@@ -1,28 +1,29 @@
 <template>
-  <el-container style="height:100vh;">
-    <el-aside width="260px">
+  <el-container style="height:100vh; overflow: hidden;">
+    <el-aside width="240px">
       <SidebarMenu />
     </el-aside>
     <el-container>
-          <el-header style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px">
-            <div>车队管理平台</div>
-            <div style="display:flex;align-items:center;gap:12px">
-              <div>{{ currentPage }}</div>
-              <el-button type="primary" size="small" @click="goLogin">返回登录</el-button>
-            </div>
-          </el-header>
-      <div class="page-tabs" style="padding: 0 24px 16px;">
+      <el-header class="dashboard-header">
+        <div class="dashboard-title">车队管理平台</div>
+        <div class="dashboard-actions">
+          <div>{{ currentPage }}</div>
+          <el-button type="primary" size="small" @click="goLogin">返回登录</el-button>
+        </div>
+      </el-header>
+      <div class="page-tabs">
         <el-tag
           v-for="tab in tabs"
           :key="tab.path"
           :type="tab.path === route.path ? 'success' : 'info'"
           closable
           @click="openTab(tab)"
-          @close="closeTab(tab)">
+          @close="closeTab(tab)"
+        >
           {{ tab.title }}
         </el-tag>
       </div>
-      <el-main style="padding:24px;">
+      <el-main class="main-content">
         <template v-if="currentPage === '全图监控' || route.path === '/fullmap'">
           <FullMap />
         </template>
@@ -101,14 +102,56 @@ const goLogin = () => {
 </script>
 
 <style scoped>
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 16px;
+  min-height: 40px;
+}
+
+.dashboard-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dashboard-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
 .page-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   justify-content: flex-start;
   align-items: center;
+  padding: 0 16px 6px;
+  min-height: 28px;
 }
 
-/* 简单布局样式 */
-h2 { margin: 0 0 12px 0 }
+.page-tabs .el-tag {
+  font-size: 11px;
+  height: 26px;
+  line-height: 22px;
+}
+
+.main-content {
+  height: calc(100vh - 68px);
+  max-height: calc(100vh - 68px);
+  padding: 12px 16px;
+  overflow: hidden;
+}
+
+.el-main > *,
+.main-content > * {
+  max-height: calc(100vh - 74px);
+  overflow: hidden;
+}
+
+h2 {
+  margin: 0 0 12px 0;
+}
 </style>
