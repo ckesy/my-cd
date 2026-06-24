@@ -59,12 +59,8 @@ body {
 }
 
 body {
-  background-image: url('./assets/首页背景.jpg');
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center center;
-  background-attachment: fixed;
-  color: #fff;
+  background: var(--bg);
+  color: var(--text);
 }
 
 #app {

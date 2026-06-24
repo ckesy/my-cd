@@ -1,12 +1,15 @@
 <script setup>
 import { ref, reactive, computed, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const activeTab = ref('phone')
 const phone = ref('13800138000')
 const code = ref('123456')
 const password = ref('password123')
 
-const cardPosition = reactive({ x: 302, y: -57 })
+const cardPosition = reactive({ x: 0, y: 0 })
 const dragOffset = reactive({ x: 0, y: 0 })
 const isDragging = ref(false)
 
@@ -47,13 +50,49 @@ const sendCode = () => {
 }
 
 const handleLogin = () => {
-  const type = activeTab.value === 'phone' ? '手机号登录' : '账户密码登录'
-  window.alert(`假登录：${type}\n手机号：${phone.value}\n${activeTab.value === 'phone' ? `验证码：${code.value}` : `密码：${password.value}`}`)
+  // 简单模拟登录，成功后跳转到 dashboard
+  router.push('/dashboard')
 }
 </script>
 
 <template>
-  <router-view />
+  <div class="app-shell">
+    <div class="login-wrapper" :style="cardStyle">
+      <div class="login-card" @mousedown="startDrag">
+        <div class="login-head">
+          <span class="login-guide">车队管理平台</span>
+          <span class="login-guide">登录指引</span>
+        </div>
+        <el-tabs v-model="activeTab" stretch>
+          <el-tab-pane label="手机号登录" name="phone"></el-tab-pane>
+          <el-tab-pane label="账户密码登录" name="account"></el-tab-pane>
+        </el-tabs>
+
+        <el-form label-position="top" size="medium" class="login-form">
+          <el-form-item label="手机号">
+            <el-input v-model="phone" placeholder="请输入电话号" />
+          </el-form-item>
+
+          <el-form-item v-if="activeTab === 'phone'" label="验证码">
+            <div class="code-row">
+              <el-input v-model="code" placeholder="请输入验证码" />
+              <el-button class="send-code-btn" type="primary" @click="sendCode">发送验证码</el-button>
+            </div>
+          </el-form-item>
+
+          <el-form-item v-else label="密码">
+            <el-input v-model="password" placeholder="请输入密码" show-password />
+          </el-form-item>
+
+          <el-form-item>
+            <el-button class="login-btn" type="primary" @click="handleLogin">登录</el-button>
+          </el-form-item>
+        </el-form>
+
+        <p class="privacy-text">登录即代表您同意《隐私保护政策》</p>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -66,6 +105,15 @@ const handleLogin = () => {
   padding: 40px 16px;
 }
 
+.app-shell {
+  background-image: url('../assets/首页背景.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center center;
+  background-attachment: fixed;
+  color: #fff;
+}
+
 .login-wrapper {
   width: 100%;
   max-width: 380px;
@@ -73,7 +121,6 @@ const handleLogin = () => {
   position: relative;
 }
 
-/* 页面标题已移入卡片内部 */
 .login-card {
   width: 100%;
   background: rgba(255, 255, 255, 0.6);
@@ -100,26 +147,21 @@ const handleLogin = () => {
 
 .login-guide {
   font-size: 16px;
-  color: #1e40af; /* deeper blue (option B) */
+  color: #1e40af;
   font-weight: 600;
 }
 
-/* Tabs and buttons contrast tweaks */
 :deep(.el-tabs__nav .el-tabs__item) {
-  color: #1652b4; /* deeper inactive blue */
+  color: #1652b4;
   font-weight: 600;
 }
 :deep(.el-tabs__nav .el-tabs__item.is-active) {
-  color: #0b4f8a !important; /* active color changed to a deeper blue */
+  color: #0b4f8a !important;
   font-weight: 800;
 }
 :deep(.el-tabs__active-bar) {
   background-color: #0b4f8a !important;
   height: 3px;
-}
-
-:deep(.el-tabs__header) {
-  margin-bottom: 24px;
 }
 
 .el-tabs__nav {
