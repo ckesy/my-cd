@@ -4,7 +4,7 @@
 
     <el-sub-menu index="drive-management">
       <template #title>行车管理</template>
-      <el-menu-item index="/dashboard/全图监控">全图监控</el-menu-item>
+      <el-menu-item index="/fullmap">全图监控</el-menu-item>
       <el-menu-item index="/dashboard/车辆故障管理">车辆故障管理</el-menu-item>
       <el-menu-item index="/dashboard/外观巡检管理">外观巡检管理</el-menu-item>
       <el-menu-item index="/dashboard/电子围栏管理">电子围栏管理</el-menu-item>

@@ -11,6 +11,11 @@ const routes = [
     name: 'Dashboard',
     component: () => import('../views/Dashboard.vue'),
   },
+  {
+    path: '/fullmap',
+    name: 'FullMap',
+    component: () => import('../views/Dashboard.vue'),
+  },
 ]
 
 const router = createRouter({

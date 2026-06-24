@@ -7,32 +7,108 @@
           <el-header style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px">
             <div>车队管理平台</div>
             <div style="display:flex;align-items:center;gap:12px">
-              <div>{{ currentPage || '首页' }}</div>
-              <el-button type="primary" size="mini" @click="goLogin">返回登录</el-button>
+              <div>{{ currentPage }}</div>
+              <el-button type="primary" size="small" @click="goLogin">返回登录</el-button>
             </div>
           </el-header>
+      <div class="page-tabs" style="padding: 0 24px 16px;">
+        <el-tag
+          v-for="tab in tabs"
+          :key="tab.path"
+          :type="tab.path === route.path ? 'success' : 'info'"
+          closable
+          @click="openTab(tab)"
+          @close="closeTab(tab)">
+          {{ tab.title }}
+        </el-tag>
+      </div>
       <el-main style="padding:24px;">
-        <h2>{{ currentPage || '欢迎' }}</h2>
-        <p>这是“{{ currentPage || '首页' }}”的占位内容。</p>
+        <template v-if="currentPage === '全图监控' || route.path === '/fullmap'">
+          <FullMap />
+        </template>
+        <template v-else>
+          <h2>{{ currentPage || '欢迎' }}</h2>
+          <p>这是“{{ currentPage || '首页' }}”的占位内容。</p>
+        </template>
       </el-main>
     </el-container>
   </el-container>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SidebarMenu from '../components/SidebarMenu.vue'
+import FullMap from '../views/FullMap.vue'
 
 const route = useRoute()
 const router = useRouter()
-const currentPage = computed(() => route.params.page)
+
+const pathLabels = {
+  '/dashboard': '监控中心',
+  '/fullmap': '全图监控',
+  '/dashboard/车辆故障管理': '车辆故障管理',
+  '/dashboard/外观巡检管理': '外观巡检管理',
+  '/dashboard/电子围栏管理': '电子围栏管理',
+  '/dashboard/运营管理': '运营管理',
+  '/dashboard/运输管理': '运输管理',
+  '/dashboard/基础数据管理': '基础数据管理',
+  '/dashboard/系统管理': '系统管理',
+}
+
+const currentPage = computed(() => {
+  return pathLabels[route.path] || route.params.page || '监控中心'
+})
+
+const tabs = ref([])
+
+const addTab = (path) => {
+  const title = pathLabels[path] || '新页面'
+  if (!tabs.value.find((tab) => tab.path === path)) {
+    tabs.value.push({ path, title })
+  }
+}
+
+const openTab = (tab) => {
+  router.push(tab.path)
+}
+
+const closeTab = (tab) => {
+  const index = tabs.value.findIndex((t) => t.path === tab.path)
+  if (index === -1) return
+  tabs.value.splice(index, 1)
+  if (route.path === tab.path) {
+    const nextTab = tabs.value[index] || tabs.value[index - 1]
+    if (nextTab) {
+      router.push(nextTab.path)
+    } else {
+      router.push('/dashboard')
+    }
+  }
+}
+
+watch(
+  () => route.path,
+  (path) => {
+    addTab(path)
+  },
+  { immediate: true }
+)
+
 const goLogin = () => {
   router.push('/')
 }
 </script>
 
 <style scoped>
+.page-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-start;
+  align-items: center;
+}
+
 /* 简单布局样式 */
 h2 { margin: 0 0 12px 0 }
 </style>
