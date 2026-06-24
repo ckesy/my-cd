@@ -1,12 +1,13 @@
 <script setup>
 import { ref, reactive, computed, onBeforeUnmount } from 'vue'
+import { ElMessage } from 'element-plus'
 
 const activeTab = ref('phone')
 const phone = ref('13800138000')
 const code = ref('123456')
 const password = ref('password123')
 
-const cardPosition = reactive({ x: 302, y: -76 })
+const cardPosition = reactive({ x: 0, y: 0 })
 const dragOffset = reactive({ x: 0, y: 0 })
 const isDragging = ref(false)
 
@@ -46,10 +47,42 @@ const sendCode = () => {
   window.alert('验证码已发送，默认验证码：123456')
 }
 
-const handleLogin = () => {
-  const type = activeTab.value === 'phone' ? '手机号登录' : '账户密码登录'
-  window.alert(`假登录：${type}\n手机号：${phone.value}\n${activeTab.value === 'phone' ? `验证码：${code.value}` : `密码：${password.value}`}`)
-}
+const handleLogin = async () => {
+  // 1. 前端简单校验
+  if (!phone.value || !code.value) {
+    ElMessage.warning('请填写手机号和验证码');
+    return;
+  }
+
+  try {
+    // 2. 发起请求到后端（替换成你自己的 Vercel 域名）
+    const response = await fetch('https://my-cd-six.vercel.app/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        phone: phone.value, 
+        code: code.value 
+      }),
+    });
+
+    const result = await response.json();
+
+    // 3. 处理返回结果
+    if (result.success) {
+      ElMessage.success('登录成功！');
+      // 可选：保存 token 到 localStorage
+      localStorage.setItem('token', result.token || 'fake-token');
+      // 跳转到仪表盘（如果你的代码里有 isLoggedIn 变量，设为 true）
+      // 例如：isLoggedIn.value = true;
+      // 注意：你的当前代码里没有 isLoggedIn，如果你需要跳转，需要额外添加
+    } else {
+      ElMessage.error(result.message || '登录失败');
+    }
+  } catch (error) {
+    console.error('请求出错:', error);
+    ElMessage.error('网络连接失败，请稍后重试');
+  }
+};
 </script>
 
 <template>
