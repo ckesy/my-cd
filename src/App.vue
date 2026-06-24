@@ -6,7 +6,7 @@ const phone = ref('13800138000')
 const code = ref('123456')
 const password = ref('password123')
 
-const cardPosition = reactive({ x: 0, y: 0 })
+const cardPosition = reactive({ x: 302, y: -76 })
 const dragOffset = reactive({ x: 0, y: 0 })
 const isDragging = ref(false)
 
