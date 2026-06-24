@@ -9,11 +9,8 @@ const phone = ref('13800138000')
 const code = ref('123456')
 const password = ref('password123')
 
-
-=======
 // 默认右移 8cm（约 304px）
 const cardPosition = reactive({ x: 304, y: 0 })
->>>>>>> 4564c3e (beta 14)
 const dragOffset = reactive({ x: 0, y: 0 })
 const isDragging = ref(false)
 
