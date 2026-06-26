@@ -25,6 +25,11 @@ const routes = [
   path: '/report',
   name: 'Report',
   component: () => import('../views/Dashboard.vue'),
+},
+{
+  path: '/waybill/create',
+  name: 'WaybillCreate',
+  component: () => import('../views/Dashboard.vue'),
 }
 ]
 

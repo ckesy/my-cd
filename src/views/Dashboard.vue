@@ -48,25 +48,30 @@
       </div>
 
       <!-- 主内容区 -->
-      <el-main class="main-content">
-        <!-- 全图监控 -->
-        <template v-if="route.path === '/fullmap'">
-          <FullMap />
-        </template>
-        <!-- 运单管理 -->
-        <template v-else-if="route.path === '/waybill'">
-          <Waybill />
-        </template>
-        <!-- 车队运营报告 -->
-        <template v-else-if="route.path === '/report'">
-          <Report />
-        </template>
-        <!-- 其他页面（占位） -->
-        <template v-else>
-          <h2>{{ currentPage || '欢迎' }}</h2>
-          <p>这是“{{ currentPage || '首页' }}”的占位内容。</p>
-        </template>
-      </el-main>
+      <!-- 主内容区 -->
+<el-main class="main-content">
+  <!-- 全图监控 -->
+  <template v-if="route.path === '/fullmap'">
+    <FullMap />
+  </template>
+  <!-- 运单管理 -->
+  <template v-else-if="route.path === '/waybill'">
+    <Waybill />
+  </template>
+  <!-- 新建运单 -->
+  <template v-else-if="route.path === '/waybill/create'">
+    <WaybillCreate />
+  </template>
+  <!-- 车队运营报告 -->
+  <template v-else-if="route.path === '/report'">
+    <Report />
+  </template>
+  <!-- 其他页面（占位） -->
+  <template v-else>
+    <h2>{{ currentPage || '欢迎' }}</h2>
+    <p>这是“{{ currentPage || '首页' }}”的占位内容。</p>
+  </template>
+</el-main>
     </el-container>
   </el-container>
 </template>
@@ -77,6 +82,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Setting } from '@element-plus/icons-vue'
 import SidebarMenu from '../components/SidebarMenu.vue'
 import FullMap from '../views/FullMap.vue'
+import WaybillCreate from '../views/WaybillCreate.vue'
 // 新增两个组件导入
 import Waybill from '../views/Waybill.vue'
 import Report from '../views/Report.vue'
@@ -97,6 +103,7 @@ const pathLabels = {
   '/dashboard/系统管理': '系统管理',
   '/waybill': '运单管理',
   '/report': '车队运营报告',
+  '/waybill/create': '新建运单',
 }
 
 const currentPage = computed(() => {
