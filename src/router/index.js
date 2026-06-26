@@ -30,6 +30,16 @@ const routes = [
   path: '/waybill/create',
   name: 'WaybillCreate',
   component: () => import('../views/Dashboard.vue'),
+},
+{
+  path: '/vehicle-archive',
+  name: 'VehicleArchive',
+  component: () => import('../views/Dashboard.vue'),
+},
+{
+  path: '/driver-archive',
+  name: 'DriverArchive',
+  component: () => import('../views/Dashboard.vue'),
 }
 ]
 

@@ -1,15 +1,16 @@
 <template>
   <el-container style="height:100vh; overflow: hidden;">
-    <!-- 侧边栏 -->
     <el-aside width="200px" class="sidebar-white">
-      <SidebarMenu />
+      <SidebarMenu
+        :active-path="activeMenu"
+        @menu-select="handleMenuSelect"
+      />
     </el-aside>
     <el-container>
       <!-- 顶部标题栏 -->
       <el-header class="dashboard-header">
         <div class="dashboard-title">车队管理平台</div>
         <div class="dashboard-actions">
-          <!-- 设置按钮 + Popover -->
           <el-popover
             placement="bottom"
             :width="110"
@@ -47,31 +48,38 @@
         </el-tag>
       </div>
 
-      <!-- 主内容区 -->
-      <!-- 主内容区 -->
-<el-main class="main-content">
-  <!-- 全图监控 -->
-  <template v-if="route.path === '/fullmap'">
-    <FullMap />
-  </template>
-  <!-- 运单管理 -->
-  <template v-else-if="route.path === '/waybill'">
-    <Waybill />
-  </template>
-  <!-- 新建运单 -->
-  <template v-else-if="route.path === '/waybill/create'">
-    <WaybillCreate />
-  </template>
-  <!-- 车队运营报告 -->
-  <template v-else-if="route.path === '/report'">
-    <Report />
-  </template>
-  <!-- 其他页面（占位） -->
-  <template v-else>
-    <h2>{{ currentPage || '欢迎' }}</h2>
-    <p>这是“{{ currentPage || '首页' }}”的占位内容。</p>
-  </template>
-</el-main>
+      <!-- 主内容区（修复条件顺序） -->
+      <el-main class="main-content">
+        <!-- 全图监控 -->
+        <template v-if="route.path === '/fullmap'">
+          <FullMap />
+        </template>
+        <!-- 运单管理 -->
+        <template v-else-if="route.path === '/waybill'">
+          <Waybill />
+        </template>
+        <!-- 新建运单 -->
+        <template v-else-if="route.path === '/waybill/create'">
+          <WaybillCreate />
+        </template>
+        <!-- 车队运营报告 -->
+        <template v-else-if="route.path === '/report'">
+          <Report />
+        </template>
+        <!-- 车辆档案 -->
+        <template v-else-if="route.path === '/vehicle-archive'">
+          <VehicleArchive />
+        </template>
+        <!-- 司机档案 -->
+        <template v-else-if="route.path === '/driver-archive'">
+          <DriverArchive />
+        </template>
+        <!-- 其他页面（占位） -->
+        <template v-else>
+          <h2>{{ currentPage || '欢迎' }}</h2>
+          <p>这是“{{ currentPage || '首页' }}”的占位内容。</p>
+        </template>
+      </el-main>
     </el-container>
   </el-container>
 </template>
@@ -83,14 +91,38 @@ import { Setting } from '@element-plus/icons-vue'
 import SidebarMenu from '../components/SidebarMenu.vue'
 import FullMap from '../views/FullMap.vue'
 import WaybillCreate from '../views/WaybillCreate.vue'
-// 新增两个组件导入
 import Waybill from '../views/Waybill.vue'
 import Report from '../views/Report.vue'
+import VehicleArchive from '../views/VehicleArchive.vue'
+import DriverArchive from '../views/DriverArchive.vue'
 
 const route = useRoute()
 const router = useRouter()
 
-// 页面路径与标题映射（新增两条）
+const activeMenu = ref(route.path)
+
+const getMenuIndex = (path) => {
+  if (path === '/waybill/create') return '/waybill'
+  return path
+}
+
+const updateActiveMenu = (path) => {
+  activeMenu.value = getMenuIndex(path)
+}
+
+watch(
+  () => route.path,
+  (newPath) => {
+    updateActiveMenu(newPath)
+  },
+  { immediate: true }
+)
+
+const handleMenuSelect = (index) => {
+  activeMenu.value = index
+  router.push(index)
+}
+
 const pathLabels = {
   '/dashboard': '监控中心',
   '/fullmap': '全图监控',
@@ -104,6 +136,8 @@ const pathLabels = {
   '/waybill': '运单管理',
   '/report': '车队运营报告',
   '/waybill/create': '新建运单',
+  '/vehicle-archive': '车辆档案',
+  '/driver-archive': '司机档案',
 }
 
 const currentPage = computed(() => {
@@ -160,11 +194,11 @@ const handleSettings = () => {
   background: #f5f5f5;
 }
 
-/* ----- 侧边栏（白底） ----- */
+/* ----- 侧边栏（白底，去边框） ----- */
 .sidebar-white {
   background: #ffffff;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06);
-  border-right: 1px solid #e8e8e8;
+  border-right: none !important;
 }
 
 .sidebar-white :deep(.el-menu) {
@@ -178,7 +212,7 @@ const handleSettings = () => {
   height: 48px;
   line-height: 48px;
   font-size: 14px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: none !important;
   margin: 0;
   padding: 0 20px;
   transition: background 0.15s, color 0.15s;
@@ -191,7 +225,7 @@ const handleSettings = () => {
   background: #c8102e !important;
   color: #ffffff !important;
   font-weight: 600;
-  border-bottom-color: #c8102e;
+  border-bottom: none !important;
 }
 .sidebar-white :deep(.el-menu-item.is-active:hover) {
   background: #b00d24 !important;
@@ -201,7 +235,7 @@ const handleSettings = () => {
 .sidebar-white :deep(.el-sub-menu .el-sub-menu__title) {
   color: #333333 !important;
   background: #ffffff !important;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: none !important;
   height: 48px;
   line-height: 48px;
 }
@@ -236,8 +270,6 @@ const handleSettings = () => {
   font-size: 13px;
   color: #333;
 }
-
-/* 设置按钮样式 */
 .settings-btn {
   border-color: #c8102e;
   color: #c8102e;
@@ -249,8 +281,6 @@ const handleSettings = () => {
   background: #c8102e;
   color: #ffffff;
 }
-
-/* 退出登录按钮 */
 .dashboard-actions .el-button--danger.is-plain {
   border-color: #c8102e;
   color: #c8102e;
@@ -260,7 +290,7 @@ const handleSettings = () => {
   color: #ffffff;
 }
 
-/* ----- 标签页栏 ----- */
+/* ===== 标签页栏 ===== */
 .page-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -282,18 +312,22 @@ const handleSettings = () => {
   color: #555;
   transition: all 0.2s;
 }
+/* 未激活标签悬停 */
 .page-tabs .el-tag:hover {
   border-color: #c8102e;
   color: #c8102e;
 }
+/* 激活标签（红底白字） */
 .page-tabs .el-tag--danger {
   background: #c8102e;
   border-color: #c8102e;
   color: #ffffff;
 }
+/* 激活标签悬停：边框变白，文字保持白色，背景加深 */
 .page-tabs .el-tag--danger:hover {
   background: #a00d24;
-  border-color: #a00d24;
+  border-color: #ffffff;
+  color: #ffffff;
 }
 .page-tabs .el-tag .el-tag__close {
   color: #999;
@@ -327,7 +361,6 @@ h2 {
 
 <!-- ===== 全局样式（用于 popover） ===== -->
 <style>
-/* 设置弹窗样式：缩小尺寸，红色边框 */
 .settings-popover {
   border: 2px solid #c8102e !important;
   border-radius: 8px;
@@ -339,8 +372,6 @@ h2 {
 .settings-popover .el-popover__title {
   display: none;
 }
-
-/* 弹窗内 “个人设置” 文字红色 */
 .settings-option {
   color: #c8102e !important;
   font-weight: 500;
