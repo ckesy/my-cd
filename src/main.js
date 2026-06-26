@@ -4,6 +4,7 @@ import 'element-plus/dist/index.css'
 import './style.css'                    // ← 保留你的全局样式
 import App from './App.vue'
 import router from './router'
+import { supabase } from './utils/supabase'
 
 // 1. 导入中文语言包和 dayjs
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
@@ -30,3 +31,12 @@ app.use(ElementPlus, {
 
 app.use(router)
 app.mount('#app')
+// 测试 Supabase 连接（临时）
+supabase.from('vehicles').select('*', { count: 'exact', head: true })
+  .then(({ error }) => {
+    if (error) {
+      console.error('❌ Supabase 连接失败:', error.message)
+    } else {
+      console.log('✅ Supabase 连接成功！')
+    }
+  })

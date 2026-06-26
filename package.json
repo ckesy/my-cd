@@ -10,10 +10,13 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@supabase/supabase-js": "^2.108.2",
     "dayjs": "^1.11.21",
     "element-plus": "^2.14.2",
+    "exceljs": "^4.4.0",
     "vue": "^3.5.34",
-    "vue-router": "^4.6.4"
+    "vue-router": "^4.6.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.6",
