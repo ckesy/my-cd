@@ -16,6 +16,16 @@ const routes = [
     name: 'FullMap',
     component: () => import('../views/Dashboard.vue'),
   },
+  {
+  path: '/waybill',
+  name: 'Waybill',
+  component: () => import('../views/Dashboard.vue'),
+},
+{
+  path: '/report',
+  name: 'Report',
+  component: () => import('../views/Dashboard.vue'),
+}
 ]
 
 const router = createRouter({
@@ -24,3 +34,4 @@ const router = createRouter({
 })
 
 export default router
+

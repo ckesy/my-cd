@@ -9,7 +9,7 @@
       <el-header class="dashboard-header">
         <div class="dashboard-title">车队管理平台</div>
         <div class="dashboard-actions">
-          <!-- 设置按钮 + Popover（缩小尺寸） -->
+          <!-- 设置按钮 + Popover -->
           <el-popover
             placement="bottom"
             :width="110"
@@ -49,9 +49,19 @@
 
       <!-- 主内容区 -->
       <el-main class="main-content">
-        <template v-if="currentPage === '全图监控' || route.path === '/fullmap'">
+        <!-- 全图监控 -->
+        <template v-if="route.path === '/fullmap'">
           <FullMap />
         </template>
+        <!-- 运单管理 -->
+        <template v-else-if="route.path === '/waybill'">
+          <Waybill />
+        </template>
+        <!-- 车队运营报告 -->
+        <template v-else-if="route.path === '/report'">
+          <Report />
+        </template>
+        <!-- 其他页面（占位） -->
         <template v-else>
           <h2>{{ currentPage || '欢迎' }}</h2>
           <p>这是“{{ currentPage || '首页' }}”的占位内容。</p>
@@ -67,10 +77,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { Setting } from '@element-plus/icons-vue'
 import SidebarMenu from '../components/SidebarMenu.vue'
 import FullMap from '../views/FullMap.vue'
+// 新增两个组件导入
+import Waybill from '../views/Waybill.vue'
+import Report from '../views/Report.vue'
 
 const route = useRoute()
 const router = useRouter()
 
+// 页面路径与标题映射（新增两条）
 const pathLabels = {
   '/dashboard': '监控中心',
   '/fullmap': '全图监控',
@@ -81,6 +95,8 @@ const pathLabels = {
   '/dashboard/运输管理': '运输管理',
   '/dashboard/基础数据管理': '基础数据管理',
   '/dashboard/系统管理': '系统管理',
+  '/waybill': '运单管理',
+  '/report': '车队运营报告',
 }
 
 const currentPage = computed(() => {
