@@ -46,7 +46,6 @@
         size="small"
         max-height="calc(100vh - 260px)"
         v-loading="loading"
-        :cell-style="{ whiteSpace: 'nowrap' }"
         @selection-change="handleSelectionChange"
       >
         <el-table-column v-if="batchDeleteMode" type="selection" width="50" align="center" />
@@ -54,7 +53,7 @@
         <el-table-column prop="vin" label="VIN码" width="180" show-overflow-tooltip />
         <el-table-column prop="nickname" label="车辆昵称" width="100" show-overflow-tooltip />
         <el-table-column prop="org" label="所属机构组织" width="120" show-overflow-tooltip />
-        <el-table-column prop="driver" label="绑定司机" width="90" show-overflow-tooltip />
+        <el-table-column prop="driver" label="绑定司机" width="120" show-overflow-tooltip />
         <el-table-column prop="fuel_type" label="燃料类型" width="80" show-overflow-tooltip />
         <el-table-column prop="vehicle_type" label="车辆类型" width="80" show-overflow-tooltip />
         <el-table-column prop="usage" label="车辆用途" width="80" show-overflow-tooltip />
@@ -105,12 +104,7 @@
     </div>
 
     <!-- 导入弹窗 -->
-    <el-dialog
-      v-model="showImportDialog"
-      title="导入车辆档案"
-      width="560px"
-      destroy-on-close
-    >
+    <el-dialog v-model="showImportDialog" title="导入车辆档案" width="560px" destroy-on-close>
       <div style="margin-bottom: 16px;">
         <el-button type="primary" plain size="small" @click="downloadTemplate">📥 下载导入模板</el-button>
         <span style="font-size:12px; color:#999; margin-left:12px;">支持 .csv / .xlsx</span>
@@ -213,7 +207,14 @@
           <el-row :gutter="16">
             <el-col :span="12">
               <el-form-item label="绑定司机">
-                <el-input v-model="editFormData.driver" placeholder="请输入绑定司机" />
+                <el-input
+                  v-model="editFormData.driverDisplay"
+                  placeholder="点击输入框选择司机"
+                  readonly
+                  clearable
+                  @click="openDriverSelect(editFormData)"
+                  @clear="clearDriverSelection(editFormData)"
+                />
               </el-form-item>
             </el-col>
             <el-col :span="12">
@@ -289,6 +290,41 @@
         <el-button type="primary" class="edit-save-btn" @click="saveEdit" :loading="editSaving">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 司机选择对话框 -->
+    <el-dialog
+      v-model="driverSelectDialogVisible"
+      title="选择绑定司机"
+      width="500px"
+      class="vehicle-detail-dialog"
+      destroy-on-close
+      :show-close="false"
+      append-to-body
+    >
+      <div style="margin-bottom: 12px; display: flex; gap: 12px; align-items: center;">
+        <el-input
+          v-model="driverSearchKeyword"
+          placeholder="输入司机姓名模糊搜索"
+          clearable
+          style="flex:1;"
+          @input="filterDriverList"
+        />
+        <el-button type="primary" size="small" @click="selectAllDrivers">全选</el-button>
+        <el-button size="small" @click="clearAllDrivers">取消全选</el-button>
+      </div>
+      <div style="max-height: 300px; overflow-y: auto;">
+        <el-checkbox-group v-model="selectedDriverNames" class="driver-checkbox-group">
+          <div v-for="d in filteredDriverList" :key="d.driver_name" style="padding: 4px 0;">
+            <el-checkbox :label="d.driver_name">{{ d.driver_name }}</el-checkbox>
+          </div>
+        </el-checkbox-group>
+        <div v-if="filteredDriverList.length === 0" style="text-align:center; color:#999; padding:20px 0;">暂无司机</div>
+      </div>
+      <template #footer>
+        <el-button class="detail-close-btn" @click="driverSelectDialogVisible = false">取消</el-button>
+        <el-button type="primary" class="edit-save-btn" @click="confirmDriverSelect">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -359,6 +395,7 @@ const saveData = () => {
   sessionStorage.setItem(CACHE_KEY, JSON.stringify(data))
 }
 
+// ---------- 搜索表单 ----------
 const searchForm = reactive({
   org: '',
   fuelType: '',
@@ -453,29 +490,178 @@ const handleView = (row) => {
   detailDialogVisible.value = true
 }
 
+// ---------- 司机选择相关 ----------
+const driverSelectDialogVisible = ref(false)
+const driverList = ref([])
+const filteredDriverList = ref([])
+const driverSearchKeyword = ref('')
+const selectedDriverNames = ref([])
+const driverTarget = ref(null)
+
+const loadDriverList = async () => {
+  if (driverList.value.length === 0) {
+    const { data, error } = await supabase.from('drivers').select('driver_name')
+    if (!error) {
+      driverList.value = data || []
+      filteredDriverList.value = [...driverList.value]
+    } else {
+      ElMessage.error('加载司机列表失败')
+    }
+  }
+}
+
+const openDriverSelect = (target) => {
+  if (!target) return
+  driverTarget.value = target
+  loadDriverList()
+  const bound = target.driver || ''
+  selectedDriverNames.value = bound ? bound.split(',').map(s => s.trim()).filter(Boolean) : []
+  driverSearchKeyword.value = ''
+  filteredDriverList.value = [...driverList.value]
+  driverSelectDialogVisible.value = true
+}
+
+const filterDriverList = () => {
+  if (!driverSearchKeyword.value) {
+    filteredDriverList.value = [...driverList.value]
+  } else {
+    const keyword = driverSearchKeyword.value.trim().toLowerCase()
+    filteredDriverList.value = driverList.value.filter(d => d.driver_name.toLowerCase().includes(keyword))
+  }
+}
+
+const selectAllDrivers = () => {
+  const allNames = filteredDriverList.value.map(d => d.driver_name)
+  selectedDriverNames.value = [...new Set([...selectedDriverNames.value, ...allNames])]
+}
+
+const clearAllDrivers = () => {
+  const allNames = filteredDriverList.value.map(d => d.driver_name)
+  selectedDriverNames.value = selectedDriverNames.value.filter(n => !allNames.includes(n))
+}
+
+const confirmDriverSelect = () => {
+  const names = selectedDriverNames.value
+  const target = driverTarget.value
+  if (!target) return
+  target.driver = names.join(',')
+  if (names.length === 0) {
+    target.driverDisplay = ''
+  } else if (names.length <= 2) {
+    target.driverDisplay = names.join('；')
+  } else {
+    target.driverDisplay = `已选 ${names.length} 名司机`
+  }
+  driverSelectDialogVisible.value = false
+}
+
+const clearDriverSelection = (target) => {
+  if (!target) return
+  target.driver = ''
+  target.driverDisplay = ''
+}
+
 // ---------- 编辑 ----------
 const editDialogVisible = ref(false)
 const editFormData = ref(null)
 const editSaving = ref(false)
 
 const handleEdit = (row) => {
-  editFormData.value = JSON.parse(JSON.stringify(row))
+  const data = JSON.parse(JSON.stringify(row))
+  const names = data.driver ? data.driver.split(',').map(s => s.trim()).filter(Boolean) : []
+  data.driverDisplay = names.length === 0 ? '' : names.length <= 2 ? names.join('；') : `已选 ${names.length} 名司机`
+  editFormData.value = data
   editDialogVisible.value = true
 }
 
 const openEditFromView = () => {
   if (currentDetailRow.value) {
-    editFormData.value = JSON.parse(JSON.stringify(currentDetailRow.value))
-    editDialogVisible.value = true
+    handleEdit(currentDetailRow.value)
     detailDialogVisible.value = false
   }
 }
 
+// ---------- 同步函数：根据车辆绑定司机更新司机档案 ----------
+const syncFromVehiclesToDrivers = async () => {
+  try {
+    // 1. 获取所有车辆
+    const { data: vehicles, error: vError } = await supabase
+      .from('vehicles')
+      .select('plate, driver')
+    if (vError) throw vError
+
+    // 2. 构建车牌 -> 司机姓名列表的映射
+    const plateToDrivers = {}
+    vehicles.forEach(v => {
+      if (v.driver) {
+        const drivers = v.driver.split(',').map(s => s.trim()).filter(Boolean)
+        if (drivers.length) {
+          plateToDrivers[v.plate] = drivers
+        }
+      }
+    })
+
+    // 3. 构建司机姓名 -> 绑定车辆列表的映射（合并）
+    const driverToPlates = {}
+    Object.keys(plateToDrivers).forEach(plate => {
+      const driverNames = plateToDrivers[plate]
+      driverNames.forEach(driverName => {
+        if (!driverToPlates[driverName]) {
+          driverToPlates[driverName] = []
+        }
+        if (!driverToPlates[driverName].includes(plate)) {
+          driverToPlates[driverName].push(plate)
+        }
+      })
+    })
+
+    // 4. 更新 drivers 表的 bound_vehicle
+    const updatePromises = []
+    for (const [driverName, plates] of Object.entries(driverToPlates)) {
+      const boundVehicleStr = plates.join(',')
+      updatePromises.push(
+        supabase
+          .from('drivers')
+          .update({ bound_vehicle: boundVehicleStr })
+          .eq('driver_name', driverName)
+      )
+    }
+
+    // 5. 清除那些没有绑定任何车辆的司机的 bound_vehicle（可选：如果要清空）
+    // 但为了保留可能存在的其他绑定，我们不主动清空，只更新已有的。
+    // 如果想清空所有未出现在映射中的司机，可以查询所有司机并更新为空，但这样可能误删。
+    // 此处仅更新已有绑定的司机，不处理未绑定车辆的情况（保持原值或置空由业务决定）。
+    // 如果业务要求严格同步，可以执行下面的代码清空所有未被覆盖的司机：
+    // 但为了安全，暂时不执行。
+
+    // 另外，如果某司机原本绑定车辆，但车辆解绑了，上面的循环不会更新，该司机仍保留旧绑定。
+    // 因此需要额外处理：查询所有司机，如果其姓名不在 driverToPlates 中，则置空。
+    const { data: allDrivers } = await supabase.from('drivers').select('driver_name')
+    if (allDrivers) {
+      allDrivers.forEach(d => {
+        if (!driverToPlates[d.driver_name]) {
+          updatePromises.push(
+            supabase
+              .from('drivers')
+              .update({ bound_vehicle: '' })
+              .eq('driver_name', d.driver_name)
+          )
+        }
+      })
+    }
+
+    await Promise.all(updatePromises)
+  } catch (err) {
+    console.error('同步车辆绑定司机到司机档案失败', err)
+  }
+}
+
+// ---------- 保存编辑 ----------
 const saveEdit = async () => {
   if (!editFormData.value) return
   editSaving.value = true
   try {
-    const { id, created_at, updated_at, ...updateFields } = editFormData.value
+    const { id, created_at, updated_at, driverDisplay, ...updateFields } = editFormData.value
     const { error } = await supabase
       .from('vehicles')
       .update({
@@ -487,6 +673,8 @@ const saveEdit = async () => {
 
     ElMessage.success('更新成功')
     editDialogVisible.value = false
+    // 同步司机档案
+    await syncFromVehiclesToDrivers()
     await fetchVehicles()
   } catch (err) {
     ElMessage.error('更新失败：' + err.message)
@@ -503,7 +691,6 @@ const exportData = async () => {
     background: 'rgba(0, 0, 0, 0.7)'
   })
   try {
-    // 构建查询（遵循当前筛选条件）
     let query = supabase
       .from('vehicles')
       .select('*')
@@ -516,17 +703,14 @@ const exportData = async () => {
 
     const { data, error } = await query
     if (error) throw error
-
     if (!data || data.length === 0) {
       ElMessage.warning('没有数据可导出')
       return
     }
 
-    // 创建工作簿
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet('车辆档案')
 
-    // 表头
     const headers = [
       '车牌号', 'VIN码', '车辆昵称', '所属机构组织', '绑定司机',
       '燃料类型', '车辆类型', '车辆用途', '子母车', '关联挂车',
@@ -546,7 +730,6 @@ const exportData = async () => {
       }
     })
 
-    // 数据行
     data.forEach(row => {
       const rowData = [
         row.plate || '',
@@ -576,10 +759,8 @@ const exportData = async () => {
       })
     })
 
-    // 设置列宽
     worksheet.columns = headers.map(() => ({ width: 18 }))
 
-    // 生成并下载
     const buffer = await workbook.xlsx.writeBuffer()
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
     const link = document.createElement('a')
@@ -605,6 +786,7 @@ const fetchVehicles = async () => {
     let query = supabase
       .from('vehicles')
       .select('*', { count: 'exact' })
+      .order('updated_at', { ascending: false })
 
     if (searchForm.org) query = query.eq('org', searchForm.org)
     if (searchForm.fuelType) query = query.eq('fuel_type', searchForm.fuelType)
@@ -615,7 +797,6 @@ const fetchVehicles = async () => {
     const to = from + pageSize.value - 1
 
     const { data, error, count } = await query
-      .order('updated_at', { ascending: false })
       .range(from, to)
 
     if (error) throw error
@@ -817,7 +998,7 @@ const confirmImport = async () => {
         vin,
         nickname: nickname || null,
         org: '西马物流新能源车队',
-        driver: null,
+        driver: '',
         fuel_type: fuelType || null,
         vehicle_type: vehicleType || null,
         usage: usage || null,
@@ -845,6 +1026,7 @@ const confirmImport = async () => {
 
     ElMessage.success(`校验通过，共 ${validData.length} 条有效数据，即将导入`)
 
+    // 手动处理重复覆盖（以车牌号为主键）
     const existingPlates = new Set()
     const { data: existingData } = await supabase
       .from('vehicles')
@@ -1092,5 +1274,14 @@ onMounted(() => {
 .edit-form :deep(.el-input),
 .edit-form :deep(.el-date-picker) {
   width: 100%;
+}
+
+/* ===== 司机选择复选框列表 ===== */
+.driver-checkbox-group {
+  display: flex;
+  flex-direction: column;
+}
+.driver-checkbox-group .el-checkbox {
+  height: 32px;
 }
 </style>
