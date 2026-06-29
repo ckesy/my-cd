@@ -1,5 +1,6 @@
 <template>
   <el-container style="height:100vh; overflow: hidden;">
+    <!-- 侧边栏 -->
     <el-aside width="200px" class="sidebar-white">
       <SidebarMenu
         :active-path="activeMenu"
@@ -48,7 +49,7 @@
         </el-tag>
       </div>
 
-      <!-- 主内容区（修复条件顺序） -->
+      <!-- 主内容区 -->
       <el-main class="main-content">
         <!-- 全图监控 -->
         <template v-if="route.path === '/fullmap'">
@@ -58,9 +59,9 @@
         <template v-else-if="route.path === '/waybill'">
           <Waybill />
         </template>
-        <!-- 新建运单 -->
+        <!-- 新建运单（添加 ref） -->
         <template v-else-if="route.path === '/waybill/create'">
-          <WaybillCreate />
+          <WaybillCreate ref="waybillCreateRef" />
         </template>
         <!-- 车队运营报告 -->
         <template v-else-if="route.path === '/report'">
@@ -87,6 +88,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import SidebarMenu from '../components/SidebarMenu.vue'
 import FullMap from '../views/FullMap.vue'
@@ -98,6 +100,7 @@ import DriverArchive from '../views/DriverArchive.vue'
 
 const route = useRoute()
 const router = useRouter()
+const waybillCreateRef = ref(null)
 
 const activeMenu = ref(route.path)
 
@@ -117,11 +120,6 @@ watch(
   },
   { immediate: true }
 )
-
-const handleMenuSelect = (index) => {
-  activeMenu.value = index
-  router.push(index)
-}
 
 const pathLabels = {
   '/dashboard': '监控中心',
@@ -144,6 +142,7 @@ const currentPage = computed(() => {
   return pathLabels[route.path] || route.params.page || '监控中心'
 })
 
+// ---------- 标签页管理 ----------
 const tabs = ref([])
 
 const addTab = (path) => {
@@ -153,8 +152,52 @@ const addTab = (path) => {
   }
 }
 
+// ---------- 未保存检查并导航 ----------
+const checkAndNavigate = async (targetPath) => {
+  // 如果点击的是当前页面，不做任何事
+  if (targetPath === route.path) return
+
+  // 如果当前是新建运单页面且有未保存内容
+  if (route.path === '/waybill/create' && waybillCreateRef.value && waybillCreateRef.value.isDirty) {
+    try {
+      await ElMessageBox.confirm(
+        '该操作未保存，切换页面将导致数据丢失，是否继续编辑？',
+        '提示',
+        {
+          confirmButtonText: '继续编辑',
+          cancelButtonText: '放弃',
+          type: 'warning',
+          distinguishCancelAndClose: true,
+          closeOnClickModal: false,
+          closeOnPressEscape: false,
+          customClass: 'dirty-confirm-box',
+        }
+      )
+      // 用户点击“继续编辑”，不跳转，留在当前页
+      return
+    } catch (action) {
+      // 用户点击“放弃”或关闭弹窗
+      if (action === 'cancel' || action === 'close') {
+        // 放弃：跳转到目标页面
+        router.push(targetPath)
+      }
+      return
+    }
+  }
+
+  // 正常跳转
+  router.push(targetPath)
+}
+
+// 打开标签
 const openTab = (tab) => {
-  router.push(tab.path)
+  checkAndNavigate(tab.path)
+}
+
+// 侧边栏菜单点击
+const handleMenuSelect = (index) => {
+  activeMenu.value = index
+  checkAndNavigate(index)
 }
 
 const closeTab = (tab) => {
@@ -359,7 +402,7 @@ h2 {
 }
 </style>
 
-<!-- ===== 全局样式（用于 popover） ===== -->
+<!-- ===== 全局样式（用于 popover 和 确认框高斯模糊） ===== -->
 <style>
 .settings-popover {
   border: 2px solid #c8102e !important;
@@ -380,5 +423,15 @@ h2 {
 .settings-option:hover {
   color: #a00d24 !important;
   background: transparent;
+}
+
+/* 确认框高斯模糊背景 */
+.dirty-confirm-box .el-overlay-dialog {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.dirty-confirm-box .el-message-box {
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 </style>
