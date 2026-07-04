@@ -8,7 +8,7 @@ import AMapLoader from '@amap/amap-jsapi-loader'
 //  1. 在 index.html 中设置安全密钥（必须）：
 //     <script>
 //       window._AMapSecurityConfig = { securityJsCode: '您的安全密钥' };
-//     
+//    
 //  2. 将下方 YOUR_AMAP_KEY 替换为您的真实高德 Key
 // ============================================================
 
@@ -409,10 +409,7 @@ const popupMarker = ref(null)
 // 更新卡片位置（被地图事件调用，但若用户已拖拽过则跳过）
 const updatePopupPosition = () => {
   if (!popupVisible.value || !popupMarker.value || !map) return
-  // 如果用户已经手动拖拽过，不再跟随标记
-  if (isUserPositioned.value) {
-    return
-  }
+  if (isUserPositioned.value) return
   try {
     const marker = popupMarker.value
     const position = marker.getPosition()
@@ -432,25 +429,19 @@ const updatePopupPosition = () => {
     }
     const rect = mapContainerRect
 
-    // 默认位置：标记右下方
     let left = rect.left + pixel.getX() + 20
     let top = rect.top + pixel.getY() + 10
 
-    // 右侧空间不足 -> 左侧
     if (left + popupWidth > window.innerWidth) {
       left = rect.left + pixel.getX() - popupWidth - 20
     }
-    // 底部空间不足 -> 上方
     if (top + popupHeight > window.innerHeight) {
       top = rect.top + pixel.getY() - popupHeight - 10
     }
-    // 顶部保护
     if (top < 10) top = 10
-    // 底部再次保护
     if (top + popupHeight > window.innerHeight) {
       top = window.innerHeight - popupHeight - 10
     }
-    // 左右边界保护
     if (left < 10) left = 10
     if (left + popupWidth > window.innerWidth) {
       left = window.innerWidth - popupWidth - 10
@@ -465,15 +456,12 @@ const updatePopupPosition = () => {
 // 拖拽事件
 const startDrag = (e) => {
   if (!popupVisible.value) return
-  // 如果点击的是关闭按钮或按钮等内部交互元素，不触发拖拽
   if (e.target.closest('.popup-close') || e.target.closest('.el-button')) {
     return
   }
   e.preventDefault()
-  // 获取卡片当前的位置
   const currentLeft = parseFloat(popupStyle.value.left) || 0
   const currentTop = parseFloat(popupStyle.value.top) || 0
-  // 记录鼠标偏移量（卡片左上角相对于鼠标的偏移）
   dragOffsetX = currentLeft - e.clientX
   dragOffsetY = currentTop - e.clientY
   isUserPositioned.value = true
@@ -487,7 +475,6 @@ const onDrag = (e) => {
   let left = e.clientX + dragOffsetX
   let top = e.clientY + dragOffsetY
 
-  // 边界约束
   if (left < 10) left = 10
   if (top < 10) top = 10
   if (left + popupWidth > window.innerWidth) {
@@ -510,10 +497,8 @@ const openPopup = (vehicle, marker) => {
   highlightMarker(marker)
   highlightedPlate.value = vehicle.plate
 
-  // 重置用户拖拽状态
   isUserPositioned.value = false
 
-  // 缓存地图容器 rect
   const mapContainer = document.getElementById('map-container')
   if (mapContainer) {
     mapContainerRect = mapContainer.getBoundingClientRect()
@@ -525,7 +510,6 @@ const openPopup = (vehicle, marker) => {
   }
   popupVisible.value = true
 
-  // 绑定地图事件
   if (map) {
     map.off('moving', updatePopupPosition)
     map.off('moveend', updatePopupPosition)
@@ -541,13 +525,12 @@ const closePopup = () => {
   popupVehicle.value = null
   popupMarker.value = null
   mapContainerRect = null
-  isUserPositioned.value = false  // 重置拖拽状态
+  isUserPositioned.value = false
   if (highlightedPlate.value) {
     const marker = markerMap.get(highlightedPlate.value)
     if (marker) resetMarkerStyle(marker)
     highlightedPlate.value = null
   }
-  // 解绑地图事件
   if (map) {
     map.off('moving', updatePopupPosition)
     map.off('moveend', updatePopupPosition)
@@ -587,7 +570,6 @@ const updateStats = () => {
 // ---------- 筛选与高亮 ----------
 const selectedPlates = ref([])
 
-// 计算过滤后的车辆列表（同时用于列表渲染和地图标记控制）
 const filteredVehicles = computed(() => {
   return vehicles.value.filter(v => {
     const matchStatus = selectedStatus.value === '全部' || v.status === selectedStatus.value
@@ -597,9 +579,7 @@ const filteredVehicles = computed(() => {
   })
 })
 
-// 点击列表项：高亮标记、居中、弹出卡片
 const highlightVehicle = (plate) => {
-  // 如果点击的是同一个，取消高亮并关闭卡片
   if (highlightedPlate.value === plate) {
     const marker = markerMap.get(plate)
     if (marker) resetMarkerStyle(marker)
@@ -609,7 +589,6 @@ const highlightVehicle = (plate) => {
     }
     return
   }
-  // 清除之前的高亮
   if (highlightedPlate.value) {
     const oldMarker = markerMap.get(highlightedPlate.value)
     if (oldMarker) resetMarkerStyle(oldMarker)
@@ -633,19 +612,16 @@ const isVehicleHighlighted = (plate) => {
   return highlightedPlate.value === plate || selectedPlates.value.includes(plate)
 }
 
-// 核心同步函数：使用 markerMap 精确控制每个标记的显隐
 const updateMarkersVisibility = () => {
   if (!map) return
 
   const visiblePlates = new Set(filteredVehicles.value.map(v => v.plate))
 
-  // 遍历所有标记，根据可见车牌列表设置显隐
   markerMap.forEach((marker, plate) => {
     const shouldVisible = visiblePlates.has(plate)
     if (typeof marker.setVisible === 'function') {
       marker.setVisible(shouldVisible)
     }
-    // 双重保险：同时使用 show/hide
     if (shouldVisible) {
       if (typeof marker.show === 'function') marker.show()
     } else {
@@ -653,7 +629,6 @@ const updateMarkersVisibility = () => {
     }
   })
 
-  // 如果当前高亮的标记被隐藏，取消高亮并关闭卡片
   if (highlightedPlate.value && !visiblePlates.has(highlightedPlate.value)) {
     const marker = markerMap.get(highlightedPlate.value)
     if (marker) resetMarkerStyle(marker)
@@ -661,7 +636,6 @@ const updateMarkersVisibility = () => {
     if (popupVisible.value) closePopup()
   }
 
-  // 调整视野到可见标记
   const visibleMarkers = []
   markerMap.forEach((marker, plate) => {
     if (visiblePlates.has(plate) && marker.getVisible()) {
@@ -673,7 +647,6 @@ const updateMarkersVisibility = () => {
   }
 }
 
-// 监听筛选条件变化，同步更新地图标记
 watch(
   [selectedStatus, searchKeyword, selectedPlates],
   () => {
@@ -852,7 +825,7 @@ onMounted(async () => {
       </template>
     </el-dialog>
 
-    <!-- 浮动小卡片（支持拖拽） -->
+    <!-- 浮动小卡片（毛玻璃 + 纯色后备） -->
     <div
       v-if="popupVisible && popupVehicle"
       class="popup-card"
@@ -1167,9 +1140,10 @@ onMounted(async () => {
   box-shadow: none !important;
 }
 
-/* ===== 浮动小卡片（毛玻璃 + 可拖拽） ===== */
+/* ===== 浮动小卡片（毛玻璃 + 纯色后备） ===== */
 .popup-card {
   position: fixed;
+  background: rgba(220, 232, 245, 0.85); /* 后备纯色 */
   background: rgba(220, 232, 245, 0.55);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -1295,7 +1269,7 @@ onMounted(async () => {
 }
 </style>
 
-<!-- ===== 自定义标记样式（非 scoped，确保高德地图内生效） ===== -->
+<!-- ===== 自定义标记样式（非 scoped） ===== -->
 <style>
 .custom-marker {
   display: flex;
