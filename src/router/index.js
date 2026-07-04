@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import WaybillDetail from '@/views/waybill-detail.vue'
 
 const routes = [
   {
@@ -17,30 +18,35 @@ const routes = [
     component: () => import('../views/Dashboard.vue'),
   },
   {
-  path: '/waybill',
-  name: 'Waybill',
-  component: () => import('../views/Dashboard.vue'),
-},
-{
-  path: '/report',
-  name: 'Report',
-  component: () => import('../views/Dashboard.vue'),
-},
-{
-  path: '/waybill/create',
-  name: 'WaybillCreate',
-  component: () => import('../views/Dashboard.vue'),
-},
-{
-  path: '/vehicle-archive',
-  name: 'VehicleArchive',
-  component: () => import('../views/Dashboard.vue'),
-},
-{
-  path: '/driver-archive',
-  name: 'DriverArchive',
-  component: () => import('../views/Dashboard.vue'),
-}
+    path: '/waybill',
+    name: 'Waybill',
+    component: () => import('../views/Dashboard.vue'),
+  },
+  {
+    path: '/report',
+    name: 'Report',
+    component: () => import('../views/Dashboard.vue'),
+  },
+  {
+    path: '/waybill/create',
+    name: 'WaybillCreate',
+    component: () => import('../views/Dashboard.vue'),
+  },
+  {
+    path: '/waybill/detail',
+    name: 'WaybillDetail',
+    component: WaybillDetail,
+  },
+  {
+    path: '/vehicle-archive',
+    name: 'VehicleArchive',
+    component: () => import('../views/Dashboard.vue'),
+  },
+  {
+    path: '/driver-archive',
+    name: 'DriverArchive',
+    component: () => import('../views/Dashboard.vue'),
+  },
 ]
 
 const router = createRouter({
@@ -49,4 +55,3 @@ const router = createRouter({
 })
 
 export default router
-

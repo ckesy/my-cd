@@ -18,19 +18,15 @@
       <!-- ===== 运输信息大标题 ===== -->
       <div class="section-title">运输信息</div>
 
-      <!-- ===== 任务列表（带动画） ===== -->
+      <!-- ===== 任务列表 ===== -->
       <transition-group name="task-list" tag="div">
         <div v-for="(task, tIndex) in tasks" :key="task.id" class="task-card" :style="{ backgroundColor: task.color }">
-          <!-- 任务头部 -->
           <div class="task-header">
             <div class="task-name-wrapper">
               <span class="task-label">任务{{ tIndex + 1 }}</span>
-              <el-input v-model="task.customName" placeholder="请输入任务名称" size="small" class="task-name-input"
-                clearable />
+              <el-input v-model="task.customName" placeholder="请输入任务名称" size="small" class="task-name-input" clearable />
             </div>
-            <el-button v-if="tasks.length > 1" type="danger" plain size="small" @click="removeTask(task.id)">
-              删除任务
-            </el-button>
+            <el-button v-if="tasks.length > 1" type="danger" plain size="small" @click="removeTask(task.id)">删除任务</el-button>
           </div>
 
           <!-- 起 -->
@@ -83,7 +79,6 @@
         </div>
       </transition-group>
 
-      <!-- 添加任务按钮 -->
       <div class="add-task-wrapper">
         <el-button type="primary" plain size="small" @click="addTask">＋ 添加任务</el-button>
       </div>
@@ -101,19 +96,18 @@
         </div>
       </div>
 
-      <!-- 货物列表（带动画） -->
       <transition-group name="task-list" tag="div">
         <div v-for="(item, index) in form.cargoList" :key="item.id" class="cargo-row"
           :style="{ backgroundColor: getTaskColor(item.taskId) }">
           <el-row :gutter="12" align="middle" style="flex-wrap: nowrap;">
             <el-col :span="5" style="white-space: nowrap;">
               <el-form-item :label="`*货物${index + 1}`" label-width="80px">
-                <el-input v-model="item.name" placeholder="请输入货物名称" />
+                <el-input v-model="item.name" placeholder="请输入货物名称" @input="triggerDistribute" />
               </el-form-item>
             </el-col>
             <el-col :span="3" style="white-space: nowrap;">
               <el-form-item label="数量" label-width="50px">
-                <el-input-number v-model="item.quantity" :min="0" controls-position="right" style="width:100%;" />
+                <el-input-number v-model="item.quantity" :min="0" controls-position="right" style="width:100%;" @change="triggerDistribute" />
               </el-form-item>
             </el-col>
             <el-col :span="2" style="white-space: nowrap;">
@@ -128,12 +122,12 @@
             <el-col :span="3" style="white-space: nowrap;">
               <el-form-item label="运费" label-width="50px">
                 <el-input-number v-model="item.freight" :min="0" :precision="2" :step="1" controls-position="right"
-                  style="width:100%;" placeholder="0.00" @focus="$event.target.select()" />
+                  style="width:100%;" placeholder="0.00" @focus="$event.target.select()" @change="triggerDistribute" />
               </el-form-item>
             </el-col>
             <el-col v-if="tasks.length > 1" :span="6" style="white-space: nowrap;">
               <el-form-item label="绑定任务" label-width="70px" required>
-                <el-select v-model="item.taskId" placeholder="选择任务" style="width:100%; min-width:200px;">
+                <el-select v-model="item.taskId" placeholder="选择任务" style="width:100%; min-width:200px;" @change="triggerDistribute">
                   <el-option v-for="t in tasks" :key="t.id"
                     :label="`任务${getTaskIndex(t.id) + 1}${t.customName ? ' - ' + t.customName : ''}`" :value="t.id" />
                 </el-select>
@@ -141,9 +135,7 @@
             </el-col>
             <el-col :span="tasks.length > 1 ? 5 : 11" class="cargo-actions">
               <el-button v-if="!(tasks.length === 1 && form.cargoList.length === 1)" type="danger" plain size="small"
-                @click="removeCargo(index)">
-                删除
-              </el-button>
+                @click="removeCargo(index)">删除</el-button>
             </el-col>
           </el-row>
         </div>
@@ -152,11 +144,9 @@
 
       <!-- ===== 指派信息 ===== -->
       <div class="section-title">指派信息</div>
-      <!-- 指派列表（带动画） -->
       <transition-group name="task-list" tag="div">
         <div v-for="(assign, aIndex) in assignList" :key="assign.id" class="assign-card"
           :style="{ backgroundColor: getTaskColor(assign.taskId) }">
-          <!-- 第一行：指派方式 + 绑定任务 + 删除卡片 -->
           <el-row :gutter="12" align="middle" style="flex-wrap: nowrap; margin-bottom: 8px;">
             <el-col :span="5" style="white-space: nowrap;">
               <el-form-item label="*指派方式" label-width="80px">
@@ -169,7 +159,7 @@
             </el-col>
             <el-col v-if="tasks.length > 1" :span="7" style="white-space: nowrap;">
               <el-form-item label="绑定任务" label-width="70px" required>
-                <el-select v-model="assign.taskId" placeholder="选择任务" style="width:100%; min-width:200px;">
+                <el-select v-model="assign.taskId" placeholder="选择任务" style="width:100%; min-width:200px;" @change="triggerDistribute">
                   <el-option v-for="t in tasks" :key="t.id"
                     :label="`任务${getTaskIndex(t.id) + 1}${t.customName ? ' - ' + t.customName : ''}`" :value="t.id" />
                 </el-select>
@@ -177,39 +167,32 @@
             </el-col>
             <el-col :span="tasks.length > 1 ? 12 : 19" class="assign-actions">
               <el-button v-if="!(tasks.length === 1 && assignList.length === 1)" type="danger" plain size="small"
-                @click="removeAssign(aIndex)">
-                删除
-              </el-button>
+                @click="removeAssign(aIndex)">删除</el-button>
             </el-col>
           </el-row>
 
-          <!-- 第二行：条目列表 -->
           <div class="assign-items">
             <transition-group name="task-list" tag="div">
               <div v-for="(item, iIndex) in assign.items" :key="item.id" class="assign-item">
                 <el-row :gutter="12" align="middle" style="flex-wrap: nowrap;">
                   <el-col :span="5" style="white-space: nowrap;">
                     <el-form-item :label="getItemLabel(assign.assignMethod, iIndex + 1)" label-width="80px">
-                      <!-- 司机 -->
                       <el-select v-if="assign.assignMethod === 'driver'" v-model="item.target" placeholder="请选择司机"
                         style="width:100%;">
                         <el-option label="张三" value="张三" />
                         <el-option label="李四" value="李四" />
                         <el-option label="王五" value="王五" />
                       </el-select>
-                      <!-- 车辆 -->
                       <el-select v-else-if="assign.assignMethod === 'vehicle'" v-model="item.target" placeholder="请选择车辆"
                         style="width:100%;">
                         <el-option label="鄂A12345" value="鄂A12345" />
                         <el-option label="鄂B67890" value="鄂B67890" />
                       </el-select>
-                      <!-- 车队 -->
                       <el-select v-else-if="assign.assignMethod === 'team'" v-model="item.target" placeholder="请选择车队"
                         style="width:100%;">
                         <el-option label="第一车队" value="第一车队" />
                         <el-option label="第二车队" value="第二车队" />
                       </el-select>
-                      <!-- 未选择时的占位 -->
                       <el-input v-else disabled placeholder="请先选择指派方式" />
                     </el-form-item>
                   </el-col>
@@ -217,25 +200,22 @@
                     <el-form-item label="承运量" label-width="60px">
                       <el-input-number v-model="item.carryQuantity" :min="0" :precision="2" :step="1"
                         controls-position="right" style="width:100%;" placeholder="0.00"
-                        @focus="$event.target.select()" />
+                        @focus="$event.target.select()" @change="item._manual = true; triggerDistribute()" />
                     </el-form-item>
                   </el-col>
                   <el-col :span="3" style="white-space: nowrap;">
                     <el-form-item label="运费" label-width="40px">
                       <el-input-number v-model="item.carryFreight" :min="0" :precision="2" :step="1"
                         controls-position="right" style="width:100%;" placeholder="0.00"
-                        @focus="$event.target.select()" />
+                        @focus="$event.target.select()" @change="item._manual = true; triggerDistribute()" />
                     </el-form-item>
                   </el-col>
                   <el-col :span="3" class="assign-item-actions">
-                    <el-button type="danger" plain size="small" @click="removeItem(aIndex, iIndex)">
-                      删除
-                    </el-button>
+                    <el-button type="danger" plain size="small" @click="removeItem(aIndex, iIndex)">删除</el-button>
                   </el-col>
                 </el-row>
               </div>
             </transition-group>
-            <!-- 添加条目按钮 -->
             <div class="add-item-wrapper">
               <el-button type="primary" plain size="small" @click="addItem(aIndex)">
                 ＋ {{ getAddButtonLabel(assign.assignMethod) }}
@@ -244,22 +224,17 @@
           </div>
         </div>
       </transition-group>
-      <!-- 添加指派卡片 -->
       <div class="add-assign-wrapper">
         <el-button type="primary" plain size="small" @click="addAssign">＋ 添加指派</el-button>
       </div>
 
       <!-- 底部按钮 -->
       <div class="form-actions">
-        <!-- 设置为常驻任务按钮（黄色醒目，最左） -->
         <el-button style="background-color: #f5a623; border-color: #f5a623; color: #fff; font-weight: 600;"
-          @click="openRecurringDialog">
-          设置为常驻任务
-        </el-button>
+          @click="openRecurringDialog">设置为常驻任务</el-button>
         <el-button @click="closeForm">关闭</el-button>
-        <el-button type="primary" plain style="border-color:#c8102e; color:#c8102e;">发布并创建相同运单</el-button>
-        <el-button type="primary" style="background-color:#c8102e; border-color:#c8102e;"
-          @click="publish">发布</el-button>
+        <el-button type="primary" plain style="border-color:#c8102e; color:#c8102e;" @click="publishAndClone">发布并创建相同运单</el-button>
+        <el-button type="primary" style="background-color:#c8102e; border-color:#c8102e;" @click="publish">发布</el-button>
       </div>
     </el-form>
 
@@ -303,24 +278,18 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { reactive, ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { supabase } from '@/utils/supabase'
 
 const router = useRouter()
+const route = useRoute()
 
 // ---------- 任务颜色池 ----------
 const taskColors = [
-  '#f0f8ff', // 爱丽丝蓝
-  '#f0fff0', // 蜜瓜色
-  '#fff0f5', // 薰衣草
-  '#f5f5dc', // 米色
-  '#fafad2', // 金色
-  '#e6e6fa', // 淡紫
-  '#ffe4e1', // 粉色
-  '#f0ffff', // 碧蓝
-  '#fff5ee', // 贝壳
-  '#fdf5e6', // 亚麻
+  '#f0f8ff', '#f0fff0', '#fff0f5', '#f5f5dc', '#fafad2',
+  '#e6e6fa', '#ffe4e1', '#f0ffff', '#fff5ee', '#fdf5e6'
 ]
 
 let nextTaskId = 1
@@ -344,12 +313,7 @@ const assignList = ref([
     assignMethod: 'driver',
     taskId: 1,
     items: [
-      {
-        id: nextItemId++,
-        target: '',
-        carryQuantity: 0,
-        carryFreight: 0
-      }
+      { id: nextItemId++, target: '', carryQuantity: null, carryFreight: null, _manual: false }
     ]
   }
 ])
@@ -362,9 +326,7 @@ const recurringStart = ref(new Date())
 const recurringEnd = ref(null)
 const recurringCount = ref(1)
 
-const disabledStartDate = (time) => {
-  return time.getTime() < new Date().setHours(0, 0, 0, 0)
-}
+const disabledStartDate = (time) => time.getTime() < new Date().setHours(0, 0, 0, 0)
 const disabledEndDate = (time) => {
   if (!recurringStart.value) return false
   return time.getTime() < recurringStart.value.getTime()
@@ -382,12 +344,8 @@ const openRecurringDialog = () => {
 const confirmRecurring = () => {
   if (isRecurring.value) {
     if (recurringType.value === 'time') {
-      if (!recurringStart.value) {
-        ElMessage.warning('请选择开始时间')
-        return
-      }
-      if (!recurringEnd.value) {
-        ElMessage.warning('请选择结束时间')
+      if (!recurringStart.value || !recurringEnd.value) {
+        ElMessage.warning('请选择完整的时间范围')
         return
       }
       if (recurringEnd.value.getTime() <= recurringStart.value.getTime()) {
@@ -396,90 +354,104 @@ const confirmRecurring = () => {
       }
     } else {
       if (!recurringCount.value || recurringCount.value < 1) {
-        ElMessage.warning('请输入有效的次数上限（至少1次）')
+        ElMessage.warning('请输入有效的次数上限')
         return
       }
     }
   }
-  // 保存数据
-  console.log('常驻任务设置：', {
-    isRecurring: isRecurring.value,
-    type: recurringType.value,
-    start: recurringType.value === 'time' ? recurringStart.value : null,
-    end: recurringType.value === 'time' ? recurringEnd.value : null,
-    count: recurringType.value === 'count' ? recurringCount.value : null
-  })
+  console.log('常驻任务设置：', { isRecurring: isRecurring.value, type: recurringType.value, start: recurringStart.value, end: recurringEnd.value, count: recurringCount.value })
   ElMessage.success('常驻任务设置已保存')
-  // 标记脏
   markDirty()
   recurringDialogVisible.value = false
 }
 
-// ---------- 获取条目标签 ----------
+// ---------- 辅助函数 ----------
 const getItemLabel = (method, index) => {
-  const map = {
-    driver: '选择司机',
-    vehicle: '选择车辆',
-    team: '选择车队'
-  }
+  const map = { driver: '选择司机', vehicle: '选择车辆', team: '选择车队' }
   return `${map[method] || '选择'}${index}`
 }
-
 const getAddButtonLabel = (method) => {
-  const map = {
-    driver: '添加司机',
-    vehicle: '添加车辆',
-    team: '添加车队'
-  }
+  const map = { driver: '添加司机', vehicle: '添加车辆', team: '添加车队' }
   return map[method] || '添加'
 }
 
 // ---------- 计算总计 ----------
-const totalQuantity = computed(() => {
-  return form.cargoList.reduce((sum, item) => sum + (item.quantity || 0), 0)
-})
-const totalFreight = computed(() => {
-  return form.cargoList.reduce((sum, item) => sum + (item.freight || 0), 0)
-})
+const totalQuantity = computed(() => form.cargoList.reduce((sum, item) => sum + (item.quantity || 0), 0))
+const totalFreight = computed(() => form.cargoList.reduce((sum, item) => sum + (item.freight || 0), 0))
 
-// ---------- 平均分配 ----------
+// ---------- 智能平均分配（按任务分组，先扣减已填写值，再分配剩余） ----------
 const distributeTotals = () => {
-  const allItems = []
-  assignList.value.forEach(assign => {
-    assign.items.forEach(item => {
-      allItems.push(item)
+  // 按任务分组
+  const taskMap = new Map()
+  tasks.value.forEach(task => {
+    taskMap.set(task.id, {
+      taskId: task.id,
+      cargoList: form.cargoList.filter(c => c.taskId === task.id),
+      assignItems: []
     })
   })
-  const count = allItems.length
-  if (count === 0) return
-  const qty = totalQuantity.value / count
-  const freight = totalFreight.value / count
-  allItems.forEach(item => {
-    item.carryQuantity = parseFloat(qty.toFixed(2))
-    item.carryFreight = parseFloat(freight.toFixed(2))
+
+  // 收集每个任务的指派条目
+  assignList.value.forEach(assign => {
+    const taskId = assign.taskId
+    if (taskMap.has(taskId)) {
+      assign.items.forEach(item => {
+        taskMap.get(taskId).assignItems.push(item)
+      })
+    }
+  })
+
+  // 对每个任务进行分配
+  taskMap.forEach((taskData) => {
+    const { cargoList, assignItems } = taskData
+    // 计算该任务的总数量和总运费
+    const totalQty = cargoList.reduce((sum, c) => sum + (c.quantity || 0), 0)
+    const totalFrt = cargoList.reduce((sum, c) => sum + (c.freight || 0), 0)
+
+    // 计算已手动填写的条目的总和
+    let manualQtySum = 0
+    let manualFrtSum = 0
+    const manualItems = []
+    const autoItems = []
+    assignItems.forEach(item => {
+      if (item._manual) {
+        manualItems.push(item)
+        manualQtySum += (item.carryQuantity || 0)
+        manualFrtSum += (item.carryFreight || 0)
+      } else {
+        autoItems.push(item)
+      }
+    })
+
+    // 计算剩余量
+    const remainingQty = totalQty - manualQtySum
+    const remainingFrt = totalFrt - manualFrtSum
+
+    // 如果剩余量小于0，则设为0（防止因精度问题出现负值）
+    const finalQty = Math.max(0, remainingQty)
+    const finalFrt = Math.max(0, remainingFrt)
+
+    const autoCount = autoItems.length
+    if (autoCount === 0) return
+
+    const qtyPerItem = finalQty / autoCount
+    const frtPerItem = finalFrt / autoCount
+
+    autoItems.forEach(item => {
+      item.carryQuantity = parseFloat(qtyPerItem.toFixed(2))
+      item.carryFreight = parseFloat(frtPerItem.toFixed(2))
+    })
   })
 }
 
-watch(
-  [totalQuantity, totalFreight],
-  () => {
-    if (assignList.value.some(a => a.items.length > 0)) {
-      distributeTotals()
-    }
-  },
-  { immediate: true }
-)
-watch(
-  () => {
-    let count = 0
-    assignList.value.forEach(a => count += a.items.length)
-    return count
-  },
-  () => {
+// 触发分配的防抖
+let distributeTimer = null
+const triggerDistribute = () => {
+  if (distributeTimer) clearTimeout(distributeTimer)
+  distributeTimer = setTimeout(() => {
     distributeTotals()
-  },
-  { immediate: true }
-)
+  }, 100)
+}
 
 // ---------- 任务管理 ----------
 const tasks = ref([
@@ -496,9 +468,7 @@ const tasks = ref([
   }
 ])
 
-const getTaskIndex = (taskId) => {
-  return tasks.value.findIndex(t => t.id === taskId)
-}
+const getTaskIndex = (taskId) => tasks.value.findIndex(t => t.id === taskId)
 const getTaskColor = (taskId) => {
   const task = tasks.value.find(t => t.id === taskId)
   return task ? task.color : taskColors[0]
@@ -507,14 +477,91 @@ const getTaskColor = (taskId) => {
 // ---------- 脏标记 ----------
 const isDirty = ref(false)
 const markDirty = () => { isDirty.value = true }
-
 let isInitializing = true
+
+// ---------- 应用克隆数据 ----------
+const applyCloneData = (cloneData) => {
+  if (!cloneData) return false
+  try {
+    nextTaskId = 1
+    nextCargoId = 1
+    nextAssignId = 1
+    nextItemId = 1
+    colorIndex = 0
+
+    if (cloneData.tasks && cloneData.tasks.length > 0) {
+      tasks.value = cloneData.tasks.map(t => ({
+        ...t,
+        id: nextTaskId++,
+        color: taskColors[colorIndex++ % taskColors.length]
+      }))
+    }
+
+    if (cloneData.cargoList && cloneData.cargoList.length > 0) {
+      form.cargoList = cloneData.cargoList.map(c => ({
+        ...c,
+        id: nextCargoId++,
+        taskId: tasks.value[0]?.id || 1
+      }))
+    } else {
+      form.cargoList = [{ id: nextCargoId++, name: '', quantity: null, unit: '吨', freight: 0.00, taskId: tasks.value[0]?.id || 1 }]
+    }
+
+    if (cloneData.assignList && cloneData.assignList.length > 0) {
+      assignList.value = cloneData.assignList.map(a => ({
+        ...a,
+        id: nextAssignId++,
+        taskId: tasks.value[0]?.id || 1,
+        items: a.items.map(item => ({
+          ...item,
+          id: nextItemId++,
+          _manual: false
+        }))
+      }))
+    } else {
+      assignList.value = [{
+        id: nextAssignId++,
+        assignMethod: 'driver',
+        taskId: tasks.value[0]?.id || 1,
+        items: [{ id: nextItemId++, target: '', carryQuantity: null, carryFreight: null, _manual: false }]
+      }]
+    }
+
+    if (cloneData.checkInRequired !== undefined) {
+      form.checkInRequired = cloneData.checkInRequired
+    }
+
+    markDirty()
+    ElMessage.success('已自动填充相同数据')
+    nextTick(() => {
+      distributeTotals()
+    })
+    return true
+  } catch (err) {
+    console.error('应用克隆数据失败', err)
+    return false
+  }
+}
+
 onMounted(() => {
-  setTimeout(() => { isInitializing = false }, 100)
+  setTimeout(() => isInitializing = false, 100)
   window.addEventListener('beforeunload', handleBeforeUnload)
+
+  const cloneData = history.state?.cloneData
+  console.log('克隆数据：', cloneData)
+  if (cloneData) {
+    applyCloneData(cloneData)
+  } else {
+    // 初始分配
+    nextTick(() => {
+      distributeTotals()
+    })
+  }
 })
+
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
+  if (distributeTimer) clearTimeout(distributeTimer)
 })
 const handleBeforeUnload = (e) => {
   if (isDirty.value) {
@@ -523,11 +570,10 @@ const handleBeforeUnload = (e) => {
   }
 }
 
-// ---------- 数据修改函数（均需设置 isDirty = true） ----------
+// ---------- 数据修改函数 ----------
 const addTask = () => {
-  const newId = nextTaskId++
   tasks.value.push({
-    id: newId,
+    id: nextTaskId++,
     customName: '',
     color: taskColors[colorIndex++ % taskColors.length],
     pickupLocation: '',
@@ -538,125 +584,306 @@ const addTask = () => {
     receiverPhone: ''
   })
   markDirty()
+  triggerDistribute()
 }
-
 const removeTask = (taskId) => {
-  if (tasks.value.length <= 1) {
-    ElMessage.warning('至少保留一个任务')
-    return
-  }
+  if (tasks.value.length <= 1) { ElMessage.warning('至少保留一个任务'); return }
   const index = tasks.value.findIndex(t => t.id === taskId)
   if (index === -1) return
   tasks.value.splice(index, 1)
-  if (tasks.value.length > 0) {
-    const firstTaskId = tasks.value[0].id
-    form.cargoList.forEach(item => {
-      if (item.taskId === taskId) {
-        item.taskId = firstTaskId
-      }
-    })
-    assignList.value.forEach(assign => {
-      if (assign.taskId === taskId) {
-        assign.taskId = firstTaskId
-      }
-    })
-  }
+  const firstTaskId = tasks.value[0].id
+  form.cargoList.forEach(item => { if (item.taskId === taskId) item.taskId = firstTaskId })
+  assignList.value.forEach(assign => { if (assign.taskId === taskId) assign.taskId = firstTaskId })
   markDirty()
+  triggerDistribute()
 }
 
 const addAssign = () => {
-  const newId = nextAssignId++
   const firstTaskId = tasks.value[0]?.id || 1
   assignList.value.push({
-    id: newId,
+    id: nextAssignId++,
     assignMethod: 'driver',
     taskId: firstTaskId,
-    items: [
-      {
-        id: nextItemId++,
-        target: '',
-        carryQuantity: 0,
-        carryFreight: 0
-      }
-    ]
+    items: [{ id: nextItemId++, target: '', carryQuantity: null, carryFreight: null, _manual: false }]
   })
   markDirty()
+  triggerDistribute()
 }
-
 const removeAssign = (index) => {
-  if (assignList.value.length <= 1) {
-    ElMessage.warning('至少保留一个指派卡片')
-    return
-  }
+  if (assignList.value.length <= 1) { ElMessage.warning('至少保留一个指派卡片'); return }
   assignList.value.splice(index, 1)
   markDirty()
+  triggerDistribute()
 }
-
 const addItem = (assignIndex) => {
-  const assign = assignList.value[assignIndex]
-  assign.items.push({
-    id: nextItemId++,
-    target: '',
-    carryQuantity: 0,
-    carryFreight: 0
-  })
+  assignList.value[assignIndex].items.push({ id: nextItemId++, target: '', carryQuantity: null, carryFreight: null, _manual: false })
   markDirty()
+  triggerDistribute()
 }
-
 const removeItem = (assignIndex, itemIndex) => {
   const assign = assignList.value[assignIndex]
-  if (assign.items.length <= 1) {
-    ElMessage.warning('至少保留一个条目')
-    return
-  }
+  if (assign.items.length <= 1) { ElMessage.warning('至少保留一个条目'); return }
   assign.items.splice(itemIndex, 1)
   markDirty()
+  triggerDistribute()
 }
-
 const addCargo = () => {
   const firstTaskId = tasks.value[0]?.id || 1
-  form.cargoList.push({
-    id: nextCargoId++,
-    name: '',
-    quantity: null,
-    unit: '吨',
-    freight: 0.00,
-    taskId: firstTaskId
-  })
+  form.cargoList.push({ id: nextCargoId++, name: '', quantity: null, unit: '吨', freight: 0.00, taskId: firstTaskId })
   markDirty()
+  triggerDistribute()
 }
-
 const removeCargo = (index) => {
-  if (form.cargoList.length > 1) {
-    form.cargoList.splice(index, 1)
-  } else {
-    ElMessage.warning('至少保留一个货物')
-  }
+  if (form.cargoList.length > 1) { form.cargoList.splice(index, 1) } else { ElMessage.warning('至少保留一个货物') }
   markDirty()
+  triggerDistribute()
 }
 
-// ---------- 关闭和发布 ----------
+// ---------- 生成运单编号 ----------
+const getMaxSeqForToday = async (todayStr) => {
+  const { data, error } = await supabase
+    .from('waybills')
+    .select('waybill_no')
+    .ilike('waybill_no', `YD${todayStr}%`)
+    .order('waybill_no', { ascending: false })
+    .limit(1)
+  if (error) {
+    console.warn('查询最大序号失败，使用0', error)
+    return 0
+  }
+  if (!data || data.length === 0) {
+    return 0
+  }
+  const lastNo = data[0].waybill_no
+  const seq = parseInt(lastNo.slice(-4), 10)
+  return isNaN(seq) ? 0 : seq
+}
+
+const generateWaybillNos = async (count) => {
+  const now = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  const datePart = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}`
+  const maxSeq = await getMaxSeqForToday(datePart)
+  const startSeq = maxSeq + 1
+  const nos = []
+  for (let i = 0; i < count; i++) {
+    const seq = startSeq + i
+    const no = `YD${datePart}${String(seq).padStart(4, '0')}`
+    nos.push(no)
+  }
+  return nos
+}
+
+// ---------- 表单校验 ----------
+const validateForm = () => {
+  // 特殊校验：如果只有一个任务但有多个货物，则提示错误
+  if (tasks.value.length === 1 && form.cargoList.length > 1) {
+    ElMessage.error('一个任务只能对应一个货物信息，请添加任务重试')
+    return false
+  }
+
+  for (let tIndex = 0; tIndex < tasks.value.length; tIndex++) {
+    const task = tasks.value[tIndex]
+    if (!task.pickupLocation) {
+      ElMessage.error(`任务${tIndex + 1} 装货地点未选择`)
+      return false
+    }
+    if (!task.deliveryLocation) {
+      ElMessage.error(`任务${tIndex + 1} 卸货地点未选择`)
+      return false
+    }
+
+    const taskCargos = form.cargoList.filter(c => c.taskId === task.id)
+    for (let cIndex = 0; cIndex < taskCargos.length; cIndex++) {
+      const cargo = taskCargos[cIndex]
+      if (!cargo.name || cargo.name.trim() === '') {
+        ElMessage.error(`任务${tIndex + 1} 的货物${cIndex + 1} 名称未填写`)
+        return false
+      }
+      // 数量非必填，只有填了值才检查
+      if (cargo.quantity !== null && cargo.quantity !== undefined && cargo.quantity < 0) {
+        ElMessage.error(`任务${tIndex + 1} 的货物${cIndex + 1} 数量不能为负数`)
+        return false
+      }
+      // 运费非必填，只有填了值才检查
+      if (cargo.freight !== null && cargo.freight !== undefined && cargo.freight < 0) {
+        ElMessage.error(`任务${tIndex + 1} 的货物${cIndex + 1} 运费不能为负数`)
+        return false
+      }
+    }
+
+    const taskAssigns = assignList.value.filter(a => a.taskId === task.id)
+    for (let aIndex = 0; aIndex < taskAssigns.length; aIndex++) {
+      const assign = taskAssigns[aIndex]
+      if (!assign.assignMethod) {
+        ElMessage.error(`任务${tIndex + 1} 的指派方式未选择`)
+        return false
+      }
+      for (let iIndex = 0; iIndex < assign.items.length; iIndex++) {
+        const item = assign.items[iIndex]
+        if (!item.target || item.target.trim() === '') {
+          let targetLabel = '目标'
+          if (assign.assignMethod === 'driver') targetLabel = '司机'
+          else if (assign.assignMethod === 'vehicle') targetLabel = '车辆'
+          else if (assign.assignMethod === 'team') targetLabel = '车队'
+          ElMessage.error(`任务${tIndex + 1} 的指派方式第${iIndex + 1}个${targetLabel}未选择`)
+          return false
+        }
+      }
+    }
+  }
+  return true
+}
+
+// ---------- 核心发布逻辑 ----------
+const doPublish = async () => {
+  try {
+    const rawRecords = []
+    tasks.value.forEach((task, index) => {
+      const taskCargos = form.cargoList.filter(c => c.taskId === task.id)
+      const taskAssigns = assignList.value.filter(a => a.taskId === task.id)
+
+      const assignments = taskAssigns.map(a => ({
+        method: a.assignMethod,
+        items: a.items.map(item => ({
+          target: item.target || '未指定',
+          carryQuantity: item.carryQuantity || 0,
+          carryFreight: item.carryFreight || 0
+        }))
+      }))
+
+      const totalFreight = taskCargos.reduce((sum, c) => sum + (c.freight || 0), 0)
+
+      const record = {
+        task_name: task.customName || `任务${index + 1}`,
+        pickup: task.pickupLocation || '未指定',
+        delivery: task.deliveryLocation || '未指定',
+        pickup_time: task.pickupTime || null,
+        plan_time: task.deliveryTime || null,
+        cargo: taskCargos.map(c => c.name || '未命名').join('、') || '无',
+        quantity: taskCargos.reduce((sum, c) => sum + (c.quantity || 0), 0),
+        freight: totalFreight,
+        remaining: 0,
+        receive_no: `RC${Date.now().toString().slice(-6)}${String(Math.floor(Math.random() * 900) + 100)}`,
+        source: '手动',
+        create_time: new Date().toISOString(),
+        status: '待接单',
+        assignments: assignments,
+        vehicle: '',
+        driver: '',
+        carry_quantity: 0
+      }
+
+      if (taskAssigns.length === 1 && taskAssigns[0].items.length === 1) {
+        const assign = taskAssigns[0]
+        const first = assign.items[0]
+        if (assign.assignMethod === 'vehicle') record.vehicle = first.target || '未指定'
+        else if (assign.assignMethod === 'driver') record.driver = first.target || '未指定'
+        record.carry_quantity = first.carryQuantity || 0
+      } else {
+        if (taskAssigns.length > 1) {
+          record.vehicle = '多种'
+          record.driver = '多种'
+        } else {
+          const assign = taskAssigns[0]
+          if (assign.assignMethod === 'vehicle') {
+            record.vehicle = `${assign.items.length}辆`
+            record.driver = '--'
+          } else if (assign.assignMethod === 'driver') {
+            record.driver = `${assign.items.length}人`
+            record.vehicle = '--'
+          } else {
+            record.vehicle = '--'
+            record.driver = '--'
+          }
+        }
+        record.carry_quantity = taskAssigns.reduce((sum, a) => sum + a.items.reduce((s, i) => s + (i.carryQuantity || 0), 0), 0)
+      }
+
+      rawRecords.push(record)
+    })
+
+    const count = rawRecords.length
+    const waybillNos = await generateWaybillNos(count)
+
+    const waybillList = rawRecords.map((record, idx) => ({
+      ...record,
+      waybill_no: waybillNos[idx]
+    }))
+
+    const { data, error } = await supabase
+      .from('waybills')
+      .insert(waybillList)
+      .select()
+
+    if (error) throw error
+
+    ElMessage.success(`运单发布成功！共生成 ${waybillList.length} 条运单`)
+    isDirty.value = false
+    return true
+  } catch (err) {
+    console.error('发布失败', err)
+    ElMessage.error('发布失败：' + err.message)
+    return false
+  }
+}
+
+// ---------- 发布（仅发布，跳转到列表） ----------
+const publish = async () => {
+  if (!validateForm()) return
+  const success = await doPublish()
+  if (success) {
+    router.push('/waybill')
+  }
+}
+
+// ---------- 发布并创建相同运单 ----------
+const publishAndClone = async () => {
+  if (!validateForm()) return
+  const success = await doPublish()
+  if (success) {
+    // 准备克隆数据
+    const cloneData = {
+      tasks: tasks.value.map(t => ({
+        customName: t.customName,
+        pickupLocation: t.pickupLocation,
+        pickupTime: t.pickupTime,
+        senderPhone: t.senderPhone,
+        deliveryLocation: t.deliveryLocation,
+        deliveryTime: t.deliveryTime,
+        receiverPhone: t.receiverPhone
+      })),
+      cargoList: form.cargoList.map(c => ({
+        name: c.name,
+        quantity: c.quantity,
+        unit: c.unit,
+        freight: c.freight,
+        taskId: c.taskId
+      })),
+      assignList: assignList.value.map(a => ({
+        assignMethod: a.assignMethod,
+        taskId: a.taskId,
+        items: a.items.map(item => ({
+          target: item.target,
+          carryQuantity: item.carryQuantity,
+          carryFreight: item.carryFreight
+        }))
+      })),
+      checkInRequired: form.checkInRequired
+    }
+    router.push({
+      path: '/waybill/create',
+      state: { cloneData }
+    })
+    // 提示“已自动填充”会在新页面加载时由 applyCloneData 显示
+  }
+}
+
+// ---------- 关闭 ----------
 const closeForm = () => {
   isDirty.value = false
   router.push('/waybill')
 }
-
-const publish = () => {
-  ElMessage.success('运单发布成功！')
-  isDirty.value = false
-  router.push('/waybill')
-}
-
-// ---------- 监听深层数据变化（兜底） ----------
-watch(
-  () => [form, tasks.value, assignList.value],
-  () => {
-    if (!isInitializing) {
-      markDirty()
-    }
-  },
-  { deep: true }
-)
 
 // ---------- 监听任务数量变化，修复无效的taskId ----------
 watch(
@@ -664,21 +891,16 @@ watch(
   () => {
     const validIds = tasks.value.map(t => t.id)
     form.cargoList.forEach(item => {
-      if (!validIds.includes(item.taskId)) {
-        item.taskId = tasks.value[0]?.id || 1
-      }
+      if (!validIds.includes(item.taskId)) item.taskId = tasks.value[0]?.id || 1
     })
     assignList.value.forEach(assign => {
-      if (!validIds.includes(assign.taskId)) {
-        assign.taskId = tasks.value[0]?.id || 1
-      }
+      if (!validIds.includes(assign.taskId)) assign.taskId = tasks.value[0]?.id || 1
     })
-    // 此修改由外部删除任务触发，已 markDirty，无需重复标记
+    triggerDistribute()
   },
   { immediate: true }
 )
 
-// 暴露 isDirty 给父组件
 defineExpose({ isDirty })
 </script>
 
@@ -701,7 +923,6 @@ defineExpose({ isDirty })
   border-bottom: 2px solid #c8102e;
   padding-bottom: 10px;
 }
-
 .page-header h2 {
   margin: 0;
   color: #c8102e;
@@ -725,7 +946,6 @@ defineExpose({ isDirty })
 .checkin-row {
   margin-bottom: 16px;
 }
-
 .hint-text {
   font-size: 12px;
   color: #888;
@@ -739,34 +959,29 @@ defineExpose({ isDirty })
   margin-bottom: 16px;
   border: 1px solid #e8e8e8;
 }
-
 .task-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
-
 .task-name-wrapper {
   display: flex;
   align-items: center;
   gap: 8px;
   flex: 1;
 }
-
 .task-label {
   font-weight: 600;
   font-size: 14px;
   color: #333;
   white-space: nowrap;
 }
-
 .task-name-input {
   flex: 1;
   min-width: 120px;
   max-width: 300px;
 }
-
 .task-name-input :deep(.el-input__inner) {
   font-size: 13px;
 }
@@ -778,11 +993,9 @@ defineExpose({ isDirty })
   gap: 12px;
   margin-bottom: 12px;
 }
-
 .row-wrapper:last-of-type {
   margin-bottom: 0;
 }
-
 .badge-circle {
   display: inline-block;
   width: 26px;
@@ -797,14 +1010,12 @@ defineExpose({ isDirty })
   flex-shrink: 0;
   margin-top: 2px;
 }
-
 .field-group {
   flex: 1;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
-
 .field-item {
   flex: 1;
   min-width: 140px;
@@ -812,20 +1023,17 @@ defineExpose({ isDirty })
   align-items: center;
   gap: 4px;
 }
-
 .field-label {
   white-space: nowrap;
   font-size: 13px;
   color: #333;
   font-weight: 500;
 }
-
 .required-star {
   color: #c8102e;
   font-weight: 700;
   margin-right: 2px;
 }
-
 .field-item .el-select,
 .field-item .el-date-picker,
 .field-item .el-input {
@@ -846,19 +1054,16 @@ defineExpose({ isDirty })
   margin: 0 0 10px 0;
   align-items: center;
 }
-
 .info-item {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 14px;
 }
-
 .info-label {
   color: #555;
   white-space: nowrap;
 }
-
 .info-value {
   font-weight: 600;
   color: #c8102e;
@@ -872,15 +1077,12 @@ defineExpose({ isDirty })
   margin-bottom: 8px;
   border: 1px solid #eee;
 }
-
 .cargo-row .el-row {
   flex-wrap: nowrap;
 }
-
 .cargo-row .el-form-item {
   margin-bottom: 0;
 }
-
 .cargo-actions {
   display: flex;
   justify-content: flex-end;
@@ -895,22 +1097,18 @@ defineExpose({ isDirty })
   margin-bottom: 8px;
   border: 1px solid #eee;
 }
-
 .assign-card .el-row {
   flex-wrap: nowrap;
 }
-
 .assign-card .el-form-item {
   margin-bottom: 0;
 }
-
 .assign-actions {
   display: flex;
   justify-content: flex-end;
   align-items: center;
   height: 100%;
 }
-
 .add-assign-wrapper {
   margin-bottom: 16px;
 }
@@ -919,18 +1117,15 @@ defineExpose({ isDirty })
 .assign-items {
   padding-left: 0;
 }
-
 .assign-item {
   margin-bottom: 8px;
 }
-
 .assign-item-actions {
   display: flex;
   justify-content: flex-end;
   align-items: center;
   height: 100%;
 }
-
 .add-item-wrapper {
   display: flex;
   justify-content: flex-start;
@@ -954,43 +1149,35 @@ defineExpose({ isDirty })
     flex-direction: column;
     gap: 8px;
   }
-
   .field-item {
     min-width: unset;
   }
-
   .info-row {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-
   .form-actions {
     flex-wrap: wrap;
     justify-content: center;
   }
-
   .hint-text {
     display: block;
     margin-left: 0;
     margin-top: 4px;
   }
-
   .task-header {
     flex-wrap: wrap;
     gap: 8px;
   }
-
   .task-name-input {
     max-width: 100%;
   }
-
   .cargo-row .el-row,
   .assign-card .el-row,
   .assign-item .el-row {
     flex-wrap: wrap;
   }
-
   .cargo-row .el-col,
   .assign-card .el-col,
   .assign-item .el-col {
@@ -998,99 +1185,79 @@ defineExpose({ isDirty })
   }
 }
 
-/* ===== 任务列表动画（同时用于货物、指派卡片和条目） ===== */
+/* ===== 任务列表动画 ===== */
 .task-list-move {
   transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-
 .task-list-enter-active {
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-
 .task-list-leave-active {
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: absolute;
   width: 100%;
 }
-
 .task-list-enter-from {
   opacity: 0;
   transform: translateY(-30px) scale(0.95);
 }
-
 .task-list-leave-to {
   opacity: 0;
   transform: scale(0.9) translateY(-20px);
 }
-
 .task-list-leave-active {
   position: absolute;
   z-index: 0;
 }
-
 .task-list-enter-to {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
-
-.task-list-leave-active+.task-card,
-.task-list-leave-active+.cargo-row,
-.task-list-leave-active+.assign-card,
-.task-list-leave-active+.assign-item {
+.task-list-leave-active + .task-card,
+.task-list-leave-active + .cargo-row,
+.task-list-leave-active + .assign-card,
+.task-list-leave-active + .assign-item {
   transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 </style>
 
-<!-- ===== 全局样式（字体加粗 + 日期选择器缩小） ===== -->
 <style>
-/* 所有输入框内文字加粗 */
+/* 全局样式 */
 .waybill-create .el-input__inner {
   font-weight: 600 !important;
 }
-
 .waybill-create .el-textarea__inner {
   font-weight: 600 !important;
 }
-
 .waybill-create .el-select .el-input__inner {
   font-weight: 600 !important;
 }
-
-/* 确保 placeholder 不加粗 */
 .waybill-create .el-input__inner::placeholder,
 .waybill-create .el-textarea__inner::placeholder {
   font-weight: 400 !important;
 }
-
-/* 日期选择器弹出面板缩小 */
 .compact-date-picker .el-picker-panel {
   font-size: 13px;
   --el-date-picker-header-padding: 6px 12px;
   --el-date-picker-cell-size: 26px;
 }
-
 .compact-date-picker .el-picker-panel .el-date-picker__header {
   padding: 6px 12px;
 }
-
 .compact-date-picker .el-picker-panel .el-date-table td {
   padding: 4px 0;
 }
-
 .compact-date-picker .el-picker-panel .el-date-table td .el-date-table-cell {
   height: 26px;
   width: 26px;
   line-height: 26px;
 }
-
 .compact-date-picker .el-picker-panel .el-time-panel {
   max-height: 180px;
 }
-
 .compact-date-picker .el-picker-panel .el-time-panel .el-time-panel__content {
   padding: 4px 0;
 }
-
 .compact-date-picker .el-picker-panel .el-time-spinner__item {
   height: 26px;
   line-height: 26px;
