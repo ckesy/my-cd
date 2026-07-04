@@ -20,31 +20,15 @@
 
       <!-- ===== 任务列表（带动画） ===== -->
       <transition-group name="task-list" tag="div">
-        <div
-          v-for="(task, tIndex) in tasks"
-          :key="task.id"
-          class="task-card"
-          :style="{ backgroundColor: task.color }"
-        >
+        <div v-for="(task, tIndex) in tasks" :key="task.id" class="task-card" :style="{ backgroundColor: task.color }">
           <!-- 任务头部 -->
           <div class="task-header">
             <div class="task-name-wrapper">
               <span class="task-label">任务{{ tIndex + 1 }}</span>
-              <el-input
-                v-model="task.customName"
-                placeholder="请输入任务名称"
-                size="small"
-                class="task-name-input"
-                clearable
-              />
+              <el-input v-model="task.customName" placeholder="请输入任务名称" size="small" class="task-name-input"
+                clearable />
             </div>
-            <el-button
-              v-if="tasks.length > 1"
-              type="danger"
-              plain
-              size="small"
-              @click="removeTask(task.id)"
-            >
+            <el-button v-if="tasks.length > 1" type="danger" plain size="small" @click="removeTask(task.id)">
               删除任务
             </el-button>
           </div>
@@ -62,14 +46,9 @@
               </div>
               <div class="field-item">
                 <span class="field-label">计划装货时间：</span>
-                <el-date-picker
-                  v-model="task.pickupTime"
-                  type="datetime"
-                  placeholder="请选择时间"
-                  style="flex:1; min-width:130px;"
-                  value-format="YYYY-MM-DD HH:mm:ss"
-                  popper-class="compact-date-picker"
-                />
+                <el-date-picker v-model="task.pickupTime" type="datetime" placeholder="请选择时间"
+                  style="flex:1; min-width:130px;" value-format="YYYY-MM-DD HH:mm:ss"
+                  popper-class="compact-date-picker" />
               </div>
               <div class="field-item">
                 <span class="field-label">发货联系电话：</span>
@@ -91,14 +70,9 @@
               </div>
               <div class="field-item">
                 <span class="field-label">计划到达时间：</span>
-                <el-date-picker
-                  v-model="task.deliveryTime"
-                  type="datetime"
-                  placeholder="请选择时间"
-                  style="flex:1; min-width:130px;"
-                  value-format="YYYY-MM-DD HH:mm:ss"
-                  popper-class="compact-date-picker"
-                />
+                <el-date-picker v-model="task.deliveryTime" type="datetime" placeholder="请选择时间"
+                  style="flex:1; min-width:130px;" value-format="YYYY-MM-DD HH:mm:ss"
+                  popper-class="compact-date-picker" />
               </div>
               <div class="field-item">
                 <span class="field-label">收货联系电话：</span>
@@ -129,15 +103,11 @@
 
       <!-- 货物列表（带动画） -->
       <transition-group name="task-list" tag="div">
-        <div
-          v-for="(item, index) in form.cargoList"
-          :key="item.id"
-          class="cargo-row"
-          :style="{ backgroundColor: getTaskColor(item.taskId) }"
-        >
+        <div v-for="(item, index) in form.cargoList" :key="item.id" class="cargo-row"
+          :style="{ backgroundColor: getTaskColor(item.taskId) }">
           <el-row :gutter="12" align="middle" style="flex-wrap: nowrap;">
             <el-col :span="5" style="white-space: nowrap;">
-              <el-form-item :label="`*货物${index+1}`" label-width="80px">
+              <el-form-item :label="`*货物${index + 1}`" label-width="80px">
                 <el-input v-model="item.name" placeholder="请输入货物名称" />
               </el-form-item>
             </el-col>
@@ -157,42 +127,21 @@
             </el-col>
             <el-col :span="3" style="white-space: nowrap;">
               <el-form-item label="运费" label-width="50px">
-                <el-input-number
-                  v-model="item.freight"
-                  :min="0"
-                  :precision="2"
-                  :step="1"
-                  controls-position="right"
-                  style="width:100%;"
-                  placeholder="0.00"
-                  @focus="$event.target.select()"
-                />
+                <el-input-number v-model="item.freight" :min="0" :precision="2" :step="1" controls-position="right"
+                  style="width:100%;" placeholder="0.00" @focus="$event.target.select()" />
               </el-form-item>
             </el-col>
             <el-col v-if="tasks.length > 1" :span="6" style="white-space: nowrap;">
               <el-form-item label="绑定任务" label-width="70px" required>
-                <el-select
-                  v-model="item.taskId"
-                  placeholder="选择任务"
-                  style="width:100%; min-width:200px;"
-                >
-                  <el-option
-                    v-for="t in tasks"
-                    :key="t.id"
-                    :label="`任务${getTaskIndex(t.id) + 1}${t.customName ? ' - ' + t.customName : ''}`"
-                    :value="t.id"
-                  />
+                <el-select v-model="item.taskId" placeholder="选择任务" style="width:100%; min-width:200px;">
+                  <el-option v-for="t in tasks" :key="t.id"
+                    :label="`任务${getTaskIndex(t.id) + 1}${t.customName ? ' - ' + t.customName : ''}`" :value="t.id" />
                 </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="tasks.length > 1 ? 5 : 11" class="cargo-actions">
-              <el-button
-                v-if="!(tasks.length === 1 && form.cargoList.length === 1)"
-                type="danger"
-                plain
-                size="small"
-                @click="removeCargo(index)"
-              >
+              <el-button v-if="!(tasks.length === 1 && form.cargoList.length === 1)" type="danger" plain size="small"
+                @click="removeCargo(index)">
                 删除
               </el-button>
             </el-col>
@@ -205,12 +154,8 @@
       <div class="section-title">指派信息</div>
       <!-- 指派列表（带动画） -->
       <transition-group name="task-list" tag="div">
-        <div
-          v-for="(assign, aIndex) in assignList"
-          :key="assign.id"
-          class="assign-card"
-          :style="{ backgroundColor: getTaskColor(assign.taskId) }"
-        >
+        <div v-for="(assign, aIndex) in assignList" :key="assign.id" class="assign-card"
+          :style="{ backgroundColor: getTaskColor(assign.taskId) }">
           <!-- 第一行：指派方式 + 绑定任务 + 删除卡片 -->
           <el-row :gutter="12" align="middle" style="flex-wrap: nowrap; margin-bottom: 8px;">
             <el-col :span="5" style="white-space: nowrap;">
@@ -224,28 +169,15 @@
             </el-col>
             <el-col v-if="tasks.length > 1" :span="7" style="white-space: nowrap;">
               <el-form-item label="绑定任务" label-width="70px" required>
-                <el-select
-                  v-model="assign.taskId"
-                  placeholder="选择任务"
-                  style="width:100%; min-width:200px;"
-                >
-                  <el-option
-                    v-for="t in tasks"
-                    :key="t.id"
-                    :label="`任务${getTaskIndex(t.id) + 1}${t.customName ? ' - ' + t.customName : ''}`"
-                    :value="t.id"
-                  />
+                <el-select v-model="assign.taskId" placeholder="选择任务" style="width:100%; min-width:200px;">
+                  <el-option v-for="t in tasks" :key="t.id"
+                    :label="`任务${getTaskIndex(t.id) + 1}${t.customName ? ' - ' + t.customName : ''}`" :value="t.id" />
                 </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="tasks.length > 1 ? 12 : 19" class="assign-actions">
-              <el-button
-                v-if="!(tasks.length === 1 && assignList.length === 1)"
-                type="danger"
-                plain
-                size="small"
-                @click="removeAssign(aIndex)"
-              >
+              <el-button v-if="!(tasks.length === 1 && assignList.length === 1)" type="danger" plain size="small"
+                @click="removeAssign(aIndex)">
                 删除
               </el-button>
             </el-col>
@@ -254,42 +186,26 @@
           <!-- 第二行：条目列表 -->
           <div class="assign-items">
             <transition-group name="task-list" tag="div">
-              <div
-                v-for="(item, iIndex) in assign.items"
-                :key="item.id"
-                class="assign-item"
-              >
+              <div v-for="(item, iIndex) in assign.items" :key="item.id" class="assign-item">
                 <el-row :gutter="12" align="middle" style="flex-wrap: nowrap;">
                   <el-col :span="5" style="white-space: nowrap;">
                     <el-form-item :label="getItemLabel(assign.assignMethod, iIndex + 1)" label-width="80px">
                       <!-- 司机 -->
-                      <el-select
-                        v-if="assign.assignMethod === 'driver'"
-                        v-model="item.target"
-                        placeholder="请选择司机"
-                        style="width:100%;"
-                      >
+                      <el-select v-if="assign.assignMethod === 'driver'" v-model="item.target" placeholder="请选择司机"
+                        style="width:100%;">
                         <el-option label="张三" value="张三" />
                         <el-option label="李四" value="李四" />
                         <el-option label="王五" value="王五" />
                       </el-select>
                       <!-- 车辆 -->
-                      <el-select
-                        v-else-if="assign.assignMethod === 'vehicle'"
-                        v-model="item.target"
-                        placeholder="请选择车辆"
-                        style="width:100%;"
-                      >
+                      <el-select v-else-if="assign.assignMethod === 'vehicle'" v-model="item.target" placeholder="请选择车辆"
+                        style="width:100%;">
                         <el-option label="鄂A12345" value="鄂A12345" />
                         <el-option label="鄂B67890" value="鄂B67890" />
                       </el-select>
                       <!-- 车队 -->
-                      <el-select
-                        v-else-if="assign.assignMethod === 'team'"
-                        v-model="item.target"
-                        placeholder="请选择车队"
-                        style="width:100%;"
-                      >
+                      <el-select v-else-if="assign.assignMethod === 'team'" v-model="item.target" placeholder="请选择车队"
+                        style="width:100%;">
                         <el-option label="第一车队" value="第一车队" />
                         <el-option label="第二车队" value="第二车队" />
                       </el-select>
@@ -299,39 +215,20 @@
                   </el-col>
                   <el-col :span="3" style="white-space: nowrap;">
                     <el-form-item label="承运量" label-width="60px">
-                      <el-input-number
-                        v-model="item.carryQuantity"
-                        :min="0"
-                        :precision="2"
-                        :step="1"
-                        controls-position="right"
-                        style="width:100%;"
-                        placeholder="0.00"
-                        @focus="$event.target.select()"
-                      />
+                      <el-input-number v-model="item.carryQuantity" :min="0" :precision="2" :step="1"
+                        controls-position="right" style="width:100%;" placeholder="0.00"
+                        @focus="$event.target.select()" />
                     </el-form-item>
                   </el-col>
                   <el-col :span="3" style="white-space: nowrap;">
                     <el-form-item label="运费" label-width="40px">
-                      <el-input-number
-                        v-model="item.carryFreight"
-                        :min="0"
-                        :precision="2"
-                        :step="1"
-                        controls-position="right"
-                        style="width:100%;"
-                        placeholder="0.00"
-                        @focus="$event.target.select()"
-                      />
+                      <el-input-number v-model="item.carryFreight" :min="0" :precision="2" :step="1"
+                        controls-position="right" style="width:100%;" placeholder="0.00"
+                        @focus="$event.target.select()" />
                     </el-form-item>
                   </el-col>
                   <el-col :span="3" class="assign-item-actions">
-                    <el-button
-                      type="danger"
-                      plain
-                      size="small"
-                      @click="removeItem(aIndex, iIndex)"
-                    >
+                    <el-button type="danger" plain size="small" @click="removeItem(aIndex, iIndex)">
                       删除
                     </el-button>
                   </el-col>
@@ -340,12 +237,7 @@
             </transition-group>
             <!-- 添加条目按钮 -->
             <div class="add-item-wrapper">
-              <el-button
-                type="primary"
-                plain
-                size="small"
-                @click="addItem(aIndex)"
-              >
+              <el-button type="primary" plain size="small" @click="addItem(aIndex)">
                 ＋ {{ getAddButtonLabel(assign.assignMethod) }}
               </el-button>
             </div>
@@ -360,26 +252,19 @@
       <!-- 底部按钮 -->
       <div class="form-actions">
         <!-- 设置为常驻任务按钮（黄色醒目，最左） -->
-        <el-button
-          style="background-color: #f5a623; border-color: #f5a623; color: #fff; font-weight: 600;"
-          @click="openRecurringDialog"
-        >
+        <el-button style="background-color: #f5a623; border-color: #f5a623; color: #fff; font-weight: 600;"
+          @click="openRecurringDialog">
           设置为常驻任务
         </el-button>
         <el-button @click="closeForm">关闭</el-button>
         <el-button type="primary" plain style="border-color:#c8102e; color:#c8102e;">发布并创建相同运单</el-button>
-        <el-button type="primary" style="background-color:#c8102e; border-color:#c8102e;" @click="publish">发布</el-button>
+        <el-button type="primary" style="background-color:#c8102e; border-color:#c8102e;"
+          @click="publish">发布</el-button>
       </div>
     </el-form>
 
     <!-- ===== 常驻任务弹窗 ===== -->
-    <el-dialog
-      v-model="recurringDialogVisible"
-      title="设置为常驻任务"
-      width="500px"
-      destroy-on-close
-      :show-close="false"
-    >
+    <el-dialog v-model="recurringDialogVisible" title="设置为常驻任务" width="500px" destroy-on-close :show-close="false">
       <el-form label-width="140px" size="default">
         <el-form-item label="常驻任务开关">
           <el-switch v-model="isRecurring" active-text="开" inactive-text="关" />
@@ -393,35 +278,18 @@
           </el-form-item>
           <template v-if="recurringType === 'time'">
             <el-form-item label="开始时间" required>
-              <el-date-picker
-                v-model="recurringStart"
-                type="datetime"
-                placeholder="选择开始时间"
-                :disabled-date="disabledStartDate"
-                :default-value="new Date()"
-                style="width:100%;"
-                value-format="YYYY-MM-DD HH:mm:ss"
-              />
+              <el-date-picker v-model="recurringStart" type="datetime" placeholder="选择开始时间"
+                :disabled-date="disabledStartDate" :default-value="new Date()" style="width:100%;"
+                value-format="YYYY-MM-DD HH:mm:ss" />
             </el-form-item>
             <el-form-item label="结束时间" required>
-              <el-date-picker
-                v-model="recurringEnd"
-                type="datetime"
-                placeholder="选择结束时间"
-                :disabled-date="disabledEndDate"
-                style="width:100%;"
-                value-format="YYYY-MM-DD HH:mm:ss"
-              />
+              <el-date-picker v-model="recurringEnd" type="datetime" placeholder="选择结束时间"
+                :disabled-date="disabledEndDate" style="width:100%;" value-format="YYYY-MM-DD HH:mm:ss" />
             </el-form-item>
           </template>
           <template v-if="recurringType === 'count'">
             <el-form-item label="次数上限" required>
-              <el-input-number
-                v-model="recurringCount"
-                :min="1"
-                :step="1"
-                style="width:100%;"
-              />
+              <el-input-number v-model="recurringCount" :min="1" :step="1" style="width:100%;" />
             </el-form-item>
           </template>
         </template>
@@ -833,6 +701,7 @@ defineExpose({ isDirty })
   border-bottom: 2px solid #c8102e;
   padding-bottom: 10px;
 }
+
 .page-header h2 {
   margin: 0;
   color: #c8102e;
@@ -856,6 +725,7 @@ defineExpose({ isDirty })
 .checkin-row {
   margin-bottom: 16px;
 }
+
 .hint-text {
   font-size: 12px;
   color: #888;
@@ -869,29 +739,34 @@ defineExpose({ isDirty })
   margin-bottom: 16px;
   border: 1px solid #e8e8e8;
 }
+
 .task-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
+
 .task-name-wrapper {
   display: flex;
   align-items: center;
   gap: 8px;
   flex: 1;
 }
+
 .task-label {
   font-weight: 600;
   font-size: 14px;
   color: #333;
   white-space: nowrap;
 }
+
 .task-name-input {
   flex: 1;
   min-width: 120px;
   max-width: 300px;
 }
+
 .task-name-input :deep(.el-input__inner) {
   font-size: 13px;
 }
@@ -903,6 +778,7 @@ defineExpose({ isDirty })
   gap: 12px;
   margin-bottom: 12px;
 }
+
 .row-wrapper:last-of-type {
   margin-bottom: 0;
 }
@@ -928,6 +804,7 @@ defineExpose({ isDirty })
   flex-wrap: wrap;
   gap: 10px;
 }
+
 .field-item {
   flex: 1;
   min-width: 140px;
@@ -935,17 +812,20 @@ defineExpose({ isDirty })
   align-items: center;
   gap: 4px;
 }
+
 .field-label {
   white-space: nowrap;
   font-size: 13px;
   color: #333;
   font-weight: 500;
 }
+
 .required-star {
   color: #c8102e;
   font-weight: 700;
   margin-right: 2px;
 }
+
 .field-item .el-select,
 .field-item .el-date-picker,
 .field-item .el-input {
@@ -966,16 +846,19 @@ defineExpose({ isDirty })
   margin: 0 0 10px 0;
   align-items: center;
 }
+
 .info-item {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 14px;
 }
+
 .info-label {
   color: #555;
   white-space: nowrap;
 }
+
 .info-value {
   font-weight: 600;
   color: #c8102e;
@@ -989,12 +872,15 @@ defineExpose({ isDirty })
   margin-bottom: 8px;
   border: 1px solid #eee;
 }
+
 .cargo-row .el-row {
   flex-wrap: nowrap;
 }
+
 .cargo-row .el-form-item {
   margin-bottom: 0;
 }
+
 .cargo-actions {
   display: flex;
   justify-content: flex-end;
@@ -1009,18 +895,22 @@ defineExpose({ isDirty })
   margin-bottom: 8px;
   border: 1px solid #eee;
 }
+
 .assign-card .el-row {
   flex-wrap: nowrap;
 }
+
 .assign-card .el-form-item {
   margin-bottom: 0;
 }
+
 .assign-actions {
   display: flex;
   justify-content: flex-end;
   align-items: center;
   height: 100%;
 }
+
 .add-assign-wrapper {
   margin-bottom: 16px;
 }
@@ -1029,15 +919,18 @@ defineExpose({ isDirty })
 .assign-items {
   padding-left: 0;
 }
+
 .assign-item {
   margin-bottom: 8px;
 }
+
 .assign-item-actions {
   display: flex;
   justify-content: flex-end;
   align-items: center;
   height: 100%;
 }
+
 .add-item-wrapper {
   display: flex;
   justify-content: flex-start;
@@ -1061,35 +954,43 @@ defineExpose({ isDirty })
     flex-direction: column;
     gap: 8px;
   }
+
   .field-item {
     min-width: unset;
   }
+
   .info-row {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
+
   .form-actions {
     flex-wrap: wrap;
     justify-content: center;
   }
+
   .hint-text {
     display: block;
     margin-left: 0;
     margin-top: 4px;
   }
+
   .task-header {
     flex-wrap: wrap;
     gap: 8px;
   }
+
   .task-name-input {
     max-width: 100%;
   }
+
   .cargo-row .el-row,
   .assign-card .el-row,
   .assign-item .el-row {
     flex-wrap: wrap;
   }
+
   .cargo-row .el-col,
   .assign-card .el-col,
   .assign-item .el-col {
@@ -1101,34 +1002,41 @@ defineExpose({ isDirty })
 .task-list-move {
   transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .task-list-enter-active {
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .task-list-leave-active {
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: absolute;
   width: 100%;
 }
+
 .task-list-enter-from {
   opacity: 0;
   transform: translateY(-30px) scale(0.95);
 }
+
 .task-list-leave-to {
   opacity: 0;
   transform: scale(0.9) translateY(-20px);
 }
+
 .task-list-leave-active {
   position: absolute;
   z-index: 0;
 }
+
 .task-list-enter-to {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
-.task-list-leave-active + .task-card,
-.task-list-leave-active + .cargo-row,
-.task-list-leave-active + .assign-card,
-.task-list-leave-active + .assign-item {
+
+.task-list-leave-active+.task-card,
+.task-list-leave-active+.cargo-row,
+.task-list-leave-active+.assign-card,
+.task-list-leave-active+.assign-item {
   transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 </style>
@@ -1139,40 +1047,50 @@ defineExpose({ isDirty })
 .waybill-create .el-input__inner {
   font-weight: 600 !important;
 }
+
 .waybill-create .el-textarea__inner {
   font-weight: 600 !important;
 }
+
 .waybill-create .el-select .el-input__inner {
   font-weight: 600 !important;
 }
+
 /* 确保 placeholder 不加粗 */
 .waybill-create .el-input__inner::placeholder,
 .waybill-create .el-textarea__inner::placeholder {
   font-weight: 400 !important;
 }
+
 /* 日期选择器弹出面板缩小 */
 .compact-date-picker .el-picker-panel {
   font-size: 13px;
   --el-date-picker-header-padding: 6px 12px;
   --el-date-picker-cell-size: 26px;
 }
+
 .compact-date-picker .el-picker-panel .el-date-picker__header {
   padding: 6px 12px;
 }
+
 .compact-date-picker .el-picker-panel .el-date-table td {
   padding: 4px 0;
 }
+
 .compact-date-picker .el-picker-panel .el-date-table td .el-date-table-cell {
   height: 26px;
   width: 26px;
   line-height: 26px;
 }
+
 .compact-date-picker .el-picker-panel .el-time-panel {
   max-height: 180px;
 }
+
 .compact-date-picker .el-picker-panel .el-time-panel .el-time-panel__content {
   padding: 4px 0;
 }
+
 .compact-date-picker .el-picker-panel .el-time-spinner__item {
   height: 26px;
   line-height: 26px;
