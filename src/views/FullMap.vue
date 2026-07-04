@@ -8,7 +8,7 @@ import AMapLoader from '@amap/amap-jsapi-loader'
 //  1. 在 index.html 中设置安全密钥（必须）：
 //     <script>
 //       window._AMapSecurityConfig = { securityJsCode: '您的安全密钥' };
-//    
+//     
 //  2. 将下方 YOUR_AMAP_KEY 替换为您的真实高德 Key
 // ============================================================
 
@@ -825,7 +825,7 @@ onMounted(async () => {
       </template>
     </el-dialog>
 
-    <!-- 浮动小卡片（毛玻璃 + 纯色后备） -->
+    <!-- 浮动小卡片 -->
     <div
       v-if="popupVisible && popupVehicle"
       class="popup-card"
@@ -1140,10 +1140,10 @@ onMounted(async () => {
   box-shadow: none !important;
 }
 
-/* ===== 浮动小卡片（毛玻璃 + 纯色后备） ===== */
+/* ===== 浮动小卡片（80%透明度后备） ===== */
 .popup-card {
   position: fixed;
-  background: rgba(220, 232, 245, 0.85); /* 后备纯色 */
+  background: rgba(220, 232, 245, 0.8); /* 80% 透明度后备 */
   background: rgba(220, 232, 245, 0.55);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
