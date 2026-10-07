@@ -1,375 +1,445 @@
+<template>
+  <div class="fullmap">
+    <div class="map-stage">
+      <div id="map-container" class="map-container"></div>
+
+      <!-- ============ 顶部胶囊统计条 ============ -->
+      <div class="floating-stats">
+        <div class="stats-pills">
+          <div class="stat-pill" :class="{ active: statusFilter === 'all' }" @click="setStatusFilter('all')">
+            <span class="pill-dot total-dot"></span>
+            <span class="pill-value">{{ totalCount }}</span>
+            <span class="pill-label">全部</span>
+          </div>
+          <div class="stat-pill" :class="{ active: statusFilter === '在线' }" @click="setStatusFilter('在线')">
+            <span class="pill-dot online-dot"></span>
+            <span class="pill-value">{{ onlineCount }}</span>
+            <span class="pill-label">在线</span>
+          </div>
+          <div class="stat-pill" :class="{ active: statusFilter === '离线' }" @click="setStatusFilter('离线')">
+            <span class="pill-dot offline-dot"></span>
+            <span class="pill-value">{{ offlineCount }}</span>
+            <span class="pill-label">离线</span>
+          </div>
+          <div class="stat-pill" :class="{ active: statusFilter === 'located' }" @click="setStatusFilter('located')">
+            <span class="pill-dot located-dot"></span>
+            <span class="pill-value">{{ locatedCount }}</span>
+            <span class="pill-label">已定位</span>
+          </div>
+        </div>
+
+        <el-button class="refresh-btn" @click="refreshLocations" :loading="loadingVehicles" size="small">
+          <el-icon :class="{ 'icon-spin': loadingVehicles }"><Refresh /></el-icon>
+          刷新定位
+        </el-button>
+      </div>
+
+      <!-- ============ 悬浮左侧车辆列表 ============ -->
+      <div class="floating-sidebar" :class="{ collapsed: isListCollapsed }"
+        :style="{ width: isListCollapsed ? '44px' : listWidth + 'px' }">
+        <div v-show="!isListCollapsed" class="sidebar-content">
+          <div class="sidebar-filter">
+            <el-select v-model="selectedOrg" placeholder="请选择组织机构" size="small" style="width: 100%;" clearable>
+              <el-option label="全部车队" value=""></el-option>
+              <el-option v-for="org in orgOptions" :key="org" :label="org" :value="org"></el-option>
+            </el-select>
+            <el-select v-model="selectedStatus" placeholder="请选择作业状态" size="small" style="width: 100%; margin-top: 8px;" clearable>
+              <el-option v-for="s in statusOptions" :key="s" :label="s" :value="s"></el-option>
+            </el-select>
+            <el-input :value="searchKeyword" placeholder="点击搜索车辆" size="small" readonly class="search-trigger"
+              style="margin-top: 8px;" @click="openDialog" clearable @clear="searchKeyword = ''; tempSearchKeyword = ''">
+              <template #prefix><el-icon><Search /></el-icon></template>
+            </el-input>
+            <div class="filter-buttons">
+              <el-button size="small" class="btn-reset" @click="resetAll">
+                <el-icon><RefreshRight /></el-icon> 重置
+              </el-button>
+              <el-button size="small" type="primary" class="btn-search" @click="openDialog">
+                <el-icon><Search /></el-icon> 搜索
+              </el-button>
+            </div>
+          </div>
+
+          <div class="sidebar-list-header">
+            <el-icon class="list-icon"><Van /></el-icon>
+            <span>车辆列表</span>
+            <span class="list-count">({{ filteredVehicles.length }})</span>
+            <div class="collapse-btn" @click.stop="toggleList" title="收起">
+              <el-icon><ArrowLeft /></el-icon>
+            </div>
+          </div>
+
+          <div class="sidebar-list">
+            <transition-group name="list-item">
+              <div v-for="v in filteredVehicles" :key="v.plate" class="vehicle-item"
+                :class="{ active: isVehicleHighlighted(v.plate), 'no-loc': !v.hasLocation }"
+                @click="highlightVehicle(v.plate)">
+                <span class="vehicle-status-dot" :class="v.status"></span>
+                <span class="vehicle-plate">{{ v.plate }}</span>
+                <span class="vehicle-vin">({{ v.vin ? v.vin.slice(-6) : '----' }})</span>
+                <span class="vehicle-status-tag" :class="v.status">{{ v.status }}</span>
+              </div>
+            </transition-group>
+            <div v-if="filteredVehicles.length === 0" class="list-empty">
+              <el-icon><Search /></el-icon>
+              <span>无匹配车辆</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-show="isListCollapsed" class="sidebar-collapsed">
+          <div class="collapse-btn-vertical" @click.stop="toggleList" title="展开">
+            <el-icon><ArrowRight /></el-icon>
+          </div>
+        </div>
+
+        <div class="resizer" v-show="!isListCollapsed" @mousedown="startResize"></div>
+      </div>
+
+      <!-- 加载遮罩 -->
+      <transition name="fade">
+        <div v-if="!isMapReady || loadingVehicles" class="map-loading-overlay">
+          <div class="loading-card">
+            <div class="loading-ring">
+              <svg viewBox="0 0 100 100" width="72" height="72">
+                <circle cx="50" cy="50" r="42" class="ring-track" />
+                <circle cx="50" cy="50" r="42" class="ring-progress"
+                  :style="{ strokeDashoffset: ringOffset }" />
+              </svg>
+              <div class="loading-percent">{{ Math.round(loadPercent) }}%</div>
+            </div>
+            <p class="loading-text">
+              {{ loadingVehicles ? `正在调用定位接口... ${locationProgress}/${locationTotal}` : '正在初始化地图...' }}
+            </p>
+          </div>
+        </div>
+      </transition>
+
+      <div v-if="isMapReady && !loadingVehicles && totalCount === 0" class="map-empty">
+        <div class="empty-icon-wrap"><el-icon><Van /></el-icon></div>
+        <p>暂无车辆档案</p>
+        <span>请先前往「基础数据管理 → 车辆档案」创建车辆</span>
+      </div>
+
+      <div v-if="isMapReady && !loadingVehicles && totalCount > 0 && locatedCount === 0" class="map-empty">
+        <div class="empty-icon-wrap warning"><el-icon><WarningFilled /></el-icon></div>
+        <p>所有车辆定位获取失败</p>
+        <span>请检查车辆 VIN 码是否正确，或点击右上角「刷新定位」重试</span>
+      </div>
+    </div>
+
+    <!-- 搜索弹窗 -->
+    <el-dialog v-model="dialogVisible" title="搜索车辆" width="450px" :close-on-click-modal="false"
+      @close="cancelSearch" class="vehicle-dialog">
+      <div class="dialog-search-row">
+        <el-input v-model="tempSearchKeyword" placeholder="输入车牌号模糊搜索" clearable style="flex:1;">
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+        <el-button type="primary" size="default" class="btn-primary" @click="selectAll">
+          {{ dialogFilteredVehicles.every(v => tempSelectedPlates.includes(v.plate)) ? '取消全选' : '全选' }}
+        </el-button>
+      </div>
+      <div class="dialog-list">
+        <el-checkbox-group v-model="tempSelectedPlates">
+          <div v-for="v in dialogFilteredVehicles" :key="v.plate" class="dialog-item">
+            <el-checkbox :label="v.plate">{{ v.plate }}</el-checkbox>
+          </div>
+        </el-checkbox-group>
+        <div v-if="dialogFilteredVehicles.length === 0" class="dialog-empty">暂无匹配车辆</div>
+      </div>
+      <template #footer>
+        <el-button @click="cancelSearch">取消</el-button>
+        <el-button type="primary" class="btn-primary" @click="confirmSearch">确定</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import {
+  Van, Position, Location, Aim, Refresh, Search, RefreshRight,
+  ArrowLeft, ArrowRight, WarningFilled
+} from '@element-plus/icons-vue'
 import AMapLoader from '@amap/amap-jsapi-loader'
+import { supabase } from '@/utils/supabase'
+import dayjs from 'dayjs'
 
-// ============================================================
-//  配置说明：
-//  1. 在 index.html 中设置安全密钥（必须）：
-//     <script>
-//       window._AMapSecurityConfig = { securityJsCode: '您的安全密钥' };
-//     
-//  2. 将下方 YOUR_AMAP_KEY 替换为您的真实高德 Key
-// ============================================================
+const AMAP_KEY = '273f5c474604b71906674aac159b8f45'
+const DONGFENG_API_URL = '/api-dongfeng/locationData'
+const DONGFENG_TOKEN = '8e0f08a758a64451b8791f47bd716ccd'
+const DONGFENG_LOGIS_NAME = 'cihon_rainbow'
 
-// ---------- 固定车辆数据（30条） ----------
-const vehicleData = [
-  { plate: '鄂A39907D', location: '湖北省武汉市青山区正街与沿河街交叉口西100米西0.110公里' },
-  { plate: '鄂A37759D', location: '湖北省武汉市青山区正街与沿河街交叉口西100米西北0.98公里' },
-  { plate: '鄂A30958D', location: '湖北省武汉市青山区工人村路112号附近西南方向150米东0.24公里' },
-  { plate: '鄂A39603D', location: '湖北省武汉市青山区正街与沿河街交叉口西100米西0.185公里' },
-  { plate: '苏K01739D', location: '江苏省扬州市邗江区物港路1号西0.77公里' },
-  { plate: '贵A07309D', location: '广西壮族自治区防城港市上思县G210|S313西0.7公里' },
-  { plate: '苏K01073D', location: '江苏省扬州市仪征市204县道张嫂酱鸭东正东方向20米南0.73公里' },
-  { plate: '鄂C18887D', location: '湖北省襄阳市枣阳市七方镇汉孟路569号东北0.37公里' },
-  { plate: '桂A06866D', location: '广西壮族自治区崇左市扶绥县祥和路153号北0.200公里' },
-  { plate: '皖M03087D', location: '安徽省滁州市凤阳县前门大街与五经路交叉口正北方向124米北0.139公里' },
-  { plate: '新AD9211', location: '新疆维吾尔自治区乌鲁木齐市天山区东泉路1568号西北0.38公里' },
-  { plate: '赣DL1340', location: '江西省吉安市新干县789县道东50米北0.175公里' },
-  { plate: '黑MM0970', location: '辽宁省沈阳市大东区东贸路水晶城一期佳每客旅馆对面北0.312公里' },
-  { plate: '闽B57583', location: '福建省莆田市秀屿区忠湄街与新西埔坑口路交叉口东40米西0.523公里' },
-  { plate: '湘A20481', location: '湖南省长沙市长沙县长沙经济技术开发区大众西路以东宾塘路以南南0.4公里' },
-  { plate: '浙B3V275', location: '浙江省宁波市奉化区长汀东路南0.66公里' },
-  { plate: '甘D00009', location: '甘肃省兰州市榆中县三角城乡高墩营幼儿园' },
-  { plate: '川AET169', location: '四川省成都市双流区航枢大道二段头道沟南0.42公里' },
-  { plate: '新L33815', location: '甘肃省陇南市武都区汉王镇杨家坝90号东南方向120米东北0.249公里' },
-  { plate: '云F95659', location: '云南省玉溪市红塔区工业园区观音山17号东北0.49公里' },
-  { plate: '辽J55251', location: '辽宁省阜新市彰武县花家村国道304与县道913路口处北0.29公里' },
-  { plate: '黑AU2363', location: '黑龙江省哈尔滨市宾县' },
-  { plate: '粤T62160', location: '广东省珠海市金湾区联富路与石化九路交叉路口往东北约290米东南0.43公里' },
-  { plate: '鲁N34527', location: '甘肃省武威市古浪县甘肃银双高速公路大境段距该站最近的高速公路出入口为大境收费站南0.47公里' },
-  { plate: '川ZD0856', location: '四川省眉山市东坡区安平街与尚义路交叉口北380米西0.114公里' },
-  { plate: '鲁N25753', location: '山东省聊城市东昌府区西侧80米北0.8公里' },
-  { plate: '鲁NH9952', location: '内蒙古自治区包头市青山区京藏高速公路|京新高速公路|G6|G7南0.165公里' },
-  { plate: '赣DL4406', location: '广东省佛山市南海区九江沙头工业园A区龙行天下物流C区2排2仓东南0.82公里' },
-  { plate: '宁E62337', location: '陕西省西安市灞桥区纺渭路与港兴四路交叉路口往西约60米北0.215公里' },
-  { plate: '晋KB9296', location: '山西省太原市阳曲县穗华物流园南塔底村南0.411公里' },
-]
-
-// ---------- 全国主要城市坐标 ----------
-const chinaCities = [
-  { name: '北京', lng: 116.4, lat: 39.9 },
-  { name: '上海', lng: 121.5, lat: 31.2 },
-  { name: '广州', lng: 113.3, lat: 23.1 },
-  { name: '深圳', lng: 114.1, lat: 22.5 },
-  { name: '成都', lng: 104.1, lat: 30.6 },
-  { name: '重庆', lng: 106.5, lat: 29.6 },
-  { name: '武汉', lng: 114.3, lat: 30.6 },
-  { name: '南京', lng: 118.8, lat: 32.0 },
-  { name: '杭州', lng: 120.2, lat: 30.3 },
-  { name: '西安', lng: 108.9, lat: 34.3 },
-  { name: '沈阳', lng: 123.4, lat: 41.8 },
-  { name: '长春', lng: 125.3, lat: 43.9 },
-  { name: '哈尔滨', lng: 126.6, lat: 45.8 },
-  { name: '乌鲁木齐', lng: 87.6, lat: 43.8 },
-  { name: '拉萨', lng: 91.1, lat: 29.6 },
-  { name: '昆明', lng: 102.7, lat: 25.0 },
-  { name: '贵阳', lng: 106.7, lat: 26.6 },
-  { name: '南宁', lng: 108.4, lat: 22.8 },
-  { name: '海口', lng: 110.3, lat: 20.0 },
-  { name: '兰州', lng: 103.8, lat: 36.0 },
-  { name: '西宁', lng: 101.8, lat: 36.6 },
-  { name: '银川', lng: 106.3, lat: 38.5 },
-  { name: '呼和浩特', lng: 111.7, lat: 40.8 },
-  { name: '太原', lng: 112.5, lat: 37.9 },
-  { name: '石家庄', lng: 114.5, lat: 38.0 },
-  { name: '济南', lng: 117.0, lat: 36.7 },
-  { name: '郑州', lng: 113.6, lat: 34.7 },
-  { name: '长沙', lng: 112.9, lat: 28.2 },
-  { name: '南昌', lng: 115.9, lat: 28.7 },
-  { name: '福州', lng: 119.3, lat: 26.1 },
-]
-
-// ---------- 统计数据 ----------
-const stats = ref([
-  { label: '全部车辆', value: 0, color: '#d32f2f' },
-  { label: '行驶', value: 0, color: '#22c55e' },
-  { label: '静止', value: 0, color: '#6b7280' },
-  { label: '充电', value: 0, color: '#eab308' },
-  { label: '离线', value: 0, color: '#ef4444' },
-])
-
-// ---------- 筛选 ----------
-const orgOptions = ref(['李先生的车队（30）'])
-const selectedOrg = ref(orgOptions.value[0])
-const statusOptions = ref(['全部', '行驶', '静止', '充电', '离线'])
-const selectedStatus = ref('全部')
+const orgOptions = ref([])
+const selectedOrg = ref('')
+const statusOptions = ref(['在线', '离线'])
+const selectedStatus = ref('')
 const searchKeyword = ref('')
-const loading = ref(false)
+const loadingVehicles = ref(false)
+const statusFilter = ref('all')
 
-// ---------- 车辆数据 ----------
 const vehicles = ref([])
-const geocodeProgress = ref(0)
 const isMapReady = ref(false)
+const locationProgress = ref(0)
+const locationTotal = ref(0)
+const locatedCount = ref(0)
 
-const enrichVehicleData = (raw) => {
-  const statusPool = ['行驶', '静止', '充电', '离线']
-  const status = statusPool[Math.floor(Math.random() * statusPool.length)]
-  const direction = Math.random() * 360
-  const isRunning = status === '行驶'
-  const isCharging = status === '充电'
-  const isOffline = status === '离线'
+const totalCount = computed(() => vehicles.value.length)
+const onlineCount = computed(() => vehicles.value.filter(v => v.status === '在线').length)
+const offlineCount = computed(() => vehicles.value.filter(v => v.status === '离线').length)
+const loadPercent = computed(() => {
+  if (locationTotal.value === 0) return 0
+  return Math.min(100, (locationProgress.value / locationTotal.value) * 100)
+})
 
-  const speed = isRunning ? Math.round(10 + Math.random() * 70) : 0
-  const rpm = isRunning ? Math.round(800 + Math.random() * 3200) : 0
-  const battery = isCharging ? Math.round(50 + Math.random() * 48) : Math.round(Math.random() * 100)
-  const dcdcStatus = isOffline ? '停止' : ['工作', '工作', '工作', '停止'][Math.floor(Math.random() * 4)]
-  const motorStatus = isOffline ? '停止' : isRunning ? ['运行', '运行', '运行', '准备'][Math.floor(Math.random() * 4)] : ['准备', '停止', '停止'][Math.floor(Math.random() * 3)]
-  const motorRpm = isRunning ? Math.round(500 + Math.random() * 3500) : 0
-  const envTemp = Math.round((18 + Math.random() * 22) * 10) / 10
-  const motorTemp = isRunning ? Math.round((45 + Math.random() * 25) * 10) / 10 : Math.round((30 + Math.random() * 20) * 10) / 10
+const RING_LENGTH = 263.89
+const ringOffset = computed(() => RING_LENGTH * (1 - loadPercent.value / 100))
 
-  const now = new Date()
-  const reportTime =
-    now.getFullYear() +
-    '-' +
-    String(now.getMonth() + 1).padStart(2, '0') +
-    '-' +
-    String(now.getDate()).padStart(2, '0') +
-    ' ' +
-    String(now.getHours()).padStart(2, '0') +
-    ':' +
-    String(now.getMinutes()).padStart(2, '0') +
-    ':' +
-    String(now.getSeconds()).padStart(2, '0')
+const getTimeValue = (record) => {
+  const candidates = [
+    'time', 'reportTime', 'gpsTime', 'createTime', 'updateTime',
+    'locTime', 'timestamp', 'ts', 'reportTimeStr', 'gpsTimeStr',
+    'locationTime', 'positionTime', 'lastTime', 'accTime',
+  ]
+  for (const key of candidates) {
+    if (record[key] !== undefined && record[key] !== null && record[key] !== '') {
+      const t = new Date(record[key]).getTime()
+      if (!isNaN(t)) return t
+    }
+  }
+  return 0
+}
 
-  const orgs = ['西马物流新能源车队', '东湖新能源车队', '南湖物流车队', '汉口新能源车队']
-  const org = orgs[Math.floor(Math.random() * orgs.length)]
+const isAccOn = (accStatus) => {
+  if (accStatus === undefined || accStatus === null || accStatus === '') return false
+  const s = String(accStatus).trim()
+  if (s.includes('开')) return true
+  if (s.includes('关')) return false
+  const lower = s.toLowerCase()
+  return ['1', 'true', 'on', 'open', 'yes', 'y'].includes(lower)
+}
 
-  return {
-    ...raw,
-    status,
-    direction,
-    speed,
-    rpm,
-    battery,
-    dcdcStatus,
-    motorStatus,
-    motorRpm,
-    envTemp,
-    motorTemp,
-    reportTime,
-    org,
-    fuelDisplay: '纯电',
-    lng: 0,
-    lat: 0,
+const fetchDongfengLocation = async (vin) => {
+  if (!vin || vin.length < 8) return { success: false, reason: 'VIN 长度不足' }
+  const chassisNo = vin.slice(-8)
+  const now = dayjs()
+  const payload = {
+    chassisNo,
+    token: DONGFENG_TOKEN,
+    startTime: now.subtract(1, 'hour').format('YYYY-MM-DD HH:mm:ss'),
+    endTime: now.add(1, 'hour').format('YYYY-MM-DD HH:mm:ss'),
+    logisName: DONGFENG_LOGIS_NAME,
+  }
+  try {
+    const response = await fetch(DONGFENG_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const result = await response.json()
+    let records = result?.data || result?.list || result?.rows || result?.result || result?.records || []
+    if (!Array.isArray(records)) records = records ? [records] : []
+    if (records.length === 0) return { success: false, reason: '无定位数据' }
+    const sorted = [...records].sort((a, b) => getTimeValue(b) - getTimeValue(a))
+    const latest = sorted[0]
+    const lng = parseFloat(latest.lng ?? latest.longitude ?? latest.lon)
+    const lat = parseFloat(latest.lat ?? latest.latitude)
+    if (!lng || !lat || isNaN(lng) || isNaN(lat)) return { success: false, reason: '经纬度无效' }
+    const accStatus = latest.accStatus ?? latest.acc ?? latest.accState ?? ''
+    const online = isAccOn(accStatus)
+    const timeVal = getTimeValue(latest)
+    const reportTime = timeVal > 0 ? dayjs(timeVal).format('YYYY-MM-DD HH:mm:ss') : '--'
+    const direction = parseFloat(latest.direction ?? latest.dir ?? latest.course ?? latest.heading ?? 0) || 0
+    const speed = parseFloat(latest.speed ?? latest.spd ?? 0) || 0
+    const rpm = parseFloat(latest.rpm ?? latest.speedRpm ?? latest.engineRpm ?? 0) || 0
+    const fuelRemaining = parseFloat(latest.fuel ?? latest.oil ?? latest.fuelRemaining ?? latest.fuelAmount ?? latest.oilMass ?? 0) || 0
+    const locationText = latest.address || latest.location || latest.formattedAddress || latest.addr || (online ? '行驶中' : '静止')
+    return { success: true, lng, lat, online, accStatus: String(accStatus || '--'), reportTime, locationText, direction, speed, rpm, fuelRemaining }
+  } catch (err) {
+    console.warn(`获取车辆 ${vin} 定位失败：`, err.message)
+    return { success: false, reason: err.message }
   }
 }
 
-// ---------- 地图相关 ----------
+const loadVehicles = async () => {
+  loadingVehicles.value = true
+  locationProgress.value = 0
+  locationTotal.value = 0
+  locatedCount.value = 0
+  try {
+    const { data, error } = await supabase.from('vehicles').select('*').order('updated_at', { ascending: false })
+    if (error) throw error
+    if (!data || data.length === 0) {
+      vehicles.value = []
+      orgOptions.value = []
+      ElMessage.warning('车辆档案为空，请先去「车辆档案」页面创建车辆')
+      return
+    }
+    locationTotal.value = data.length
+    const enriched = new Array(data.length)
+    const concurrency = 5
+    let index = 0
+    const worker = async () => {
+      while (index < data.length) {
+        const i = index++
+        const item = data[i]
+        const loc = await fetchDongfengLocation(item.vin)
+        if (loc.success) {
+          locatedCount.value++
+          enriched[i] = { ...item, status: loc.online ? '在线' : '离线', accStatus: loc.accStatus, reportTime: loc.reportTime, lng: loc.lng, lat: loc.lat, hasLocation: true, location: loc.locationText, direction: loc.direction, speed: loc.speed, rpm: loc.rpm, fuelRemaining: loc.fuelRemaining }
+        } else {
+          enriched[i] = { ...item, status: '离线', accStatus: '--', reportTime: '--', lng: null, lat: null, hasLocation: false, location: '定位获取失败', direction: 0, speed: 0, rpm: 0, fuelRemaining: 0 }
+        }
+        locationProgress.value++
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(concurrency, data.length) }, () => worker()))
+    vehicles.value = enriched.filter(Boolean)
+    const orgSet = new Set()
+    vehicles.value.forEach(v => { if (v.org) orgSet.add(v.org) })
+    orgOptions.value = Array.from(orgSet)
+  } catch (e) {
+    console.error('加载车辆失败：', e)
+    ElMessage.error('加载车辆失败：' + e.message)
+  } finally {
+    loadingVehicles.value = false
+  }
+}
+
+const refreshLocations = async () => {
+  await loadVehicles()
+  if (isMapReady.value) {
+    addMarkers()
+    updateMarkersVisibility()
+  }
+}
+
+// ============================================================
+// 地图
+// ============================================================
 let map = null
-let markers = []           // 存储所有标记对象
-let markerMap = new Map()  // 车牌 -> marker 映射
+let markers = []
+let markerMap = new Map()
 let infoWindow = null
 
 const highlightedPlate = ref(null)
 let hoveredMarker = null
 
-// 缓存地图容器 rect，避免频繁读取
-let mapContainerRect = null
-const popupWidth = 260
-const popupHeight = 500
-
-// ---------- 卡片拖拽相关 ----------
-const isUserPositioned = ref(false)  // 是否用户手动拖拽过
-let dragOffsetX = 0
-let dragOffsetY = 0
-
-const getRandomChinaLocation = () => {
-  const city = chinaCities[Math.floor(Math.random() * chinaCities.length)]
-  const offsetLng = (Math.random() - 0.5) * 1.0
-  const offsetLat = (Math.random() - 0.5) * 1.0
-  return {
-    lng: city.lng + offsetLng,
-    lat: city.lat + offsetLat,
-    cityName: city.name,
-  }
-}
-
 const initMap = async () => {
   try {
     const AMap = await AMapLoader.load({
-      key: '273f5c474604b71906674aac159b8f45', // 👈 替换为您的 Key
+      key: AMAP_KEY,
       version: '2.0',
       plugins: ['AMap.Geocoder'],
     })
 
     map = new AMap.Map('map-container', {
-      zoom: 4,
-      center: [104, 35],
+      zoom: 5,
+      center: [107, 33],
       mapStyle: 'amap://styles/fresh',
       viewMode: '2D',
       features: ['bg', 'road', 'building', 'point'],
     })
 
     infoWindow = new AMap.InfoWindow({
-      offset: new AMap.Pixel(0, -20),
+      isCustom: true,
+      offset: new AMap.Pixel(0, -46),
       autoMove: true,
       closeWhenClickMap: true,
     })
 
-    await geocodeAddresses(AMap)
-
     addMarkers()
     isMapReady.value = true
-    updateStats()
     updateMarkersVisibility()
-
-    ElMessage.success('地图加载完成，共 ' + vehicles.value.length + ' 辆车')
   } catch (err) {
     ElMessage.error('地图加载失败：' + err.message)
     console.error(err)
   }
 }
 
-const geocodeAddresses = (AMap) => {
-  return new Promise((resolve) => {
-    const geocoder = new AMap.Geocoder({
-      city: '',
-      radius: 1000,
-      extensions: 'all',
-    })
-
-    const total = vehicles.value.length
-    let completed = 0
-
-    const promises = vehicles.value.map((v) => {
-      return new Promise((res) => {
-        const timeout = setTimeout(() => {
-          const loc = getRandomChinaLocation()
-          v.lng = loc.lng
-          v.lat = loc.lat
-          v.location = '中国 ' + loc.cityName + ' 附近'
-          completed++
-          geocodeProgress.value = Math.round((completed / total) * 100)
-          console.warn('地址编码超时: ' + v.location + '，使用随机城市坐标')
-          res()
-        }, 5000)
-
-        geocoder.getLocation(v.location, (status, result) => {
-          clearTimeout(timeout)
-          let lng, lat
-          if (status === 'complete' && result.geocodes.length) {
-            const loc = result.geocodes[0]
-            lng = loc.location.getLng()
-            lat = loc.location.getLat()
-            if (lng < 73 || lng > 135 || lat < 3 || lat > 54) {
-              const fallback = getRandomChinaLocation()
-              lng = fallback.lng
-              lat = fallback.lat
-              v.location = '中国 ' + fallback.cityName + ' 附近'
-              console.warn('坐标超出中国范围，使用随机城市坐标')
-            } else {
-              v.location = loc.formattedAddress || v.location
-            }
-          } else {
-            const fallback = getRandomChinaLocation()
-            lng = fallback.lng
-            lat = fallback.lat
-            v.location = '中国 ' + fallback.cityName + ' 附近'
-            console.warn('地址编码失败: ' + v.location + '，使用随机城市坐标')
-          }
-          v.lng = lng
-          v.lat = lat
-          completed++
-          geocodeProgress.value = Math.round((completed / total) * 100)
-          res()
-        })
-      })
-    })
-
-    Promise.all(promises).then(() => resolve())
-  })
+const getTruckSVG = (isOnline) => {
+  const fillColor = isOnline ? '#10B981' : '#1F2937'
+  return `
+    <svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="truckShadow_${isOnline ? 'on' : 'off'}" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="rgba(0,0,0,0.3)"/>
+        </filter>
+      </defs>
+      <g filter="url(#truckShadow_${isOnline ? 'on' : 'off'})">
+        <rect x="11" y="6" width="14" height="24" rx="3" ry="3" fill="${fillColor}" stroke="#ffffff" stroke-width="1.5"/>
+        <path d="M 12 6 L 24 6 L 22 2 L 14 2 Z" fill="${fillColor}" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+        <rect x="13.5" y="8" width="9" height="3" rx="1" fill="rgba(255,255,255,0.4)"/>
+        <line x1="11.5" y1="15" x2="24.5" y2="15" stroke="#ffffff" stroke-width="1" opacity="0.7"/>
+        <rect x="9" y="20" width="2" height="5" rx="0.8" fill="#1F2937"/>
+        <rect x="25" y="20" width="2" height="5" rx="0.8" fill="#1F2937"/>
+        <rect x="9" y="8" width="2" height="4" rx="0.8" fill="#1F2937"/>
+        <rect x="25" y="8" width="2" height="4" rx="0.8" fill="#1F2937"/>
+      </g>
+    </svg>
+  `
 }
 
 const addMarkers = () => {
   if (!map) return
-
-  // 清除已有标记
   if (markers.length) {
     map.remove(markers)
     markers = []
     markerMap.clear()
   }
+  const locatedVehicles = vehicles.value.filter(v => v.hasLocation)
+  if (locatedVehicles.length === 0) return
 
-  vehicles.value.forEach(v => {
-    if (!v.lng || !v.lat || v.lng < 73 || v.lng > 135 || v.lat < 3 || v.lat > 54) {
-      const loc = getRandomChinaLocation()
-      v.lng = loc.lng
-      v.lat = loc.lat
-      v.location = '中国 ' + loc.cityName + ' 附近'
-    }
-
+  locatedVehicles.forEach((v, idx) => {
     const container = document.createElement('div')
     container.className = 'custom-marker'
+    container.style.animationDelay = (idx * 0.02) + 's'
 
-    const icon = document.createElement('div')
-    icon.className = 'vehicle-icon ' + v.status
-    icon.style.width = '16px'
-    icon.style.height = '16px'
-    icon.style.border = '2.5px solid #ffffff'
-    icon.style.boxShadow = '0 0 0 2px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.3)'
+    const iconWrap = document.createElement('div')
+    iconWrap.className = 'truck-icon-wrap ' + (v.status === '在线' ? 'online' : 'offline')
+    iconWrap.style.transform = `rotate(${v.direction || 0}deg)`
+    iconWrap.innerHTML = getTruckSVG(v.status === '在线')
 
-    const arrow = document.createElement('span')
-    arrow.className = 'arrow'
-    arrow.textContent = '▲'
-    arrow.style.fontSize = '9px'
-    arrow.style.color = '#ffffff'
-    arrow.style.textShadow = '0 1px 3px rgba(0,0,0,0.6)'
-    arrow.style.cssText += '; transform: translate(-50%, -50%) rotate(' + v.direction + 'deg);'
-    icon.appendChild(arrow)
+    if (v.status === '在线') {
+      const ring = document.createElement('div')
+      ring.className = 'truck-pulse-ring'
+      iconWrap.appendChild(ring)
+    }
 
     const plateSpan = document.createElement('span')
     plateSpan.className = 'plate'
     plateSpan.textContent = v.plate
-    const statusColorMap = {
-      '行驶': '#22c55e',
-      '静止': '#6b7280',
-      '充电': '#eab308',
-      '离线': '#ef4444'
-    }
-    plateSpan.style.color = statusColorMap[v.status] || '#1a2a4a'
-    plateSpan.style.fontWeight = '700'
-    plateSpan.style.fontSize = '8px'
-    plateSpan.style.textShadow = '0 0 4px rgba(255,255,255,0.9)'
-    plateSpan.style.background = 'rgba(255,255,255,0.85)'
 
-    container.appendChild(icon)
+    container.appendChild(iconWrap)
     container.appendChild(plateSpan)
 
     const marker = new AMap.Marker({
       position: [v.lng, v.lat],
       content: container,
-      offset: new AMap.Pixel(-8, -18),
+      offset: new AMap.Pixel(-18, -18),
       zIndex: 1,
       extData: { plate: v.plate },
     })
 
-    // 点击事件
-    marker.on('click', (e) => {
-      if (popupVisible.value && popupVehicle.value?.plate === v.plate) {
+    marker.on('click', () => {
+      if (highlightedPlate.value === v.plate && infoWindow.getIsOpen()) {
         closePopup()
       } else {
         openPopup(v, marker)
       }
     })
 
-    // 悬停高亮
     marker.on('mouseover', () => {
       if (hoveredMarker && hoveredMarker !== marker) resetMarkerStyle(hoveredMarker)
       hoveredMarker = marker
       const c = marker.getContent()
-      if (c) {
-        c.style.transform = 'translate(-50%, -50%) scale(1.5)'
-        c.style.filter = 'drop-shadow(0 0 12px rgba(0,0,0,0.5))'
-        c.style.zIndex = '100'
-      }
+      if (c) { c.style.transform = 'scale(1.3)'; c.style.zIndex = '100' }
     })
     marker.on('mouseout', () => {
       if (hoveredMarker === marker) {
-        if (highlightedPlate.value !== v.plate) {
-          resetMarkerStyle(marker)
-        }
+        if (highlightedPlate.value !== v.plate) resetMarkerStyle(marker)
         hoveredMarker = null
       }
     })
@@ -379,214 +449,126 @@ const addMarkers = () => {
   })
 
   map.add(markers)
-  if (markers.length) map.setFitView(markers)
+  if (markers.length) map.setFitView(markers, false, [120, 80, 80, 80])
 }
 
 const resetMarkerStyle = (marker) => {
   const c = marker.getContent()
-  if (c) {
-    c.style.transform = 'translate(-50%, -50%) scale(1)'
-    c.style.filter = 'none'
-    c.style.zIndex = '1'
-  }
+  if (c) { c.style.transform = 'scale(1)'; c.style.zIndex = '1' }
 }
 
 const highlightMarker = (marker) => {
   const c = marker.getContent()
-  if (c) {
-    c.style.transform = 'translate(-50%, -50%) scale(1.5)'
-    c.style.filter = 'drop-shadow(0 0 12px rgba(0,0,0,0.5))'
-    c.style.zIndex = '100'
-  }
+  if (c) { c.style.transform = 'scale(1.3)'; c.style.zIndex = '100' }
 }
 
-// ---------- 浮动小卡片 ----------
-const popupVisible = ref(false)
-const popupVehicle = ref(null)
-const popupStyle = ref({ left: '0px', top: '0px' })
-const popupMarker = ref(null)
-
-// 更新卡片位置（被地图事件调用，但若用户已拖拽过则跳过）
-const updatePopupPosition = () => {
-  if (!popupVisible.value || !popupMarker.value || !map) return
-  if (isUserPositioned.value) return
-  try {
-    const marker = popupMarker.value
-    const position = marker.getPosition()
-    let pixel = null
-    if (position) {
-      pixel = map.lngLatToContainer(position)
-    }
-    if (!pixel || typeof pixel.getX !== 'function') {
-      const center = map.getCenter()
-      pixel = map.lngLatToContainer(center)
-    }
-    if (!mapContainerRect) {
-      const mapContainer = document.getElementById('map-container')
-      if (mapContainer) {
-        mapContainerRect = mapContainer.getBoundingClientRect()
-      }
-    }
-    const rect = mapContainerRect
-
-    let left = rect.left + pixel.getX() + 20
-    let top = rect.top + pixel.getY() + 10
-
-    if (left + popupWidth > window.innerWidth) {
-      left = rect.left + pixel.getX() - popupWidth - 20
-    }
-    if (top + popupHeight > window.innerHeight) {
-      top = rect.top + pixel.getY() - popupHeight - 10
-    }
-    if (top < 10) top = 10
-    if (top + popupHeight > window.innerHeight) {
-      top = window.innerHeight - popupHeight - 10
-    }
-    if (left < 10) left = 10
-    if (left + popupWidth > window.innerWidth) {
-      left = window.innerWidth - popupWidth - 10
-    }
-
-    popupStyle.value = { left: left + 'px', top: top + 'px' }
-  } catch (e) {
-    console.warn('更新卡片位置失败', e)
-  }
-}
-
-// 拖拽事件
-const startDrag = (e) => {
-  if (!popupVisible.value) return
-  if (e.target.closest('.popup-close') || e.target.closest('.el-button')) {
-    return
-  }
-  e.preventDefault()
-  const currentLeft = parseFloat(popupStyle.value.left) || 0
-  const currentTop = parseFloat(popupStyle.value.top) || 0
-  dragOffsetX = currentLeft - e.clientX
-  dragOffsetY = currentTop - e.clientY
-  isUserPositioned.value = true
-
-  document.addEventListener('mousemove', onDrag)
-  document.addEventListener('mouseup', endDrag)
-}
-
-const onDrag = (e) => {
-  e.preventDefault()
-  let left = e.clientX + dragOffsetX
-  let top = e.clientY + dragOffsetY
-
-  if (left < 10) left = 10
-  if (top < 10) top = 10
-  if (left + popupWidth > window.innerWidth) {
-    left = window.innerWidth - popupWidth - 10
-  }
-  if (top + popupHeight > window.innerHeight) {
-    top = window.innerHeight - popupHeight - 10
-  }
-  popupStyle.value = { left: left + 'px', top: top + 'px' }
-}
-
-const endDrag = () => {
-  document.removeEventListener('mousemove', onDrag)
-  document.removeEventListener('mouseup', endDrag)
-}
-
+// ============================================================
+// 用高德原生 InfoWindow 展示详情
+// ============================================================
 const openPopup = (vehicle, marker) => {
-  popupVehicle.value = vehicle
-  popupMarker.value = marker
-  highlightMarker(marker)
   highlightedPlate.value = vehicle.plate
+  highlightMarker(marker)
 
-  isUserPositioned.value = false
+  const isOnline = vehicle.status === '在线'
+  const statusClass = isOnline ? 'online' : 'offline'
 
-  const mapContainer = document.getElementById('map-container')
-  if (mapContainer) {
-    mapContainerRect = mapContainer.getBoundingClientRect()
-  }
+  const html = `
+    <div class="amap-custom-popup ${statusClass}">
+      <div class="amap-popup-accent"></div>
+      <div class="amap-popup-close">×</div>
+      <div class="amap-popup-header">
+        <span class="amap-popup-plate">${vehicle.plate || '--'}</span>
+        <span class="amap-popup-status ${statusClass}">${vehicle.status}</span>
+      </div>
+      <div class="amap-popup-divider"></div>
+      <div class="amap-popup-info">
+        <div class="amap-popup-row"><span class="amap-popup-label">所属机构</span><span class="amap-popup-value">${vehicle.org || '--'}</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">燃料类型</span><span class="amap-popup-value">${vehicle.fuel_type || '--'}</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">当前速度</span><span class="amap-popup-value">${(vehicle.speed ?? 0)} km/h</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">当前转速</span><span class="amap-popup-value">${(vehicle.rpm ?? 0)} r/min</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">剩余油量</span><span class="amap-popup-value">${(vehicle.fuelRemaining ?? 0)} L</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">ACC状态</span><span class="amap-popup-value">${vehicle.accStatus || '--'}</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">上报时间</span><span class="amap-popup-value mono">${vehicle.reportTime || '--'}</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">当前位置</span><span class="amap-popup-value mono">${vehicle.location || '--'}</span></div>
+      </div>
+      <div class="amap-popup-actions">
+        <button class="amap-popup-btn" data-action="track">实时跟踪</button>
+        <button class="amap-popup-btn" data-action="playback">轨迹回放</button>
+      </div>
+    </div>
+  `
 
-  updatePopupPosition()
-  if (popupStyle.value.left === '0px' && popupStyle.value.top === '0px') {
-    setTimeout(() => { updatePopupPosition() }, 100)
-  }
-  popupVisible.value = true
+  infoWindow.setContent(html)
+  infoWindow.open(map, marker.getPosition())
 
-  if (map) {
-    map.off('moving', updatePopupPosition)
-    map.off('moveend', updatePopupPosition)
-    map.off('zoomend', updatePopupPosition)
-    map.on('moving', updatePopupPosition)
-    map.on('moveend', updatePopupPosition)
-    map.on('zoomend', updatePopupPosition)
-  }
+  setTimeout(() => {
+    const closeBtn = document.querySelector('.amap-popup-close')
+    if (closeBtn) closeBtn.onclick = closePopup
+
+    document.querySelectorAll('.amap-popup-btn').forEach(btn => {
+      btn.onclick = () => {
+        const action = btn.getAttribute('data-action')
+        ElMessage.info(action === 'track' ? '实时跟踪功能开发中' : '轨迹回放功能开发中')
+      }
+    })
+  }, 50)
 }
 
 const closePopup = () => {
-  popupVisible.value = false
-  popupVehicle.value = null
-  popupMarker.value = null
-  mapContainerRect = null
-  isUserPositioned.value = false
+  if (infoWindow) infoWindow.close()
   if (highlightedPlate.value) {
     const marker = markerMap.get(highlightedPlate.value)
     if (marker) resetMarkerStyle(marker)
     highlightedPlate.value = null
   }
-  if (map) {
-    map.off('moving', updatePopupPosition)
-    map.off('moveend', updatePopupPosition)
-    map.off('zoomend', updatePopupPosition)
-  }
 }
 
 const onMapClick = (e) => {
   const target = e.originalEvent?.target || e.target
-  if (!target?.closest?.('.custom-marker') && !target?.closest?.('.popup-card')) {
+  if (!target?.closest?.('.custom-marker') && !target?.closest?.('.amap-custom-popup')) {
     closePopup()
   }
 }
 
 watch(isMapReady, (val) => {
-  if (val && map) {
-    map.on('click', onMapClick)
-  }
+  if (val && map) map.on('click', onMapClick)
 })
 
-// ---------- 统计更新 ----------
-const updateStats = () => {
-  const total = vehicles.value.length
-  const running = vehicles.value.filter(v => v.status === '行驶').length
-  const stopped = vehicles.value.filter(v => v.status === '静止').length
-  const charging = vehicles.value.filter(v => v.status === '充电').length
-  const offline = vehicles.value.filter(v => v.status === '离线').length
-  stats.value = [
-    { label: '全部车辆', value: total, color: '#d32f2f' },
-    { label: '行驶', value: running, color: '#22c55e' },
-    { label: '静止', value: stopped, color: '#6b7280' },
-    { label: '充电', value: charging, color: '#eab308' },
-    { label: '离线', value: offline, color: '#ef4444' },
-  ]
-}
-
-// ---------- 筛选与高亮 ----------
+// ============================================================
+// 筛选
+// ============================================================
 const selectedPlates = ref([])
+
+const setStatusFilter = (type) => {
+  statusFilter.value = statusFilter.value === type ? 'all' : type
+  updateMarkersVisibility()
+}
 
 const filteredVehicles = computed(() => {
   return vehicles.value.filter(v => {
-    const matchStatus = selectedStatus.value === '全部' || v.status === selectedStatus.value
+    if (statusFilter.value === '在线' && v.status !== '在线') return false
+    if (statusFilter.value === '离线' && v.status !== '离线') return false
+    if (statusFilter.value === 'located' && !v.hasLocation) return false
+    const matchOrg = !selectedOrg.value || v.org === selectedOrg.value
+    const matchStatus = !selectedStatus.value || v.status === selectedStatus.value
     const matchSearch = !searchKeyword.value || v.plate.includes(searchKeyword.value)
     const matchSelected = selectedPlates.value.length === 0 || selectedPlates.value.includes(v.plate)
-    return matchStatus && matchSearch && matchSelected
+    return matchOrg && matchStatus && matchSearch && matchSelected
   })
 })
 
+watch([selectedOrg, selectedStatus, searchKeyword, selectedPlates, statusFilter], () => {
+  updateMarkersVisibility()
+}, { deep: true })
+
 const highlightVehicle = (plate) => {
+  const vehicle = vehicles.value.find(v => v.plate === plate)
+  if (vehicle && !vehicle.hasLocation) {
+    ElMessage.warning(`车辆「${plate}」暂无定位数据，请稍后刷新定位`)
+    return
+  }
   if (highlightedPlate.value === plate) {
-    const marker = markerMap.get(plate)
-    if (marker) resetMarkerStyle(marker)
-    highlightedPlate.value = null
-    if (popupVisible.value && popupVehicle.value?.plate === plate) {
-      closePopup()
-    }
+    closePopup()
     return
   }
   if (highlightedPlate.value) {
@@ -594,17 +576,12 @@ const highlightVehicle = (plate) => {
     if (oldMarker) resetMarkerStyle(oldMarker)
   }
   const marker = markerMap.get(plate)
-  if (marker && map) {
-    map.setCenter(marker.getPosition())
-    highlightMarker(marker)
-    highlightedPlate.value = plate
-    if (popupVisible.value && popupVehicle.value?.plate !== plate) {
-      closePopup()
-    }
-    const vehicle = vehicles.value.find(v => v.plate === plate)
-    if (vehicle) {
+  if (marker && map && vehicle) {
+    map.setZoomAndCenter(8, marker.getPosition(), false, 400)
+    setTimeout(() => {
+      highlightMarker(marker)
       openPopup(vehicle, marker)
-    }
+    }, 420)
   }
 }
 
@@ -614,48 +591,19 @@ const isVehicleHighlighted = (plate) => {
 
 const updateMarkersVisibility = () => {
   if (!map) return
-
-  const visiblePlates = new Set(filteredVehicles.value.map(v => v.plate))
-
+  const visiblePlates = new Set(filteredVehicles.value.filter(v => v.hasLocation).map(v => v.plate))
   markerMap.forEach((marker, plate) => {
     const shouldVisible = visiblePlates.has(plate)
-    if (typeof marker.setVisible === 'function') {
-      marker.setVisible(shouldVisible)
-    }
-    if (shouldVisible) {
-      if (typeof marker.show === 'function') marker.show()
-    } else {
-      if (typeof marker.hide === 'function') marker.hide()
-    }
+    if (typeof marker.setVisible === 'function') marker.setVisible(shouldVisible)
   })
-
   if (highlightedPlate.value && !visiblePlates.has(highlightedPlate.value)) {
-    const marker = markerMap.get(highlightedPlate.value)
-    if (marker) resetMarkerStyle(marker)
-    highlightedPlate.value = null
-    if (popupVisible.value) closePopup()
-  }
-
-  const visibleMarkers = []
-  markerMap.forEach((marker, plate) => {
-    if (visiblePlates.has(plate) && marker.getVisible()) {
-      visibleMarkers.push(marker)
-    }
-  })
-  if (visibleMarkers.length) {
-    map.setFitView(visibleMarkers)
+    closePopup()
   }
 }
 
-watch(
-  [selectedStatus, searchKeyword, selectedPlates],
-  () => {
-    updateMarkersVisibility()
-  },
-  { deep: true, immediate: true }
-)
-
-// ---------- 搜索弹窗 ----------
+// ============================================================
+// 搜索弹窗
+// ============================================================
 const dialogVisible = ref(false)
 const tempSearchKeyword = ref('')
 const tempSelectedPlates = ref([])
@@ -670,16 +618,13 @@ const openDialog = () => {
   tempSelectedPlates.value = [...selectedPlates.value]
   dialogVisible.value = true
 }
-
 const confirmSearch = () => {
   searchKeyword.value = tempSearchKeyword.value
   selectedPlates.value = [...tempSelectedPlates.value]
   dialogVisible.value = false
   updateMarkersVisibility()
 }
-
 const cancelSearch = () => { dialogVisible.value = false }
-
 const selectAll = () => {
   const allPlates = dialogFilteredVehicles.value.map(v => v.plate)
   const allSelected = allPlates.every(p => tempSelectedPlates.value.includes(p))
@@ -690,36 +635,35 @@ const selectAll = () => {
     tempSelectedPlates.value = [...tempSelectedPlates.value, ...toAdd]
   }
 }
-
 const resetAll = () => {
-  selectedStatus.value = '全部'
+  selectedOrg.value = ''
+  selectedStatus.value = ''
   searchKeyword.value = ''
   tempSearchKeyword.value = ''
   selectedPlates.value = []
   tempSelectedPlates.value = []
+  statusFilter.value = 'all'
   closePopup()
-  if (highlightedPlate.value) {
-    const marker = markerMap.get(highlightedPlate.value)
-    if (marker) resetMarkerStyle(marker)
-    highlightedPlate.value = null
-  }
   updateMarkersVisibility()
 }
 
-// ---------- 列表折叠 ----------
+// ============================================================
+// 列表折叠 + 拖拽
+// ============================================================
 const isListCollapsed = ref(false)
 const toggleList = () => { isListCollapsed.value = !isListCollapsed.value }
 
-const listWidth = ref(180)
+const listWidth = ref(220)
 const isResizing = ref(false)
 const startResize = (e) => {
   e.preventDefault()
+  e.stopPropagation()
   isResizing.value = true
   const startX = e.clientX
   const startWidth = listWidth.value
   const onMouseMove = (ev) => {
     const newWidth = startWidth + (ev.clientX - startX)
-    listWidth.value = Math.min(400, Math.max(80, newWidth))
+    listWidth.value = Math.min(400, Math.max(200, newWidth))
   }
   const onMouseUp = () => {
     isResizing.value = false
@@ -730,591 +674,674 @@ const startResize = (e) => {
   document.addEventListener('mouseup', onMouseUp)
 }
 
-// ---------- 生命周期 ----------
 onMounted(async () => {
-  vehicles.value = vehicleData.map(item => enrichVehicleData(item))
-  updateStats()
   await nextTick()
+  await loadVehicles()
   await initMap()
 })
 </script>
 
-<template>
-  <div class="fullmap">
-    <!-- 顶部标题 -->
-    <div class="header">
-      <div class="title"><span class="brand">🚛 李先生的车队</span></div>
-    </div>
-
-    <!-- 统计卡片 -->
-    <div class="stats-row">
-      <div v-for="s in stats" :key="s.label" class="stat-item">
-        <span class="stat-value" :style="{ color: s.color }">{{ s.value }}</span>
-        <span class="stat-label">{{ s.label }}</span>
-      </div>
-    </div>
-
-    <!-- 筛选栏 -->
-    <div class="filter-bar">
-      <el-select v-model="selectedOrg" placeholder="请选择组织机构" size="small" style="width:160px;" disabled>
-        <el-option label="李先生的车队（30）" value="李先生的车队（30）"></el-option>
-      </el-select>
-      <el-select v-model="selectedStatus" placeholder="请选择作业状态" size="small" style="width:140px; margin-left:10px;">
-        <el-option v-for="s in statusOptions" :key="s" :label="s" :value="s"></el-option>
-      </el-select>
-      <el-input :value="searchKeyword" placeholder="点击搜索车辆" size="small" style="width:160px; margin-left:10px;"
-        readonly class="search-input" @click="openDialog" clearable @clear="searchKeyword = ''; tempSearchKeyword = ''">
-      </el-input>
-      <el-button size="small" style="margin-left:10px;" @click="resetAll">重置</el-button>
-    </div>
-
-    <!-- 主区域 -->
-    <div class="map-layout">
-      <!-- 左侧车辆列表 -->
-      <div class="vehicle-list" :class="{ collapsed: isListCollapsed }" :style="{ width: listWidth + 'px' }">
-        <div class="list-header" @click="toggleList">
-          <span v-if="!isListCollapsed">车辆列表</span>
-          <span v-else class="collapsed-icon">📋</span>
-          <span v-if="!isListCollapsed" class="list-count">{{ filteredVehicles.length }}</span>
-          <span class="toggle-btn">{{ isListCollapsed ? '▶' : '◀' }}</span>
-        </div>
-        <div v-show="!isListCollapsed" class="list-scroll">
-          <div v-for="v in filteredVehicles" :key="v.plate" class="list-item"
-            :class="{ active: isVehicleHighlighted(v.plate), 'selected-multi': selectedPlates.includes(v.plate) }"
-            @click="highlightVehicle(v.plate)">
-            <span class="plate-badge">{{ v.plate }}</span>
-            <span class="status-badge" :class="v.status">{{ v.status }}</span>
-          </div>
-        </div>
-        <div v-show="isListCollapsed" class="list-scroll collapsed-list">
-          <div v-for="v in filteredVehicles" :key="v.plate" class="list-item collapsed-item"
-            :class="{ active: isVehicleHighlighted(v.plate), 'selected-multi': selectedPlates.includes(v.plate) }"
-            @click="highlightVehicle(v.plate)">
-            <span class="plate-badge-collapsed">{{ v.plate }}</span>
-          </div>
-        </div>
-        <div class="resizer" @mousedown="startResize"></div>
-      </div>
-
-      <!-- 地图容器 -->
-      <div id="map-container" class="map-container">
-        <div v-if="!isMapReady" class="map-loading">
-          <span>正在定位车辆位置... {{ geocodeProgress }}%</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 搜索弹窗 -->
-    <el-dialog v-model="dialogVisible" title="搜索车辆" width="450px" :close-on-click-modal="false" @close="cancelSearch">
-      <div style="margin-bottom:16px; display:flex; align-items:center; gap:12px;">
-        <el-input v-model="tempSearchKeyword" placeholder="输入车牌号模糊搜索" clearable style="flex:1;"></el-input>
-        <el-button type="primary" size="small" @click="selectAll">
-          {{ dialogFilteredVehicles.every(v => tempSelectedPlates.includes(v.plate)) ? '取消全选' : '全选' }}
-        </el-button>
-      </div>
-      <div style="max-height:400px; overflow-y:auto; text-align:left;">
-        <el-checkbox-group v-model="tempSelectedPlates" style="display:flex; flex-direction:column; align-items:flex-start;">
-          <div v-for="v in dialogFilteredVehicles" :key="v.plate" style="padding:4px 0; width:100%; text-align:left;">
-            <el-checkbox :label="v.plate" style="text-align:left;">{{ v.plate }}</el-checkbox>
-          </div>
-        </el-checkbox-group>
-      </div>
-      <template #footer>
-        <el-button @click="cancelSearch">取消</el-button>
-        <el-button type="primary" @click="confirmSearch">确定</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 浮动小卡片 -->
-    <div
-      v-if="popupVisible && popupVehicle"
-      class="popup-card"
-      :style="popupStyle"
-      @click.stop
-      @mousedown="startDrag"
-      style="cursor: grab; user-select: none;"
-      @dragstart.prevent
-    >
-      <div class="popup-close" @click="closePopup">×</div>
-      <div class="popup-header">
-        <span class="popup-plate">{{ popupVehicle.plate }}</span>
-        <span class="popup-status" :class="popupVehicle.status">{{ popupVehicle.status }}</span>
-      </div>
-      <div class="popup-divider"></div>
-      <div class="popup-info">
-        <div class="popup-row"><span class="popup-label">所属机构</span><span class="popup-value">{{ popupVehicle.org || '西马物流新能源车队' }}</span></div>
-        <div class="popup-row"><span class="popup-label">燃料类型</span><span class="popup-value">{{ popupVehicle.fuelDisplay || '纯电' }}</span></div>
-        <div class="popup-row"><span class="popup-label">当前速度</span><span class="popup-value">{{ popupVehicle.speed }}km/h</span></div>
-        <div class="popup-row"><span class="popup-label">当前转速</span><span class="popup-value">{{ popupVehicle.rpm }}r/min</span></div>
-        <div class="popup-row"><span class="popup-label">剩余电量</span><span class="popup-value">{{ popupVehicle.battery }}%</span></div>
-        <div class="popup-row"><span class="popup-label">DCDC状态</span><span class="popup-value">{{ popupVehicle.dcdcStatus || '工作' }}</span></div>
-        <div class="popup-row"><span class="popup-label">驱动电机状态</span><span class="popup-value">{{ popupVehicle.motorStatus || '准备' }}</span></div>
-        <div class="popup-row"><span class="popup-label">驱动电机转速</span><span class="popup-value">{{ popupVehicle.motorRpm }}r/min</span></div>
-        <div class="popup-row"><span class="popup-label">环境温度</span><span class="popup-value">{{ popupVehicle.envTemp }}℃</span></div>
-        <div class="popup-row"><span class="popup-label">电机温度</span><span class="popup-value">{{ popupVehicle.motorTemp }}℃</span></div>
-        <div class="popup-row"><span class="popup-label">上报时间</span><span class="popup-value">{{ popupVehicle.reportTime }}</span></div>
-        <div class="popup-row"><span class="popup-label">当前位置</span><span class="popup-value">{{ popupVehicle.location }}</span></div>
-      </div>
-      <div class="popup-actions">
-        <el-button type="primary" size="small" plain @click="ElMessage.info('实时跟踪功能开发中')">实时跟踪</el-button>
-        <el-button type="info" size="small" plain @click="ElMessage.info('轨迹回放功能开发中')">轨迹回放</el-button>
-      </div>
-    </div>
-  </div>
-</template>
-
 <style scoped>
-/* ===== 全局 ===== */
 .fullmap {
   height: 100vh;
+  width: 100%;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background: #f5f7fb;
-  padding: 8px 16px 12px;
+  padding: 12px;
   box-sizing: border-box;
+  background: #f0f2f5;
+}
+.map-stage {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  background: #F8FAFC;
+}
+.map-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
-.header {
+/* ========== 顶部胶囊统计条 ========== */
+.floating-stats {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  left: 260px;
+  z-index: 50;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
-  flex-shrink: 0;
+  gap: 10px;
+  pointer-events: none;
 }
-.title .brand {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0a2a4a;
-}
-
-/* ===== 统计卡片 ===== */
-.stats-row {
+.stats-pills {
   display: flex;
+  align-items: center;
   gap: 6px;
-  background: #ffffff;
-  padding: 4px 12px;
-  border-radius: 8px;
-  border: 1px solid #f0f0f0;
-  margin-bottom: 6px;
-  flex-shrink: 0;
-  flex-wrap: nowrap;
-  align-items: center;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 999px;
+  padding: 5px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  pointer-events: auto;
 }
-.stat-item {
+.stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: transparent;
+  border: 1.5px solid transparent;
+  user-select: none;
+}
+.stat-pill:hover {
+  background: rgba(248, 250, 252, 0.95);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+}
+.stat-pill:hover .pill-dot { transform: scale(1.4); }
+.stat-pill.active {
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(200, 16, 46, 0.12), 0 0 0 1.5px currentColor inset;
+}
+.stat-pill.active .pill-value { transform: scale(1.08); }
+.stat-pill:nth-child(1) { color: #c8102e; }
+.stat-pill:nth-child(2) { color: #10B981; }
+.stat-pill:nth-child(3) { color: #1F2937; }
+.stat-pill:nth-child(4) { color: #2563EB; }
+.pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+.stat-pill:nth-child(1) .pill-dot { box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.18); animation: dotPulseRed 2s ease-in-out infinite; }
+.stat-pill:nth-child(2) .pill-dot { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18); animation: dotPulseGreen 2s ease-in-out infinite; }
+.stat-pill:nth-child(4) .pill-dot { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18); animation: dotPulseBlue 2s ease-in-out infinite; }
+@keyframes dotPulseRed { 0%,100% { box-shadow: 0 0 0 3px rgba(200,16,46,0.18); } 50% { box-shadow: 0 0 0 6px rgba(200,16,46,0.04); } }
+@keyframes dotPulseGreen { 0%,100% { box-shadow: 0 0 0 3px rgba(16,185,129,0.18); } 50% { box-shadow: 0 0 0 6px rgba(16,185,129,0.04); } }
+@keyframes dotPulseBlue { 0%,100% { box-shadow: 0 0 0 3px rgba(37,99,235,0.18); } 50% { box-shadow: 0 0 0 6px rgba(37,99,235,0.04); } }
+.pill-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0F172A;
+  font-family: 'Courier New', monospace;
+  line-height: 1;
+}
+.pill-label { font-size: 12px; font-weight: 600; color: #64748B; line-height: 1; }
+
+.refresh-btn {
+  background: linear-gradient(135deg, #c8102e, #a00d24) !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  border-radius: 999px !important;
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.3) !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  pointer-events: auto;
+  padding: 8px 18px !important;
+}
+.refresh-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(200, 16, 46, 0.45) !important;
+}
+.icon-spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ========== 悬浮左侧车辆列表 ========== */
+.floating-sidebar {
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  left: 16px;
+  z-index: 60;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 2px 10px 2px 8px;
-  border-right: 1px solid #f0f0f0;
+  overflow: hidden;
+  transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   min-width: 44px;
 }
-.stat-item:last-child {
-  border-right: none;
-  padding-right: 4px;
+.sidebar-content { display: flex; flex-direction: column; height: 100%; overflow: hidden; width: 100%; }
+.sidebar-filter { padding: 12px; border-bottom: 1px solid rgba(226, 232, 240, 0.6); flex-shrink: 0; }
+
+:deep(.sidebar-filter .el-input__wrapper),
+:deep(.sidebar-filter .el-select__wrapper) {
+  border-radius: 8px !important;
+  background: rgba(248, 250, 252, 0.8) !important;
 }
-.stat-value {
-  font-size: 16px;
+:deep(.sidebar-filter .el-input__wrapper.is-focus),
+:deep(.sidebar-filter .el-select__wrapper.is-focused) {
+  box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.15), 0 0 0 1px #c8102e inset !important;
+  background: #ffffff !important;
+}
+.search-trigger :deep(.el-input__wrapper) { cursor: pointer; }
+.search-trigger :deep(.el-input__inner) { cursor: pointer; }
+.filter-buttons { display: flex; gap: 8px; margin-top: 8px; }
+.btn-reset, .btn-search {
+  flex: 1;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+}
+.btn-reset { border-color: #CBD5E1; color: #334155; }
+.btn-reset:hover { border-color: #c8102e; color: #c8102e; background: #FEF2F2; }
+.btn-search {
+  background: linear-gradient(135deg, #c8102e, #a00d24) !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+.btn-search:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.3);
+}
+
+.sidebar-list-header {
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
   font-weight: 700;
-  line-height: 1.2;
+  color: #0F172A;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  flex-shrink: 0;
 }
-.stat-label {
-  font-size: 10px;
-  color: #999;
-  font-weight: 400;
-  letter-spacing: 0.2px;
-  margin-top: 1px;
-}
-
-/* ===== 筛选栏 ===== */
-.filter-bar {
+.list-icon { color: #c8102e; font-size: 15px; }
+.list-count { color: #94A3B8; font-weight: 600; font-size: 12px; }
+.collapse-btn {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  background: #ffffff;
-  padding: 6px 16px;
-  border-radius: 10px;
-  border: 1px solid #e5e9f0;
-  margin-bottom: 8px;
-  flex-shrink: 0;
-  gap: 4px;
-}
-.filter-bar .el-select,
-.filter-bar .el-input {
-  font-size: 12px;
-}
-.filter-bar .el-button {
-  font-size: 12px;
-  padding: 5px 12px;
-}
-.search-input :deep(.el-input__wrapper) {
-  background-color: #f5f7fa;
+  justify-content: center;
   border-radius: 6px;
-  box-shadow: 0 0 0 1px #dcdfe6 inset;
   cursor: pointer;
+  color: #64748B;
+  font-size: 13px;
+  transition: all 0.25s;
 }
-.search-input :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px #c0c4cc inset;
-}
-.search-input :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px #409eff inset;
-}
-.search-input :deep(.el-input__inner) {
-  cursor: pointer;
-}
+.collapse-btn:hover { background: #F1F5F9; color: #c8102e; transform: scale(1.1); }
 
-/* ===== 地图布局 ===== */
-.map-layout {
-  display: flex;
-  gap: 12px;
-  flex: 1;
-  min-height: 0;
-  position: relative;
-}
+.sidebar-list { flex: 1; overflow-y: auto; padding: 6px; }
+.sidebar-list::-webkit-scrollbar { width: 4px; }
+.sidebar-list::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 2px; }
 
-/* ----- 车辆列表 ----- */
-.vehicle-list {
-  background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #e5e9f0;
+.vehicle-item {
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  flex-shrink: 0;
-  transition: width 0.3s ease;
-  position: relative;
-  min-width: 80px;
-}
-.list-header {
-  padding: 8px 12px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e5e9f0;
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-weight: 600;
-  font-size: 13px;
-  color: #0a2a4a;
+  gap: 6px;
+  padding: 7px 8px;
+  margin-bottom: 2px;
+  border-radius: 7px;
   cursor: pointer;
-  user-select: none;
-  flex-shrink: 0;
-}
-.vehicle-list.collapsed .list-header {
-  justify-content: center;
-  padding: 8px 0;
-}
-.toggle-btn {
-  font-size: 11px;
-  color: #4a6a8a;
-}
-.collapsed-icon {
-  font-size: 18px;
-}
-.list-count {
-  background: #e5e9f0;
-  padding: 0 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  color: #4a6a8a;
-}
-.list-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 0;
-}
-.list-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 12px;
-  cursor: pointer;
-  transition: background 0.15s;
-  border-left: 3px solid transparent;
-  font-size: 13px;
-}
-.list-item:hover {
-  background: #f0f4f9;
-}
-.list-item.active {
-  background: #e6effa;
-  border-left-color: #1a3a6b;
-}
-.list-item.selected-multi {
-  background: #d4e2f7;
-  border-left-color: #3b82f6;
-}
-.plate-badge {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a2a4a;
-}
-.status-badge {
-  font-size: 11px;
-  padding: 1px 8px;
-  border-radius: 10px;
-  color: #fff;
-  font-weight: 500;
-}
-.status-badge.行驶 { background: #22c55e; }
-.status-badge.静止 { background: #6b7280; }
-.status-badge.充电 { background: #eab308; }
-.status-badge.离线 { background: #ef4444; }
-
-.collapsed-list .list-item {
-  justify-content: center;
-  padding: 2px 0;
-}
-.collapsed-item .plate-badge-collapsed {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a2a4a;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-left: 2px solid transparent;
+  font-size: 12.5px;
   white-space: nowrap;
+  overflow: hidden;
 }
+.vehicle-item:hover { background: rgba(248, 250, 252, 0.9); transform: translateX(3px); }
+.vehicle-item.active {
+  background: rgba(254, 242, 242, 0.95);
+  border-left-color: #c8102e;
+  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.08);
+}
+.vehicle-item.no-loc { opacity: 0.45; }
+.vehicle-item.no-loc:hover { transform: none; }
+.vehicle-status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.vehicle-status-dot.在线 { background: #10B981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18); animation: dotPulseGreen 2s ease-in-out infinite; }
+.vehicle-status-dot.离线 { background: #1F2937; }
+.vehicle-plate { font-weight: 700; color: #0F172A; font-size: 12.5px; flex-shrink: 0; }
+.vehicle-vin { color: #94A3B8; font-size: 11px; font-family: 'Courier New', monospace; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.vehicle-status-tag { margin-left: auto; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px; flex-shrink: 0; }
+.vehicle-status-tag.在线 { background: #D1FAE5; color: #065F46; }
+.vehicle-status-tag.离线 { background: #F1F5F9; color: #1F2937; }
 
-/* ----- 拖拽手柄 ----- */
+.list-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 40px 20px; color: #94A3B8; font-size: 12px; }
+.list-empty .el-icon { font-size: 26px; color: #CBD5E1; }
+
+.sidebar-collapsed { display: flex; flex-direction: column; height: 100%; align-items: center; padding: 8px 0; }
+.collapse-btn-vertical {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #64748B;
+  transition: all 0.25s;
+  background: rgba(241, 245, 249, 0.6);
+}
+.collapse-btn-vertical:hover { background: #FEF2F2; color: #c8102e; transform: scale(1.1); }
+
 .resizer {
   position: absolute;
   top: 0;
-  right: -4px;
-  width: 8px;
+  right: -3px;
+  width: 6px;
   height: 100%;
   cursor: col-resize;
-  z-index: 5;
-  background: transparent;
-  transition: background 0.2s;
+  z-index: 10;
 }
-.resizer:hover {
-  background: rgba(26, 58, 107, 0.15);
-}
+.resizer:hover { background: rgba(200, 16, 46, 0.08); }
 .resizer::after {
   content: '';
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  width: 2px;
-  height: 30px;
-  background: #b0c4de;
-  border-radius: 2px;
-  opacity: 0.5;
-  transition: opacity 0.2s;
+  width: 2px; height: 24px;
+  background: #CBD5E1;
+  border-radius: 1px;
+  opacity: 0;
 }
-.resizer:hover::after {
-  opacity: 1;
-}
+.resizer:hover::after { opacity: 1; }
 
-/* ----- 地图容器 ----- */
-#map-container {
-  flex: 1;
-  border-radius: 12px;
-  border: 1px solid #d0d8e0;
-  overflow: hidden;
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.6);
-  min-height: 0;
-  position: relative;
-}
-.map-loading {
+.list-item-enter-active, .list-item-leave-active { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.list-item-enter-from { opacity: 0; transform: translateX(-20px); }
+.list-item-leave-to { opacity: 0; transform: translateX(20px); }
+
+/* ========== 加载遮罩 ========== */
+.map-loading-overlay {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(255,255,255,0.9);
-  padding: 16px 32px;
-  border-radius: 10px;
-  font-size: 16px;
-  color: #1a3a6b;
-  z-index: 100;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-}
-
-/* ===== 高德信息窗体 - 透明背景 ===== */
-.amap-info-content {
-  padding: 0 !important;
-  background: transparent !important;
-  border: none !important;
-}
-.amap-info-window {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-/* ===== 浮动小卡片（80%透明度后备） ===== */
-.popup-card {
-  position: fixed;
-  background: rgba(220, 232, 245, 0.8); /* 80% 透明度后备 */
-  background: rgba(220, 232, 245, 0.55);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  padding: 12px 14px 14px;
-  width: 260px;
-  z-index: 1000;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  pointer-events: auto;
-  cursor: grab;
-  user-select: none;
-}
-.popup-card:active {
-  cursor: grabbing;
-}
-.popup-close {
-  position: absolute;
-  top: 6px;
-  right: 10px;
-  font-size: 18px;
-  color: rgba(60, 70, 80, 0.7);
-  cursor: pointer;
-  line-height: 1;
-  pointer-events: auto;
-}
-.popup-close:hover {
-  color: rgba(30, 40, 50, 0.9);
-}
-
-.popup-header {
+  inset: 0;
+  background: rgba(248, 250, 252, 0.9);
+  backdrop-filter: blur(8px);
   display: flex;
-  align-items: baseline;
-  gap: 4px;
-  margin-bottom: 4px;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
 }
-.popup-plate {
-  font-size: 15px;
-  font-weight: 700;
-  color: #0a2a4a;
-  letter-spacing: 0.5px;
-}
-.popup-status {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 0 10px;
-  border-radius: 20px;
-  color: #fff;
-  line-height: 1.6;
-}
-.popup-status.行驶 { background: #22c55e; }
-.popup-status.静止 { background: #6b7280; }
-.popup-status.充电 { background: #eab308; }
-.popup-status.离线 { background: #ef4444; }
-
-.popup-divider {
-  border-top: 1px solid rgba(192, 208, 224, 0.5);
-  margin: 4px 0 6px 0;
-}
-
-.popup-info {
+.loading-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 28px 40px;
   display: flex;
   flex-direction: column;
-  gap: 0px;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 20px 60px rgba(200, 16, 46, 0.15);
+  animation: loadingCardIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.popup-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  font-size: 10px;
-  padding: 2px 0;
-  border-bottom: 1px dashed rgba(208, 222, 236, 0.5);
+@keyframes loadingCardIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+.loading-ring { position: relative; width: 72px; height: 72px; }
+.loading-ring svg { transform: rotate(-90deg); }
+.ring-track { fill: none; stroke: #FEE2E2; stroke-width: 6; }
+.ring-progress {
+  fill: none;
+  stroke: #c8102e;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 263.89;
+  transition: stroke-dashoffset 0.3s ease-out;
+  filter: drop-shadow(0 2px 6px rgba(200, 16, 46, 0.4));
 }
-.popup-row:last-child {
-  border-bottom: none;
+.loading-percent {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 16px;
+  font-weight: 800;
+  color: #c8102e;
+  font-family: 'Courier New', monospace;
 }
-.popup-label {
-  color: rgba(60, 80, 100, 0.8);
-  font-weight: 400;
-  white-space: nowrap;
-  margin-right: 4px;
-}
-.popup-value {
-  color: #1a2a4a;
-  font-weight: 500;
-  text-align: right;
-  word-break: break-all;
-}
+.loading-text { font-size: 13px; color: #475569; font-weight: 600; margin: 0; animation: textPulse 1.6s ease-in-out infinite; }
+@keyframes textPulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
 
-.popup-actions {
+.fade-enter-active, .fade-leave-active { transition: opacity 0.4s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* ========== 空状态 ========== */
+.map-empty {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 150;
+  text-align: center;
+  padding: 30px 40px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+}
+.empty-icon-wrap {
+  display: flex;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FEF2F2, #FCA5A5);
+  align-items: center;
   justify-content: center;
+  animation: emptyFloat 3s ease-in-out infinite;
 }
-.popup-actions .el-button {
-  flex: 1;
-  max-width: 100px;
-  border-radius: 20px;
-  font-size: 9px;
-  padding: 2px 0;
+.empty-icon-wrap.warning { background: linear-gradient(135deg, #FFFBEB, #FCD34D); }
+.empty-icon-wrap .el-icon { font-size: 34px; color: #991B1B; }
+.empty-icon-wrap.warning .el-icon { color: #92400E; }
+@keyframes emptyFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.map-empty p { margin: 0; font-size: 16px; color: #0F172A; font-weight: 700; }
+.map-empty span { font-size: 13px; color: #64748B; font-weight: 500; }
+
+/* ========== 高德 InfoWindow 容器清理 ========== */
+:deep(.amap-info-content) { padding: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important; }
+:deep(.amap-info-window) { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+:deep(.amap-info-close) { display: none !important; }
+
+/* ========== 搜索弹窗 ========== */
+:deep(.vehicle-dialog .el-dialog) { border-radius: 12px; overflow: hidden; }
+:deep(.vehicle-dialog .el-dialog__header) { padding: 16px 20px; border-bottom: 1px solid #F1F5F9; }
+:deep(.vehicle-dialog .el-dialog__title) { font-weight: 700; color: #0F172A; }
+:deep(.vehicle-dialog .el-dialog__body) { padding: 16px 20px; }
+.dialog-search-row { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+.dialog-list { max-height: 380px; overflow-y: auto; padding: 4px 0; }
+.dialog-item { padding: 6px 0; }
+.dialog-empty { text-align: center; color: #94A3B8; padding: 30px 0; font-size: 13px; }
+:deep(.btn-primary) {
+  background-color: #c8102e !important;
+  border-color: #c8102e !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+:deep(.btn-primary:hover) {
+  background-color: #a00d24 !important;
+  border-color: #a00d24 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.3);
 }
 
-/* ===== 响应式 ===== */
+@media (max-width: 1200px) { .pill-label { display: none; } .stat-pill { padding: 6px 10px; } }
 @media (max-width: 768px) {
-  .fullmap { padding: 4px 8px 8px; }
-  .stats-row { gap: 4px; padding: 4px 8px; flex-wrap: nowrap; overflow-x: auto; }
-  .stat-item { padding: 2px 6px 2px 4px; min-width: 36px; }
-  .stat-value { font-size: 14px; }
-  .stat-label { font-size: 9px; }
-  .filter-bar { flex-direction: column; align-items: stretch; gap: 4px; padding: 6px 10px; }
-  .filter-bar .el-select, .filter-bar .el-input { width: 100% !important; margin-left: 0 !important; }
-  .map-layout { flex-direction: column; }
-  .vehicle-list { width: 100% !important; max-height: 120px; }
-  .vehicle-list.collapsed { width: 100% !important; max-height: 36px; }
-  .resizer { display: none; }
-  #map-container { min-height: 300px; }
-  .popup-card { width: 220px; padding: 10px 12px; }
-  .popup-plate { font-size: 13px; }
-  .popup-status { font-size: 10px; padding: 0 8px; }
-  .popup-row { font-size: 9px; }
-  .popup-actions .el-button { max-width: 80px; font-size: 8px; }
+  .fullmap { padding: 6px; }
+  .floating-sidebar { display: none; }
+  .floating-stats { left: 12px; right: 12px; top: 12px; }
+  .stats-pills { flex: 1; overflow-x: auto; }
 }
 </style>
 
-<!-- ===== 自定义标记样式（非 scoped） ===== -->
+<!-- ==========================================
+   非 scoped：地图标记 + InfoWindow 浅色毛玻璃卡片
+   ========================================== -->
 <style>
+/* ========== 自定义地图标记 ========== */
 .custom-marker {
   display: flex;
   flex-direction: column;
   align-items: center;
   cursor: pointer;
-  transform: translate(-50%, -50%);
-  transition: transform 0.2s, filter 0.2s, box-shadow 0.2s;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   will-change: transform;
   z-index: 1;
+  animation: markerDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
-.custom-marker .vehicle-icon {
+@keyframes markerDrop {
+  from { opacity: 0; transform: translateY(-20px) scale(0.5); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.custom-marker .truck-icon-wrap {
   position: relative;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2.5px solid #ffffff;
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.3);
-  margin-bottom: 2px;
-}
-.custom-marker .vehicle-icon.行驶 { background: #22c55e; }
-.custom-marker .vehicle-icon.静止 { background: #6b7280; }
-.custom-marker .vehicle-icon.充电 { background: #eab308; }
-.custom-marker .vehicle-icon.离线 { background: #ef4444; }
-
-.custom-marker .vehicle-icon .arrow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  font-size: 9px;
-  color: #ffffff;
-  line-height: 1;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-  pointer-events: none;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease-out;
   transform-origin: center center;
 }
-
+.custom-marker .truck-icon-wrap svg { width: 36px; height: 36px; display: block; }
+.custom-marker .truck-pulse-ring {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 24px; height: 24px;
+  margin-left: -12px;
+  margin-top: -12px;
+  border-radius: 50%;
+  border: 2px solid rgba(16, 185, 129, 0.7);
+  animation: truckPulse 1.8s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes truckPulse {
+  0% { transform: scale(0.8); opacity: 0.9; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
 .custom-marker .plate {
-  font-size: 8px;
-  font-weight: 700;
-  background: rgba(255,255,255,0.85);
-  padding: 0 4px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #0F172A;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 1px 5px;
   border-radius: 4px;
   white-space: nowrap;
-  border: 1px solid rgba(255,255,255,0.8);
-  text-shadow: 0 0 4px rgba(255,255,255,0.9);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  letter-spacing: 0.3px;
+  margin-top: -2px;
 }
+
+/* ==========================================
+   高德 InfoWindow 卡片 —— 浅色毛玻璃 + 弹性入场 + 顶部流光
+   ========================================== */
+.amap-custom-popup {
+  position: relative;
+  /* 浅色毛玻璃 */
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 210px;
+  max-width: 230px;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset,
+    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  color: #1E293B;
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  overflow: hidden;
+  /* 弹性缩放入场（原来的动画） */
+  animation: popupFadeIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes popupFadeIn {
+  from { opacity: 0; transform: scale(0.88) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* 顶部动态流光条 —— 从中间扫开 + 持续呼吸流光 */
+.amap-popup-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2.5px;
+  overflow: hidden;
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.35), rgba(16, 185, 129, 0.15));
+}
+.amap-popup-accent::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, #34D399, #10B981, transparent);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.9);
+  animation: accentFlow 2.2s ease-in-out infinite;
+}
+@keyframes accentFlow {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+.amap-custom-popup.offline .amap-popup-accent {
+  background: linear-gradient(90deg, rgba(100, 116, 139, 0.15), rgba(100, 116, 139, 0.35), rgba(100, 116, 139, 0.15));
+}
+.amap-custom-popup.offline .amap-popup-accent::before {
+  background: linear-gradient(90deg, transparent, #94A3B8, #64748B, transparent);
+  box-shadow: 0 0 8px rgba(100, 116, 139, 0.9);
+}
+
+/* 关闭按钮 */
+.amap-popup-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 14px;
+  color: #94A3B8;
+  cursor: pointer;
+  transition: all 0.25s;
+  line-height: 1;
+  user-select: none;
+  z-index: 2;
+}
+.amap-popup-close:hover {
+  background: #F1F5F9;
+  color: #475569;
+  transform: rotate(90deg) scale(1.1);
+}
+
+/* 头部：车牌 + 状态 */
+.amap-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-right: 20px;
+}
+.amap-popup-plate {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: 0.4px;
+}
+.amap-popup-status {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid;
+  letter-spacing: 0.2px;
+}
+.amap-popup-status.online {
+  background: #ECFDF5;
+  color: #059669;
+  border-color: #A7F3D0;
+}
+.amap-popup-status.offline {
+  background: #F1F5F9;
+  color: #475569;
+  border-color: #E2E8F0;
+}
+
+.amap-popup-divider {
+  border-top: 1px solid rgba(226, 232, 240, 0.7);
+  margin: 0 0 8px 0;
+}
+
+/* 信息行 */
+.amap-popup-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.amap-popup-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+.amap-popup-label {
+  color: #64748B;
+  font-weight: 500;
+  white-space: nowrap;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+.amap-popup-value {
+  color: #0F172A;
+  font-weight: 600;
+  text-align: right;
+  word-break: break-all;
+  flex: 1;
+}
+.amap-popup-value.mono {
+  font-family: 'Courier New', monospace;
+  font-size: 10.5px;
+}
+
+/* 底部按钮 */
+.amap-popup-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+.amap-popup-btn {
+  flex: 1;
+  padding: 5px 0;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #E2E8F0;
+  outline: none;
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+.amap-popup-btn::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(200, 16, 46, 0.18), transparent);
+  transition: left 0.5s ease;
+}
+.amap-popup-btn:hover::after {
+  left: 100%;
+}
+.amap-popup-btn:hover {
+  background: #FEF2F2;
+  border-color: #FCA5A5;
+  color: #c8102e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.15);
+}
+.amap-popup-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* 隐藏高德自带关闭按钮和箭头 */
+.amap-info-close { display: none !important; }
+.amap-info-sharp { display: none !important; }
+.amap-info-content { padding: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important; }
+.amap-info-window { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
 </style>
