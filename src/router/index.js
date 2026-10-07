@@ -49,7 +49,7 @@ const routes = [
   },
 
   // ==========================================
-  // 👇 新增：电子围栏管理模块
+  // 👇 电子围栏管理模块
   // ==========================================
   {
     path: '/ele-fence',
@@ -60,7 +60,6 @@ const routes = [
       {
         path: 'setting',
         name: 'EleFenceSetting',
-        // 统一指向 Dashboard.vue，由 Dashboard.vue 内部的条件渲染决定加载哪个具体组件
         component: () => import('../views/Dashboard.vue'),
         meta: { title: '围栏设置' }
       },

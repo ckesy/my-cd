@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     }
 
     let url = ''
-    const params: Record<string, string> = { key, sid, gfid, name }
+    const params = { key, sid, gfid, name }
     if (desc) params.desc = desc
 
     switch (shape) {

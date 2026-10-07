@@ -9,3 +9,47 @@ entrypoint = "./functions/amap-geofence/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/amap-geofence/*.html" ]
+
+[functions.amap-geofence-delete]
+enabled = true
+verify_jwt = false
+import_map = "./functions/amap-geofence-delete/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/amap-geofence-delete/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/amap-geofence-delete/*.html" ]
+
+[functions.amap-geofence-update]
+enabled = true
+verify_jwt = false
+import_map = "./functions/amap-geofence-update/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/amap-geofence-update/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/amap-geofence-update/*.html" ]
+
+[functions.amap-driving-analysis]
+enabled = true
+verify_jwt = false
+import_map = "./functions/amap-driving-analysis/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/amap-driving-analysis/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/amap-driving-analysis/*.html" ]
+
+[functions.amap-staypoint-analysis]
+enabled = true
+verify_jwt = false
+import_map = "./functions/amap-staypoint-analysis/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/amap-staypoint-analysis/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/amap-staypoint-analysis/*.html" ]

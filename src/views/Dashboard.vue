@@ -53,7 +53,7 @@
           <template v-else-if="route.path === '/waybill'">
             <Waybill />
           </template>
-          <!-- 新建运单（添加 ref） -->
+          <!-- 新建运单 -->
           <template v-else-if="route.path === '/waybill/create'">
             <WaybillCreate ref="waybillCreateRef" />
           </template>
@@ -69,8 +69,8 @@
           <template v-else-if="route.path === '/driver-archive'">
             <DriverArchive />
           </template>
-          
-          <!-- 👇 新增：电子围栏管理 👇 -->
+
+          <!-- 👇 电子围栏管理 - 三个子页面 -->
           <template v-else-if="route.path === '/ele-fence/setting'">
             <EleFenceSetting />
           </template>
@@ -84,7 +84,7 @@
           <!-- 其他页面（占位） -->
           <template v-else>
             <h2>{{ currentPage || '欢迎' }}</h2>
-            <p>这是“{{ currentPage || '首页' }}”的占位内容。</p>
+            <p>这是"{{ currentPage || '首页' }}"的占位内容。</p>
           </template>
         </div>
       </el-main>
@@ -105,6 +105,7 @@ import Report from '../views/Report.vue'
 import VehicleArchive from '../views/VehicleArchive.vue'
 import DriverArchive from '../views/DriverArchive.vue'
 
+// 👇 电子围栏管理三个子页面
 import EleFenceSetting from '../views/EleFenceSetting.vue'
 import EleFenceAlertSetting from '../views/EleFenceAlertSetting.vue'
 import EleFenceAlertQuery from '../views/EleFenceAlertQuery.vue'
@@ -126,7 +127,9 @@ const updateActiveMenu = (path) => {
 
 watch(
   () => route.path,
-  (newPath) => { updateActiveMenu(newPath) },
+  (newPath) => {
+    updateActiveMenu(newPath)
+  },
   { immediate: true }
 )
 
@@ -145,6 +148,8 @@ const pathLabels = {
   '/waybill/create': '新建运单',
   '/vehicle-archive': '车辆档案',
   '/driver-archive': '司机档案',
+
+  // 👇 电子围栏子页面
   '/ele-fence/setting': '围栏设置',
   '/ele-fence/alert-setting': '提醒设置',
   '/ele-fence/alert-query': '提醒事件查询',
@@ -163,15 +168,25 @@ const addTab = (path) => {
   }
 }
 
+// ---------- 未保存检查并导航 ----------
 const checkAndNavigate = async (targetPath) => {
   if (targetPath === route.path) return
+
   if (route.path === '/waybill/create' && waybillCreateRef.value && waybillCreateRef.value.isDirty) {
     try {
-      await ElMessageBox.confirm('该操作未保存，切换页面将导致数据丢失，是否继续编辑？', '提示', {
-        confirmButtonText: '继续编辑', cancelButtonText: '放弃', type: 'warning',
-        distinguishCancelAndClose: true, closeOnClickModal: false, closeOnPressEscape: false,
-        customClass: 'dirty-confirm-box',
-      })
+      await ElMessageBox.confirm(
+        '该操作未保存，切换页面将导致数据丢失，是否继续编辑？',
+        '提示',
+        {
+          confirmButtonText: '继续编辑',
+          cancelButtonText: '放弃',
+          type: 'warning',
+          distinguishCancelAndClose: true,
+          closeOnClickModal: false,
+          closeOnPressEscape: false,
+          customClass: 'dirty-confirm-box',
+        }
+      )
       return
     } catch (action) {
       if (action === 'cancel' || action === 'close') {
@@ -180,11 +195,18 @@ const checkAndNavigate = async (targetPath) => {
       return
     }
   }
+
   router.push(targetPath)
 }
 
-const openTab = (tab) => checkAndNavigate(tab.path)
-const handleMenuSelect = (index) => { activeMenu.value = index; checkAndNavigate(index) }
+const openTab = (tab) => {
+  checkAndNavigate(tab.path)
+}
+
+const handleMenuSelect = (index) => {
+  activeMenu.value = index
+  checkAndNavigate(index)
+}
 
 const closeTab = (tab) => {
   const index = tabs.value.findIndex((t) => t.path === tab.path)
@@ -192,15 +214,29 @@ const closeTab = (tab) => {
   tabs.value.splice(index, 1)
   if (route.path === tab.path) {
     const nextTab = tabs.value[index] || tabs.value[index - 1]
-    if (nextTab) router.push(nextTab.path)
-    else router.push('/dashboard')
+    if (nextTab) {
+      router.push(nextTab.path)
+    } else {
+      router.push('/dashboard')
+    }
   }
 }
 
-watch(() => route.path, (path) => { addTab(path) }, { immediate: true })
+watch(
+  () => route.path,
+  (path) => {
+    addTab(path)
+  },
+  { immediate: true }
+)
 
-const goLogin = () => router.push('/')
-const handleSettings = () => console.log('打开个人设置')
+const goLogin = () => {
+  router.push('/')
+}
+
+const handleSettings = () => {
+  console.log('打开个人设置')
+}
 </script>
 
 <style scoped>
@@ -211,28 +247,11 @@ const handleSettings = () => console.log('打开个人设置')
   background-color: #F8FAFC;
 }
 
-/* 👇 核心改动1：侧边栏右侧加垂直渐变光条 */
 .sidebar-container {
-  position: relative; /* 为光条定位做准备 */
   background: #FFFFFF;
-  border-right: none; /* 去掉原来的实线边框 */
+  box-shadow: 1px 0 8px rgba(0, 0, 0, 0.03);
+  border-right: 1px solid #E2E8F0;
   z-index: 10;
-}
-.sidebar-container::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  height: 100%;
-  background: linear-gradient(180deg, 
-    rgba(211, 47, 47, 0) 0%, 
-    rgba(211, 47, 47, 0.8) 50%, 
-    rgba(211, 47, 47, 0) 100%
-  );
-  box-shadow: 2px 0 8px rgba(211, 47, 47, 0.15);
-  z-index: 1;
 }
 
 /* ==========================================
@@ -288,10 +307,10 @@ const handleSettings = () => console.log('打开个人设置')
 }
 
 /* ==========================================
-   标签页栏 (底部横向光条)
+   标签页栏
    ========================================== */
 .page-tabs {
-  position: relative; 
+  position: relative;
   display: flex;
   flex-wrap: nowrap;
   overflow-x: auto;
@@ -311,16 +330,15 @@ const handleSettings = () => console.log('打开个人设置')
   bottom: 0;
   width: 100%;
   height: 2px;
-  background: linear-gradient(90deg, 
-    rgba(211, 47, 47, 0) 0%, 
-    rgba(211, 47, 47, 0.8) 50%, 
+  background: linear-gradient(90deg,
+    rgba(211, 47, 47, 0) 0%,
+    rgba(211, 47, 47, 0.8) 50%,
     rgba(211, 47, 47, 0) 100%
   );
   box-shadow: 0 2px 6px rgba(211, 47, 47, 0.15);
   z-index: 1;
 }
 
-/* 标签样式 */
 .tab-item {
   font-size: 12px;
   height: 24px;
@@ -373,7 +391,7 @@ const handleSettings = () => console.log('打开个人设置')
 }
 
 /* ==========================================
-   主内容区 (彻底消除四周边距)
+   主内容区
    ========================================== */
 .main-content {
   height: calc(100vh - 48px - 36px - 1px);
@@ -384,13 +402,14 @@ const handleSettings = () => console.log('打开个人设置')
   background: #F8FAFC;
 }
 
-/* 👇 核心改动2：左侧间隙清零，完全紧贴侧边栏光条 */
 .content-wrapper {
-  padding: 0 16px 16px 0; /* 左侧 0，右侧 16，底部 16 */
+  padding: 0 16px 16px 0;
   min-height: 100%;
 }
 
-/* 页面切换动画 */
+/* ==========================================
+   页面切换动画
+   ========================================== */
 .animate-fade-up {
   animation: fadeUp 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
@@ -412,7 +431,7 @@ h2 {
 }
 </style>
 
-<!-- ===== 全局样式 ===== -->
+<!-- ===== 全局样式（用于 popover 和 确认框高斯模糊） ===== -->
 <style>
 .settings-popover {
   border: 1px solid #E2E8F0 !important;
