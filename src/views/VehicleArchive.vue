@@ -342,6 +342,22 @@ const formatDateTime = (dateStr) => {
   return dayjs(dateStr).format('YYYY-MM-DD HH:mm:ss')
 }
 
+// ==========================================
+// 🛡️ 超时防御工具 (核心新增)
+// ==========================================
+const withTimeout = (promise, timeoutMs = 10000, errorMessage = '请求超时，请检查网络或稍后重试') => {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(errorMessage));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+};
+
 // ---------- 缓存 ----------
 const CACHE_KEY = 'vehicle_archive_cache'
 const STATE_KEY = 'vehicle_archive_state'
@@ -448,10 +464,12 @@ const confirmDelete = async () => {
       background: 'rgba(0, 0, 0, 0.7)'
     })
     try {
-      const { error } = await supabase
-        .from('vehicles')
-        .delete()
-        .in('id', selectedIds.value)
+      // 👇 防御：删除操作
+      const { error } = await withTimeout(
+        supabase.from('vehicles').delete().in('id', selectedIds.value),
+        10000,
+        '删除请求超时，请稍后重试'
+      )
       if (error) throw error
       ElMessage.success(`成功删除 ${selectedIds.value.length} 条数据`)
       batchDeleteMode.value = false
@@ -500,12 +518,21 @@ const driverTarget = ref(null)
 
 const loadDriverList = async () => {
   if (driverList.value.length === 0) {
-    const { data, error } = await supabase.from('drivers').select('driver_name')
-    if (!error) {
-      driverList.value = data || []
-      filteredDriverList.value = [...driverList.value]
-    } else {
-      ElMessage.error('加载司机列表失败')
+    try {
+      // 👇 防御：加载司机列表
+      const { data, error } = await withTimeout(
+        supabase.from('drivers').select('driver_name'),
+        10000,
+        '加载司机列表超时，请重试'
+      )
+      if (!error) {
+        driverList.value = data || []
+        filteredDriverList.value = [...driverList.value]
+      } else {
+        ElMessage.error('加载司机列表失败')
+      }
+    } catch (err) {
+      ElMessage.error(err.message)
     }
   }
 }
@@ -585,9 +612,12 @@ const openEditFromView = () => {
 const syncFromVehiclesToDrivers = async () => {
   try {
     // 1. 获取所有车辆
-    const { data: vehicles, error: vError } = await supabase
-      .from('vehicles')
-      .select('plate, driver')
+    // 👇 防御：同步查询
+    const { data: vehicles, error: vError } = await withTimeout(
+      supabase.from('vehicles').select('plate, driver'),
+      15000,
+      '同步数据超时'
+    )
     if (vError) throw vError
 
     // 2. 构建车牌 -> 司机姓名列表的映射
@@ -628,15 +658,11 @@ const syncFromVehiclesToDrivers = async () => {
     }
 
     // 5. 清除那些没有绑定任何车辆的司机的 bound_vehicle（可选：如果要清空）
-    // 但为了保留可能存在的其他绑定，我们不主动清空，只更新已有的。
-    // 如果想清空所有未出现在映射中的司机，可以查询所有司机并更新为空，但这样可能误删。
-    // 此处仅更新已有绑定的司机，不处理未绑定车辆的情况（保持原值或置空由业务决定）。
-    // 如果业务要求严格同步，可以执行下面的代码清空所有未被覆盖的司机：
-    // 但为了安全，暂时不执行。
-
-    // 另外，如果某司机原本绑定车辆，但车辆解绑了，上面的循环不会更新，该司机仍保留旧绑定。
-    // 因此需要额外处理：查询所有司机，如果其姓名不在 driverToPlates 中，则置空。
-    const { data: allDrivers } = await supabase.from('drivers').select('driver_name')
+    const { data: allDrivers } = await withTimeout(
+      supabase.from('drivers').select('driver_name'),
+      10000,
+      '获取司机列表超时'
+    )
     if (allDrivers) {
       allDrivers.forEach(d => {
         if (!driverToPlates[d.driver_name]) {
@@ -662,13 +688,15 @@ const saveEdit = async () => {
   editSaving.value = true
   try {
     const { id, created_at, updated_at, driverDisplay, ...updateFields } = editFormData.value
-    const { error } = await supabase
-      .from('vehicles')
-      .update({
+    // 👇 防御：保存更新
+    const { error } = await withTimeout(
+      supabase.from('vehicles').update({
         ...updateFields,
         updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
+      }).eq('id', id),
+      10000,
+      '保存超时，请重试'
+    )
     if (error) throw error
 
     ElMessage.success('更新成功')
@@ -701,7 +729,8 @@ const exportData = async () => {
     if (searchForm.plate) query = query.ilike('plate', `%${searchForm.plate}%`)
     if (searchForm.vin) query = query.ilike('vin', `%${searchForm.vin}%`)
 
-    const { data, error } = await query
+    // 👇 防御：导出查询，设置 15 秒超时
+    const { data, error } = await withTimeout(query, 15000, '导出请求超时，请稍后重试')
     if (error) throw error
     if (!data || data.length === 0) {
       ElMessage.warning('没有数据可导出')
@@ -796,8 +825,12 @@ const fetchVehicles = async () => {
     const from = (currentPage.value - 1) * pageSize.value
     const to = from + pageSize.value - 1
 
-    const { data, error, count } = await query
-      .range(from, to)
+    // 👇 防御：核心列表查询，设置 10 秒超时
+    const { data, error, count } = await withTimeout(
+      query.range(from, to),
+      10000,
+      '加载数据超时：Supabase 可能正在休眠或恢复中，请稍后重试'
+    )
 
     if (error) throw error
     tableData.value = data || []
@@ -805,7 +838,7 @@ const fetchVehicles = async () => {
     saveData()
     saveState()
   } catch (err) {
-    ElMessage.error('加载数据失败：' + err.message)
+    ElMessage.error(err.message || '加载数据失败')
   } finally {
     loading.value = false
   }
@@ -1028,10 +1061,15 @@ const confirmImport = async () => {
 
     // 手动处理重复覆盖（以车牌号为主键）
     const existingPlates = new Set()
-    const { data: existingData } = await supabase
-      .from('vehicles')
-      .select('plate')
-      .in('plate', validData.map(v => v.plate))
+    // 👇 防御：查询已有车牌
+    const { data: existingData } = await withTimeout(
+      supabase
+        .from('vehicles')
+        .select('plate')
+        .in('plate', validData.map(v => v.plate)),
+      15000,
+      '查询已有车辆超时'
+    )
     if (existingData) {
       existingData.forEach(item => existingPlates.add(item.plate))
     }
@@ -1046,16 +1084,23 @@ const confirmImport = async () => {
       }
     })
 
+    // 👇 防御：循环更新（每条 10 秒超时）
     for (const item of updateData) {
-      const { error } = await supabase
-        .from('vehicles')
-        .update(item)
-        .eq('plate', item.plate)
+      const { error } = await withTimeout(
+        supabase.from('vehicles').update(item).eq('plate', item.plate),
+        10000,
+        `更新车牌 ${item.plate} 超时`
+      )
       if (error) throw error
     }
 
+    // 👇 防御：批量插入（15 秒超时）
     if (insertData.length > 0) {
-      const { error } = await supabase.from('vehicles').insert(insertData)
+      const { error } = await withTimeout(
+        supabase.from('vehicles').insert(insertData),
+        15000,
+        '批量插入数据超时'
+      )
       if (error) throw error
     }
 
