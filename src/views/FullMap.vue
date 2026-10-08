@@ -263,20 +263,43 @@ const fetchDongfengLocation = async (vin) => {
   }
 }
 
+// ============================================================
+// 加载车辆（含按当前登录客户过滤）
+// ============================================================
 const loadVehicles = async () => {
   loadingVehicles.value = true
   locationProgress.value = 0
   locationTotal.value = 0
   locatedCount.value = 0
   try {
-    const { data, error } = await supabase.from('vehicles').select('*').order('updated_at', { ascending: false })
+    // 读取当前登录用户
+    let currentUser = null
+    try {
+      currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
+    } catch {}
+
+    // 构造查询
+    let query = supabase.from('vehicles').select('*').order('updated_at', { ascending: false })
+
+    // 客户只显示自己名下的车辆
+    if (currentUser?.role === 'customer' && currentUser?.customerId) {
+      query = query.eq('customer_id', currentUser.customerId)
+    }
+
+    const { data, error } = await query
     if (error) throw error
+
     if (!data || data.length === 0) {
       vehicles.value = []
       orgOptions.value = []
-      ElMessage.warning('车辆档案为空，请先去「车辆档案」页面创建车辆')
+      if (currentUser?.role === 'customer') {
+        ElMessage.warning('您的账户下暂无车辆，请联系管理员分配')
+      } else {
+        ElMessage.warning('车辆档案为空，请先去「车辆档案」页面创建车辆')
+      }
       return
     }
+
     locationTotal.value = data.length
     const enriched = new Array(data.length)
     const concurrency = 5
@@ -288,17 +311,48 @@ const loadVehicles = async () => {
         const loc = await fetchDongfengLocation(item.vin)
         if (loc.success) {
           locatedCount.value++
-          enriched[i] = { ...item, status: loc.online ? '在线' : '离线', accStatus: loc.accStatus, reportTime: loc.reportTime, lng: loc.lng, lat: loc.lat, hasLocation: true, location: loc.locationText, direction: loc.direction, speed: loc.speed, rpm: loc.rpm, fuelRemaining: loc.fuelRemaining }
+          enriched[i] = {
+            ...item,
+            status: loc.online ? '在线' : '离线',
+            accStatus: loc.accStatus,
+            reportTime: loc.reportTime,
+            lng: loc.lng,
+            lat: loc.lat,
+            hasLocation: true,
+            location: loc.locationText,
+            direction: loc.direction,
+            speed: loc.speed,
+            rpm: loc.rpm,
+            fuelRemaining: loc.fuelRemaining,
+          }
         } else {
-          enriched[i] = { ...item, status: '离线', accStatus: '--', reportTime: '--', lng: null, lat: null, hasLocation: false, location: '定位获取失败', direction: 0, speed: 0, rpm: 0, fuelRemaining: 0 }
+          enriched[i] = {
+            ...item,
+            status: '离线',
+            accStatus: '--',
+            reportTime: '--',
+            lng: null,
+            lat: null,
+            hasLocation: false,
+            location: '定位获取失败',
+            direction: 0,
+            speed: 0,
+            rpm: 0,
+            fuelRemaining: 0,
+          }
         }
         locationProgress.value++
       }
     }
     await Promise.all(Array.from({ length: Math.min(concurrency, data.length) }, () => worker()))
     vehicles.value = enriched.filter(Boolean)
+
+    // 收集组织/车队选项
     const orgSet = new Set()
-    vehicles.value.forEach(v => { if (v.org) orgSet.add(v.org) })
+    vehicles.value.forEach(v => {
+      const org = v.org || v.customer_name || v.nickname
+      if (org) orgSet.add(org)
+    })
     orgOptions.value = Array.from(orgSet)
   } catch (e) {
     console.error('加载车辆失败：', e)
@@ -463,7 +517,7 @@ const highlightMarker = (marker) => {
 }
 
 // ============================================================
-// 用高德原生 InfoWindow 展示详情
+// InfoWindow 详情
 // ============================================================
 const openPopup = (vehicle, marker) => {
   highlightedPlate.value = vehicle.plate
@@ -483,6 +537,7 @@ const openPopup = (vehicle, marker) => {
       <div class="amap-popup-divider"></div>
       <div class="amap-popup-info">
         <div class="amap-popup-row"><span class="amap-popup-label">所属机构</span><span class="amap-popup-value">${vehicle.org || '--'}</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">司机</span><span class="amap-popup-value">${vehicle.driver || '--'}</span></div>
         <div class="amap-popup-row"><span class="amap-popup-label">燃料类型</span><span class="amap-popup-value">${vehicle.fuel_type || '--'}</span></div>
         <div class="amap-popup-row"><span class="amap-popup-label">当前速度</span><span class="amap-popup-value">${(vehicle.speed ?? 0)} km/h</span></div>
         <div class="amap-popup-row"><span class="amap-popup-label">当前转速</span><span class="amap-popup-value">${(vehicle.rpm ?? 0)} r/min</span></div>
@@ -549,7 +604,8 @@ const filteredVehicles = computed(() => {
     if (statusFilter.value === '在线' && v.status !== '在线') return false
     if (statusFilter.value === '离线' && v.status !== '离线') return false
     if (statusFilter.value === 'located' && !v.hasLocation) return false
-    const matchOrg = !selectedOrg.value || v.org === selectedOrg.value
+    const org = v.org || v.customer_name || ''
+    const matchOrg = !selectedOrg.value || org === selectedOrg.value
     const matchStatus = !selectedStatus.value || v.status === selectedStatus.value
     const matchSearch = !searchKeyword.value || v.plate.includes(searchKeyword.value)
     const matchSelected = selectedPlates.value.length === 0 || selectedPlates.value.includes(v.plate)
@@ -1141,7 +1197,6 @@ onMounted(async () => {
    ========================================== */
 .amap-custom-popup {
   position: relative;
-  /* 浅色毛玻璃 */
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
@@ -1157,7 +1212,6 @@ onMounted(async () => {
   color: #1E293B;
   font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   overflow: hidden;
-  /* 弹性缩放入场（原来的动画） */
   animation: popupFadeIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -1166,7 +1220,6 @@ onMounted(async () => {
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* 顶部动态流光条 —— 从中间扫开 + 持续呼吸流光 */
 .amap-popup-accent {
   position: absolute;
   top: 0;
@@ -1200,7 +1253,6 @@ onMounted(async () => {
   box-shadow: 0 0 8px rgba(100, 116, 139, 0.9);
 }
 
-/* 关闭按钮 */
 .amap-popup-close {
   position: absolute;
   top: 6px;
@@ -1225,7 +1277,6 @@ onMounted(async () => {
   transform: rotate(90deg) scale(1.1);
 }
 
-/* 头部：车牌 + 状态 */
 .amap-popup-header {
   display: flex;
   align-items: center;
@@ -1263,7 +1314,6 @@ onMounted(async () => {
   margin: 0 0 8px 0;
 }
 
-/* 信息行 */
 .amap-popup-info {
   display: flex;
   flex-direction: column;
@@ -1295,7 +1345,6 @@ onMounted(async () => {
   font-size: 10.5px;
 }
 
-/* 底部按钮 */
 .amap-popup-actions {
   display: flex;
   gap: 6px;
@@ -1339,7 +1388,6 @@ onMounted(async () => {
   transform: translateY(0) scale(0.97);
 }
 
-/* 隐藏高德自带关闭按钮和箭头 */
 .amap-info-close { display: none !important; }
 .amap-info-sharp { display: none !important; }
 .amap-info-content { padding: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important; }

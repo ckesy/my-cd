@@ -30,7 +30,6 @@
         >
           确认删除 ({{ selectedIds.length }})
         </el-button>
-        <el-button size="small" plain class="import-btn" @click="showImportDialog = true">导入</el-button>
         <el-button size="small" plain class="export-btn" @click="exportData">导出</el-button>
       </div>
     </div>
@@ -102,39 +101,6 @@
         页
       </span>
     </div>
-
-    <!-- 导入弹窗 -->
-    <el-dialog v-model="showImportDialog" title="导入车辆档案" width="560px" destroy-on-close>
-      <div style="margin-bottom: 16px;">
-        <el-button type="primary" plain size="small" @click="downloadTemplate">📥 下载导入模板</el-button>
-        <span style="font-size:12px; color:#999; margin-left:12px;">支持 .csv / .xlsx</span>
-      </div>
-      <el-upload
-        ref="uploadRef"
-        action="#"
-        :auto-upload="false"
-        :on-change="handleFileChange"
-        :on-remove="handleFileRemove"
-        :limit="1"
-        accept=".csv,.xlsx,.xls"
-        drag
-      >
-        <div style="padding: 20px 0;">
-          <el-icon><Upload /></el-icon>
-          <div style="margin-top: 8px; font-size: 14px;">点击或拖拽上传文件</div>
-        </div>
-      </el-upload>
-      <div v-if="uploadFileName" style="margin-top: 8px; font-size: 13px; color: #333;">
-        已选文件：{{ uploadFileName }}
-      </div>
-      <div v-if="importErrors.length" style="margin-top: 8px; max-height: 150px; overflow-y: auto; background: #fef0f0; padding: 8px; border-radius: 4px; font-size: 12px; color: #c8102e;">
-        <div v-for="(err, idx) in importErrors" :key="idx">{{ err }}</div>
-      </div>
-      <template #footer>
-        <el-button @click="showImportDialog = false">取消</el-button>
-        <el-button type="primary" @click="confirmImport" :loading="importing">确认导入</el-button>
-      </template>
-    </el-dialog>
 
     <!-- 查看详情弹窗 -->
     <el-dialog
@@ -331,9 +297,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
-import { Upload } from '@element-plus/icons-vue'
 import { supabase } from '@/utils/supabase'
-import * as XLSX from 'xlsx'
 import ExcelJS from 'exceljs'
 import dayjs from 'dayjs'
 
@@ -343,20 +307,15 @@ const formatDateTime = (dateStr) => {
 }
 
 // ==========================================
-// 🛡️ 超时防御工具 (核心新增)
+// 超时防御工具
 // ==========================================
 const withTimeout = (promise, timeoutMs = 10000, errorMessage = '请求超时，请检查网络或稍后重试') => {
-  let timeoutId;
+  let timeoutId
   const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new Error(errorMessage));
-    }, timeoutMs);
-  });
-
-  return Promise.race([promise, timeoutPromise]).finally(() => {
-    clearTimeout(timeoutId);
-  });
-};
+    timeoutId = setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
+  })
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId))
+}
 
 // ---------- 缓存 ----------
 const CACHE_KEY = 'vehicle_archive_cache'
@@ -385,7 +344,7 @@ const saveState = () => {
     plate: searchForm.plate,
     vin: searchForm.vin,
     currentPage: currentPage.value,
-    pageSize: pageSize.value
+    pageSize: pageSize.value,
   }
   sessionStorage.setItem(STATE_KEY, JSON.stringify(state))
 }
@@ -404,10 +363,7 @@ const restoreData = () => {
 }
 
 const saveData = () => {
-  const data = {
-    tableData: tableData.value,
-    total: total.value
-  }
+  const data = { tableData: tableData.value, total: total.value }
   sessionStorage.setItem(CACHE_KEY, JSON.stringify(data))
 }
 
@@ -452,19 +408,14 @@ const confirmDelete = async () => {
     await ElMessageBox.confirm(
       `确定要删除选中的 ${selectedIds.value.length} 条车辆档案吗？此操作不可恢复！`,
       '删除确认',
-      {
-        confirmButtonText: '确定删除',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
+      { confirmButtonText: '确定删除', cancelButtonText: '取消', type: 'warning' }
     )
     const loadingInstance = ElLoading.service({
       fullscreen: true,
       text: `正在删除 ${selectedIds.value.length} 条数据...`,
-      background: 'rgba(0, 0, 0, 0.7)'
+      background: 'rgba(0, 0, 0, 0.7)',
     })
     try {
-      // 👇 防御：删除操作
       const { error } = await withTimeout(
         supabase.from('vehicles').delete().in('id', selectedIds.value),
         10000,
@@ -489,9 +440,7 @@ watch(
   () => {
     if (batchDeleteMode.value) {
       nextTick(() => {
-        if (tableRef.value) {
-          tableRef.value.clearSelection()
-        }
+        if (tableRef.value) tableRef.value.clearSelection()
         selectedIds.value = []
       })
     }
@@ -508,7 +457,7 @@ const handleView = (row) => {
   detailDialogVisible.value = true
 }
 
-// ---------- 司机选择相关 ----------
+// ---------- 司机选择 ----------
 const driverSelectDialogVisible = ref(false)
 const driverList = ref([])
 const filteredDriverList = ref([])
@@ -519,7 +468,6 @@ const driverTarget = ref(null)
 const loadDriverList = async () => {
   if (driverList.value.length === 0) {
     try {
-      // 👇 防御：加载司机列表
       const { data, error } = await withTimeout(
         supabase.from('drivers').select('driver_name'),
         10000,
@@ -553,7 +501,9 @@ const filterDriverList = () => {
     filteredDriverList.value = [...driverList.value]
   } else {
     const keyword = driverSearchKeyword.value.trim().toLowerCase()
-    filteredDriverList.value = driverList.value.filter(d => d.driver_name.toLowerCase().includes(keyword))
+    filteredDriverList.value = driverList.value.filter(d =>
+      d.driver_name.toLowerCase().includes(keyword)
+    )
   }
 }
 
@@ -608,11 +558,9 @@ const openEditFromView = () => {
   }
 }
 
-// ---------- 同步函数：根据车辆绑定司机更新司机档案 ----------
+// ---------- 同步司机档案 ----------
 const syncFromVehiclesToDrivers = async () => {
   try {
-    // 1. 获取所有车辆
-    // 👇 防御：同步查询
     const { data: vehicles, error: vError } = await withTimeout(
       supabase.from('vehicles').select('plate, driver'),
       15000,
@@ -620,44 +568,29 @@ const syncFromVehiclesToDrivers = async () => {
     )
     if (vError) throw vError
 
-    // 2. 构建车牌 -> 司机姓名列表的映射
     const plateToDrivers = {}
     vehicles.forEach(v => {
       if (v.driver) {
         const drivers = v.driver.split(',').map(s => s.trim()).filter(Boolean)
-        if (drivers.length) {
-          plateToDrivers[v.plate] = drivers
-        }
+        if (drivers.length) plateToDrivers[v.plate] = drivers
       }
     })
 
-    // 3. 构建司机姓名 -> 绑定车辆列表的映射（合并）
     const driverToPlates = {}
     Object.keys(plateToDrivers).forEach(plate => {
-      const driverNames = plateToDrivers[plate]
-      driverNames.forEach(driverName => {
-        if (!driverToPlates[driverName]) {
-          driverToPlates[driverName] = []
-        }
-        if (!driverToPlates[driverName].includes(plate)) {
-          driverToPlates[driverName].push(plate)
-        }
+      plateToDrivers[plate].forEach(driverName => {
+        if (!driverToPlates[driverName]) driverToPlates[driverName] = []
+        if (!driverToPlates[driverName].includes(plate)) driverToPlates[driverName].push(plate)
       })
     })
 
-    // 4. 更新 drivers 表的 bound_vehicle
     const updatePromises = []
     for (const [driverName, plates] of Object.entries(driverToPlates)) {
-      const boundVehicleStr = plates.join(',')
       updatePromises.push(
-        supabase
-          .from('drivers')
-          .update({ bound_vehicle: boundVehicleStr })
-          .eq('driver_name', driverName)
+        supabase.from('drivers').update({ bound_vehicle: plates.join(',') }).eq('driver_name', driverName)
       )
     }
 
-    // 5. 清除那些没有绑定任何车辆的司机的 bound_vehicle（可选：如果要清空）
     const { data: allDrivers } = await withTimeout(
       supabase.from('drivers').select('driver_name'),
       10000,
@@ -667,10 +600,7 @@ const syncFromVehiclesToDrivers = async () => {
       allDrivers.forEach(d => {
         if (!driverToPlates[d.driver_name]) {
           updatePromises.push(
-            supabase
-              .from('drivers')
-              .update({ bound_vehicle: '' })
-              .eq('driver_name', d.driver_name)
+            supabase.from('drivers').update({ bound_vehicle: '' }).eq('driver_name', d.driver_name)
           )
         }
       })
@@ -688,11 +618,10 @@ const saveEdit = async () => {
   editSaving.value = true
   try {
     const { id, created_at, updated_at, driverDisplay, ...updateFields } = editFormData.value
-    // 👇 防御：保存更新
     const { error } = await withTimeout(
       supabase.from('vehicles').update({
         ...updateFields,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       }).eq('id', id),
       10000,
       '保存超时，请重试'
@@ -701,7 +630,6 @@ const saveEdit = async () => {
 
     ElMessage.success('更新成功')
     editDialogVisible.value = false
-    // 同步司机档案
     await syncFromVehiclesToDrivers()
     await fetchVehicles()
   } catch (err) {
@@ -716,20 +644,16 @@ const exportData = async () => {
   const loadingInstance = ElLoading.service({
     fullscreen: true,
     text: '正在导出数据...',
-    background: 'rgba(0, 0, 0, 0.7)'
+    background: 'rgba(0, 0, 0, 0.7)',
   })
   try {
-    let query = supabase
-      .from('vehicles')
-      .select('*')
-      .order('updated_at', { ascending: false })
+    let query = supabase.from('vehicles').select('*').order('updated_at', { ascending: false })
 
     if (searchForm.org) query = query.eq('org', searchForm.org)
     if (searchForm.fuelType) query = query.eq('fuel_type', searchForm.fuelType)
     if (searchForm.plate) query = query.ilike('plate', `%${searchForm.plate}%`)
     if (searchForm.vin) query = query.ilike('vin', `%${searchForm.vin}%`)
 
-    // 👇 防御：导出查询，设置 15 秒超时
     const { data, error } = await withTimeout(query, 15000, '导出请求超时，请稍后重试')
     if (error) throw error
     if (!data || data.length === 0) {
@@ -743,7 +667,7 @@ const exportData = async () => {
     const headers = [
       '车牌号', 'VIN码', '车辆昵称', '所属机构组织', '绑定司机',
       '燃料类型', '车辆类型', '车辆用途', '子母车', '关联挂车',
-      '车辆购买日', '保险购买日', '创建时间', '修改时间'
+      '车辆购买日', '保险购买日', '创建时间', '修改时间',
     ]
 
     const headerRow = worksheet.addRow(headers)
@@ -755,26 +679,16 @@ const exportData = async () => {
         top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
         left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
         bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-        right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+        right: { style: 'thin', color: { argb: 'FFCCCCCC' } },
       }
     })
 
     data.forEach(row => {
       const rowData = [
-        row.plate || '',
-        row.vin || '',
-        row.nickname || '',
-        row.org || '',
-        row.driver || '',
-        row.fuel_type || '',
-        row.vehicle_type || '',
-        row.usage || '',
-        row.sub_vehicle || '',
-        row.trailer || '',
-        row.purchase_date || '',
-        row.insurance_date || '',
-        formatDateTime(row.created_at),
-        formatDateTime(row.updated_at)
+        row.plate || '', row.vin || '', row.nickname || '', row.org || '', row.driver || '',
+        row.fuel_type || '', row.vehicle_type || '', row.usage || '', row.sub_vehicle || '', row.trailer || '',
+        row.purchase_date || '', row.insurance_date || '',
+        formatDateTime(row.created_at), formatDateTime(row.updated_at),
       ]
       const dataRow = worksheet.addRow(rowData)
       dataRow.eachCell((cell) => {
@@ -782,7 +696,7 @@ const exportData = async () => {
           top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
           left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
           bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-          right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+          right: { style: 'thin', color: { argb: 'FFCCCCCC' } },
         }
         cell.alignment = { horizontal: 'left', vertical: 'middle' }
       })
@@ -825,7 +739,6 @@ const fetchVehicles = async () => {
     const from = (currentPage.value - 1) * pageSize.value
     const to = from + pageSize.value - 1
 
-    // 👇 防御：核心列表查询，设置 10 秒超时
     const { data, error, count } = await withTimeout(
       query.range(from, to),
       10000,
@@ -852,9 +765,7 @@ const refreshData = () => {
   fetchVehicles()
 }
 
-const handleSearch = () => {
-  refreshData()
-}
+const handleSearch = () => { refreshData() }
 
 const handleReset = () => {
   searchForm.org = ''
@@ -886,251 +797,16 @@ const handleGotoPage = (val) => {
   }
 }
 
-// ---------- 导入 ----------
-const showImportDialog = ref(false)
-const uploadRef = ref(null)
-const uploadFile = ref(null)
-const uploadFileName = ref('')
-const importErrors = ref([])
-const importing = ref(false)
-
-const templateHeaders = [
-  '车牌号', 'VIN码', '车辆昵称',
-  '燃料类型', '车辆类型', '车辆用途', '子母车', '关联挂车',
-  '车辆购买日', '保险购买日'
-]
-
-const downloadTemplate = async () => {
-  const workbook = new ExcelJS.Workbook()
-  const worksheet = workbook.addWorksheet('车辆档案导入模板')
-
-  const headerRow = worksheet.addRow(templateHeaders)
-
-  headerRow.eachCell((cell) => {
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 }
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC8102E' } }
-    cell.alignment = { horizontal: 'center', vertical: 'middle' }
-    cell.border = {
-      top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-      left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-      bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-      right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
-    }
-  })
-
-  const sampleData = [
-    '粤A12345', 'LGAX3AG59N9009177', '我的车',
-    '纯电动', '', '快递快运', '否', '无',
-    '2026-01-01', '2026-01-01'
-  ]
-  const dataRow = worksheet.addRow(sampleData)
-  dataRow.eachCell((cell) => {
-    cell.border = {
-      top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-      left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-      bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-      right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
-    }
-  })
-
-  worksheet.columns = templateHeaders.map(() => ({ width: 18 }))
-
-  const buffer = await workbook.xlsx.writeBuffer()
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = '车辆档案导入模板.xlsx'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(link.href)
-}
-
-const handleFileChange = (file) => {
-  uploadFile.value = file.raw
-  uploadFileName.value = file.name
-  importErrors.value = []
-}
-
-const handleFileRemove = () => {
-  uploadFile.value = null
-  uploadFileName.value = ''
-  importErrors.value = []
-}
-
-const confirmImport = async () => {
-  if (!uploadFile.value) {
-    ElMessage.warning('请先选择文件')
-    return
-  }
-
-  importing.value = true
-  importErrors.value = []
-
-  try {
-    const file = uploadFile.value
-    const fileExt = file.name.split('.').pop().toLowerCase()
-    let rows = []
-
-    if (fileExt === 'csv') {
-      const text = await file.text()
-      const lines = text.split('\n').filter(line => line.trim())
-      if (lines.length < 2) {
-        ElMessage.error('文件为空或格式不正确')
-        return
-      }
-      const dataRows = lines.slice(1).map(line => line.split(',').map(cell => cell.trim()))
-      rows = dataRows
-    } else if (['xlsx', 'xls'].includes(fileExt)) {
-      const data = await file.arrayBuffer()
-      const workbook = XLSX.read(data, { type: 'array' })
-      const sheet = workbook.Sheets[workbook.SheetNames[0]]
-      const json = XLSX.utils.sheet_to_json(sheet, { header: 1 })
-      if (json.length < 2) {
-        ElMessage.error('文件为空或格式不正确')
-        return
-      }
-      rows = json.slice(1)
-    } else {
-      ElMessage.error('不支持的文件格式，请上传 .csv 或 .xlsx')
-      return
-    }
-
-    const validData = []
-    const errors = []
-
-    rows.forEach((row, index) => {
-      const rowNum = index + 2
-      const [
-        plate, vin, nickname,
-        fuelType, vehicleType, usage, subVehicle, trailer,
-        purchaseDate, insuranceDate
-      ] = row.map(cell => (cell || '').toString().trim())
-
-      const missing = []
-      if (!plate) missing.push('车牌号')
-      if (!vin) missing.push('VIN码')
-
-      if (missing.length) {
-        errors.push(`第 ${rowNum} 行：缺少必填字段：${missing.join('、')}`)
-        return
-      }
-
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/
-      if (purchaseDate && !dateRegex.test(purchaseDate)) {
-        errors.push(`第 ${rowNum} 行：车辆购买日格式错误，应为 YYYY-MM-DD`)
-        return
-      }
-      if (insuranceDate && !dateRegex.test(insuranceDate)) {
-        errors.push(`第 ${rowNum} 行：保险购买日格式错误，应为 YYYY-MM-DD`)
-        return
-      }
-
-      validData.push({
-        plate,
-        vin,
-        nickname: nickname || null,
-        org: '西马物流新能源车队',
-        driver: '',
-        fuel_type: fuelType || null,
-        vehicle_type: vehicleType || null,
-        usage: usage || null,
-        sub_vehicle: subVehicle || null,
-        trailer: trailer || null,
-        purchase_date: purchaseDate || null,
-        insurance_date: insuranceDate || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-    })
-
-    if (errors.length) {
-      importErrors.value = errors.slice(0, 20)
-      ElMessage.error(`存在 ${errors.length} 条错误，请修正后重试`)
-      importing.value = false
-      return
-    }
-
-    if (validData.length === 0) {
-      ElMessage.warning('没有有效数据可导入')
-      importing.value = false
-      return
-    }
-
-    ElMessage.success(`校验通过，共 ${validData.length} 条有效数据，即将导入`)
-
-    // 手动处理重复覆盖（以车牌号为主键）
-    const existingPlates = new Set()
-    // 👇 防御：查询已有车牌
-    const { data: existingData } = await withTimeout(
-      supabase
-        .from('vehicles')
-        .select('plate')
-        .in('plate', validData.map(v => v.plate)),
-      15000,
-      '查询已有车辆超时'
-    )
-    if (existingData) {
-      existingData.forEach(item => existingPlates.add(item.plate))
-    }
-
-    const updateData = []
-    const insertData = []
-    validData.forEach(item => {
-      if (existingPlates.has(item.plate)) {
-        updateData.push(item)
-      } else {
-        insertData.push(item)
-      }
-    })
-
-    // 👇 防御：循环更新（每条 10 秒超时）
-    for (const item of updateData) {
-      const { error } = await withTimeout(
-        supabase.from('vehicles').update(item).eq('plate', item.plate),
-        10000,
-        `更新车牌 ${item.plate} 超时`
-      )
-      if (error) throw error
-    }
-
-    // 👇 防御：批量插入（15 秒超时）
-    if (insertData.length > 0) {
-      const { error } = await withTimeout(
-        supabase.from('vehicles').insert(insertData),
-        15000,
-        '批量插入数据超时'
-      )
-      if (error) throw error
-    }
-
-    ElMessage.success(`导入完成：更新 ${updateData.length} 条，新增 ${insertData.length} 条`)
-    showImportDialog.value = false
-    uploadFile.value = null
-    uploadFileName.value = ''
-    importErrors.value = []
-    refreshData()
-  } catch (err) {
-    ElMessage.error('导入失败：' + err.message)
-  } finally {
-    importing.value = false
-  }
-}
-
 watch(
   () => [searchForm.org, searchForm.fuelType, searchForm.plate, searchForm.vin, currentPage.value, pageSize.value],
-  () => {
-    saveState()
-  },
+  () => { saveState() },
   { deep: true }
 )
 
 onMounted(() => {
   restoreState()
   const hasCache = restoreData()
-  if (!hasCache) {
-    fetchVehicles()
-  }
+  if (!hasCache) fetchVehicles()
 })
 </script>
 
@@ -1154,12 +830,8 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
 }
-.search-select {
-  width: 180px;
-}
-.search-input {
-  width: 160px;
-}
+.search-select { width: 180px; }
+.search-input { width: 160px; }
 .search-btn {
   background-color: #c8102e;
   border-color: #c8102e;
@@ -1177,18 +849,14 @@ onMounted(() => {
   background-color: #c8102e;
   color: #fff;
 }
-.import-btn,
 .export-btn {
   border-color: #c8102e;
   color: #c8102e;
+  margin-left: auto;
 }
-.import-btn:hover,
 .export-btn:hover {
   background-color: #c8102e;
   color: #fff;
-}
-.import-btn {
-  margin-left: auto;
 }
 
 .table-wrapper {
@@ -1228,22 +896,15 @@ onMounted(() => {
   font-size: 13px;
   color: #555;
 }
-.goto .el-input-number {
-  width: 70px;
-}
+.goto .el-input-number { width: 70px; }
 :deep(.el-pagination .btn-prev),
-:deep(.el-pagination .btn-next) {
-  color: #333;
-}
+:deep(.el-pagination .btn-next) { color: #333; }
 :deep(.el-pagination .el-pager li.active) {
   background-color: #409eff;
   color: #fff;
 }
-:deep(.el-pagination .el-pager li:hover) {
-  color: #c8102e;
-}
+:deep(.el-pagination .el-pager li:hover) { color: #c8102e; }
 
-/* ===== 查看/编辑弹窗通用样式 ===== */
 :deep(.vehicle-detail-dialog .el-dialog) {
   border-radius: 12px;
   overflow: hidden;
@@ -1262,9 +923,7 @@ onMounted(() => {
   letter-spacing: 0.5px;
   text-align: left;
 }
-:deep(.vehicle-detail-dialog .el-dialog__headerbtn) {
-  display: none;
-}
+:deep(.vehicle-detail-dialog .el-dialog__headerbtn) { display: none; }
 :deep(.vehicle-detail-dialog .el-dialog__body) {
   padding: 20px 24px;
   background: #ffffff;
@@ -1274,19 +933,14 @@ onMounted(() => {
   background: #fafafa;
   border-top: 1px solid #f0f0f0;
 }
-.detail-content {
-  padding: 0;
-}
+.detail-content { padding: 0; }
 .detail-descriptions :deep(.el-descriptions__label) {
   font-weight: 600;
   color: #333;
   background-color: #f9f9f9;
 }
-.detail-descriptions :deep(.el-descriptions__content) {
-  color: #1a1a1a;
-}
+.detail-descriptions :deep(.el-descriptions__content) { color: #1a1a1a; }
 
-/* ===== 底部按钮 ===== */
 .detail-close-btn {
   border-color: #c8102e;
   color: #c8102e;
@@ -1308,25 +962,17 @@ onMounted(() => {
   border-color: #a00d24;
 }
 
-/* ===== 编辑表单（两列布局） ===== */
-.edit-form :deep(.el-form-item) {
-  margin-bottom: 12px;
-}
+.edit-form :deep(.el-form-item) { margin-bottom: 12px; }
 .edit-form :deep(.el-form-item__label) {
   font-weight: 500;
   color: #333;
 }
 .edit-form :deep(.el-input),
-.edit-form :deep(.el-date-picker) {
-  width: 100%;
-}
+.edit-form :deep(.el-date-picker) { width: 100%; }
 
-/* ===== 司机选择复选框列表 ===== */
 .driver-checkbox-group {
   display: flex;
   flex-direction: column;
 }
-.driver-checkbox-group .el-checkbox {
-  height: 32px;
-}
+.driver-checkbox-group .el-checkbox { height: 32px; }
 </style>

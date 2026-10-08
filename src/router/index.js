@@ -76,7 +76,47 @@ const routes = [
         meta: { title: '提醒事件查询' }
       }
     ]
-  }
+  },
+
+  // ==========================================
+  // 👇 入口选择页（管理员登录后进入）
+  // ==========================================
+  {
+    path: '/portal',
+    name: 'Portal',
+    component: () => import('../views/PortalSelect.vue'),
+  },
+
+  // ==========================================
+  // 👇 管理端（含数据总览、车辆管理、客户管理、管理员账号）
+  // ==========================================
+  {
+    path: '/admin',
+    component: () => import('../views/admin/AdminLayout.vue'),
+    redirect: '/admin/dashboard',
+    children: [
+      {
+        path: 'dashboard',
+        name: 'AdminDashboard',
+        component: () => import('../views/admin/AdminDashboard.vue'),
+      },
+      {
+        path: 'vehicle',
+        name: 'AdminVehicle',
+        component: () => import('../views/admin/AdminVehicle.vue'),
+      },
+      {
+        path: 'customer',
+        name: 'AdminCustomer',
+        component: () => import('../views/admin/AdminCustomer.vue'),
+      },
+      {
+        path: 'accounts',
+        name: 'AdminAccounts',
+        component: () => import('../views/admin/AdminAccounts.vue'),
+      },
+    ],
+  },
 ]
 
 const router = createRouter({

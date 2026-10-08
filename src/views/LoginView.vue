@@ -2,6 +2,7 @@
 import { ref, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { supabase } from '@/utils/supabase'
 
 const router = useRouter()
 
@@ -10,15 +11,12 @@ const showLogin = ref(false)
 const openLogin = () => { showLogin.value = true }
 const closeLogin = () => { showLogin.value = false }
 
-// ---------- 登录表单（已预设默认账号） ----------
-const DEFAULT_PHONE = '15035660677'
-const DEFAULT_PASSWORD = '1869099215sB@..'
-
+// ---------- 表单状态 ----------
 const activeTab = ref('password')
-const phone = ref(DEFAULT_PHONE)
-const password = ref(DEFAULT_PASSWORD)
+const phone = ref('')
+const password = ref('')
 const code = ref('')
-const agreed = ref(true)   // 默认勾选同意协议
+const agreed = ref(true)
 const showPassword = ref(false)
 
 // ---------- 发送验证码倒计时 ----------
@@ -42,36 +40,97 @@ onBeforeUnmount(() => {
   if (codeTimer) clearInterval(codeTimer)
 })
 
-// ---------- 登录 ----------
-const handleLogin = () => {
-  // 密码登录：手机号 + 密码
+// ============================================================
+// 登录
+// ============================================================
+const handleLogin = async () => {
+  if (!phone.value) { ElMessage.warning('请输入手机号'); return }
+  if (!agreed.value) { ElMessage.warning('请先阅读并同意用户协议'); return }
+
   if (activeTab.value === 'password') {
-    if (phone.value !== DEFAULT_PHONE) {
-      ElMessage.error('手机号不正确')
-      return
-    }
-    if (password.value !== DEFAULT_PASSWORD) {
-      ElMessage.error('密码不正确')
-      return
-    }
+    if (!password.value) { ElMessage.warning('请输入密码'); return }
   } else {
-    // 验证码登录：暂时只校验手机号
-    if (phone.value !== DEFAULT_PHONE) {
-      ElMessage.error('手机号不正确')
-      return
-    }
-    if (!code.value) {
-      ElMessage.warning('请输入验证码')
-      return
-    }
+    if (!code.value) { ElMessage.warning('请输入验证码'); return }
   }
 
-  if (!agreed.value) {
-    ElMessage.warning('请先阅读并同意用户协议')
-    return
-  }
+  try {
+    // ============================================================
+    // ① 先查 admins 表（不加 status 过滤，查到再判断）
+    // ============================================================
+    const { data: adminData, error: adminError } = await supabase
+      .from('admins')
+      .select('*')
+      .eq('phone', phone.value)
+      .maybeSingle()
 
-  playWelcome()
+    if (adminError && adminError.code !== 'PGRST116') throw adminError
+
+    if (adminData) {
+      // 密码校验
+      if (activeTab.value === 'password' && adminData.password !== password.value) {
+        ElMessage.error('手机号或密码不正确')
+        return
+      }
+      // 密码正确后，再判断状态
+      if (Number(adminData.status) !== 1) {
+        ElMessage.error('账号已被禁用，请联系管理员')
+        return
+      }
+
+      const account = {
+        id: adminData.id,
+        phone: adminData.phone,
+        name: adminData.name,
+        role: 'admin',
+      }
+      localStorage.setItem('currentUser', JSON.stringify(account))
+      playWelcome('/portal')
+      return
+    }
+
+    // ============================================================
+    // ② 再查 customers 表（不加 status 过滤）
+    // ============================================================
+    const { data: customerData, error: customerError } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('phone', phone.value)
+      .maybeSingle()
+
+    if (customerError && customerError.code !== 'PGRST116') throw customerError
+
+    if (!customerData) {
+      ElMessage.error('手机号或密码不正确')
+      return
+    }
+
+    // 密码校验
+    if (activeTab.value === 'password' && customerData.password !== password.value) {
+      ElMessage.error('手机号或密码不正确')
+      return
+    }
+
+    // 👇 密码正确后，再判断是否被禁用
+    if (Number(customerData.status) !== 1) {
+      ElMessage.error('账号已被禁用，请联系管理员')
+      return
+    }
+
+    const account = {
+      id: customerData.id,
+      phone: customerData.phone,
+      name: customerData.name,
+      role: 'customer',
+      customerId: customerData.id,
+      platforms: customerData.platforms || [],
+      permissions: customerData.permissions || {},
+    }
+    localStorage.setItem('currentUser', JSON.stringify(account))
+    playWelcome('/dashboard')
+  } catch (e) {
+    console.error(e)
+    ElMessage.error('登录异常：' + (e?.message || e))
+  }
 }
 
 const handleRegister = () => ElMessage.info('注册功能开发中')
@@ -82,12 +141,11 @@ const handleBackdropClick = (e) => {
 }
 
 // ============================================================
-// 登录成功后的欢迎动画 + 跳转全图监控页
+// 欢迎动画
 // ============================================================
 const showWelcome = ref(false)
 const welcomeLeaving = ref(false)
 
-// 随机粒子（setup 只执行一次，位置稳定）
 const particles = Array.from({ length: 18 }, () => ({
   left: Math.random() * 100,
   top: 55 + Math.random() * 45,
@@ -96,12 +154,10 @@ const particles = Array.from({ length: 18 }, () => ({
   duration: 4 + Math.random() * 4,
 }))
 
-const playWelcome = () => {
+const playWelcome = (target = '/dashboard') => {
   showWelcome.value = true
-  // 1.0s 后开始淡出
   setTimeout(() => { welcomeLeaving.value = true }, 1000)
-  // 1.4s 后进入全图监控页
-  setTimeout(() => { router.push('/dashboard') }, 1400)
+  setTimeout(() => { router.push(target) }, 1400)
 }
 </script>
 
@@ -122,12 +178,10 @@ const playWelcome = () => {
 
     <!-- ========== 顶部栏：Logo + 用户图标 ========== -->
     <div class="top-bar">
-      <!-- 左上角 Logo（无遮罩） -->
       <div class="logo-wrap">
         <img src="/DFLOGO.png" alt="东风商用车" class="logo-img" />
       </div>
 
-      <!-- 右上角用户图标按钮 -->
       <button class="user-btn" @click="openLogin" title="登录">
         <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="8" r="4" />
@@ -224,7 +278,6 @@ const playWelcome = () => {
 
     <!-- ========== 登录成功 · 全屏欢迎动画 ========== -->
     <div v-if="showWelcome" class="welcome-overlay" :class="{ leaving: welcomeLeaving }">
-      <!-- 上升粒子 -->
       <div class="welcome-particles">
         <span
           v-for="(p, i) in particles"
@@ -240,17 +293,14 @@ const playWelcome = () => {
         ></span>
       </div>
 
-      <!-- 扩散光环 -->
       <div class="welcome-rings">
         <span></span>
         <span></span>
         <span></span>
       </div>
 
-      <!-- 旋转光晕 -->
       <div class="welcome-glow"></div>
 
-      <!-- 中央内容 -->
       <div class="welcome-content">
         <div class="welcome-logo">
           <img src="/DFLOGO.png" alt="东风商用车" />
@@ -302,7 +352,6 @@ const playWelcome = () => {
   pointer-events: none;
 }
 
-/* 左上角 Logo 容器（已移除黑色遮罩） */
 .logo-wrap {
   pointer-events: auto;
   display: inline-flex;
@@ -319,7 +368,6 @@ const playWelcome = () => {
   user-select: none;
 }
 
-/* 右上角用户图标 */
 .user-btn {
   flex-shrink: 0;
   width: 56px;
@@ -365,7 +413,6 @@ const playWelcome = () => {
 .backdrop-enter-active, .backdrop-leave-active { transition: opacity 0.35s ease; }
 .backdrop-enter-from, .backdrop-leave-to { opacity: 0; }
 
-/* 登录卡片：外框直角 */
 .login-card {
   position: relative;
   width: 420px;
@@ -385,7 +432,6 @@ const playWelcome = () => {
 .login-card-enter-from { opacity: 0; transform: scale(0.85) translateY(20px); }
 .login-card-leave-to { opacity: 0; transform: scale(0.95); }
 
-/* 关闭按钮：小圆角 */
 .close-btn {
   position: absolute;
   top: 16px;
@@ -422,7 +468,6 @@ const playWelcome = () => {
   font-family: inherit;
 }
 .tab-item.active { color: #0f172a; }
-/* 下划线：小圆角 */
 .tab-item.active::after {
   content: '';
   position: absolute;
@@ -438,7 +483,6 @@ const playWelcome = () => {
 
 .form-body { display: flex; flex-direction: column; gap: 16px; }
 
-/* 输入框：小圆角 */
 .input-wrap {
   position: relative;
   display: flex;
@@ -482,7 +526,6 @@ const playWelcome = () => {
   font-family: inherit;
 }
 .field::placeholder { color: #b6bfc9; font-weight: 400; }
-/* 密码显示按钮：小圆角 */
 .eye-btn {
   display: flex;
   align-items: center;
@@ -497,7 +540,6 @@ const playWelcome = () => {
   transition: all 0.2s;
 }
 .eye-btn:hover { color: #0f172a; background: rgba(0, 0, 0, 0.05); }
-/* 验证码按钮：小圆角 */
 .code-btn {
   flex-shrink: 0;
   padding: 6px 14px;
@@ -515,7 +557,6 @@ const playWelcome = () => {
 .code-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
 
 .btn-row { display: flex; gap: 12px; margin-top: 8px; }
-/* 注册/登录按钮：小圆角 */
 .btn {
   flex: 1;
   height: 56px;
@@ -537,7 +578,6 @@ const playWelcome = () => {
 .divider .line { flex: 1; height: 1px; background: #e2e8f0; }
 .divider .text { color: #94a3b8; font-size: 14px; font-weight: 500; }
 
-/* 微信登录按钮：小圆角 */
 .btn-wechat {
   display: flex;
   align-items: center;
@@ -561,7 +601,6 @@ const playWelcome = () => {
 .btn-wechat:hover svg { transform: scale(1.15); }
 
 .agreement { display: flex; align-items: center; gap: 10px; margin-top: 8px; cursor: pointer; user-select: none; font-size: 13px; color: #64748b; }
-/* 勾选框：小圆角 */
 .checkbox {
   flex-shrink: 0;
   width: 20px;
@@ -606,7 +645,6 @@ const playWelcome = () => {
   to { opacity: 1; }
 }
 
-/* 粒子 */
 .welcome-particles {
   position: absolute;
   inset: 0;
@@ -629,7 +667,6 @@ const playWelcome = () => {
   100% { opacity: 0; transform: translateY(-160px) scale(1.15); }
 }
 
-/* 扩散光环 */
 .welcome-rings {
   position: absolute;
   inset: 0;
@@ -656,7 +693,6 @@ const playWelcome = () => {
   100% { transform: scale(3.4); opacity: 0; }
 }
 
-/* 旋转光晕 */
 .welcome-glow {
   position: absolute;
   top: 50%;
@@ -680,7 +716,6 @@ const playWelcome = () => {
   to { transform: rotate(360deg); }
 }
 
-/* 中央内容 */
 .welcome-content {
   position: relative;
   z-index: 2;

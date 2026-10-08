@@ -12,16 +12,9 @@
       <el-header class="dashboard-header">
         <div class="dashboard-title">车队管理平台</div>
         <div class="dashboard-actions">
-          <el-popover placement="bottom" :width="110" trigger="click" popper-class="settings-popover">
-            <template #reference>
-              <el-button size="small" plain class="action-btn settings-btn">
-                <el-icon><Setting /></el-icon> 设置
-              </el-button>
-            </template>
-            <div style="padding: 2px 0; text-align: center;">
-              <el-button type="text" size="small" class="settings-option" @click="handleSettings">个人设置</el-button>
-            </div>
-          </el-popover>
+          <el-button size="small" plain class="action-btn settings-btn" @click="handleSettings">
+            <el-icon><Setting /></el-icon> 设置
+          </el-button>
           <el-button type="danger" size="small" plain class="action-btn logout-btn" @click="goLogin">退出登录</el-button>
         </div>
       </el-header>
@@ -44,11 +37,25 @@
 
       <!-- 主内容区 -->
       <el-main class="main-content">
-        <div class="content-wrapper animate-fade-up">
-          <!-- 全图监控（默认首页 /dashboard 与 /fullmap 均渲染） -->
-          <template v-if="route.path === '/fullmap' || route.path === '/dashboard'">
+        <!-- 👇 无权限时显示提示 -->
+        <div v-if="!isPermitted" class="no-permission">
+          <div class="no-permission-icon">🔒</div>
+          <h2>暂无访问权限</h2>
+          <p>您当前账号未开通「{{ currentPage }}」功能的访问权限</p>
+          <button class="back-btn" @click="goHome">返回首页</button>
+        </div>
+
+        <div v-else class="content-wrapper animate-fade-up">
+          <!-- 客户端首页 -->
+          <template v-if="isClientHome">
+            <ClientHome />
+          </template>
+
+          <!-- 全图监控 -->
+          <template v-else-if="isFullMap">
             <FullMap />
           </template>
+
           <!-- 运单管理 -->
           <template v-else-if="route.path === '/waybill'">
             <Waybill />
@@ -90,9 +97,12 @@
       </el-main>
     </el-container>
 
-    <!-- ========== 退出登录 · 模糊至黑屏 + 欢迎使用 + 放大快切 ========== -->
+    <!-- ========== 个人设置弹窗 ========== -->
+    <PersonalSettings v-model="settingsVisible" />
+
+    <!-- ========== 退出登录动画 ========== -->
     <div v-if="showGoodbye" class="goodbye-overlay">
-      <h1 class="goodbye-text">欢迎使用</h1>
+      <h1 class="goodbye-text">感谢使用</h1>
     </div>
   </el-container>
 </template>
@@ -100,9 +110,11 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox, ElMessage } from 'element-plus'
 import { Setting } from '@element-plus/icons-vue'
 import SidebarMenu from '../components/SidebarMenu.vue'
+import PersonalSettings from '../components/PersonalSettings.vue'
+import ClientHome from '../views/ClientHome.vue'
 import FullMap from '../views/FullMap.vue'
 import WaybillCreate from '../views/WaybillCreate.vue'
 import Waybill from '../views/Waybill.vue'
@@ -110,7 +122,6 @@ import Report from '../views/Report.vue'
 import VehicleArchive from '../views/VehicleArchive.vue'
 import DriverArchive from '../views/DriverArchive.vue'
 
-// 👇 电子围栏管理三个子页面
 import EleFenceSetting from '../views/EleFenceSetting.vue'
 import EleFenceAlertSetting from '../views/EleFenceAlertSetting.vue'
 import EleFenceAlertQuery from '../views/EleFenceAlertQuery.vue'
@@ -120,6 +131,72 @@ const router = useRouter()
 const waybillCreateRef = ref(null)
 
 const activeMenu = ref(route.path)
+
+// ============================================================
+// 当前用户 & 权限
+// ============================================================
+const currentUser = (() => {
+  try {
+    return JSON.parse(localStorage.getItem('currentUser') || 'null')
+  } catch { return null }
+})()
+
+const clientPerms = computed(() => {
+  if (currentUser?.role !== 'customer') return null
+  return currentUser?.permissions?.client || []
+})
+
+// 路由 → 权限 key
+const routePermissionMap = {
+  '/dashboard': 'home',
+  '/fullmap': 'driving_fullmap',
+  '/dashboard/车辆故障管理': 'vehicle_fault',
+  '/dashboard/外观巡检管理': 'appearance_inspect',
+  '/ele-fence/setting': 'ele_fence',
+  '/ele-fence/alert-setting': 'ele_fence',
+  '/ele-fence/alert-query': 'ele_fence',
+  '/dashboard/运营管理': 'operation',
+  '/waybill': 'waybill',
+  '/waybill/create': 'waybill',
+  '/waybill/detail': 'waybill',
+  '/report': 'report',
+  '/vehicle-archive': 'vehicle_archive',
+  '/driver-archive': 'driver_archive',
+  '/dashboard/系统管理': 'system',
+}
+
+// 当前页面是否允许访问
+const isPermitted = computed(() => {
+  if (clientPerms.value === null) return true  // 管理员
+  // 客户端首页永远允许
+  if (route.path === '/dashboard' && !route.params.page) return true
+  const permKey = routePermissionMap[route.path]
+  if (!permKey) return true  // 未配置权限的路由，默认放行
+  return clientPerms.value.includes(permKey)
+})
+
+// 无权限时跳回首页
+watch(isPermitted, (val) => {
+  if (!val) {
+    ElMessage.warning('您没有权限访问该页面')
+    setTimeout(() => {
+      router.replace('/dashboard')
+    }, 1200)
+  }
+}, { immediate: false })
+
+const goHome = () => router.push('/dashboard')
+
+// ============================================================
+// 页面识别
+// ============================================================
+const isClientHome = computed(() => {
+  return route.path === '/dashboard' && !route.params.page
+})
+
+const isFullMap = computed(() => {
+  return route.path === '/fullmap' || route.params.page === 'fullmap'
+})
 
 const getMenuIndex = (path) => {
   if (path === '/waybill/create') return '/waybill'
@@ -139,8 +216,7 @@ watch(
 )
 
 const pathLabels = {
-  // 👇 dashboard 与 fullmap 都指向全图监控
-  '/dashboard': '全图监控',
+  '/dashboard': '首页',
   '/fullmap': '全图监控',
   '/dashboard/车辆故障管理': '车辆故障管理',
   '/dashboard/外观巡检管理': '外观巡检管理',
@@ -155,7 +231,6 @@ const pathLabels = {
   '/vehicle-archive': '车辆档案',
   '/driver-archive': '司机档案',
 
-  // 👇 电子围栏子页面
   '/ele-fence/setting': '围栏设置',
   '/ele-fence/alert-setting': '提醒设置',
   '/ele-fence/alert-query': '提醒事件查询',
@@ -237,6 +312,12 @@ watch(
 )
 
 // ============================================================
+// 个人设置
+// ============================================================
+const settingsVisible = ref(false)
+const handleSettings = () => { settingsVisible.value = true }
+
+// ============================================================
 // 退出登录 · 模糊至黑屏 + 欢迎使用 + 放大快切
 // ============================================================
 const showGoodbye = ref(false)
@@ -244,23 +325,14 @@ const showGoodbye = ref(false)
 const goLogin = () => {
   if (showGoodbye.value) return
   showGoodbye.value = true
-  // 1.25s：文字放大到最大时触发跳转，与动画高潮卡点
   setTimeout(() => {
     router.push('/')
-    // 稍后重置状态，避免返回时残留
     setTimeout(() => { showGoodbye.value = false }, 200)
   }, 1250)
-}
-
-const handleSettings = () => {
-  console.log('打开个人设置')
 }
 </script>
 
 <style scoped>
-/* ==========================================
-   全局底色与布局
-   ========================================== */
 .el-container {
   background-color: #F8FAFC;
 }
@@ -272,9 +344,6 @@ const handleSettings = () => {
   z-index: 10;
 }
 
-/* ==========================================
-   顶部标题栏
-   ========================================== */
 .dashboard-header {
   display: flex;
   align-items: center;
@@ -324,9 +393,6 @@ const handleSettings = () => {
   box-shadow: 0 4px 12px rgba(211, 47, 47, 0.25);
 }
 
-/* ==========================================
-   标签页栏
-   ========================================== */
 .page-tabs {
   position: relative;
   display: flex;
@@ -407,9 +473,6 @@ const handleSettings = () => {
   border-radius: 50%;
 }
 
-/* ==========================================
-   主内容区
-   ========================================== */
 .main-content {
   height: calc(100vh - 48px - 36px - 1px);
   max-height: calc(100vh - 48px - 36px - 1px);
@@ -424,9 +487,11 @@ const handleSettings = () => {
   min-height: 100%;
 }
 
-/* ==========================================
-   页面切换动画
-   ========================================== */
+.content-wrapper:has(.client-home),
+.content-wrapper:has(.fullmap) {
+  padding: 0;
+}
+
 .animate-fade-up {
   animation: fadeUp 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
@@ -435,7 +500,6 @@ const handleSettings = () => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 滚动条美化 */
 .main-content::-webkit-scrollbar { width: 6px; }
 .main-content::-webkit-scrollbar-track { background: transparent; }
 .main-content::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
@@ -448,7 +512,64 @@ h2 {
 }
 
 /* ==========================================
-   退出登录 · 模糊至黑屏 + 欢迎使用 + 放大快切
+   无权限提示
+   ========================================== */
+.no-permission {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 14px;
+  padding: 40px 20px;
+  animation: noPermIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes noPermIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.no-permission-icon {
+  font-size: 64px;
+  line-height: 1;
+  filter: drop-shadow(0 6px 16px rgba(200, 16, 46, 0.25));
+  animation: noPermFloat 3s ease-in-out infinite;
+}
+@keyframes noPermFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.no-permission h2 {
+  font-size: 20px;
+  color: #0F172A;
+  margin: 0;
+}
+.no-permission p {
+  font-size: 13px;
+  color: #64748B;
+  margin: 0;
+}
+.back-btn {
+  margin-top: 8px;
+  padding: 10px 28px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(200, 16, 46, 0.3);
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-family: inherit;
+}
+.back-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(200, 16, 46, 0.45);
+}
+
+/* ==========================================
+   退出登录动画
    ========================================== */
 .goodbye-overlay {
   position: fixed;
@@ -461,30 +582,15 @@ h2 {
   background: rgba(0, 0, 0, 0);
   backdrop-filter: blur(0px);
   -webkit-backdrop-filter: blur(0px);
-  /* 动画总时长 1.25s，与跳转时机对齐 */
   animation: goodbyeBlackout 1.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-/* 背景逐渐模糊 → 变黑：前 70% 完成，后面保持全黑等待文字放大 */
 @keyframes goodbyeBlackout {
-  0% {
-    background: rgba(0, 0, 0, 0);
-    backdrop-filter: blur(0px);
-    -webkit-backdrop-filter: blur(0px);
-  }
-  70% {
-    background: rgba(0, 0, 0, 1);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
-  }
-  100% {
-    background: rgba(0, 0, 0, 1);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
-  }
+  0%   { background: rgba(0, 0, 0, 0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
+  70%  { background: rgba(0, 0, 0, 1); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); }
+  100% { background: rgba(0, 0, 0, 1); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); }
 }
 
-/* “欢迎使用”四个字：聚焦出现 → 停留一拍 → 放大淡出 */
 .goodbye-text {
   position: relative;
   z-index: 2;
@@ -493,7 +599,6 @@ h2 {
   font-size: 46px;
   font-weight: 700;
   letter-spacing: 14px;
-  /* 文字本身的视觉居中（左缩进补足字距） */
   text-indent: 14px;
   color: #ffffff;
   user-select: none;
@@ -507,39 +612,12 @@ h2 {
 }
 
 @keyframes goodbyeTextFocus {
-  /* 阶段1：从模糊拉近聚焦 */
-  0% {
-    opacity: 0;
-    filter: blur(20px);
-    letter-spacing: 32px;
-    transform: scale(1.1);
-  }
-  /* 阶段2：完全聚焦（动画"展示完成"） */
-  55% {
-    opacity: 1;
-    filter: blur(0);
-    letter-spacing: 14px;
-    transform: scale(1);
-  }
-  /* 阶段3：停留一拍（卡点蓄力） */
-  70% {
-    opacity: 1;
-    filter: blur(0);
-    letter-spacing: 14px;
-    transform: scale(1);
-  }
-  /* 阶段4：放大 + 淡出，与跳转同步 */
-  100% {
-    opacity: 0;
-    filter: blur(4px);
-    letter-spacing: 14px;
-    transform: scale(4);
-  }
+  0%   { opacity: 0; filter: blur(20px); letter-spacing: 32px; transform: scale(1.1); }
+  55%  { opacity: 1; filter: blur(0);    letter-spacing: 14px; transform: scale(1); }
+  70%  { opacity: 1; filter: blur(0);    letter-spacing: 14px; transform: scale(1); }
+  100% { opacity: 0; filter: blur(4px);  letter-spacing: 14px; transform: scale(4); }
 }
 
-/* ==========================================
-   响应式
-   ========================================== */
 @media (max-width: 768px) {
   .goodbye-text {
     font-size: 28px;
@@ -547,35 +625,15 @@ h2 {
     text-indent: 8px;
   }
   @keyframes goodbyeTextFocus {
-    0% {
-      opacity: 0;
-      filter: blur(16px);
-      letter-spacing: 22px;
-      transform: scale(1.1);
-    }
-    55% {
-      opacity: 1;
-      filter: blur(0);
-      letter-spacing: 8px;
-      transform: scale(1);
-    }
-    70% {
-      opacity: 1;
-      filter: blur(0);
-      letter-spacing: 8px;
-      transform: scale(1);
-    }
-    100% {
-      opacity: 0;
-      filter: blur(4px);
-      letter-spacing: 8px;
-      transform: scale(4);
-    }
+    0%   { opacity: 0; filter: blur(16px); letter-spacing: 22px; transform: scale(1.1); }
+    55%  { opacity: 1; filter: blur(0);    letter-spacing: 8px;  transform: scale(1); }
+    70%  { opacity: 1; filter: blur(0);    letter-spacing: 8px;  transform: scale(1); }
+    100% { opacity: 0; filter: blur(4px);  letter-spacing: 8px;  transform: scale(4); }
   }
 }
 </style>
 
-<!-- ===== 全局样式（用于 popover 和 确认框高斯模糊） ===== -->
+<!-- ===== 全局样式 ===== -->
 <style>
 .settings-popover {
   border: 1px solid #E2E8F0 !important;
@@ -596,5 +654,37 @@ h2 {
 .dirty-confirm-box .el-message-box {
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.light-panel {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.3s;
+}
+.light-panel:hover { box-shadow: 0 6px 22px rgba(15, 23, 42, 0.06); }
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 14px;
+}
+.panel-title .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #c8102e;
+  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.15);
+}
+.panel-title .count {
+  font-size: 12px;
+  color: #94A3B8;
+  font-weight: 400;
+  margin-left: auto;
 }
 </style>
