@@ -45,8 +45,8 @@
       <!-- 主内容区 -->
       <el-main class="main-content">
         <div class="content-wrapper animate-fade-up">
-          <!-- 全图监控 -->
-          <template v-if="route.path === '/fullmap'">
+          <!-- 全图监控（默认首页 /dashboard 与 /fullmap 均渲染） -->
+          <template v-if="route.path === '/fullmap' || route.path === '/dashboard'">
             <FullMap />
           </template>
           <!-- 运单管理 -->
@@ -89,6 +89,11 @@
         </div>
       </el-main>
     </el-container>
+
+    <!-- ========== 退出登录 · 模糊至黑屏 + 欢迎使用 + 放大快切 ========== -->
+    <div v-if="showGoodbye" class="goodbye-overlay">
+      <h1 class="goodbye-text">欢迎使用</h1>
+    </div>
   </el-container>
 </template>
 
@@ -134,7 +139,8 @@ watch(
 )
 
 const pathLabels = {
-  '/dashboard': '监控中心',
+  // 👇 dashboard 与 fullmap 都指向全图监控
+  '/dashboard': '全图监控',
   '/fullmap': '全图监控',
   '/dashboard/车辆故障管理': '车辆故障管理',
   '/dashboard/外观巡检管理': '外观巡检管理',
@@ -230,8 +236,20 @@ watch(
   { immediate: true }
 )
 
+// ============================================================
+// 退出登录 · 模糊至黑屏 + 欢迎使用 + 放大快切
+// ============================================================
+const showGoodbye = ref(false)
+
 const goLogin = () => {
-  router.push('/')
+  if (showGoodbye.value) return
+  showGoodbye.value = true
+  // 1.25s：文字放大到最大时触发跳转，与动画高潮卡点
+  setTimeout(() => {
+    router.push('/')
+    // 稍后重置状态，避免返回时残留
+    setTimeout(() => { showGoodbye.value = false }, 200)
+  }, 1250)
 }
 
 const handleSettings = () => {
@@ -322,7 +340,6 @@ const handleSettings = () => {
 }
 .page-tabs::-webkit-scrollbar { display: none; }
 
-/* 标签栏底部的红色渐变分割光条 */
 .page-tabs::after {
   content: '';
   position: absolute;
@@ -428,6 +445,133 @@ h2 {
   margin: 0 0 12px 0;
   color: #1E293B;
   font-weight: 600;
+}
+
+/* ==========================================
+   退出登录 · 模糊至黑屏 + 欢迎使用 + 放大快切
+   ========================================== */
+.goodbye-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  /* 动画总时长 1.25s，与跳转时机对齐 */
+  animation: goodbyeBlackout 1.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* 背景逐渐模糊 → 变黑：前 70% 完成，后面保持全黑等待文字放大 */
+@keyframes goodbyeBlackout {
+  0% {
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  70% {
+    background: rgba(0, 0, 0, 1);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+  }
+  100% {
+    background: rgba(0, 0, 0, 1);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+  }
+}
+
+/* “欢迎使用”四个字：聚焦出现 → 停留一拍 → 放大淡出 */
+.goodbye-text {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  font-family: inherit;
+  font-size: 46px;
+  font-weight: 700;
+  letter-spacing: 14px;
+  /* 文字本身的视觉居中（左缩进补足字距） */
+  text-indent: 14px;
+  color: #ffffff;
+  user-select: none;
+  white-space: nowrap;
+  text-shadow:
+    0 0 24px rgba(255, 255, 255, 0.55),
+    0 0 60px rgba(211, 47, 47, 0.35);
+  transform-origin: center center;
+  will-change: transform, opacity, filter;
+  animation: goodbyeTextFocus 1.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes goodbyeTextFocus {
+  /* 阶段1：从模糊拉近聚焦 */
+  0% {
+    opacity: 0;
+    filter: blur(20px);
+    letter-spacing: 32px;
+    transform: scale(1.1);
+  }
+  /* 阶段2：完全聚焦（动画"展示完成"） */
+  55% {
+    opacity: 1;
+    filter: blur(0);
+    letter-spacing: 14px;
+    transform: scale(1);
+  }
+  /* 阶段3：停留一拍（卡点蓄力） */
+  70% {
+    opacity: 1;
+    filter: blur(0);
+    letter-spacing: 14px;
+    transform: scale(1);
+  }
+  /* 阶段4：放大 + 淡出，与跳转同步 */
+  100% {
+    opacity: 0;
+    filter: blur(4px);
+    letter-spacing: 14px;
+    transform: scale(4);
+  }
+}
+
+/* ==========================================
+   响应式
+   ========================================== */
+@media (max-width: 768px) {
+  .goodbye-text {
+    font-size: 28px;
+    letter-spacing: 8px;
+    text-indent: 8px;
+  }
+  @keyframes goodbyeTextFocus {
+    0% {
+      opacity: 0;
+      filter: blur(16px);
+      letter-spacing: 22px;
+      transform: scale(1.1);
+    }
+    55% {
+      opacity: 1;
+      filter: blur(0);
+      letter-spacing: 8px;
+      transform: scale(1);
+    }
+    70% {
+      opacity: 1;
+      filter: blur(0);
+      letter-spacing: 8px;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      filter: blur(4px);
+      letter-spacing: 8px;
+      transform: scale(4);
+    }
+  }
 }
 </style>
 
