@@ -11,24 +11,24 @@
             <span class="pill-value">{{ totalCount }}</span>
             <span class="pill-label">全部</span>
           </div>
-          <div class="stat-pill" :class="{ active: statusFilter === '在线' }" @click="setStatusFilter('在线')">
-            <span class="pill-dot online-dot"></span>
-            <span class="pill-value">{{ onlineCount }}</span>
-            <span class="pill-label">在线</span>
+          <div class="stat-pill" :class="{ active: statusFilter === '行驶' }" @click="setStatusFilter('行驶')">
+            <span class="pill-dot driving-dot"></span>
+            <span class="pill-value">{{ drivingCount }}</span>
+            <span class="pill-label">行驶</span>
+          </div>
+          <div class="stat-pill" :class="{ active: statusFilter === '静止' }" @click="setStatusFilter('静止')">
+            <span class="pill-dot parked-dot"></span>
+            <span class="pill-value">{{ parkedCount }}</span>
+            <span class="pill-label">静止</span>
           </div>
           <div class="stat-pill" :class="{ active: statusFilter === '离线' }" @click="setStatusFilter('离线')">
             <span class="pill-dot offline-dot"></span>
             <span class="pill-value">{{ offlineCount }}</span>
             <span class="pill-label">离线</span>
           </div>
-          <div class="stat-pill" :class="{ active: statusFilter === 'located' }" @click="setStatusFilter('located')">
-            <span class="pill-dot located-dot"></span>
-            <span class="pill-value">{{ locatedCount }}</span>
-            <span class="pill-label">已定位</span>
-          </div>
         </div>
 
-        <el-button class="refresh-btn" @click="refreshLocations" :loading="loadingVehicles" size="small">
+        <el-button class="refresh-btn" @click="refreshLocations(true)" :loading="loadingVehicles" size="small">
           <el-icon :class="{ 'icon-spin': loadingVehicles }"><Refresh /></el-icon>
           刷新定位
         </el-button>
@@ -159,7 +159,7 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  Van, Position, Location, Aim, Refresh, Search, RefreshRight,
+  Van, Refresh, Search, RefreshRight,
   ArrowLeft, ArrowRight, WarningFilled
 } from '@element-plus/icons-vue'
 import AMapLoader from '@amap/amap-jsapi-loader'
@@ -167,13 +167,17 @@ import { supabase } from '@/utils/supabase'
 import dayjs from 'dayjs'
 
 const AMAP_KEY = '273f5c474604b71906674aac159b8f45'
-const DONGFENG_API_URL = '/api-dongfeng/locationData'
-const DONGFENG_TOKEN = '8e0f08a758a64451b8791f47bd716ccd'
-const DONGFENG_LOGIS_NAME = 'cihon_rainbow'
+const DONGFENG_API_URL = 'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com/dongfeng-lostlocation'
+
+// 👇 并发数（从 5 提到 15）
+const CONCURRENCY = 15
+// 👇 缓存有效期：3 分钟
+const CACHE_TTL = 3 * 60 * 1000
+const CACHE_KEY = 'fullmap_vehicle_locations_cache'
 
 const orgOptions = ref([])
 const selectedOrg = ref('')
-const statusOptions = ref(['在线', '离线'])
+const statusOptions = ref(['行驶', '静止', '离线'])
 const selectedStatus = ref('')
 const searchKeyword = ref('')
 const loadingVehicles = ref(false)
@@ -186,8 +190,10 @@ const locationTotal = ref(0)
 const locatedCount = ref(0)
 
 const totalCount = computed(() => vehicles.value.length)
-const onlineCount = computed(() => vehicles.value.filter(v => v.status === '在线').length)
+const drivingCount = computed(() => vehicles.value.filter(v => v.status === '行驶').length)
+const parkedCount = computed(() => vehicles.value.filter(v => v.status === '静止').length)
 const offlineCount = computed(() => vehicles.value.filter(v => v.status === '离线').length)
+
 const loadPercent = computed(() => {
   if (locationTotal.value === 0) return 0
   return Math.min(100, (locationProgress.value / locationTotal.value) * 100)
@@ -196,67 +202,113 @@ const loadPercent = computed(() => {
 const RING_LENGTH = 263.89
 const ringOffset = computed(() => RING_LENGTH * (1 - loadPercent.value / 100))
 
-const getTimeValue = (record) => {
-  const candidates = [
-    'time', 'reportTime', 'gpsTime', 'createTime', 'updateTime',
-    'locTime', 'timestamp', 'ts', 'reportTimeStr', 'gpsTimeStr',
-    'locationTime', 'positionTime', 'lastTime', 'accTime',
-  ]
-  for (const key of candidates) {
-    if (record[key] !== undefined && record[key] !== null && record[key] !== '') {
-      const t = new Date(record[key]).getTime()
-      if (!isNaN(t)) return t
-    }
-  }
-  return 0
+// ============================================================
+// 工具：时间解析
+// ============================================================
+const parseTimeToMs = (t) => {
+  if (t === undefined || t === null || t === '') return 0
+  if (typeof t === 'number') return t
+  if (/^\d+$/.test(String(t))) return Number(t)
+  const ms = new Date(t).getTime()
+  return isNaN(ms) ? 0 : ms
 }
 
+// 工具：ACC 状态解析
 const isAccOn = (accStatus) => {
   if (accStatus === undefined || accStatus === null || accStatus === '') return false
   const s = String(accStatus).trim()
-  if (s.includes('开')) return true
   if (s.includes('关')) return false
-  const lower = s.toLowerCase()
-  return ['1', 'true', 'on', 'open', 'yes', 'y'].includes(lower)
+  if (s.includes('开')) return true
+  return false
 }
 
+// ============================================================
+// 缓存读写
+// ============================================================
+const readCache = () => {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const obj = JSON.parse(raw)
+    if (!obj || !obj.ts) return null
+    if (Date.now() - obj.ts > CACHE_TTL) {
+      sessionStorage.removeItem(CACHE_KEY)
+      return null
+    }
+    return obj.data
+  } catch (e) {
+    return null
+  }
+}
+
+const writeCache = (data) => {
+  try {
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data }))
+  } catch (e) {}
+}
+
+const clearCache = () => {
+  try { sessionStorage.removeItem(CACHE_KEY) } catch (e) {}
+}
+
+// ============================================================
+// 东风定位接口
+// ============================================================
 const fetchDongfengLocation = async (vin) => {
   if (!vin || vin.length < 8) return { success: false, reason: 'VIN 长度不足' }
-  const chassisNo = vin.slice(-8)
-  const now = dayjs()
-  const payload = {
-    chassisNo,
-    token: DONGFENG_TOKEN,
-    startTime: now.subtract(1, 'hour').format('YYYY-MM-DD HH:mm:ss'),
-    endTime: now.add(1, 'hour').format('YYYY-MM-DD HH:mm:ss'),
-    logisName: DONGFENG_LOGIS_NAME,
-  }
+
   try {
     const response = await fetch(DONGFENG_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ vin }),
     })
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const result = await response.json()
-    let records = result?.data || result?.list || result?.rows || result?.result || result?.records || []
-    if (!Array.isArray(records)) records = records ? [records] : []
-    if (records.length === 0) return { success: false, reason: '无定位数据' }
-    const sorted = [...records].sort((a, b) => getTimeValue(b) - getTimeValue(a))
+
+    if (result.code !== 1 || !Array.isArray(result.data) || result.data.length === 0) {
+      return { success: false, reason: result.msg || '近 3 天无数据' }
+    }
+
+    const sorted = [...result.data].sort((a, b) => parseTimeToMs(b.time) - parseTimeToMs(a.time))
     const latest = sorted[0]
-    const lng = parseFloat(latest.lng ?? latest.longitude ?? latest.lon)
-    const lat = parseFloat(latest.lat ?? latest.latitude)
-    if (!lng || !lat || isNaN(lng) || isNaN(lat)) return { success: false, reason: '经纬度无效' }
-    const accStatus = latest.accStatus ?? latest.acc ?? latest.accState ?? ''
-    const online = isAccOn(accStatus)
-    const timeVal = getTimeValue(latest)
-    const reportTime = timeVal > 0 ? dayjs(timeVal).format('YYYY-MM-DD HH:mm:ss') : '--'
-    const direction = parseFloat(latest.direction ?? latest.dir ?? latest.course ?? latest.heading ?? 0) || 0
-    const speed = parseFloat(latest.speed ?? latest.spd ?? 0) || 0
-    const rpm = parseFloat(latest.rpm ?? latest.speedRpm ?? latest.engineRpm ?? 0) || 0
-    const fuelRemaining = parseFloat(latest.fuel ?? latest.oil ?? latest.fuelRemaining ?? latest.fuelAmount ?? latest.oilMass ?? 0) || 0
-    const locationText = latest.address || latest.location || latest.formattedAddress || latest.addr || (online ? '行驶中' : '静止')
-    return { success: true, lng, lat, online, accStatus: String(accStatus || '--'), reportTime, locationText, direction, speed, rpm, fuelRemaining }
+
+    const lng = parseFloat(latest.lng)
+    const lat = parseFloat(latest.lat)
+    if (!lng || !lat || isNaN(lng) || isNaN(lat)) {
+      return { success: false, reason: '经纬度无效' }
+    }
+
+    const speed = parseFloat(latest.speed) || 0
+    const accOn = isAccOn(latest.accStatus)
+
+    let status = '离线'
+    if (accOn) {
+      status = speed > 0 ? '行驶' : '静止'
+    }
+
+    const timeMs = parseTimeToMs(latest.time)
+    const reportTime = timeMs > 0 ? dayjs(timeMs).format('YYYY-MM-DD HH:mm:ss') : '--'
+
+    const locationText = latest.address ||
+      (status === '行驶' ? '行驶中' : status === '静止' ? '停车' : '离线')
+
+    const dayOffset = typeof result.dayOffset === 'number' ? result.dayOffset : 0
+
+    return {
+      success: true,
+      lng,
+      lat,
+      online: status !== '离线',
+      status,
+      accStatus: String(latest.accStatus || '--'),
+      reportTime,
+      locationText,
+      direction: parseFloat(latest.direction) || 0,
+      speed,
+      altitude: parseFloat(latest.altitude) || 0,
+      dayOffset,
+    }
   } catch (err) {
     console.warn(`获取车辆 ${vin} 定位失败：`, err.message)
     return { success: false, reason: err.message }
@@ -264,24 +316,37 @@ const fetchDongfengLocation = async (vin) => {
 }
 
 // ============================================================
-// 加载车辆（含按当前登录客户过滤）
+// 加载车辆（带缓存）
+// forceRefresh=true 时跳过缓存
 // ============================================================
-const loadVehicles = async () => {
+const loadVehicles = async (forceRefresh = false) => {
+  // 1️⃣ 优先读缓存
+  if (!forceRefresh) {
+    const cached = readCache()
+    if (cached && Array.isArray(cached.vehicles)) {
+      vehicles.value = cached.vehicles
+      orgOptions.value = cached.orgOptions || []
+      locatedCount.value = cached.locatedCount || 0
+      locationTotal.value = cached.vehicles.length
+      locationProgress.value = cached.vehicles.length
+      console.log('[全图监控] 使用缓存数据，共', cached.vehicles.length, '辆')
+      return
+    }
+  }
+
+  // 2️⃣ 无缓存或强制刷新，走真实请求
   loadingVehicles.value = true
   locationProgress.value = 0
   locationTotal.value = 0
   locatedCount.value = 0
   try {
-    // 读取当前登录用户
     let currentUser = null
     try {
       currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
     } catch {}
 
-    // 构造查询
     let query = supabase.from('vehicles').select('*').order('updated_at', { ascending: false })
 
-    // 客户只显示自己名下的车辆
     if (currentUser?.role === 'customer' && currentUser?.customerId) {
       query = query.eq('customer_id', currentUser.customerId)
     }
@@ -302,7 +367,8 @@ const loadVehicles = async () => {
 
     locationTotal.value = data.length
     const enriched = new Array(data.length)
-    const concurrency = 5
+
+    // 👇 高并发：15 个 worker
     let index = 0
     const worker = async () => {
       while (index < data.length) {
@@ -313,7 +379,7 @@ const loadVehicles = async () => {
           locatedCount.value++
           enriched[i] = {
             ...item,
-            status: loc.online ? '在线' : '离线',
+            status: loc.status,
             accStatus: loc.accStatus,
             reportTime: loc.reportTime,
             lng: loc.lng,
@@ -322,8 +388,8 @@ const loadVehicles = async () => {
             location: loc.locationText,
             direction: loc.direction,
             speed: loc.speed,
-            rpm: loc.rpm,
-            fuelRemaining: loc.fuelRemaining,
+            altitude: loc.altitude,
+            dayOffset: loc.dayOffset,
           }
         } else {
           enriched[i] = {
@@ -337,23 +403,29 @@ const loadVehicles = async () => {
             location: '定位获取失败',
             direction: 0,
             speed: 0,
-            rpm: 0,
-            fuelRemaining: 0,
+            altitude: 0,
+            dayOffset: -1,
           }
         }
         locationProgress.value++
       }
     }
-    await Promise.all(Array.from({ length: Math.min(concurrency, data.length) }, () => worker()))
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, data.length) }, () => worker()))
     vehicles.value = enriched.filter(Boolean)
 
-    // 收集组织/车队选项
     const orgSet = new Set()
     vehicles.value.forEach(v => {
       const org = v.org || v.customer_name || v.nickname
       if (org) orgSet.add(org)
     })
     orgOptions.value = Array.from(orgSet)
+
+    // 👇 写入缓存
+    writeCache({
+      vehicles: vehicles.value,
+      orgOptions: orgOptions.value,
+      locatedCount: locatedCount.value,
+    })
   } catch (e) {
     console.error('加载车辆失败：', e)
     ElMessage.error('加载车辆失败：' + e.message)
@@ -362,8 +434,10 @@ const loadVehicles = async () => {
   }
 }
 
-const refreshLocations = async () => {
-  await loadVehicles()
+// 刷新（forceRefresh=true 时跳过缓存）
+const refreshLocations = async (forceRefresh = false) => {
+  if (forceRefresh) clearCache()
+  await loadVehicles(forceRefresh)
   if (isMapReady.value) {
     addMarkers()
     updateMarkersVisibility()
@@ -399,7 +473,7 @@ const initMap = async () => {
 
     infoWindow = new AMap.InfoWindow({
       isCustom: true,
-      offset: new AMap.Pixel(0, -46),
+      offset: new AMap.Pixel(0, -54),
       autoMove: true,
       closeWhenClickMap: true,
     })
@@ -413,24 +487,36 @@ const initMap = async () => {
   }
 }
 
-const getTruckSVG = (isOnline) => {
-  const fillColor = isOnline ? '#10B981' : '#1F2937'
+// ============================================================
+// 箭头 SVG
+// ============================================================
+const getArrowScheme = (status) => {
+  if (status === '行驶') return { id: 'driving', top: '#34D399', bottom: '#059669' }
+  if (status === '静止') return { id: 'parked', top: '#FBBF24', bottom: '#D97706' }
+  return { id: 'offline', top: '#94A3B8', bottom: '#475569' }
+}
+
+const getArrowSVG = (status) => {
+  const s = getArrowScheme(status)
   return `
-    <svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <svg width="34" height="34" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <filter id="truckShadow_${isOnline ? 'on' : 'off'}" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="rgba(0,0,0,0.3)"/>
+        <linearGradient id="arrowGrad_${s.id}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${s.top}"/>
+          <stop offset="100%" stop-color="${s.bottom}"/>
+        </linearGradient>
+        <filter id="arrowShadow_${s.id}" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.25)"/>
         </filter>
       </defs>
-      <g filter="url(#truckShadow_${isOnline ? 'on' : 'off'})">
-        <rect x="11" y="6" width="14" height="24" rx="3" ry="3" fill="${fillColor}" stroke="#ffffff" stroke-width="1.5"/>
-        <path d="M 12 6 L 24 6 L 22 2 L 14 2 Z" fill="${fillColor}" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
-        <rect x="13.5" y="8" width="9" height="3" rx="1" fill="rgba(255,255,255,0.4)"/>
-        <line x1="11.5" y1="15" x2="24.5" y2="15" stroke="#ffffff" stroke-width="1" opacity="0.7"/>
-        <rect x="9" y="20" width="2" height="5" rx="0.8" fill="#1F2937"/>
-        <rect x="25" y="20" width="2" height="5" rx="0.8" fill="#1F2937"/>
-        <rect x="9" y="8" width="2" height="4" rx="0.8" fill="#1F2937"/>
-        <rect x="25" y="8" width="2" height="4" rx="0.8" fill="#1F2937"/>
+      <g filter="url(#arrowShadow_${s.id})">
+        <path d="M17 3 L29 30 L17 24 L5 30 Z"
+              fill="url(#arrowGrad_${s.id})"
+              stroke="#ffffff"
+              stroke-width="1.8"
+              stroke-linejoin="round"/>
+        <path d="M17 8 L23 25 L17 21 Z"
+              fill="rgba(255,255,255,0.35)"/>
       </g>
     </svg>
   `
@@ -448,17 +534,17 @@ const addMarkers = () => {
 
   locatedVehicles.forEach((v, idx) => {
     const container = document.createElement('div')
-    container.className = 'custom-marker'
+    container.className = 'custom-marker status-' + v.status
     container.style.animationDelay = (idx * 0.02) + 's'
 
     const iconWrap = document.createElement('div')
-    iconWrap.className = 'truck-icon-wrap ' + (v.status === '在线' ? 'online' : 'offline')
+    iconWrap.className = 'arrow-icon-wrap ' + v.status
     iconWrap.style.transform = `rotate(${v.direction || 0}deg)`
-    iconWrap.innerHTML = getTruckSVG(v.status === '在线')
+    iconWrap.innerHTML = getArrowSVG(v.status)
 
-    if (v.status === '在线') {
+    if (v.status === '行驶') {
       const ring = document.createElement('div')
-      ring.className = 'truck-pulse-ring'
+      ring.className = 'arrow-pulse-ring driving'
       iconWrap.appendChild(ring)
     }
 
@@ -472,7 +558,7 @@ const addMarkers = () => {
     const marker = new AMap.Marker({
       position: [v.lng, v.lat],
       content: container,
-      offset: new AMap.Pixel(-18, -18),
+      offset: new AMap.Pixel(-17, -17),
       zIndex: 1,
       extData: { plate: v.plate },
     })
@@ -489,7 +575,7 @@ const addMarkers = () => {
       if (hoveredMarker && hoveredMarker !== marker) resetMarkerStyle(hoveredMarker)
       hoveredMarker = marker
       const c = marker.getContent()
-      if (c) { c.style.transform = 'scale(1.3)'; c.style.zIndex = '100' }
+      if (c) { c.style.transform = 'scale(1.25)'; c.style.zIndex = '100' }
     })
     marker.on('mouseout', () => {
       if (hoveredMarker === marker) {
@@ -513,7 +599,7 @@ const resetMarkerStyle = (marker) => {
 
 const highlightMarker = (marker) => {
   const c = marker.getContent()
-  if (c) { c.style.transform = 'scale(1.3)'; c.style.zIndex = '100' }
+  if (c) { c.style.transform = 'scale(1.25)'; c.style.zIndex = '100' }
 }
 
 // ============================================================
@@ -523,8 +609,13 @@ const openPopup = (vehicle, marker) => {
   highlightedPlate.value = vehicle.plate
   highlightMarker(marker)
 
-  const isOnline = vehicle.status === '在线'
-  const statusClass = isOnline ? 'online' : 'offline'
+  let statusClass = 'offline'
+  if (vehicle.status === '行驶') statusClass = 'driving'
+  else if (vehicle.status === '静止') statusClass = 'parked'
+
+  let dayOffsetText = ''
+  if (vehicle.dayOffset === 1) dayOffsetText = '📅 昨天的数据'
+  else if (vehicle.dayOffset === 2) dayOffsetText = '📅 前天的数据'
 
   const html = `
     <div class="amap-custom-popup ${statusClass}">
@@ -534,14 +625,27 @@ const openPopup = (vehicle, marker) => {
         <span class="amap-popup-plate">${vehicle.plate || '--'}</span>
         <span class="amap-popup-status ${statusClass}">${vehicle.status}</span>
       </div>
+      ${dayOffsetText ? `<div class="amap-popup-dayoffset">${dayOffsetText}</div>` : ''}
+      <div class="amap-popup-vin">
+        <span class="vin-label">VIN</span>
+        <span class="vin-value">${vehicle.vin || '--'}</span>
+      </div>
+      <div class="amap-popup-metrics">
+        <div class="metric-card">
+          <span class="metric-label">当前速度</span>
+          <span class="metric-value">${vehicle.speed ?? 0}<small>km/h</small></span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">海拔高度</span>
+          <span class="metric-value">${(vehicle.altitude ?? 0).toFixed(1)}<small>m</small></span>
+        </div>
+      </div>
       <div class="amap-popup-divider"></div>
       <div class="amap-popup-info">
         <div class="amap-popup-row"><span class="amap-popup-label">所属机构</span><span class="amap-popup-value">${vehicle.org || '--'}</span></div>
         <div class="amap-popup-row"><span class="amap-popup-label">司机</span><span class="amap-popup-value">${vehicle.driver || '--'}</span></div>
         <div class="amap-popup-row"><span class="amap-popup-label">燃料类型</span><span class="amap-popup-value">${vehicle.fuel_type || '--'}</span></div>
-        <div class="amap-popup-row"><span class="amap-popup-label">当前速度</span><span class="amap-popup-value">${(vehicle.speed ?? 0)} km/h</span></div>
-        <div class="amap-popup-row"><span class="amap-popup-label">当前转速</span><span class="amap-popup-value">${(vehicle.rpm ?? 0)} r/min</span></div>
-        <div class="amap-popup-row"><span class="amap-popup-label">剩余油量</span><span class="amap-popup-value">${(vehicle.fuelRemaining ?? 0)} L</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">行驶方向</span><span class="amap-popup-value">${(vehicle.direction ?? 0)}°</span></div>
         <div class="amap-popup-row"><span class="amap-popup-label">ACC状态</span><span class="amap-popup-value">${vehicle.accStatus || '--'}</span></div>
         <div class="amap-popup-row"><span class="amap-popup-label">上报时间</span><span class="amap-popup-value mono">${vehicle.reportTime || '--'}</span></div>
         <div class="amap-popup-row"><span class="amap-popup-label">当前位置</span><span class="amap-popup-value mono">${vehicle.location || '--'}</span></div>
@@ -601,9 +705,9 @@ const setStatusFilter = (type) => {
 
 const filteredVehicles = computed(() => {
   return vehicles.value.filter(v => {
-    if (statusFilter.value === '在线' && v.status !== '在线') return false
+    if (statusFilter.value === '行驶' && v.status !== '行驶') return false
+    if (statusFilter.value === '静止' && v.status !== '静止') return false
     if (statusFilter.value === '离线' && v.status !== '离线') return false
-    if (statusFilter.value === 'located' && !v.hasLocation) return false
     const org = v.org || v.customer_name || ''
     const matchOrg = !selectedOrg.value || org === selectedOrg.value
     const matchStatus = !selectedStatus.value || v.status === selectedStatus.value
@@ -730,9 +834,10 @@ const startResize = (e) => {
   document.addEventListener('mouseup', onMouseUp)
 }
 
+// 👇 首次进入用缓存（3 分钟内），过期自动刷新
 onMounted(async () => {
   await nextTick()
-  await loadVehicles()
+  await loadVehicles(false)
   await initMap()
 })
 </script>
@@ -811,8 +916,8 @@ onMounted(async () => {
 .stat-pill.active .pill-value { transform: scale(1.08); }
 .stat-pill:nth-child(1) { color: #c8102e; }
 .stat-pill:nth-child(2) { color: #10B981; }
-.stat-pill:nth-child(3) { color: #1F2937; }
-.stat-pill:nth-child(4) { color: #2563EB; }
+.stat-pill:nth-child(3) { color: #F59E0B; }
+.stat-pill:nth-child(4) { color: #64748B; }
 .pill-dot {
   width: 8px;
   height: 8px;
@@ -823,10 +928,10 @@ onMounted(async () => {
 }
 .stat-pill:nth-child(1) .pill-dot { box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.18); animation: dotPulseRed 2s ease-in-out infinite; }
 .stat-pill:nth-child(2) .pill-dot { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18); animation: dotPulseGreen 2s ease-in-out infinite; }
-.stat-pill:nth-child(4) .pill-dot { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18); animation: dotPulseBlue 2s ease-in-out infinite; }
+.stat-pill:nth-child(3) .pill-dot { box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18); animation: dotPulseAmber 2s ease-in-out infinite; }
 @keyframes dotPulseRed { 0%,100% { box-shadow: 0 0 0 3px rgba(200,16,46,0.18); } 50% { box-shadow: 0 0 0 6px rgba(200,16,46,0.04); } }
 @keyframes dotPulseGreen { 0%,100% { box-shadow: 0 0 0 3px rgba(16,185,129,0.18); } 50% { box-shadow: 0 0 0 6px rgba(16,185,129,0.04); } }
-@keyframes dotPulseBlue { 0%,100% { box-shadow: 0 0 0 3px rgba(37,99,235,0.18); } 50% { box-shadow: 0 0 0 6px rgba(37,99,235,0.04); } }
+@keyframes dotPulseAmber { 0%,100% { box-shadow: 0 0 0 3px rgba(245,158,11,0.18); } 50% { box-shadow: 0 0 0 6px rgba(245,158,11,0.04); } }
 .pill-value {
   font-size: 14px;
   font-weight: 800;
@@ -961,13 +1066,15 @@ onMounted(async () => {
 .vehicle-item.no-loc { opacity: 0.45; }
 .vehicle-item.no-loc:hover { transform: none; }
 .vehicle-status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.vehicle-status-dot.在线 { background: #10B981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18); animation: dotPulseGreen 2s ease-in-out infinite; }
-.vehicle-status-dot.离线 { background: #1F2937; }
+.vehicle-status-dot.行驶 { background: #10B981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18); animation: dotPulseGreen 2s ease-in-out infinite; }
+.vehicle-status-dot.静止 { background: #F59E0B; box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18); }
+.vehicle-status-dot.离线 { background: #64748B; }
 .vehicle-plate { font-weight: 700; color: #0F172A; font-size: 12.5px; flex-shrink: 0; }
 .vehicle-vin { color: #94A3B8; font-size: 11px; font-family: 'Courier New', monospace; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .vehicle-status-tag { margin-left: auto; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px; flex-shrink: 0; }
-.vehicle-status-tag.在线 { background: #D1FAE5; color: #065F46; }
-.vehicle-status-tag.离线 { background: #F1F5F9; color: #1F2937; }
+.vehicle-status-tag.行驶 { background: #D1FAE5; color: #065F46; }
+.vehicle-status-tag.静止 { background: #FEF3C7; color: #92400E; }
+.vehicle-status-tag.离线 { background: #F1F5F9; color: #475569; }
 
 .list-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 40px 20px; color: #94A3B8; font-size: 12px; }
 .list-empty .el-icon { font-size: 26px; color: #CBD5E1; }
@@ -1134,10 +1241,9 @@ onMounted(async () => {
 </style>
 
 <!-- ==========================================
-   非 scoped：地图标记 + InfoWindow 浅色毛玻璃卡片
+   非 scoped：地图标记 + InfoWindow
    ========================================== -->
 <style>
-/* ========== 自定义地图标记 ========== */
 .custom-marker {
   display: flex;
   flex-direction: column;
@@ -1149,41 +1255,70 @@ onMounted(async () => {
   animation: markerDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
 @keyframes markerDrop {
-  from { opacity: 0; transform: translateY(-20px) scale(0.5); }
+  from { opacity: 0; transform: translateY(-24px) scale(0.4); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
-.custom-marker .truck-icon-wrap {
+
+.custom-marker .arrow-icon-wrap {
   position: relative;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.3s ease-out;
   transform-origin: center center;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.custom-marker .truck-icon-wrap svg { width: 36px; height: 36px; display: block; }
-.custom-marker .truck-pulse-ring {
+.custom-marker .arrow-icon-wrap svg {
+  width: 34px;
+  height: 34px;
+  display: block;
+}
+
+.custom-marker.status-行驶 .arrow-icon-wrap {
+  animation: arrowBreathe 1.8s ease-in-out infinite;
+}
+@keyframes arrowBreathe {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 0 rgba(16,185,129,0)); }
+  50% { filter: brightness(1.08) drop-shadow(0 0 6px rgba(16,185,129,0.6)); }
+}
+
+.custom-marker.status-静止 .arrow-icon-wrap {
+  animation: parkedGlow 2.6s ease-in-out infinite;
+}
+@keyframes parkedGlow {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 0 rgba(245,158,11,0)); }
+  50% { filter: brightness(1.05) drop-shadow(0 0 5px rgba(245,158,11,0.55)); }
+}
+
+.custom-marker.status-离线 { opacity: 0.78; }
+.custom-marker.status-离线:hover { opacity: 1; }
+
+.arrow-pulse-ring {
   position: absolute;
   top: 50%; left: 50%;
-  width: 24px; height: 24px;
-  margin-left: -12px;
-  margin-top: -12px;
+  width: 22px; height: 22px;
+  margin-left: -11px;
+  margin-top: -11px;
   border-radius: 50%;
-  border: 2px solid rgba(16, 185, 129, 0.7);
-  animation: truckPulse 1.8s ease-out infinite;
   pointer-events: none;
+  border: 2px solid;
 }
-@keyframes truckPulse {
-  0% { transform: scale(0.8); opacity: 0.9; }
-  100% { transform: scale(2.4); opacity: 0; }
+.arrow-pulse-ring.driving {
+  border-color: rgba(16, 185, 129, 0.75);
+  animation: arrowPulse 1.8s ease-out infinite;
 }
+@keyframes arrowPulse {
+  0% { transform: scale(0.7); opacity: 0.95; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
 .custom-marker .plate {
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 800;
   color: #0F172A;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 1px 5px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 1px 6px;
   border-radius: 4px;
   white-space: nowrap;
   border: 1px solid rgba(255, 255, 255, 0.9);
@@ -1192,78 +1327,87 @@ onMounted(async () => {
   margin-top: -2px;
 }
 
-/* ==========================================
-   高德 InfoWindow 卡片 —— 浅色毛玻璃 + 弹性入场 + 顶部流光
-   ========================================== */
 .amap-custom-popup {
   position: relative;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-radius: 10px;
-  padding: 10px 12px;
-  min-width: 210px;
-  max-width: 230px;
+  border-radius: 12px;
+  padding: 14px 16px 12px;
+  min-width: 260px;
+  max-width: 288px;
   box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.15),
-    0 0 0 1px rgba(255, 255, 255, 0.8) inset,
+    0 16px 48px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.85) inset,
     0 1px 0 rgba(255, 255, 255, 0.9) inset;
-  border: 1px solid rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   color: #1E293B;
   font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   overflow: hidden;
-  animation: popupFadeIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: popupFadeIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes popupFadeIn {
-  from { opacity: 0; transform: scale(0.88) translateY(6px); }
+  from { opacity: 0; transform: scale(0.88) translateY(8px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .amap-popup-accent {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 2.5px;
+  top: 0; left: 0;
+  width: 100%; height: 3px;
   overflow: hidden;
-  border-radius: 10px 10px 0 0;
-  background: linear-gradient(90deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.35), rgba(16, 185, 129, 0.15));
+  border-radius: 12px 12px 0 0;
 }
-.amap-popup-accent::before {
+.amap-custom-popup.driving .amap-popup-accent {
+  background: linear-gradient(90deg, rgba(16,185,129,0.2), rgba(16,185,129,0.55), rgba(16,185,129,0.2));
+}
+.amap-custom-popup.driving .amap-popup-accent::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: -40%;
-  width: 40%;
-  height: 100%;
+  top: 0; left: -40%;
+  width: 40%; height: 100%;
   background: linear-gradient(90deg, transparent, #34D399, #10B981, transparent);
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.9);
-  animation: accentFlow 2.2s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.95);
+  animation: accentFlow 2s ease-in-out infinite;
+}
+.amap-custom-popup.parked .amap-popup-accent {
+  background: linear-gradient(90deg, rgba(245,158,11,0.2), rgba(245,158,11,0.55), rgba(245,158,11,0.2));
+}
+.amap-custom-popup.parked .amap-popup-accent::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -40%;
+  width: 40%; height: 100%;
+  background: linear-gradient(90deg, transparent, #FBBF24, #F59E0B, transparent);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.9);
+  animation: accentFlow 2.6s ease-in-out infinite;
+}
+.amap-custom-popup.offline .amap-popup-accent {
+  background: linear-gradient(90deg, rgba(100,116,139,0.2), rgba(100,116,139,0.5), rgba(100,116,139,0.2));
+}
+.amap-custom-popup.offline .amap-popup-accent::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -40%;
+  width: 40%; height: 100%;
+  background: linear-gradient(90deg, transparent, #94A3B8, #64748B, transparent);
+  animation: accentFlow 3.5s ease-in-out infinite;
 }
 @keyframes accentFlow {
   0% { left: -40%; }
   100% { left: 100%; }
 }
-.amap-custom-popup.offline .amap-popup-accent {
-  background: linear-gradient(90deg, rgba(100, 116, 139, 0.15), rgba(100, 116, 139, 0.35), rgba(100, 116, 139, 0.15));
-}
-.amap-custom-popup.offline .amap-popup-accent::before {
-  background: linear-gradient(90deg, transparent, #94A3B8, #64748B, transparent);
-  box-shadow: 0 0 8px rgba(100, 116, 139, 0.9);
-}
 
 .amap-popup-close {
   position: absolute;
-  top: 6px;
-  right: 8px;
-  width: 18px;
-  height: 18px;
+  top: 8px; right: 10px;
+  width: 20px; height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  font-size: 14px;
+  font-size: 15px;
   color: #94A3B8;
   cursor: pointer;
   transition: all 0.25s;
@@ -1274,34 +1418,39 @@ onMounted(async () => {
 .amap-popup-close:hover {
   background: #F1F5F9;
   color: #475569;
-  transform: rotate(90deg) scale(1.1);
+  transform: rotate(90deg) scale(1.15);
 }
 
 .amap-popup-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 8px;
-  padding-right: 20px;
+  padding-right: 22px;
 }
 .amap-popup-plate {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 800;
   color: #0F172A;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
 }
 .amap-popup-status {
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 3px;
+  padding: 2px 8px;
+  border-radius: 4px;
   border: 1px solid;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.3px;
 }
-.amap-popup-status.online {
+.amap-popup-status.driving {
   background: #ECFDF5;
   color: #059669;
   border-color: #A7F3D0;
+}
+.amap-popup-status.parked {
+  background: #FFFBEB;
+  color: #D97706;
+  border-color: #FDE68A;
 }
 .amap-popup-status.offline {
   background: #F1F5F9;
@@ -1309,28 +1458,114 @@ onMounted(async () => {
   border-color: #E2E8F0;
 }
 
+.amap-popup-dayoffset {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #D97706;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
+}
+
+.amap-popup-vin {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(248, 250, 252, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+.vin-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748B;
+  letter-spacing: 0.8px;
+  background: #E2E8F0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.vin-value {
+  font-family: 'Courier New', monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: 0.4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.amap-popup-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: linear-gradient(135deg, #ffffff 0%, #F8FAFC 100%);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+.metric-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94A3B8;
+  letter-spacing: 0.3px;
+}
+.metric-value {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0F172A;
+  font-family: 'Courier New', monospace;
+  line-height: 1.1;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.metric-value small {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #94A3B8;
+  letter-spacing: 0;
+}
+.amap-custom-popup.driving .metric-card:first-child .metric-value { color: #059669; }
+.amap-custom-popup.parked .metric-card:first-child .metric-value { color: #D97706; }
+
 .amap-popup-divider {
-  border-top: 1px solid rgba(226, 232, 240, 0.7);
+  border-top: 1px dashed rgba(203, 213, 225, 0.9);
   margin: 0 0 8px 0;
 }
 
 .amap-popup-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 .amap-popup-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  font-size: 11.5px;
-  line-height: 1.35;
+  font-size: 12px;
+  line-height: 1.4;
 }
 .amap-popup-label {
   color: #64748B;
   font-weight: 500;
   white-space: nowrap;
-  margin-right: 6px;
+  margin-right: 8px;
   flex-shrink: 0;
 }
 .amap-popup-value {
@@ -1342,20 +1577,20 @@ onMounted(async () => {
 }
 .amap-popup-value.mono {
   font-family: 'Courier New', monospace;
-  font-size: 10.5px;
+  font-size: 11px;
 }
 
 .amap-popup-actions {
   display: flex;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 12px;
 }
 .amap-popup-btn {
   flex: 1;
-  padding: 5px 0;
-  border-radius: 14px;
-  font-size: 11px;
-  font-weight: 600;
+  padding: 7px 0;
+  border-radius: 16px;
+  font-size: 11.5px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   background: #F1F5F9;
@@ -1374,9 +1609,7 @@ onMounted(async () => {
   background: linear-gradient(90deg, transparent, rgba(200, 16, 46, 0.18), transparent);
   transition: left 0.5s ease;
 }
-.amap-popup-btn:hover::after {
-  left: 100%;
-}
+.amap-popup-btn:hover::after { left: 100%; }
 .amap-popup-btn:hover {
   background: #FEF2F2;
   border-color: #FCA5A5;
@@ -1384,9 +1617,7 @@ onMounted(async () => {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(200, 16, 46, 0.15);
 }
-.amap-popup-btn:active {
-  transform: translateY(0) scale(0.97);
-}
+.amap-popup-btn:active { transform: translateY(0) scale(0.97); }
 
 .amap-info-close { display: none !important; }
 .amap-info-sharp { display: none !important; }

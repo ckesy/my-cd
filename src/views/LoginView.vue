@@ -54,9 +54,7 @@ const handleLogin = async () => {
   }
 
   try {
-    // ============================================================
     // ① 先查 admins 表（不加 status 过滤，查到再判断）
-    // ============================================================
     const { data: adminData, error: adminError } = await supabase
       .from('admins')
       .select('*')
@@ -66,12 +64,10 @@ const handleLogin = async () => {
     if (adminError && adminError.code !== 'PGRST116') throw adminError
 
     if (adminData) {
-      // 密码校验
       if (activeTab.value === 'password' && adminData.password !== password.value) {
         ElMessage.error('手机号或密码不正确')
         return
       }
-      // 密码正确后，再判断状态
       if (Number(adminData.status) !== 1) {
         ElMessage.error('账号已被禁用，请联系管理员')
         return
@@ -84,13 +80,12 @@ const handleLogin = async () => {
         role: 'admin',
       }
       localStorage.setItem('currentUser', JSON.stringify(account))
+      localStorage.setItem('originalUser', JSON.stringify(account))   // 👈 保留原始身份
       playWelcome('/portal')
       return
     }
 
-    // ============================================================
     // ② 再查 customers 表（不加 status 过滤）
-    // ============================================================
     const { data: customerData, error: customerError } = await supabase
       .from('customers')
       .select('*')
@@ -104,13 +99,11 @@ const handleLogin = async () => {
       return
     }
 
-    // 密码校验
     if (activeTab.value === 'password' && customerData.password !== password.value) {
       ElMessage.error('手机号或密码不正确')
       return
     }
 
-    // 👇 密码正确后，再判断是否被禁用
     if (Number(customerData.status) !== 1) {
       ElMessage.error('账号已被禁用，请联系管理员')
       return
@@ -126,6 +119,7 @@ const handleLogin = async () => {
       permissions: customerData.permissions || {},
     }
     localStorage.setItem('currentUser', JSON.stringify(account))
+    localStorage.setItem('originalUser', JSON.stringify(account))    // 👈 保留原始身份
     playWelcome('/dashboard')
   } catch (e) {
     console.error(e)
@@ -725,6 +719,7 @@ const playWelcome = (target = '/dashboard') => {
   gap: 16px;
   text-align: center;
   padding: 0 24px;
+  top: -18vh;
   animation: welcomeContentIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   animation-delay: 0.05s;
 }
@@ -733,8 +728,14 @@ const playWelcome = (target = '/dashboard') => {
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* Logo 与文字间距 */
+.welcome-logo {
+  margin-bottom: 40px;
+  transform: translateX(-22px);
+}
+
 .welcome-logo img {
-  height: 130px;
+  height: 250px;
   width: auto;
   display: block;
   filter: drop-shadow(0 10px 32px rgba(200, 16, 46, 0.6))
@@ -835,7 +836,9 @@ const playWelcome = (target = '/dashboard') => {
   .login-card { padding: 32px 24px 24px; }
   .tab-item { font-size: 18px; }
 
-  .welcome-logo img { height: 88px; }
+  .welcome-content { top: -10vh; }
+  .welcome-logo { margin-bottom: 16px; transform: translateX(-12px); }
+  .welcome-logo img { height: 150px; }
   .welcome-title { font-size: 21px; letter-spacing: 2px; }
   .welcome-sub { font-size: 10px; letter-spacing: 4px; }
   .welcome-loader { width: 170px; }

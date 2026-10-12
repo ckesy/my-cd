@@ -70,11 +70,8 @@
               @blur="handleNameBlur"
             >
               <template #suffix>
-                <!-- 校验中的旋转小圈 -->
                 <el-icon v-if="nameChecking" class="is-loading name-status-icon"><Loading /></el-icon>
-                <!-- 校验通过的绿勾 -->
                 <el-icon v-else-if="nameValidated && !nameExists && form.name" class="name-status-icon success"><CircleCheck /></el-icon>
-                <!-- 重名的红叉 -->
                 <el-icon v-else-if="nameExists && form.name" class="name-status-icon error"><CircleClose /></el-icon>
               </template>
             </el-input>
@@ -259,6 +256,9 @@ const searchKeyword = ref('')
 const located = ref(false)
 const showSuccess = ref(false)
 
+// 👇 HTTP 网关地址
+const API_BASE = 'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com'
+
 // 提交动画进度
 const submitProgress = ref(0)
 const submitText = ref('正在准备...')
@@ -272,10 +272,10 @@ const ringOffset = computed(() => RING_LENGTH * (1 - submitProgress.value / 100)
 // ============================================
 // 👇 围栏名称重名校验状态
 // ============================================
-const nameChecking = ref(false)      // 正在查询
-const nameExists = ref(false)         // 是否存在重名
-const nameValidated = ref(false)      // 是否已校验通过
-let nameCheckTimer = null             // 防抖定时器
+const nameChecking = ref(false)
+const nameExists = ref(false)
+const nameValidated = ref(false)
+let nameCheckTimer = null
 
 const form = reactive({
   shape: 'circle',
@@ -307,18 +307,15 @@ const validateName = async (rule, value, callback) => {
     callback(new Error('围栏名称不能超过 128 个字符'))
     return
   }
-  // 校验非法字符：只允许中文、英文字母、数字、下划线、横线
   const validPattern = /^[\u4e00-\u9fa5a-zA-Z0-9_-]+$/
   if (!validPattern.test(value)) {
     callback(new Error('围栏名称仅支持中文、英文字母、数字、下划线和横线'))
     return
   }
-  // 如果本地已经标记重名，直接返回错误
   if (nameExists.value) {
     callback(new Error(`围栏名称「${value}」已存在，请修改后重试`))
     return
   }
-  // 如果还未校验过，做一次即时校验
   if (!nameValidated.value) {
     const exists = await checkNameExists(value)
     if (exists) {
@@ -341,7 +338,6 @@ const checkNameExists = async (name) => {
       .select('id, gfid, name')
       .eq('name', name)
 
-    // 编辑模式下排除自己
     if (isEdit.value && props.editData && props.editData.id) {
       query = query.neq('id', props.editData.id)
     }
@@ -362,18 +358,15 @@ const checkNameExists = async (name) => {
 // 👇 名称输入：防抖校验
 // ============================================
 const handleNameInput = () => {
-  // 输入变化时重置校验状态
   nameExists.value = false
   nameValidated.value = false
 
   if (nameCheckTimer) clearTimeout(nameCheckTimer)
 
   const currentName = form.name.trim()
-  // 长度为 0 或太短时不做校验
   if (!currentName || currentName.length < 2) return
 
   nameCheckTimer = setTimeout(async () => {
-    // 实时检查：非法字符直接标记
     const validPattern = /^[\u4e00-\u9fa5a-zA-Z0-9_-]+$/
     if (!validPattern.test(currentName)) return
 
@@ -384,7 +377,6 @@ const handleNameInput = () => {
     if (exists) {
       nameExists.value = true
       nameValidated.value = false
-      // 触发校验，让输入框变红
       formRef.value?.validateField('name').catch(() => {})
     } else {
       nameExists.value = false
@@ -398,7 +390,6 @@ const handleNameBlur = () => {
     clearTimeout(nameCheckTimer)
     nameCheckTimer = null
   }
-  // 失焦时立即校验
   formRef.value?.validateField('name').catch(() => {})
 }
 
@@ -597,7 +588,6 @@ const loadEditData = () => {
   form.lastActionTime = d.updated_at ? dayjs(d.updated_at).format('YYYY-MM-DD HH:mm:ss') : ''
   form.lastActionText = '上次修改时间'
 
-  // 编辑模式下默认认为名称已校验通过（因为是他自己的）
   nameValidated.value = true
   nameExists.value = false
 
@@ -1052,7 +1042,6 @@ const handleClose = () => {
   searchKeyword.value = ''
   showSuccess.value = false
   resetProgressAnimation()
-  // 重置重名校验状态
   nameExists.value = false
   nameValidated.value = false
   nameChecking.value = false
@@ -1066,7 +1055,6 @@ const submitForm = (isContinue) => {
   formRef.value.validate(async (valid) => {
     if (!valid) return
 
-    // 额外检查重名
     if (nameExists.value) {
       ElMessage.error(`围栏名称「${form.name}」已存在，请修改后重试`)
       return
@@ -1098,12 +1086,19 @@ const submitForm = (isContinue) => {
         functionName = 'amap-geofence-update'
       }
 
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: payload,
+      // 👇 用 fetch 调用 HTTP 网关（新建/更新）
+      const response = await fetch(`${API_BASE}/${functionName}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      const data = await response.json()
 
-      const isSuccess = data.errcode === 0 || data.errcode === 10000
+      // 把 20003 也当作成功（高德"假错误"，实际已成功）
+      const isSuccess = data.errcode === 0 || data.errcode === 10000 || data.errcode === 20003
       if (!isSuccess) {
         finishProgressAnimation()
         setTimeout(() => {
@@ -1111,15 +1106,12 @@ const submitForm = (isContinue) => {
           resetProgressAnimation()
           console.error('【高德返回】', data)
 
-          // 友好错误提示
           const errmsg = String(data.errmsg || '')
           let friendlyMsg = (isEdit.value ? '更新' : '创建') + '失败：' + (errmsg || '未知错误')
 
           if (errmsg.includes('EXISTING_ELEMENT') || errmsg.includes('DUPLICATE') || errmsg.includes('existed')) {
             friendlyMsg = `围栏名称「${form.name}」已存在，请修改名称后重试`
             nameExists.value = true
-          } else if (data.errcode === 20003) {
-            friendlyMsg = '围栏不存在，可能已被删除，请刷新列表'
           } else if (data.errcode === 20001 || data.errcode === 20800) {
             friendlyMsg = '参数错误，请检查围栏名称是否包含非法字符（仅支持中文、英文、数字、_ 和 -）'
           }
@@ -1153,9 +1145,10 @@ const submitForm = (isContinue) => {
           .eq('gfid', props.editData.gfid)
         dbError = error
       } else {
+        const newGfid = (data && data.data && data.data.gfid) || (data && data.gfid) || null
         const { error } = await supabase
           .from('ele_fences')
-          .insert({ ...dbPayload, gfid: data.data.gfid, created_at: now })
+          .insert({ ...dbPayload, gfid: newGfid, created_at: now })
         dbError = error
       }
 
@@ -1189,7 +1182,6 @@ const submitForm = (isContinue) => {
             })
             searchKeyword.value = ''
             clearDrawings()
-            // 重置重名校验状态
             nameExists.value = false
             nameValidated.value = false
           } else {
@@ -1335,7 +1327,6 @@ const submitForm = (isContinue) => {
 .search-icon { cursor: pointer; color: #94A3B8; transition: all 0.25s; }
 .search-icon:hover { color: #D32F2F; transform: scale(1.15) rotate(10deg); }
 
-/* 名称校验状态图标 */
 .name-status-icon {
   font-size: 16px;
   transition: all 0.2s;
@@ -1439,9 +1430,6 @@ const submitForm = (isContinue) => {
   cursor: not-allowed;
 }
 
-/* ==========================================
-   提交中动画遮罩
-   ========================================== */
 .submit-loading-overlay {
   position: absolute;
   inset: 0;
@@ -1557,9 +1545,6 @@ const submitForm = (isContinue) => {
 }
 .loading-fade-enter-from, .loading-fade-leave-to { opacity: 0; }
 
-/* ==========================================
-   成功对勾动画
-   ========================================== */
 .success-overlay {
   position: absolute; inset: 0;
   background: rgba(255,255,255,0.85);

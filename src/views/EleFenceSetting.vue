@@ -154,6 +154,9 @@ import dayjs from 'dayjs'
 import { supabase } from '@/utils/supabase'
 import AddEleFenceDialog from '@/components/AddEleFenceDialog.vue'
 
+// 👇 HTTP 网关地址
+const API_BASE = 'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com'
+
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '--'
   return dayjs(dateStr).format('YYYY-MM-DD HH:mm:ss')
@@ -176,6 +179,9 @@ const tableData = ref([])
 const total = ref(0)
 const pageSize = ref(10)
 const currentPage = ref(1)
+
+// 保存合并后的全量数据（用于本地分页）
+const fullList = ref([])
 
 const searchForm = reactive({ org: '', shape: '', name: '' })
 
@@ -210,40 +216,99 @@ const resetDeleteAnimation = () => {
   deleteProgress.value = 0
 }
 
+// ============================================
+// 👇 关键改动：数据源改为高德 list 接口
+// ============================================
 const fetchData = async () => {
   loading.value = true
   try {
-    let query = supabase
-      .from('ele_fences')
-      .select('*', { count: 'exact' })
-      .order('updated_at', { ascending: false })
+    // 1️⃣ 从高德拿最新的围栏列表
+    const response = await fetch(`${API_BASE}/amap-geofence-list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const result = await response.json()
 
-    if (searchForm.org) query = query.eq('org', searchForm.org)
-    if (searchForm.shape) query = query.eq('shape', searchForm.shape)
-    if (searchForm.name) query = query.ilike('name', `%${searchForm.name}%`)
+    if (result.errcode !== 10000 && result.errcode !== 0) {
+      throw new Error(result.errmsg || '获取围栏列表失败')
+    }
 
-    const from = (currentPage.value - 1) * pageSize.value
-    const to = from + pageSize.value - 1
+    const amapList = (result.data && result.data.results) || []
+    const gfids = amapList.map(item => item.gfid).filter(Boolean)
 
-    const { data, error, count } = await query.range(from, to)
-    if (error) throw error
+    // 2️⃣ 用 gfid 从数据库补业务字段（org、shape、center、points、location 等）
+    let dbMap = {}
+    if (gfids.length > 0) {
+      const { data: dbRows, error: dbError } = await supabase
+        .from('ele_fences')
+        .select('*')
+        .in('gfid', gfids)
+      if (dbError) {
+        console.warn('从数据库补充字段失败：', dbError)
+      }
+      if (dbRows) {
+        dbRows.forEach(row => { dbMap[row.gfid] = row })
+      }
+    }
 
-    tableData.value = data || []
-    total.value = count || 0
+    // 3️⃣ 合并：高德是主，数据库补字段
+    const merged = amapList.map(item => {
+      const dbRow = dbMap[item.gfid] || {}
+      return {
+        id: dbRow.id || null,
+        gfid: item.gfid,
+        name: item.name,
+        desc: item.desc,
+        shape: dbRow.shape || '',
+        org: dbRow.org || '',
+        attr: dbRow.attr || item.desc || '',
+        radius: dbRow.radius,
+        bufferradius: dbRow.bufferradius,
+        center: dbRow.center,
+        points: dbRow.points,
+        adcode: dbRow.adcode,
+        location: dbRow.location || '',
+        updated_at: item.modifytime
+          ? dayjs(item.modifytime).format('YYYY-MM-DD HH:mm:ss')
+          : (dbRow.updated_at || ''),
+      }
+    })
+
+    fullList.value = merged
+    applyLocalFilter()
   } catch (err) {
+    console.error('加载围栏数据失败：', err)
     ElMessage.error('加载围栏数据失败：' + err.message)
   } finally {
     loading.value = false
   }
 }
 
-const handleSearch = () => { currentPage.value = 1; fetchData() }
+// 本地搜索 + 分页
+const applyLocalFilter = () => {
+  let filtered = fullList.value
+  if (searchForm.org) filtered = filtered.filter(r => r.org === searchForm.org)
+  if (searchForm.shape) filtered = filtered.filter(r => r.shape === searchForm.shape)
+  if (searchForm.name) {
+    const kw = searchForm.name.toLowerCase()
+    filtered = filtered.filter(r => (r.name || '').toLowerCase().includes(kw))
+  }
+  total.value = filtered.length
+  const from = (currentPage.value - 1) * pageSize.value
+  const to = from + pageSize.value
+  tableData.value = filtered.slice(from, to)
+}
+
+const handleSearch = () => { currentPage.value = 1; applyLocalFilter() }
 
 const handleReset = () => {
   searchForm.org = ''
   searchForm.shape = ''
   searchForm.name = ''
-  handleSearch()
+  currentPage.value = 1
+  applyLocalFilter()
 }
 
 const handleAdd = () => {
@@ -274,12 +339,19 @@ const handleDelete = (row) => {
   ).then(async () => {
     startDeleteAnimation(row.name)
     try {
-      const { data, error } = await supabase.functions.invoke('amap-geofence-delete', {
-        body: { gfids: row.gfid },
+      // 👇 用 fetch 调用 HTTP 网关
+      const response = await fetch(`${API_BASE}/amap-geofence-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gfids: row.gfid }),
       })
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      const data = await response.json()
 
-      const isSuccess = data.errcode === 0 || data.errcode === 10000
+      // 把 20003 也当作成功（高德"假错误"，实际已删除成功）
+      const isSuccess = data.errcode === 0 || data.errcode === 10000 || data.errcode === 20003
       if (!isSuccess) {
         finishDeleteAnimation()
         setTimeout(() => {
@@ -289,8 +361,11 @@ const handleDelete = (row) => {
         return
       }
 
-      const { error: dbError } = await supabase.from('ele_fences').delete().eq('id', row.id)
-      if (dbError) throw dbError
+      // 清理数据库里的对应记录（如果存在）
+      if (row.id) {
+        const { error: dbError } = await supabase.from('ele_fences').delete().eq('id', row.id)
+        if (dbError) console.warn('清理数据库记录失败：', dbError)
+      }
 
       finishDeleteAnimation()
       setTimeout(() => {
@@ -302,14 +377,21 @@ const handleDelete = (row) => {
       finishDeleteAnimation()
       setTimeout(() => {
         resetDeleteAnimation()
-        ElMessage.error('删除失败：' + err.message)
+        ElMessage.error('删除失败：' + (err.message || err.errMsg || '未知错误'))
       }, 400)
     }
   }).catch(() => {})
 }
 
-const handleSizeChange = (val) => { pageSize.value = val; currentPage.value = 1; fetchData() }
-const handleCurrentChange = (val) => { currentPage.value = val; fetchData() }
+const handleSizeChange = (val) => {
+  pageSize.value = val
+  currentPage.value = 1
+  applyLocalFilter()
+}
+const handleCurrentChange = (val) => {
+  currentPage.value = val
+  applyLocalFilter()
+}
 
 onMounted(() => { fetchData() })
 </script>

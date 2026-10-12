@@ -15,6 +15,18 @@
           <el-button size="small" plain class="action-btn settings-btn" @click="handleSettings">
             <el-icon><Setting /></el-icon> 设置
           </el-button>
+
+          <!-- 👇 管理员模拟进入客户端时显示"返回入口"，放在设置与退出之间 -->
+          <el-button
+            v-if="isImpersonatingAdmin"
+            size="small"
+            plain
+            class="action-btn back-btn"
+            @click="goBackToPortal"
+          >
+            返回入口
+          </el-button>
+
           <el-button type="danger" size="small" plain class="action-btn logout-btn" @click="goLogin">退出登录</el-button>
         </div>
       </el-header>
@@ -37,12 +49,11 @@
 
       <!-- 主内容区 -->
       <el-main class="main-content">
-        <!-- 👇 无权限时显示提示 -->
         <div v-if="!isPermitted" class="no-permission">
           <div class="no-permission-icon">🔒</div>
           <h2>暂无访问权限</h2>
           <p>您当前账号未开通「{{ currentPage }}」功能的访问权限</p>
-          <button class="back-btn" @click="goHome">返回首页</button>
+          <button class="back-btn-home" @click="goHome">返回首页</button>
         </div>
 
         <div v-else class="content-wrapper animate-fade-up">
@@ -77,7 +88,7 @@
             <DriverArchive />
           </template>
 
-          <!-- 👇 电子围栏管理 - 三个子页面 -->
+          <!-- 电子围栏管理 -->
           <template v-else-if="route.path === '/ele-fence/setting'">
             <EleFenceSetting />
           </template>
@@ -141,6 +152,26 @@ const currentUser = (() => {
   } catch { return null }
 })()
 
+// 👇 原始登录用户（判断是否管理员模拟进入客户端）
+const originalUser = (() => {
+  try {
+    return JSON.parse(localStorage.getItem('originalUser') || 'null')
+  } catch { return null }
+})()
+
+// 👇 是否由管理员模拟进入客户端
+const isImpersonatingAdmin = computed(() => {
+  return originalUser?.role === 'admin' && currentUser?.role === 'customer'
+})
+
+// 👇 返回入口（恢复管理员身份后跳 /portal）
+const goBackToPortal = () => {
+  if (originalUser) {
+    localStorage.setItem('currentUser', JSON.stringify(originalUser))
+  }
+  router.push('/portal')
+}
+
 const clientPerms = computed(() => {
   if (currentUser?.role !== 'customer') return null
   return currentUser?.permissions?.client || []
@@ -165,17 +196,14 @@ const routePermissionMap = {
   '/dashboard/系统管理': 'system',
 }
 
-// 当前页面是否允许访问
 const isPermitted = computed(() => {
-  if (clientPerms.value === null) return true  // 管理员
-  // 客户端首页永远允许
+  if (clientPerms.value === null) return true
   if (route.path === '/dashboard' && !route.params.page) return true
   const permKey = routePermissionMap[route.path]
-  if (!permKey) return true  // 未配置权限的路由，默认放行
+  if (!permKey) return true
   return clientPerms.value.includes(permKey)
 })
 
-// 无权限时跳回首页
 watch(isPermitted, (val) => {
   if (!val) {
     ElMessage.warning('您没有权限访问该页面')
@@ -230,7 +258,6 @@ const pathLabels = {
   '/waybill/create': '新建运单',
   '/vehicle-archive': '车辆档案',
   '/driver-archive': '司机档案',
-
   '/ele-fence/setting': '围栏设置',
   '/ele-fence/alert-setting': '提醒设置',
   '/ele-fence/alert-query': '提醒事件查询',
@@ -318,7 +345,7 @@ const settingsVisible = ref(false)
 const handleSettings = () => { settingsVisible.value = true }
 
 // ============================================================
-// 退出登录 · 模糊至黑屏 + 欢迎使用 + 放大快切
+// 退出登录 · 模糊至黑屏 + 感谢使用 + 放大快切
 // ============================================================
 const showGoodbye = ref(false)
 
@@ -326,6 +353,8 @@ const goLogin = () => {
   if (showGoodbye.value) return
   showGoodbye.value = true
   setTimeout(() => {
+    // 退出时清掉原始身份记录
+    localStorage.removeItem('originalUser')
     router.push('/')
     setTimeout(() => { showGoodbye.value = false }, 200)
   }, 1250)
@@ -382,6 +411,23 @@ const goLogin = () => {
 .settings-btn { border-color: #E2E8F0; color: #64748B; }
 .settings-btn:hover { border-color: #D32F2F; color: #D32F2F; background: #FEF2F2; }
 
+/* 👇 返回入口按钮：与设置按钮同风格，悬停变红 */
+.back-btn {
+  border-color: #E2E8F0 !important;
+  color: #64748B !important;
+  background: #FFFFFF !important;
+}
+.back-btn:hover {
+  border-color: #D32F2F !important;
+  color: #D32F2F !important;
+  background: #FEF2F2 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.12) !important;
+}
+.back-btn:active {
+  transform: translateY(0) scale(0.98) !important;
+}
+
 .logout-btn {
   background-color: #D32F2F;
   color: #FFFFFF;
@@ -393,6 +439,7 @@ const goLogin = () => {
   box-shadow: 0 4px 12px rgba(211, 47, 47, 0.25);
 }
 
+/* 标签栏 */
 .page-tabs {
   position: relative;
   display: flex;
@@ -511,9 +558,7 @@ h2 {
   font-weight: 600;
 }
 
-/* ==========================================
-   无权限提示
-   ========================================== */
+/* 无权限提示 */
 .no-permission {
   display: flex;
   flex-direction: column;
@@ -548,7 +593,7 @@ h2 {
   color: #64748B;
   margin: 0;
 }
-.back-btn {
+.back-btn-home {
   margin-top: 8px;
   padding: 10px 28px;
   font-size: 14px;
@@ -563,14 +608,12 @@ h2 {
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-family: inherit;
 }
-.back-btn:hover {
+.back-btn-home:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 28px rgba(200, 16, 46, 0.45);
 }
 
-/* ==========================================
-   退出登录动画
-   ========================================== */
+/* 退出登录动画 */
 .goodbye-overlay {
   position: fixed;
   inset: 0;

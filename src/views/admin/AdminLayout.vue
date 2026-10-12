@@ -50,7 +50,7 @@ const goLogout = () => {
     <!-- 顶部栏 -->
     <header class="admin-header">
       <div class="header-left">
-        <img src="/DFLOGO.png" class="admin-logo" alt="东风商用车" />
+        <img src="/DFLOGO1.png" class="admin-logo" alt="东风商用车" />
         <button class="icon-btn" @click="collapsed = !collapsed" title="折叠菜单">
           <el-icon><Fold v-if="!collapsed" /><Expand v-else /></el-icon>
         </button>
@@ -121,7 +121,7 @@ const goLogout = () => {
 /* ============ 顶部栏 ============ */
 .admin-header {
   position: relative;
-  height: 62px;
+  height: px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -150,7 +150,7 @@ const goLogout = () => {
 
 .header-left, .header-right { display: flex; align-items: center; gap: 10px; }
 
-.admin-logo { height: 38px; width: auto; }
+.admin-logo { height: 45px; width: auto; }
 
 .icon-btn {
   width: 34px; height: 34px;

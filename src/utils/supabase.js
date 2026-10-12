@@ -3,27 +3,16 @@ import cloudbase from '@cloudbase/js-sdk'
 
 const ENV_ID = 'wuxian-token-d0guymjkpadcd1f22'
 
+const ACCESS_KEY = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjAyYjIyYjQ1LTFmMTAtNDRiOC1hMDRiLWJmN2QxNWM4NGM1ZCJ9.eyJpc3MiOiJodHRwczovL3d1eGlhbi10b2tlbi1kMGd1eW1qa3BhZGNkMWYyMi5hcC1zaGFuZ2hhaS50Y2ItYXBpLnRlbmNlbnRjbG91ZGFwaS5jb20iLCJzdWIiOiJhbm9uIiwiYXVkIjoid3V4aWFuLXRva2VuLWQwZ3V5bWprcGFkY2QxZjIyIiwiZXhwIjo0MDk1NDczMDcwLCJpYXQiOjE3OTE3ODk4NzAsIm5vbmNlIjoiRmxTRHpPR3dScUt1ZmVXNVhYYmhnIiwicm9sZSI6ImFub24iLCJpc19hbm9ueW1vdXMiOnRydWV9.k5RZnhk3TSqNz2c8qbaiMLMk2tPXXj8UTfGROlsl3wcn_M1oFFudXX7OZjVDyDIJ5NYb8EjDLcSpo5eX0kynL3t9A-SaFCGl1spiA8-nMQXx4Se-Ql5D86MVUPg2Qj76o9CHOWdczaEo9k6GvyLDUgzt1E9fETq1e_Qm3XWdBaeCmO9QddUOZoQV7l3F5JypIqiEXANjBjI7dT2MNkzsGlS2jOkxTsqK7lCbXK38am6boFYLvUkpHjpSXJIV9zrT6qwdmG0Jr2AATSwLUB1vpA_FWG_SNZn65hUpJym5yp5hgQrey_WEXKCqp0u3kSXIaE7tgehYV8LRYdg-5lTCUg'
+
 const app = cloudbase.init({
   env: ENV_ID,
-  // 注意：这里不传 accessKey
-  // 匿名登录会自动处理凭证
+  region: 'ap-shanghai',
+  accessKey: ACCESS_KEY,
 })
 
-// 关键：先匿名登录，再导出数据库实例
-const auth = app.auth()
-
-try {
-  const loginState = await auth.getLoginState()
-  if (!loginState) {
-    await auth.signInAnonymously()
-    console.log('[CloudBase] ✅ 匿名登录成功')
-  } else {
-    console.log('[CloudBase] ✅ 已有登录态')
-  }
-} catch (e) {
-  console.error('[CloudBase] ❌ 匿名登录失败:', e)
-}
-
+// 导出数据库实例和认证对象
 export const supabase = app.rdb()
-export { auth }
+export const auth = app.auth()
+
 export default app

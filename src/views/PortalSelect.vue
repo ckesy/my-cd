@@ -1,51 +1,89 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { supabase } from '@/utils/supabase'
 
 const router = useRouter()
 
 const showHeader = ref(false)
 const showBody = ref(false)
+const showGoodbye = ref(false)
+
+const customers = ref([])
+const loadingCustomers = ref(false)
+const selectedCustomerId = ref('')
+
+const selectedCustomer = computed(() => {
+  if (!selectedCustomerId.value) return null
+  return customers.value.find(c => c.id === selectedCustomerId.value) || null
+})
+
+const loadCustomers = async () => {
+  loadingCustomers.value = true
+  try {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('status', 1)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    customers.value = data || []
+  } catch (e) {
+    console.error('加载客户失败：', e)
+    ElMessage.error('加载客户列表失败')
+  } finally {
+    loadingCustomers.value = false
+  }
+}
 
 onMounted(() => {
   requestAnimationFrame(() => {
     showHeader.value = true
-    setTimeout(() => { showBody.value = true }, 200)
+    setTimeout(() => { showBody.value = true }, 150)
   })
+  loadCustomers()
 })
 
-// TODO: 后续从 supabase 拉取真实客户列表
-const customers = ref([
-  { id: 'c001', name: '示例客户 A 有限公司' },
-  { id: 'c002', name: '示例客户 B 物流集团' },
-  { id: 'c003', name: '示例客户 C 运输公司' },
-])
-
-const selections = reactive({ fuel: '', newenergy: '' })
-
 const cardList = [
-  { key: 'fuel',      title: '车队管理系统客户端', sub: '燃油平台',   tone: 'red' },
-  { key: 'newenergy', title: '车队管理系统客户端', sub: '新能源平台', tone: 'blue' },
-  { key: 'admin',     title: '车队管理系统管理端', sub: '后台管理中心', tone: 'slate' },
+  { key: 'client', title: '车队管理系统客户端', sub: '新能源平台', tone: 'green', tagline: 'CLIENT' },
+  { key: 'admin',  title: '车队管理系统管理端', sub: '后台管理中心', tone: 'purple', tagline: 'ADMIN' },
 ]
 
-const enterCard = (key) => {
-  if (key === 'admin') { router.push('/admin'); return }
-  const cid = selections[key]
-  if (!cid) { ElMessage.warning('请先选择客户'); return }
-  router.push({ path: '/dashboard', query: { type: key, customer: cid } })
+const onSelectCustomer = (customerId) => {
+  if (!customerId) return
 }
 
-// ============================================================
-// 退出登录 · 模糊至黑屏 + 欢迎使用 + 放大转场
-// ============================================================
-const showGoodbye = ref(false)
+const enterClient = () => {
+  const customer = selectedCustomer.value
+  if (!customer) { ElMessage.warning('请先选择客户'); return }
 
+  const account = {
+    id: customer.id,
+    phone: customer.phone,
+    name: customer.name,
+    role: 'customer',
+    customerId: customer.id,
+    platforms: customer.platforms || [],
+    permissions: customer.permissions || {},
+  }
+  // 👇 只覆盖 currentUser，保留 originalUser（管理员身份不丢）
+  localStorage.setItem('currentUser', JSON.stringify(account))
+
+  ElMessage.success(`正在进入「${customer.name}」的客户端`)
+  setTimeout(() => { router.push('/dashboard') }, 300)
+}
+
+const enterAdmin = () => { router.push('/admin') }
+
+// ============================================================
+// 退出登录 · 模糊至黑屏 + 感谢使用 + 放大转场
+// ============================================================
 const goLogout = () => {
   if (showGoodbye.value) return
   showGoodbye.value = true
   setTimeout(() => {
+    localStorage.removeItem('originalUser')
     router.push('/')
     setTimeout(() => { showGoodbye.value = false }, 200)
   }, 1250)
@@ -55,21 +93,19 @@ const goLogout = () => {
 <template>
   <div class="portal-page">
     <div class="bg-grid"></div>
+    <div class="bg-orb orb-green"></div>
+    <div class="bg-orb orb-purple"></div>
     <div class="bg-orb orb-red"></div>
-    <div class="bg-orb orb-blue"></div>
 
-    <!-- 顶部栏 -->
     <header class="portal-header" :class="{ show: showHeader }">
       <div class="header-logo">
-        <img src="/DFLOGO.png" alt="东风商用车" />
+        <img src="/DFLOGO1.png" alt="东风商用车" />
       </div>
-
       <div class="header-title">
         <span class="title-line"></span>
         <h1>车 队 管 理 平 台</h1>
         <span class="title-line"></span>
       </div>
-
       <button class="logout-btn" @click="goLogout">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -80,59 +116,87 @@ const goLogout = () => {
       </button>
     </header>
 
-    <!-- 卡片区 -->
     <main class="portal-body" :class="{ show: showBody }">
       <div
         v-for="(card, i) in cardList"
         :key="card.key"
         class="portal-card"
-        :class="'tone-' + card.tone"
-        :style="{ animationDelay: (i * 0.15) + 's' }"
+        :class="['tone-' + card.tone, { active: card.key === 'client' && selectedCustomer }]"
+        :style="{ animationDelay: (0.1 + i * 0.18) + 's' }"
       >
-        <div class="card-shine"></div>
+        <div class="card-border-glow"></div>
+        <div class="card-bg-orb"></div>
+
         <div class="card-body">
-          <div class="card-icon">
-            <svg v-if="card.key === 'fuel'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2 C12 2 5 10 5 15 a7 7 0 0 0 14 0 c0-5-7-13-7-13z" />
-            </svg>
-            <svg v-else-if="card.key === 'newenergy'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
-            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
+          <div class="card-tag">{{ card.tagline }}</div>
+
+          <div class="card-icon-wrap">
+            <span class="icon-ring ring-1"></span>
+            <span class="icon-ring ring-2"></span>
+            <div class="card-icon">
+              <svg v-if="card.key === 'client'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </div>
           </div>
 
           <h3 class="card-title">{{ card.title }}</h3>
           <p class="card-sub">{{ card.sub }}</p>
-
           <div class="card-divider"></div>
 
-          <div v-if="card.key !== 'admin'" class="card-select">
+          <div v-if="card.key === 'client'" class="card-select">
             <el-select
-              v-model="selections[card.key]"
-              placeholder="请选择客户"
+              v-model="selectedCustomerId"
+              placeholder="点击选择客户"
               popper-class="portal-select-popper"
+              filterable
+              clearable
+              :loading="loadingCustomers"
+              style="width: 100%;"
+              @change="onSelectCustomer"
             >
-              <el-option
-                v-for="c in customers"
-                :key="c.id"
-                :label="c.name"
-                :value="c.id"
-              />
+              <el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.id">
+                <div class="option-row">
+                  <span class="option-name">{{ c.name }}</span>
+                  <span class="option-phone">{{ c.phone }}</span>
+                </div>
+              </el-option>
+              <template #empty>
+                <div class="select-empty">暂无可用客户</div>
+              </template>
             </el-select>
+
+            <transition name="btn-slide">
+              <button v-if="selectedCustomer" class="enter-btn green" @click="enterClient">
+                <span class="btn-text">进入客户端</span>
+                <span class="btn-icon">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+                </span>
+                <span class="btn-shine"></span>
+              </button>
+            </transition>
           </div>
+
           <div v-else class="card-select placeholder">
             <span>管理员后台</span>
           </div>
 
-          <button class="enter-btn" @click="enterCard(card.key)">
-            <span>进入</span>
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
+          <button v-if="card.key === 'admin'" class="enter-btn purple" @click="enterAdmin">
+            <span class="btn-text">进入管理端</span>
+            <span class="btn-icon">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </span>
+            <span class="btn-shine"></span>
           </button>
         </div>
       </div>
@@ -151,45 +215,47 @@ const goLogout = () => {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #F8FAFC;
+  background: radial-gradient(ellipse at 50% 30%, #F0F4FA 0%, #F8FAFC 50%, #EFF2F7 100%);
   font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   color: #0F172A;
 }
 
-/* ============ 网格背景 ============ */
 .bg-grid {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
-  background-size: 44px 44px;
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
   mask-image: radial-gradient(ellipse at 50% 45%, #000 0%, transparent 78%);
   -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 0%, transparent 78%);
   pointer-events: none;
-  animation: gridDrift 32s linear infinite;
+  animation: gridDrift 36s linear infinite;
 }
 @keyframes gridDrift {
   from { background-position: 0 0, 0 0; }
-  to   { background-position: 44px 44px, 44px 44px; }
+  to   { background-position: 48px 48px, 48px 48px; }
 }
 
-/* ============ 背景光晕 ============ */
 .bg-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
+  filter: blur(100px);
   pointer-events: none;
-  animation: orbFloat 14s ease-in-out infinite;
+  animation: orbFloat 16s ease-in-out infinite;
 }
-.orb-red  { width: 620px; height: 620px; top: -180px; left: -140px; background: radial-gradient(circle, rgba(200, 16, 46, 0.18) 0%, transparent 70%); }
-.orb-blue { width: 680px; height: 680px; bottom: -240px; right: -180px; background: radial-gradient(circle, rgba(30, 100, 200, 0.16) 0%, transparent 70%); animation-delay: -7s; }
+.orb-green  { width: 720px; height: 720px; top: -220px; left: -180px; background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, transparent 70%); }
+.orb-purple { width: 760px; height: 760px; bottom: -260px; right: -200px; background: radial-gradient(circle, rgba(139, 92, 246, 0.22) 0%, transparent 70%); animation-delay: -8s; }
+.orb-red    { width: 480px; height: 480px; top: 45%; left: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle, rgba(200, 16, 46, 0.08) 0%, transparent 70%); animation-delay: -4s; animation-name: orbFloatCenter; }
 @keyframes orbFloat {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50%      { transform: translate(30px, -22px) scale(1.08); }
+  50%      { transform: translate(40px, -30px) scale(1.1); }
+}
+@keyframes orbFloatCenter {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50%      { transform: translate(-50%, -50%) scale(1.15); }
 }
 
-/* ============ 顶部栏 ============ */
 .portal-header {
   position: relative;
   z-index: 10;
@@ -205,9 +271,14 @@ const goLogout = () => {
 .portal-header.show { opacity: 1; transform: translateY(0); }
 
 .header-logo img {
-  height: 58px;
+  height: 45px;
   width: auto;
   display: block;
+  animation: logoIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes logoIn {
+  from { opacity: 0; transform: translateX(-30px) scale(0.9); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
 }
 
 .header-title {
@@ -226,7 +297,17 @@ const goLogout = () => {
   font-size: 22px;
   font-weight: 700;
   letter-spacing: 8px;
-  color: #0F172A;
+  background: linear-gradient(120deg, #0F172A 0%, #334155 50%, #0F172A 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: titleShine 4s ease-in-out infinite;
+}
+@keyframes titleShine {
+  0%, 100% { background-position: 0% 0; }
+  50%      { background-position: 100% 0; }
 }
 .header-title h1::after {
   content: '';
@@ -259,7 +340,9 @@ const goLogout = () => {
   font-size: 13px;
   font-weight: 600;
   color: #c8102e;
-  background: #FFFFFF;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(200, 16, 46, 0.35);
   border-radius: 8px;
   cursor: pointer;
@@ -275,131 +358,217 @@ const goLogout = () => {
   transform: translateY(-2px);
 }
 
-/* ============ 卡片区 ============ */
 .portal-body {
   position: relative;
   z-index: 5;
   display: grid;
-  grid-template-columns: repeat(3, minmax(260px, 340px));
+  grid-template-columns: repeat(2, minmax(320px, 400px));
   justify-content: center;
   align-items: center;
-  gap: 56px;
+  gap: 80px;
   padding: 40px;
   height: calc(100vh - 88px);
 }
 
 .portal-card {
   position: relative;
-  border-radius: 16px;
+  border-radius: 32px;
   opacity: 0;
-  transform: translateY(40px);
+  transform: translateY(60px);
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .portal-body.show .portal-card {
-  animation: cardEnter 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: cardEnter 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 @keyframes cardEnter {
-  from { opacity: 0; transform: translateY(40px) scale(0.94); }
+  from { opacity: 0; transform: translateY(60px) scale(0.92); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.card-body {
-  position: relative;
-  background: #FFFFFF;
-  border-radius: 16px;
-  padding: 40px 28px 30px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 380px;
-  border: 1px solid #E2E8F0;
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
-  transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-  overflow: hidden;
-}
-.portal-card:hover .card-body {
+.portal-card:hover {
   transform: translateY(-10px);
-  border-color: rgba(200, 16, 46, 0.35);
-  box-shadow:
-    0 20px 50px rgba(200, 16, 46, 0.15),
-    0 6px 18px rgba(15, 23, 42, 0.06);
-}
-.portal-card.tone-blue:hover .card-body {
-  border-color: rgba(30, 100, 200, 0.35);
-  box-shadow:
-    0 20px 50px rgba(30, 100, 200, 0.15),
-    0 6px 18px rgba(15, 23, 42, 0.06);
-}
-.portal-card.tone-slate:hover .card-body {
-  border-color: rgba(71, 85, 105, 0.35);
-  box-shadow:
-    0 20px 50px rgba(71, 85, 105, 0.15),
-    0 6px 18px rgba(15, 23, 42, 0.06);
 }
 
-.card-shine {
+/* 背景光效：渐变进入 + 呼吸律动 */
+.card-border-glow {
   position: absolute;
-  top: 0; left: -60%;
-  width: 60%; height: 3px;
-  background: linear-gradient(90deg, transparent, currentColor, transparent);
-  color: #c8102e;
-  opacity: 0.85;
-  transition: left 0.9s ease;
-  border-radius: 3px;
-  z-index: 2;
+  inset: -2px;
+  border-radius: 34px;
+  opacity: 0;
+  transition: opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.9s cubic-bezier(0.4, 0, 0.2, 1),
+              filter 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: -1;
 }
-.portal-card.tone-blue  .card-shine { color: #2563EB; }
-.portal-card.tone-slate .card-shine { color: #475569; }
-.portal-card:hover .card-shine { left: 100%; }
+.tone-green .card-border-glow {
+  background: linear-gradient(135deg, #10B981, #34D399, #06B6D4, #10B981);
+  background-size: 300% 300%;
+}
+.tone-purple .card-border-glow {
+  background: linear-gradient(135deg, #8B5CF6, #A78BFA, #6366F1, #8B5CF6);
+  background-size: 300% 300%;
+}
 
-.card-icon {
-  width: 82px; height: 82px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 50%;
-  margin-bottom: 24px;
-  transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-  position: relative;
+.portal-card:hover .card-border-glow {
+  opacity: 0.85;
+  animation:
+    borderBreath 2.2s ease-in-out infinite 0.5s,
+    glowGradientShift 5s ease-in-out infinite;
 }
-.tone-red .card-icon {
-  background: radial-gradient(circle at 30% 30%, #FCA5A5 0%, #C8102E 100%);
-  color: #FFFFFF;
-  box-shadow: 0 8px 24px rgba(200, 16, 46, 0.3);
+@keyframes borderBreath {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.45;
+    filter: blur(18px);
+  }
+  50% {
+    transform: scale(1.035);
+    opacity: 0.95;
+    filter: blur(28px);
+  }
 }
-.tone-blue .card-icon {
-  background: radial-gradient(circle at 30% 30%, #93C5FD 0%, #2563EB 100%);
-  color: #FFFFFF;
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
+@keyframes glowGradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
 }
-.tone-slate .card-icon {
-  background: radial-gradient(circle at 30% 30%, #94A3B8 0%, #334155 100%);
-  color: #FFFFFF;
-  box-shadow: 0 8px 24px rgba(51, 65, 85, 0.3);
-}
-.portal-card:hover .card-icon {
-  transform: scale(1.1) rotate(-5deg);
-}
-.portal-card:hover .card-icon::after {
+
+.card-border-glow::after {
   content: '';
   position: absolute;
   inset: -12px;
+  border-radius: 44px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.tone-green .card-border-glow::after {
+  background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.5) 0%, transparent 70%);
+}
+.tone-purple .card-border-glow::after {
+  background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.5) 0%, transparent 70%);
+}
+.portal-card:hover .card-border-glow::after {
+  animation: borderBreathOuter 2.2s ease-in-out infinite 0.9s;
+}
+@keyframes borderBreathOuter {
+  0%, 100% { opacity: 0.15; transform: scale(1); filter: blur(20px); }
+  50%      { opacity: 0.55; transform: scale(1.1); filter: blur(32px); }
+}
+
+.card-bg-orb {
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 220px; height: 220px;
   border-radius: 50%;
-  border: 2px solid currentColor;
-  color: inherit;
-  opacity: 0.4;
-  animation: iconRing 1.6s ease-out infinite;
+  filter: blur(60px);
+  opacity: 0.35;
+  pointer-events: none;
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.tone-red   .card-icon::after { color: #C8102E; }
-.tone-blue  .card-icon::after { color: #2563EB; }
-.tone-slate .card-icon::after { color: #334155; }
-@keyframes iconRing {
-  0%   { transform: scale(0.85); opacity: 0.5; }
-  100% { transform: scale(1.6);  opacity: 0; }
+.tone-green  .card-bg-orb { background: radial-gradient(circle, rgba(16, 185, 129, 0.6) 0%, transparent 70%); }
+.tone-purple .card-bg-orb { background: radial-gradient(circle, rgba(139, 92, 246, 0.6) 0%, transparent 70%); }
+.portal-card:hover .card-bg-orb { transform: scale(1.5) translate(-20px, 20px); }
+
+.card-body {
+  position: relative;
+  overflow: hidden;
+  background: #FFFFFF;
+  border-radius: 32px;
+  padding: 44px 36px 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 460px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow:
+    0 4px 20px rgba(15, 23, 42, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  transition: box-shadow 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.card-icon svg { width: 38px; height: 38px; }
+
+.tone-green:hover .card-body {
+  box-shadow:
+    0 24px 60px rgba(16, 185, 129, 0.18),
+    0 8px 24px rgba(15, 23, 42, 0.06);
+}
+.tone-purple:hover .card-body {
+  box-shadow:
+    0 24px 60px rgba(139, 92, 246, 0.18),
+    0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.portal-card.tone-green.active .card-body {
+  box-shadow:
+    0 0 0 3px rgba(16, 185, 129, 0.12),
+    0 24px 60px rgba(16, 185, 129, 0.2);
+}
+
+.card-tag {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: #FFFFFF;
+  z-index: 2;
+}
+.tone-green  .card-tag { background: linear-gradient(135deg, #10B981, #059669); }
+.tone-purple .card-tag { background: linear-gradient(135deg, #8B5CF6, #7C3AED); }
+
+.card-icon-wrap {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+.icon-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.tone-green  .icon-ring { border: 2px solid rgba(16, 185, 129, 0.5); }
+.tone-purple .icon-ring { border: 2px solid rgba(139, 92, 246, 0.5); }
+.icon-ring.ring-1 { animation: ringPulse 2.8s ease-out infinite; }
+.icon-ring.ring-2 { animation: ringPulse 2.8s ease-out infinite; animation-delay: 1.4s; }
+@keyframes ringPulse {
+  0%   { transform: scale(0.9); opacity: 0.9; }
+  100% { transform: scale(1.8);  opacity: 0; }
+}
+
+.card-icon {
+  position: relative;
+  z-index: 2;
+  width: 88px; height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #FFFFFF;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.tone-green .card-icon {
+  background: radial-gradient(circle at 30% 30%, #34D399 0%, #10B981 50%, #059669 100%);
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.35), 0 0 0 6px rgba(16, 185, 129, 0.08);
+}
+.tone-purple .card-icon {
+  background: radial-gradient(circle at 30% 30%, #A78BFA 0%, #8B5CF6 50%, #7C3AED 100%);
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.35), 0 0 0 6px rgba(139, 92, 246, 0.08);
+}
+.portal-card:hover .card-icon { transform: scale(1.12) rotate(-8deg); }
+.card-icon svg { width: 42px; height: 42px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15)); }
 
 .card-title {
-  margin: 0 0 6px;
-  font-size: 17px;
-  font-weight: 700;
+  margin: 0 0 8px;
+  font-size: 19px;
+  font-weight: 800;
   color: #0F172A;
   letter-spacing: 0.8px;
   text-align: center;
@@ -408,91 +577,98 @@ const goLogout = () => {
   margin: 0;
   font-size: 13px;
   color: #64748B;
-  letter-spacing: 1.6px;
+  letter-spacing: 2px;
+  font-weight: 500;
 }
 .card-divider {
-  width: 40px; height: 1px;
-  margin: 22px 0;
+  width: 48px; height: 1px;
+  margin: 26px 0;
   background: linear-gradient(90deg, transparent, #CBD5E1, transparent);
 }
 
-.card-select { width: 100%; margin-bottom: 22px; }
+.card-select { width: 100%; }
 .card-select.placeholder {
   display: flex; align-items: center; justify-content: center;
-  height: 40px;
+  height: 46px;
   color: #94A3B8;
   font-size: 13px;
   letter-spacing: 2px;
-  border: 1px dashed #CBD5E1;
-  border-radius: 8px;
+  border: 1.5px dashed #CBD5E1;
+  border-radius: 10px;
   background: #F8FAFC;
+  margin-bottom: 20px;
 }
 .card-select :deep(.el-select__wrapper) {
-  border-radius: 8px !important;
-  min-height: 40px;
-  box-shadow: 0 0 0 1px #E2E8F0 inset !important;
+  border-radius: 10px !important;
+  min-height: 46px;
+  box-shadow: 0 0 0 1.5px #E2E8F0 inset !important;
   background: #F8FAFC !important;
-  transition: all 0.28s;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.card-select :deep(.el-select__wrapper:hover) {
-  box-shadow: 0 0 0 1px rgba(200, 16, 46, 0.45) inset !important;
+.tone-green .card-select :deep(.el-select__wrapper:hover) {
+  box-shadow: 0 0 0 1.5px rgba(16, 185, 129, 0.5) inset !important;
+  background: #FFFFFF !important;
+  transform: translateY(-1px);
+}
+.tone-green .card-select :deep(.el-select__wrapper.is-focused) {
+  box-shadow: 0 0 0 1.5px #10B981 inset, 0 0 0 4px rgba(16, 185, 129, 0.12) !important;
   background: #FFFFFF !important;
 }
-.card-select :deep(.el-select__wrapper.is-focused) {
-  box-shadow: 0 0 0 1px #c8102e inset, 0 0 0 3px rgba(200, 16, 46, 0.12) !important;
-  background: #FFFFFF !important;
-}
+.select-empty { padding: 16px 0; text-align: center; color: #94A3B8; font-size: 13px; }
+
+.option-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.option-name { font-weight: 600; color: #0F172A; }
+.option-phone { font-size: 11px; color: #94A3B8; font-family: 'Courier New', monospace; }
 
 .enter-btn {
-  margin-top: auto;
+  margin-top: 24px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 11px 34px;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 3px;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 40px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 2px;
   color: #FFFFFF;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 6px 20px rgba(200, 16, 46, 0.3);
   font-family: inherit;
+  width: 100%;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.tone-blue .enter-btn {
-  background: linear-gradient(135deg, #2563EB, #1d4ed8);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
-}
-.tone-slate .enter-btn {
-  background: linear-gradient(135deg, #475569, #1e293b);
-  box-shadow: 0 6px 20px rgba(51, 65, 85, 0.3);
-}
-.enter-btn::before {
-  content: '';
+.enter-btn.green { background: linear-gradient(135deg, #10B981, #059669); box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35); }
+.enter-btn.purple { background: linear-gradient(135deg, #8B5CF6, #7C3AED); box-shadow: 0 8px 24px rgba(139, 92, 246, 0.35); }
+.enter-btn:hover { transform: translateY(-3px) scale(1.02); }
+.enter-btn.green:hover { box-shadow: 0 16px 40px rgba(16, 185, 129, 0.5); }
+.enter-btn.purple:hover { box-shadow: 0 16px 40px rgba(139, 92, 246, 0.5); }
+.enter-btn:active { transform: translateY(-1px) scale(0.98); }
+
+.enter-btn .btn-text { position: relative; z-index: 2; transition: transform 0.3s; }
+.enter-btn .btn-icon { position: relative; z-index: 2; display: inline-flex; transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.enter-btn:hover .btn-icon { transform: translateX(6px); }
+.enter-btn .btn-shine {
   position: absolute;
   top: 0; left: -100%;
   width: 60%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-  transition: left 0.65s ease;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  pointer-events: none;
 }
-.enter-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(200, 16, 46, 0.4);
+.enter-btn:hover .btn-shine { animation: btnShine 0.75s ease; }
+@keyframes btnShine {
+  0%   { left: -100%; }
+  100% { left: 130%; }
 }
-.tone-blue .enter-btn:hover { box-shadow: 0 12px 28px rgba(37, 99, 235, 0.4); }
-.tone-slate .enter-btn:hover { box-shadow: 0 12px 28px rgba(51, 65, 85, 0.4); }
-.enter-btn:hover::before { left: 130%; }
-.enter-btn:active { transform: translateY(0) scale(0.97); }
-.enter-btn svg { transition: transform 0.3s; }
-.enter-btn:hover svg { transform: translateX(4px); }
 
-/* ==========================================
-   退出登录 · 模糊至黑屏 + 欢迎使用 + 放大转场
-   ========================================== */
+.btn-slide-enter-active { transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.btn-slide-leave-active { transition: all 0.28s ease; }
+.btn-slide-enter-from { opacity: 0; transform: translateY(16px) scale(0.92); }
+.btn-slide-leave-to { opacity: 0; transform: translateY(8px) scale(0.95); }
+
+/* 退出登录动画 */
 .goodbye-overlay {
   position: fixed;
   inset: 0;
@@ -507,21 +683,9 @@ const goLogout = () => {
   animation: goodbyeBlackout 1.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 @keyframes goodbyeBlackout {
-  0% {
-    background: rgba(0, 0, 0, 0);
-    backdrop-filter: blur(0px);
-    -webkit-backdrop-filter: blur(0px);
-  }
-  70% {
-    background: rgba(0, 0, 0, 1);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
-  }
-  100% {
-    background: rgba(0, 0, 0, 1);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
-  }
+  0%   { background: rgba(0, 0, 0, 0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
+  70%  { background: rgba(0, 0, 0, 1); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); }
+  100% { background: rgba(0, 0, 0, 1); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); }
 }
 
 .goodbye-text {
@@ -544,49 +708,25 @@ const goLogout = () => {
   animation: goodbyeTextFocus 1.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 @keyframes goodbyeTextFocus {
-  0% {
-    opacity: 0;
-    filter: blur(20px);
-    letter-spacing: 32px;
-    transform: scale(1.1);
-  }
-  55% {
-    opacity: 1;
-    filter: blur(0);
-    letter-spacing: 14px;
-    transform: scale(1);
-  }
-  70% {
-    opacity: 1;
-    filter: blur(0);
-    letter-spacing: 14px;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    filter: blur(4px);
-    letter-spacing: 14px;
-    transform: scale(4);
-  }
+  0%   { opacity: 0; filter: blur(20px); letter-spacing: 32px; transform: scale(1.1); }
+  55%  { opacity: 1; filter: blur(0);    letter-spacing: 14px; transform: scale(1); }
+  70%  { opacity: 1; filter: blur(0);    letter-spacing: 14px; transform: scale(1); }
+  100% { opacity: 0; filter: blur(4px);  letter-spacing: 14px; transform: scale(4); }
 }
 
-/* ============ 响应式 ============ */
 @media (max-width: 1100px) {
-  .portal-body {
-    grid-template-columns: 1fr;
-    overflow-y: auto;
-    gap: 30px;
-    padding: 30px 40px 60px;
-  }
+  .portal-body { grid-template-columns: 1fr; overflow-y: auto; gap: 30px; padding: 30px 40px 60px; }
   .header-title h1 { font-size: 18px; letter-spacing: 4px; }
   .title-line { width: 24px; }
 }
 @media (max-width: 768px) {
-  .goodbye-text {
-    font-size: 28px;
-    letter-spacing: 8px;
-    text-indent: 8px;
-  }
+  .portal-header { height: 72px; padding: 0 20px; }
+  .header-logo img { height: 34px; }
+  .portal-body { height: calc(100vh - 72px); }
+  .card-body { padding: 36px 24px 28px; min-height: 420px; border-radius: 24px; }
+  .portal-card { border-radius: 24px; }
+
+  .goodbye-text { font-size: 28px; letter-spacing: 8px; text-indent: 8px; }
   @keyframes goodbyeTextFocus {
     0%   { opacity: 0; filter: blur(16px); letter-spacing: 22px; transform: scale(1.1); }
     55%  { opacity: 1; filter: blur(0);    letter-spacing: 8px;  transform: scale(1); }
@@ -596,21 +736,30 @@ const goLogout = () => {
 }
 </style>
 
-<!-- 全局：下拉 popper -->
 <style>
 .portal-select-popper {
-  border-radius: 8px !important;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.15) !important;
   border: 1px solid #E2E8F0 !important;
+  padding: 6px !important;
 }
-.portal-select-popper .el-select-dropdown__item { font-size: 13px; color: #334155; }
+.portal-select-popper .el-select-dropdown__item {
+  font-size: 13px;
+  color: #334155;
+  border-radius: 8px;
+  margin: 2px 0;
+  padding: 8px 12px;
+  height: auto;
+  line-height: 1.4;
+}
 .portal-select-popper .el-select-dropdown__item.is-hovering,
 .portal-select-popper .el-select-dropdown__item:hover {
-  background: #FEF2F2 !important;
-  color: #c8102e !important;
+  background: #ECFDF5 !important;
+  color: #10B981 !important;
 }
 .portal-select-popper .el-select-dropdown__item.is-selected {
-  color: #c8102e !important;
+  color: #10B981 !important;
   font-weight: 700;
+  background: #ECFDF5 !important;
 }
 </style>
