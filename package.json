@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@amap/amap-jsapi-loader": "^1.0.1",
+    "@cloudbase/js-sdk": "^3.10.2",
     "@element-plus/icons-vue": "^2.3.2",
     "@supabase/supabase-js": "^2.108.2",
     "dayjs": "^1.11.21",

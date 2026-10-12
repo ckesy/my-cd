@@ -1,11 +1,29 @@
 // src/utils/supabase.js
-import { createClient } from '@supabase/supabase-js'
+import cloudbase from '@cloudbase/js-sdk'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const ENV_ID = 'wuxian-token-d0guymjkpadcd1f22'
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('⚠️ 请在 .env 文件中配置 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY')
+const app = cloudbase.init({
+  env: ENV_ID,
+  // 注意：这里不传 accessKey
+  // 匿名登录会自动处理凭证
+})
+
+// 关键：先匿名登录，再导出数据库实例
+const auth = app.auth()
+
+try {
+  const loginState = await auth.getLoginState()
+  if (!loginState) {
+    await auth.signInAnonymously()
+    console.log('[CloudBase] ✅ 匿名登录成功')
+  } else {
+    console.log('[CloudBase] ✅ 已有登录态')
+  }
+} catch (e) {
+  console.error('[CloudBase] ❌ 匿名登录失败:', e)
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = app.rdb()
+export { auth }
+export default app
