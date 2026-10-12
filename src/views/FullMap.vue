@@ -170,7 +170,7 @@ const AMAP_KEY = '273f5c474604b71906674aac159b8f45'
 const DONGFENG_API_URL = 'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com/dongfeng-lostlocation'
 
 // 👇 并发数（从 5 提到 15）
-const CONCURRENCY = 15
+const CONCURRENCY = 5
 // 👇 缓存有效期：3 分钟
 const CACHE_TTL = 3 * 60 * 1000
 const CACHE_KEY = 'fullmap_vehicle_locations_cache'
