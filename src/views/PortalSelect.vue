@@ -54,20 +54,45 @@ const onSelectCustomer = (customerId) => {
   if (!customerId) return
 }
 
-const enterClient = () => {
+// ============================================================
+// ⭐ 进入客户端 —— 修复数据隔离
+// ============================================================
+const enterClient = async () => {
   const customer = selectedCustomer.value
   if (!customer) { ElMessage.warning('请先选择客户'); return }
 
+  // ⭐ 关键修复：查 users 表，拿到与客户直接登录完全一致的 account
+  // 客户直接登录时 currentUser.account = users.account
+  // 管理员进入客户视角时，也必须用同一个 account，否则 owner_account 过滤会失效
+  let realAccount = ''
+  try {
+    const { data: u } = await supabase
+      .from('users')
+      .select('account')
+      .eq('phone', customer.phone)
+      .limit(1)
+    if (Array.isArray(u) && u[0] && u[0].account) {
+      realAccount = u[0].account
+    }
+  } catch (e) {
+    console.warn('查询 users.account 失败，降级使用 phone:', e)
+  }
+
+  // 降级兜底：查不到就用 phone
+  if (!realAccount) realAccount = customer.phone || ''
+
   const account = {
     id: customer.id,
+    account: realAccount,              // ⭐⭐ 必须补上！原代码这里缺了
     phone: customer.phone,
     name: customer.name,
-    role: 'customer',
+    role: 'customer',                  // 强制降级为 customer，走客户隔离分支
     customerId: customer.id,
     platforms: customer.platforms || [],
     permissions: customer.permissions || {},
   }
-  // 👇 只覆盖 currentUser，保留 originalUser（管理员身份不丢）
+
+  // 只覆盖 currentUser，保留 originalUser（管理员身份不丢）
   localStorage.setItem('currentUser', JSON.stringify(account))
 
   ElMessage.success(`正在进入「${customer.name}」的客户端`)
@@ -389,7 +414,6 @@ const goLogout = () => {
   transform: translateY(-10px);
 }
 
-/* 背景光效：渐变进入 + 呼吸律动 */
 .card-border-glow {
   position: absolute;
   inset: -2px;
@@ -417,16 +441,8 @@ const goLogout = () => {
     glowGradientShift 5s ease-in-out infinite;
 }
 @keyframes borderBreath {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.45;
-    filter: blur(18px);
-  }
-  50% {
-    transform: scale(1.035);
-    opacity: 0.95;
-    filter: blur(28px);
-  }
+  0%, 100% { transform: scale(1); opacity: 0.45; filter: blur(18px); }
+  50%      { transform: scale(1.035); opacity: 0.95; filter: blur(28px); }
 }
 @keyframes glowGradientShift {
   0%, 100% { background-position: 0% 50%; }

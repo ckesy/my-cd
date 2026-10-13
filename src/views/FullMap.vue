@@ -3,10 +3,8 @@
     <div class="map-stage">
       <div id="map-container" class="map-container"></div>
 
-      <!-- SVG 流光覆盖层 -->
       <svg ref="rangingSvgRef" class="ranging-svg" xmlns="http://www.w3.org/2000/svg"></svg>
 
-      <!-- ============ 顶部栏 ============ -->
       <div class="top-bar">
         <div class="left-group">
           <div class="stats-pills">
@@ -64,7 +62,6 @@
         </div>
       </div>
 
-      <!-- 测距总览悬浮面板 -->
       <transition name="summary-slide">
         <div v-if="rangingActive && segmentCount > 0" class="ranging-summary">
           <div class="ranging-summary-header">
@@ -86,27 +83,29 @@
         </div>
       </transition>
 
-      <!-- 悬浮左侧车辆列表 -->
+      <!-- 左侧悬浮面板 -->
       <div class="floating-sidebar" :class="{ collapsed: isListCollapsed }"
         :style="{ width: isListCollapsed ? '44px' : listWidth + 'px' }">
-        <div v-show="!isListCollapsed" class="sidebar-content">
+        <div class="sidebar-content" :class="{ 'is-hidden': isListCollapsed }">
+
           <div class="sidebar-filter">
             <el-select v-model="selectedOrg" placeholder="请选择组织机构" size="small" style="width: 100%;" clearable>
               <el-option label="全部车队" value=""></el-option>
               <el-option v-for="org in orgOptions" :key="org" :label="org" :value="org"></el-option>
             </el-select>
-            <el-select v-model="selectedStatus" placeholder="请选择作业状态" size="small" style="width: 100%; margin-top: 8px;" clearable>
+            <el-select v-model="selectedStatus" placeholder="请选择车辆状态" size="small" style="width: 100%; margin-top: 8px;" clearable>
               <el-option v-for="s in statusOptions" :key="s" :label="s" :value="s"></el-option>
             </el-select>
-            <el-input :value="searchKeyword" placeholder="点击搜索车辆" size="small" readonly class="search-trigger"
-              style="margin-top: 8px;" @click="openDialog" clearable @clear="searchKeyword = ''; tempSearchKeyword = ''">
-              <template #prefix><el-icon><Search /></el-icon></template>
-            </el-input>
+            <div class="search-row">
+              <el-input v-model="searchKeyword" placeholder="车牌/昵称/车架" size="small" clearable>
+                <template #prefix><el-icon><Search /></el-icon></template>
+              </el-input>
+            </div>
             <div class="filter-buttons">
               <el-button size="small" class="btn-reset" @click="resetAll">
                 <el-icon><RefreshRight /></el-icon> 重置
               </el-button>
-              <el-button size="small" type="primary" class="btn-search" @click="openDialog">
+              <el-button size="small" type="primary" class="btn-search" @click="handleSearch">
                 <el-icon><Search /></el-icon> 搜索
               </el-button>
             </div>
@@ -114,41 +113,70 @@
 
           <div class="sidebar-list-header">
             <el-icon class="list-icon"><Van /></el-icon>
-            <span>车辆列表</span>
-            <span class="list-count">({{ filteredVehicles.length }})</span>
+            <span class="header-title">{{ rootNodeName }}</span>
+            <span class="list-count">({{ visibleVehicleCount }})</span>
             <div class="collapse-btn" @click.stop="toggleList" title="收起">
-              <el-icon><ArrowLeft /></el-icon>
+              <el-icon class="collapse-icon"><ArrowLeft /></el-icon>
             </div>
           </div>
 
-          <div class="sidebar-list">
-            <transition-group name="list-item">
-              <div v-for="v in filteredVehicles" :key="v.plate" class="vehicle-item"
-                :class="{ active: isVehicleHighlighted(v.plate), 'no-loc': !v.hasLocation }"
-                @click="highlightVehicle(v.plate)">
-                <span class="vehicle-status-dot" :class="v.status"></span>
-                <span class="vehicle-plate">{{ v.plate }}</span>
-                <span class="vehicle-vin">({{ v.vin ? v.vin.slice(-6) : '----' }})</span>
-                <span class="vehicle-status-tag" :class="v.status">{{ v.status }}</span>
-              </div>
-            </transition-group>
-            <div v-if="filteredVehicles.length === 0" class="list-empty">
+          <div class="sidebar-tree" v-loading="treeLoading" element-loading-text="加载中…">
+            <el-tree
+              v-if="displayTreeData.length > 0"
+              ref="orgTreeRef"
+              :data="displayTreeData"
+              node-key="key"
+              :props="{ children: 'children', label: 'label' }"
+              :default-expand-all="true"
+              :expand-on-click-node="false"
+              highlight-current
+              :indent="0"
+              class="org-tree"
+            >
+              <template #default="{ data }">
+                <!-- 车辆节点 -->
+                <div
+                  v-if="data.type === 'vehicle'"
+                  class="tree-node tree-node-vehicle"
+                  :class="{ active: isVehicleHighlighted(data.plate), 'no-loc': !data.hasLocation }"
+                  :style="{ paddingLeft: (data.level || 0) * 18 + 'px' }"
+                  @click.stop="highlightVehicle(data.plate)"
+                >
+                  <span class="vehicle-plate">{{ data.label }}</span>
+                  <span class="vehicle-status-tag" :class="data.status">{{ data.status }}</span>
+                </div>
+
+                <!-- 组织节点 -->
+                <div
+                  v-else
+                  class="tree-node tree-node-org"
+                  :class="'type-' + data.type"
+                  :style="{ paddingLeft: (data.level || 0) * 18 + 'px' }"
+                >
+                  <span class="org-label">{{ data.label }}</span>
+                  <span class="org-count" :class="{ empty: data.vehicleCount === 0 }">
+                    ({{ data.vehicleCount }})
+                  </span>
+                </div>
+              </template>
+            </el-tree>
+
+            <div v-if="visibleVehicleCount === 0" class="list-empty">
               <el-icon><Search /></el-icon>
               <span>无匹配车辆</span>
             </div>
           </div>
         </div>
 
-        <div v-show="isListCollapsed" class="sidebar-collapsed">
+        <div class="sidebar-collapsed" :class="{ 'is-visible': isListCollapsed }">
           <div class="collapse-btn-vertical" @click.stop="toggleList" title="展开">
-            <el-icon><ArrowRight /></el-icon>
+            <el-icon class="collapse-icon"><ArrowRight /></el-icon>
           </div>
         </div>
 
         <div class="resizer" v-show="!isListCollapsed" @mousedown="startResize"></div>
       </div>
 
-      <!-- 加载遮罩 -->
       <transition name="fade">
         <div v-if="!isMapReady || loadingVehicles" class="map-loading-overlay">
           <div class="loading-card">
@@ -179,41 +207,16 @@
         <span>请检查车辆 VIN 码是否正确，或点击右上角「刷新定位」重试</span>
       </div>
     </div>
-
-    <!-- 搜索弹窗 -->
-    <el-dialog v-model="dialogVisible" title="搜索车辆" width="450px" :close-on-click-modal="false"
-      @close="cancelSearch" class="vehicle-dialog">
-      <div class="dialog-search-row">
-        <el-input v-model="tempSearchKeyword" placeholder="输入车牌号模糊搜索" clearable style="flex:1;">
-          <template #prefix><el-icon><Search /></el-icon></template>
-        </el-input>
-        <el-button type="primary" size="default" class="btn-primary" @click="selectAll">
-          {{ dialogFilteredVehicles.every(v => tempSelectedPlates.includes(v.plate)) ? '取消全选' : '全选' }}
-        </el-button>
-      </div>
-      <div class="dialog-list">
-        <el-checkbox-group v-model="tempSelectedPlates">
-          <div v-for="v in dialogFilteredVehicles" :key="v.plate" class="dialog-item">
-            <el-checkbox :label="v.plate">{{ v.plate }}</el-checkbox>
-          </div>
-        </el-checkbox-group>
-        <div v-if="dialogFilteredVehicles.length === 0" class="dialog-empty">暂无匹配车辆</div>
-      </div>
-      <template #footer>
-        <el-button @click="cancelSearch">取消</el-button>
-        <el-button type="primary" class="btn-primary" @click="confirmSearch">确定</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, onActivated, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Van, Refresh, Search, RefreshRight,
   ArrowLeft, ArrowRight, WarningFilled,
-  Brush, Aim, Guide, Position
+  Brush, Aim, Guide, Position,
 } from '@element-plus/icons-vue'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import { supabase } from '@/utils/supabase'
@@ -226,6 +229,39 @@ const CONCURRENCY = 5
 const CACHE_TTL = 3 * 60 * 1000
 const CACHE_KEY = 'fullmap_vehicle_locations_cache'
 
+// ============================================================
+// ⭐ 当前登录用户 & 主账号信息
+// ============================================================
+const currentUser = (() => {
+  try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
+  catch { return {} }
+})()
+
+const isAdmin = currentUser.role === 'admin'
+const isCustomer = currentUser.role === 'customer'
+
+// ⭐ 主账号信息（子账号登录时，由 LoginView 查好存入）
+const masterAccount = currentUser.masterAccount || ''
+const masterPhone = currentUser.masterPhone || ''
+const masterName = currentUser.masterName || ''
+const customerName = currentUser.customerName || ''
+
+// 用于查 organizations.owner_account
+const myAccount = masterAccount || currentUser.account || ''
+// 用于查 customers.phone
+const myPhone = masterPhone || currentUser.phone || ''
+
+// ⭐ 显示用的根节点名称
+// 管理员：全部组织
+// 子账号：主账号名（如"测试客户4"）
+// 主账号：自己的 name
+const rootNodeName = isAdmin
+  ? '全部组织'
+  : (customerName || masterName || currentUser.name || '我的组织')
+
+// ============================================================
+// 数据
+// ============================================================
 const orgOptions = ref([])
 const selectedOrg = ref('')
 const statusOptions = ref(['行驶', '静止', '离线'])
@@ -235,6 +271,7 @@ const loadingVehicles = ref(false)
 const statusFilter = ref('all')
 
 const vehicles = ref([])
+const organizations = ref([])
 const isMapReady = ref(false)
 const locationProgress = ref(0)
 const locationTotal = ref(0)
@@ -248,18 +285,20 @@ const rangingActive = ref(false)
 let satelliteLayer = null
 let roadNetLayer = null
 
-// ============================================================
-// 自定义测距状态
-// ============================================================
-const rangingSvgRef = ref(null)      // SVG 覆盖层 ref
-const pointGroups = ref([[]])        // 组数组，每组是一段连续折线
-let nodeInfos = []                   // 节点 Marker 信息
-let segmentInfos = []                // 线段信息（含基础 Polyline）
-let distanceLabels = []              // 距离标签 Marker
-let groupTotalLabels = []            // 每组的"总计"标签 Marker
-let previewLine = null               // 预览虚线 Polyline
-let previewLabel = null              // 预览距离标签 Marker
-let svgLines = []                    // SVG 流光层 { from, to, baseEl, flowEl }
+const rangingSvgRef = ref(null)
+const pointGroups = ref([[]])
+let nodeInfos = []
+let segmentInfos = []
+let distanceLabels = []
+let groupTotalLabels = []
+let previewLine = null
+let previewLabel = null
+let svgLines = []
+
+let lastClickTime = 0
+let rafId = null
+let pendingMouseLng = null
+let pendingMouseLat = null
 
 const totalDistance = ref(0)
 const segmentCount = ref(0)
@@ -277,9 +316,6 @@ const loadPercent = computed(() => {
 const RING_LENGTH = 263.89
 const ringOffset = computed(() => RING_LENGTH * (1 - loadPercent.value / 100))
 
-// ============================================================
-// 主题配色
-// ============================================================
 const isDarkTheme = computed(() => {
   if (showSatellite.value) return true
   const s = currentMapStyle.value
@@ -301,9 +337,6 @@ const themeColors = computed(() => {
   }
 })
 
-// ============================================================
-// 工具
-// ============================================================
 const parseTimeToMs = (t) => {
   if (t === undefined || t === null || t === '') return 0
   if (typeof t === 'number') return t
@@ -320,9 +353,6 @@ const isAccOn = (accStatus) => {
   return false
 }
 
-// ============================================================
-// 缓存
-// ============================================================
 const readCache = () => {
   try {
     const raw = sessionStorage.getItem(CACHE_KEY)
@@ -345,12 +375,8 @@ const clearCache = () => {
   try { sessionStorage.removeItem(CACHE_KEY) } catch (e) {}
 }
 
-// ============================================================
-// 东风定位接口
-// ============================================================
 const fetchDongfengLocation = async (vin) => {
   if (!vin || vin.length < 8) return { success: false, reason: 'VIN 长度不足' }
-
   try {
     const response = await fetch(DONGFENG_API_URL, {
       method: 'POST',
@@ -359,32 +385,25 @@ const fetchDongfengLocation = async (vin) => {
     })
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const result = await response.json()
-
     if (result.code !== 1 || !Array.isArray(result.data) || result.data.length === 0) {
       return { success: false, reason: result.msg || '近 3 天无数据' }
     }
-
     const sorted = [...result.data].sort((a, b) => parseTimeToMs(b.time) - parseTimeToMs(a.time))
     const latest = sorted[0]
-
     const lng = parseFloat(latest.lng)
     const lat = parseFloat(latest.lat)
     if (!lng || !lat || isNaN(lng) || isNaN(lat)) {
       return { success: false, reason: '经纬度无效' }
     }
-
     const speed = parseFloat(latest.speed) || 0
     const accOn = isAccOn(latest.accStatus)
-
     let status = '离线'
     if (accOn) status = speed > 0 ? '行驶' : '静止'
-
     const timeMs = parseTimeToMs(latest.time)
     const reportTime = timeMs > 0 ? dayjs(timeMs).format('YYYY-MM-DD HH:mm:ss') : '--'
     const locationText = latest.address ||
       (status === '行驶' ? '行驶中' : status === '静止' ? '停车' : '离线')
     const dayOffset = typeof result.dayOffset === 'number' ? result.dayOffset : 0
-
     return {
       success: true, lng, lat,
       online: status !== '离线', status,
@@ -401,6 +420,27 @@ const fetchDongfengLocation = async (vin) => {
 }
 
 // ============================================================
+// ⭐ 客户 ID（子账号用主账号 phone 查）
+// ============================================================
+const myCustomerId = ref(null)
+
+const loadMyCustomerId = async () => {
+  if (!isCustomer) return
+  // ⭐ 用主账号 phone 查 customers
+  if (!myPhone) return
+  try {
+    const { data } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('phone', myPhone)
+      .maybeSingle()
+    if (data) myCustomerId.value = data.id
+  } catch (e) {
+    console.warn('查询客户信息失败:', e)
+  }
+}
+
+// ============================================================
 // 加载车辆
 // ============================================================
 const loadVehicles = async (forceRefresh = false) => {
@@ -412,37 +452,34 @@ const loadVehicles = async (forceRefresh = false) => {
       locatedCount.value = cached.locatedCount || 0
       locationTotal.value = cached.vehicles.length
       locationProgress.value = cached.vehicles.length
+      await loadOrganizations()
+      await syncVehicleOrgFields()
       return
     }
   }
-
   loadingVehicles.value = true
   locationProgress.value = 0
   locationTotal.value = 0
   locatedCount.value = 0
   try {
-    let currentUser = null
-    try { currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null') } catch {}
-
     let query = supabase.from('vehicles').select('*').order('updated_at', { ascending: false })
-    if (currentUser?.role === 'customer' && currentUser?.customerId) {
-      query = query.eq('customer_id', currentUser.customerId)
+    // ⭐ 客户视角：用 myCustomerId 过滤（myCustomerId 已由主账号 phone 查得）
+    if (isCustomer && myCustomerId.value) {
+      query = query.eq('customer_id', myCustomerId.value)
     }
-
     const { data, error } = await query
     if (error) throw error
-
     if (!data || data.length === 0) {
       vehicles.value = []
       orgOptions.value = []
-      if (currentUser?.role === 'customer') {
+      if (isCustomer) {
         ElMessage.warning('您的账户下暂无车辆，请联系管理员分配')
       } else {
         ElMessage.warning('车辆档案为空，请先去「车辆档案」页面创建车辆')
       }
+      await loadOrganizations()
       return
     }
-
     locationTotal.value = data.length
     const enriched = new Array(data.length)
     let index = 0
@@ -473,24 +510,75 @@ const loadVehicles = async (forceRefresh = false) => {
     }
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, data.length) }, () => worker()))
     vehicles.value = enriched.filter(Boolean)
-
     const orgSet = new Set()
     vehicles.value.forEach(v => {
       const org = v.org || v.customer_name || v.nickname
       if (org) orgSet.add(org)
     })
     orgOptions.value = Array.from(orgSet)
-
     writeCache({
       vehicles: vehicles.value,
       orgOptions: orgOptions.value,
       locatedCount: locatedCount.value,
     })
+    await loadOrganizations()
   } catch (e) {
     console.error('加载车辆失败：', e)
     ElMessage.error('加载车辆失败：' + e.message)
   } finally {
     loadingVehicles.value = false
+  }
+}
+
+const syncVehicleOrgFields = async () => {
+  if (!vehicles.value.length) return
+  try {
+    const plates = vehicles.value.map(v => v.plate).filter(Boolean)
+    if (!plates.length) return
+
+    let q = supabase.from('vehicles').select('plate, org, customer_id, driver, nickname').in('plate', plates)
+    if (isCustomer && myCustomerId.value) q = q.eq('customer_id', myCustomerId.value)
+    const { data, error } = await q
+    if (error || !data) return
+
+    const freshMap = {}
+    data.forEach(item => { freshMap[item.plate] = item })
+
+    let changed = false
+    const updated = vehicles.value.map(v => {
+      const fresh = freshMap[v.plate]
+      if (fresh && (v.org !== fresh.org || v.driver !== fresh.driver || v.nickname !== fresh.nickname)) {
+        changed = true
+        return { ...v, org: fresh.org, driver: fresh.driver, nickname: fresh.nickname }
+      }
+      return v
+    })
+
+    if (changed) {
+      vehicles.value = updated
+      const orgSet = new Set()
+      vehicles.value.forEach(v => {
+        const org = v.org || v.customer_name || v.nickname
+        if (org) orgSet.add(org)
+      })
+      orgOptions.value = Array.from(orgSet)
+      writeCache({ vehicles: vehicles.value, orgOptions: orgOptions.value, locatedCount: locatedCount.value })
+    }
+  } catch (e) {
+    console.error('同步车辆 org 失败:', e)
+  }
+}
+
+// ⭐ 加载组织：用主账号的 account
+const loadOrganizations = async () => {
+  try {
+    let q = supabase.from('organizations').select('*').order('id')
+    if (isCustomer) q = q.eq('owner_account', myAccount)
+    const { data, error } = await q
+    if (error) throw error
+    organizations.value = data || []
+  } catch (e) {
+    console.error('加载组织失败:', e)
   }
 }
 
@@ -503,9 +591,6 @@ const refreshLocations = async (forceRefresh = false) => {
   }
 }
 
-// ============================================================
-// 地图
-// ============================================================
 let map = null
 let markers = []
 let markerMap = new Map()
@@ -519,32 +604,23 @@ const initMap = async () => {
     AMap = await AMapLoader.load({
       key: AMAP_KEY,
       version: '2.0',
-      plugins: [
-        'AMap.Geocoder',
-        'AMap.TileLayer.Satellite', 'AMap.TileLayer.RoadNet',
-      ],
+      plugins: ['AMap.Geocoder', 'AMap.TileLayer.Satellite', 'AMap.TileLayer.RoadNet'],
     })
-
     map = new AMap.Map('map-container', {
       zoom: 5, center: [107, 33],
       mapStyle: currentMapStyle.value,
       viewMode: '2D',
       features: ['bg', 'road', 'building', 'point'],
     })
-
     infoWindow = new AMap.InfoWindow({
       isCustom: true,
       offset: new AMap.Pixel(0, -54),
       autoMove: true,
       closeWhenClickMap: true,
     })
-
     map.on('click', onMapClick)
-
-    // 地图移动/缩放时同步 SVG 流光层
     map.on('mapmove', updateAllSvgLines)
     map.on('zoomchange', updateAllSvgLines)
-
     addMarkers()
     isMapReady.value = true
     updateMarkersVisibility()
@@ -554,9 +630,6 @@ const initMap = async () => {
   }
 }
 
-// ============================================================
-// 主题切换
-// ============================================================
 const changeMapStyle = (style) => {
   if (!map) return
   map.setMapStyle(style)
@@ -588,11 +661,6 @@ const toggleRoadNet = () => {
   }
 }
 
-// ============================================================
-// 自定义测距工具
-// ============================================================
-
-// -------- 距离计算 --------
 const calcDistance = (p1, p2) => {
   try {
     const a = new AMap.LngLat(p1.lng, p1.lat)
@@ -608,7 +676,6 @@ const formatDistance = (m) => {
 
 const formatDistanceText = (m) => formatDistance(m)
 
-// -------- 节点元信息 --------
 const getNodeMeta = (group, pointIdx) => {
   const total = group.length
   if (total === 1) return { type: 'start', badge: '起', label: '起点' }
@@ -617,15 +684,12 @@ const getNodeMeta = (group, pointIdx) => {
   return { type: 'mid', badge: String(pointIdx), label: `途径点${pointIdx}` }
 }
 
-// -------- 创建节点 Marker --------
 const createNodeMarker = (point, groupIdx, pointIdx) => {
   const group = pointGroups.value[groupIdx]
   const meta = getNodeMeta(group, pointIdx)
-
   const container = document.createElement('div')
   container.className = `ranging-point ${meta.type}`
   container.innerHTML = `<div class="ranging-point-icon">${meta.badge}</div>`
-
   const marker = new AMap.Marker({
     position: [point.lng, point.lat],
     content: container,
@@ -633,7 +697,6 @@ const createNodeMarker = (point, groupIdx, pointIdx) => {
     zIndex: 200,
     map: map,
   })
-
   return { marker, container, groupIdx, pointIdx }
 }
 
@@ -641,15 +704,12 @@ const updateNodeMarker = (info) => {
   const group = pointGroups.value[info.groupIdx]
   if (!group) return
   const meta = getNodeMeta(group, info.pointIdx)
-
   const newClass = `ranging-point ${meta.type}`
   if (info.container.className !== newClass) info.container.className = newClass
-
   const iconEl = info.container.querySelector('.ranging-point-icon')
   if (iconEl && iconEl.textContent !== meta.badge) iconEl.textContent = meta.badge
 }
 
-// -------- 基础 Polyline（蓝色实线，带淡入） --------
 const createBaseLine = (p1, p2) => {
   const line = new AMap.Polyline({
     path: [[p1.lng, p1.lat], [p2.lng, p2.lat]],
@@ -661,7 +721,6 @@ const createBaseLine = (p1, p2) => {
     zIndex: 150,
     map: map,
   })
-
   let opacity = 0
   const step = () => {
     opacity += 0.08
@@ -670,11 +729,9 @@ const createBaseLine = (p1, p2) => {
     if (opacity < 0.95) requestAnimationFrame(step)
   }
   requestAnimationFrame(step)
-
   return line
 }
 
-// -------- SVG 流光层 --------
 const getPixelCoords = (lngLat) => {
   if (!map) return { x: 0, y: 0 }
   try {
@@ -729,15 +786,12 @@ const clearSvgLines = () => {
   svgLines = []
 }
 
-// -------- 距离标签 --------
 const createDistanceLabel = (p1, p2, distance) => {
   const midLng = (p1.lng + p2.lng) / 2
   const midLat = (p1.lat + p2.lat) / 2
-
   const container = document.createElement('div')
   container.className = 'ranging-distance-label'
   container.textContent = formatDistance(distance)
-
   const marker = new AMap.Marker({
     position: [midLng, midLat],
     content: container,
@@ -746,26 +800,21 @@ const createDistanceLabel = (p1, p2, distance) => {
     zIndex: 250,
     map: map,
   })
-
   return marker
 }
 
-// -------- 分组"总计"标签 --------
 const showGroupTotalLabel = (point, total, groupIdx) => {
-  // 已有该组标签则先移除
   const existing = groupTotalLabels.find(l => l.groupIdx === groupIdx)
   if (existing) {
     try { map.remove(existing.marker) } catch (e) {}
     groupTotalLabels.splice(groupTotalLabels.indexOf(existing), 1)
   }
-
   const container = document.createElement('div')
   container.className = 'ranging-group-total'
   container.innerHTML = `
     <span class="group-total-icon">∑</span>
     <span class="group-total-text">${formatDistance(total)}</span>
   `
-
   const marker = new AMap.Marker({
     position: [point.lng, point.lat],
     content: container,
@@ -774,7 +823,6 @@ const showGroupTotalLabel = (point, total, groupIdx) => {
     zIndex: 260,
     map: map,
   })
-
   groupTotalLabels.push({ groupIdx, marker })
 }
 
@@ -785,39 +833,26 @@ const clearGroupTotalLabels = () => {
   groupTotalLabels = []
 }
 
-// -------- 加点 --------
 const addRangingPoint = (lng, lat) => {
   const point = { lng, lat }
   const currentGroupIdx = pointGroups.value.length - 1
   const currentGroup = pointGroups.value[currentGroupIdx]
-
   if (currentGroup.length > 0) {
     const prev = currentGroup[currentGroup.length - 1]
     const distance = calcDistance(prev, point)
-
-    // 基础 Polyline（带淡入）
     const line = createBaseLine(prev, point)
-    // SVG 流光层
     const svgLine = createSvgFlowLine(prev, point)
-    // 距离标签
     const label = createDistanceLabel(prev, point, distance)
-
     segmentInfos.push({ from: prev, to: point, distance, line, svgLine })
     distanceLabels.push(label)
   }
-
   currentGroup.push(point)
-
   const info = createNodeMarker(point, currentGroupIdx, currentGroup.length - 1)
   nodeInfos.push(info)
-
-  // 更新该组内所有节点（"终点"可能变成"途径点"）
   const groupInfos = nodeInfos.filter(i => i.groupIdx === currentGroupIdx)
   groupInfos.forEach(i => updateNodeMarker(i))
-
   recalcTotals()
-  clearPreview()
-  // 新增线段后，立即同步一次 SVG
+  hidePreview()
   updateAllSvgLines()
 }
 
@@ -828,7 +863,16 @@ const recalcTotals = () => {
   segmentCount.value = segmentInfos.length
 }
 
-const clearPreview = () => {
+const hidePreview = () => {
+  if (previewLine) {
+    try { previewLine.setMap(null) } catch (e) {}
+  }
+  if (previewLabel) {
+    try { previewLabel.setMap(null) } catch (e) {}
+  }
+}
+
+const destroyPreview = () => {
   if (previewLine) {
     try { map.remove(previewLine) } catch (e) {}
     previewLine = null
@@ -842,12 +886,12 @@ const clearPreview = () => {
 const updatePreview = (mouseLng, mouseLat) => {
   const currentGroup = pointGroups.value[pointGroups.value.length - 1]
   if (currentGroup.length === 0) return
-
   const lastPoint = currentGroup[currentGroup.length - 1]
+  const path = [[lastPoint.lng, lastPoint.lat], [mouseLng, mouseLat]]
 
   if (!previewLine) {
     previewLine = new AMap.Polyline({
-      path: [[lastPoint.lng, lastPoint.lat], [mouseLng, mouseLat]],
+      path,
       strokeColor: '#3B82F6',
       strokeWeight: 3,
       strokeStyle: 'dashed',
@@ -859,17 +903,16 @@ const updatePreview = (mouseLng, mouseLat) => {
       map: map,
     })
   } else {
-    previewLine.setPath([[lastPoint.lng, lastPoint.lat], [mouseLng, mouseLat]])
+    previewLine.setPath(path)
+    try { previewLine.setMap(map) } catch (e) {}
   }
 
   const dist = calcDistance(lastPoint, { lng: mouseLng, lat: mouseLat })
   const previewText = '+' + formatDistance(dist)
-
   if (!previewLabel) {
     const container = document.createElement('div')
     container.className = 'ranging-preview-label'
     container.textContent = previewText
-
     previewLabel = new AMap.Marker({
       position: [mouseLng, mouseLat],
       content: container,
@@ -881,30 +924,38 @@ const updatePreview = (mouseLng, mouseLat) => {
     previewLabel.setPosition([mouseLng, mouseLat])
     const c = previewLabel.getContent()
     if (c) c.textContent = previewText
+    try { previewLabel.setMap(map) } catch (e) {}
   }
 }
 
-// -------- 清空所有测距可视化 --------
 const clearAllRanging = () => {
   if (!map) return
   nodeInfos.forEach(i => { try { map.remove(i.marker) } catch (e) {} })
   segmentInfos.forEach(s => { try { map.remove(s.line) } catch (e) {} })
   distanceLabels.forEach(l => { try { map.remove(l) } catch (e) {} })
   clearGroupTotalLabels()
-  clearPreview()
+  destroyPreview()
   clearSvgLines()
-
   nodeInfos = []
   segmentInfos = []
   distanceLabels = []
   pointGroups.value = [[]]
   totalDistance.value = 0
   segmentCount.value = 0
+  if (rafId) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
+  pendingMouseLng = null
+  pendingMouseLat = null
+  lastClickTime = 0
 }
 
-// -------- 地图事件 --------
 const onRangingClick = (e) => {
   if (!rangingActive.value) return
+  const now = Date.now()
+  if (now - lastClickTime < 60) return
+  lastClickTime = now
   addRangingPoint(e.lnglat.getLng(), e.lnglat.getLat())
 }
 
@@ -913,35 +964,41 @@ const onRangingRightClick = (e) => {
   if (e && e.originalEvent && e.originalEvent.preventDefault) {
     e.originalEvent.preventDefault()
   }
-
   const currentGroupIdx = pointGroups.value.length - 1
   const currentGroup = pointGroups.value[currentGroupIdx]
-
   if (currentGroup.length >= 2) {
-    // 计算当前组总距离
     let groupTotal = 0
     for (let i = 0; i < currentGroup.length - 1; i++) {
       groupTotal += calcDistance(currentGroup[i], currentGroup[i + 1])
     }
     const lastPoint = currentGroup[currentGroup.length - 1]
     showGroupTotalLabel(lastPoint, groupTotal, currentGroupIdx)
-
-    // 新建空组（下次点击开始新段）
     pointGroups.value.push([])
   }
-
-  clearPreview()
+  hidePreview()
 }
 
 const onRangingMouseMove = (e) => {
   if (!rangingActive.value) return
   const currentGroup = pointGroups.value[pointGroups.value.length - 1]
   if (currentGroup.length === 0) return
-  updatePreview(e.lnglat.getLng(), e.lnglat.getLat())
+
+  pendingMouseLng = e.lnglat.getLng()
+  pendingMouseLat = e.lnglat.getLat()
+
+  if (rafId) return
+  rafId = requestAnimationFrame(() => {
+    rafId = null
+    if (pendingMouseLng !== null && rangingActive.value) {
+      updatePreview(pendingMouseLng, pendingMouseLat)
+      pendingMouseLng = null
+      pendingMouseLat = null
+    }
+  })
 }
 
 const onRangingMouseOut = () => {
-  clearPreview()
+  hidePreview()
 }
 
 const startRanging = () => {
@@ -972,9 +1029,6 @@ const toggleRanging = () => {
   }
 }
 
-// ============================================================
-// 车辆箭头 SVG
-// ============================================================
 const getArrowScheme = (status) => {
   const colors = themeColors.value
   if (status === '行驶') return { id: 'driving_' + (isDarkTheme.value ? 'd' : 'l'), ...colors.driving }
@@ -1013,31 +1067,25 @@ const addMarkers = () => {
   }
   const locatedVehicles = vehicles.value.filter(v => v.hasLocation)
   if (locatedVehicles.length === 0) return
-
   locatedVehicles.forEach((v, idx) => {
     const container = document.createElement('div')
     container.className = 'custom-marker status-' + v.status
     container.style.animationDelay = (idx * 0.02) + 's'
-
     const iconWrap = document.createElement('div')
     iconWrap.className = 'arrow-icon-wrap ' + v.status
     iconWrap.style.transform = `rotate(${v.direction || 0}deg)`
     iconWrap.innerHTML = getArrowSVG(v.status)
-
     if (v.status === '行驶') {
       const ring = document.createElement('div')
       ring.className = 'arrow-pulse-ring driving'
       ring.style.borderColor = themeColors.value.driving.glow
       iconWrap.appendChild(ring)
     }
-
     const plateSpan = document.createElement('span')
     plateSpan.className = 'plate'
     plateSpan.textContent = v.plate
-
     container.appendChild(iconWrap)
     container.appendChild(plateSpan)
-
     const marker = new AMap.Marker({
       position: [v.lng, v.lat],
       content: container,
@@ -1045,16 +1093,16 @@ const addMarkers = () => {
       zIndex: 1,
       extData: { plate: v.plate },
     })
-
     marker.on('click', () => {
+      if (rangingActive.value) return
       if (highlightedPlate.value === v.plate && infoWindow.getIsOpen()) {
         closePopup()
       } else {
         openPopup(v, marker)
       }
     })
-
     marker.on('mouseover', () => {
+      if (rangingActive.value) return
       const c = marker.getContent()
       if (c) c.classList.add('hovered')
     })
@@ -1062,11 +1110,9 @@ const addMarkers = () => {
       const c = marker.getContent()
       if (c) c.classList.remove('hovered')
     })
-
     markers.push(marker)
     markerMap.set(v.plate, marker)
   })
-
   map.add(markers)
   if (markers.length) map.setFitView(markers, false, [120, 80, 80, 80])
 }
@@ -1081,21 +1127,15 @@ const highlightMarker = (marker) => {
   if (c) c.classList.add('hovered')
 }
 
-// ============================================================
-// InfoWindow
-// ============================================================
 const openPopup = (vehicle, marker) => {
   highlightedPlate.value = vehicle.plate
   highlightMarker(marker)
-
   let statusClass = 'offline'
   if (vehicle.status === '行驶') statusClass = 'driving'
   else if (vehicle.status === '静止') statusClass = 'parked'
-
   let dayOffsetText = ''
   if (vehicle.dayOffset === 1) dayOffsetText = '📅 昨天的数据'
   else if (vehicle.dayOffset === 2) dayOffsetText = '📅 前天的数据'
-
   const html = `
     <div class="amap-custom-popup ${statusClass}">
       <div class="amap-popup-accent"></div>
@@ -1135,10 +1175,8 @@ const openPopup = (vehicle, marker) => {
       </div>
     </div>
   `
-
   infoWindow.setContent(html)
   infoWindow.open(map, marker.getPosition())
-
   setTimeout(() => {
     const closeBtn = document.querySelector('.amap-popup-close')
     if (closeBtn) closeBtn.onclick = closePopup
@@ -1168,9 +1206,6 @@ const onMapClick = (e) => {
   }
 }
 
-// ============================================================
-// 筛选
-// ============================================================
 const selectedPlates = ref([])
 
 const setStatusFilter = (type) => {
@@ -1178,24 +1213,126 @@ const setStatusFilter = (type) => {
   updateMarkersVisibility()
 }
 
+// ============================================================
+// 状态优先级排序
+// ============================================================
+const getStatusPriority = (v) => {
+  if (!v.hasLocation) return 4
+  if (v.status === '行驶') return 1
+  if (v.status === '静止') return 2
+  if (v.status === '离线') return 3
+  return 4
+}
+
+const sortByStatusPriority = (list) => {
+  return [...list]
+    .map((v, idx) => ({ v, idx, p: getStatusPriority(v) }))
+    .sort((a, b) => {
+      if (a.p !== b.p) return a.p - b.p
+      return a.idx - b.idx
+    })
+    .map(item => item.v)
+}
+
+// ============================================================
+// 组织树构建
+// ============================================================
+const orgTreeRef = ref(null)
+const treeLoading = ref(false)
+
 const filteredVehicles = computed(() => {
   return vehicles.value.filter(v => {
-    if (statusFilter.value === '行驶' && v.status !== '行驶') return false
-    if (statusFilter.value === '静止' && v.status !== '静止') return false
-    if (statusFilter.value === '离线' && v.status !== '离线') return false
-    const org = v.org || v.customer_name || ''
-    const matchOrg = !selectedOrg.value || org === selectedOrg.value
-    const matchStatus = !selectedStatus.value || v.status === selectedStatus.value
-    const matchSearch = !searchKeyword.value || v.plate.includes(searchKeyword.value)
-    const matchSelected = selectedPlates.value.length === 0 || selectedPlates.value.includes(v.plate)
-    return matchOrg && matchStatus && matchSearch && matchSelected
+    if (statusFilter.value !== 'all' && v.status !== statusFilter.value) return false
+    if (selectedOrg.value) {
+      const org = v.org || v.customer_name || ''
+      if (org !== selectedOrg.value) return false
+    }
+    if (selectedStatus.value && v.status !== selectedStatus.value) return false
+    if (searchKeyword.value) {
+      const kw = searchKeyword.value.trim().toLowerCase()
+      const haystack = `${v.plate || ''} ${v.nickname || ''} ${v.vin || ''}`.toLowerCase()
+      if (!haystack.includes(kw)) return false
+    }
+    return true
   })
 })
 
-watch([selectedOrg, selectedStatus, searchKeyword, selectedPlates, statusFilter], () => {
-  updateMarkersVisibility()
-}, { deep: true })
+const visibleVehicleCount = computed(() => filteredVehicles.value.length)
 
+const buildVehicleNode = (v, level = 0) => ({
+  key: 'vehicle-' + (v.id || v.plate),
+  type: 'vehicle',
+  label: v.plate || '--',
+  plate: v.plate,
+  status: v.status,
+  hasLocation: v.hasLocation,
+  vehicle: v,
+  level,
+})
+
+// ⭐ 构建树：根节点名用 rootNodeName（子账号 = 主账号名）
+const displayTreeData = computed(() => {
+  const list = filteredVehicles.value
+  const orgs = organizations.value
+
+  const orgVehiclesMap = {}
+  const rootLevelVehicles = []
+  const unassigned = []
+
+  list.forEach(v => {
+    const orgName = v.org || v.customer_name || ''
+    if (!orgName) {
+      unassigned.push(v)
+    } else if (orgName === rootNodeName) {
+      rootLevelVehicles.push(v)
+    } else {
+      if (!orgVehiclesMap[orgName]) orgVehiclesMap[orgName] = []
+      orgVehiclesMap[orgName].push(v)
+    }
+  })
+
+  const buildOrgChildren = (parentId, level = 0) => {
+    const childOrgs = orgs.filter(o => o.parent_id === parentId)
+    const nodes = []
+    let total = 0
+    childOrgs.forEach(o => {
+      const sub = buildOrgChildren(o.id, level + 1)
+      const ownVehicles = sortByStatusPriority(orgVehiclesMap[o.name] || [])
+      const vehicleNodes = ownVehicles.map(v => buildVehicleNode(v, level))
+      const count = sub.total + vehicleNodes.length
+      total += count
+      if (count > 0) {
+        nodes.push({
+          key: 'org-' + o.id,
+          type: 'org',
+          label: o.name,
+          vehicleCount: count,
+          level,
+          children: [...sub.nodes, ...vehicleNodes],
+        })
+      }
+    })
+    return { nodes, total }
+  }
+
+  const root = buildOrgChildren(null, 1)
+
+  const rootVehicleNodes = sortByStatusPriority(rootLevelVehicles).map(v => buildVehicleNode(v, 0))
+  const unassignedNodes = sortByStatusPriority(unassigned).map(v => buildVehicleNode(v, 0))
+
+  return [{
+    key: 'root',
+    type: 'root',
+    label: rootNodeName,   // ⭐ 子账号 = 主账号名
+    vehicleCount: list.length,
+    level: 0,
+    children: [...root.nodes, ...unassignedNodes, ...rootVehicleNodes],
+  }]
+})
+
+// ============================================================
+// 选中车辆 / 定位
+// ============================================================
 const highlightVehicle = (plate) => {
   const vehicle = vehicles.value.find(v => v.plate === plate)
   if (vehicle && !vehicle.hasLocation) {
@@ -1236,59 +1373,26 @@ const updateMarkersVisibility = () => {
   }
 }
 
-// ============================================================
-// 搜索弹窗
-// ============================================================
-const dialogVisible = ref(false)
-const tempSearchKeyword = ref('')
-const tempSelectedPlates = ref([])
-
-const dialogFilteredVehicles = computed(() => {
-  if (!tempSearchKeyword.value) return vehicles.value
-  return vehicles.value.filter(v => v.plate.includes(tempSearchKeyword.value))
-})
-
-const openDialog = () => {
-  tempSearchKeyword.value = searchKeyword.value
-  tempSelectedPlates.value = [...selectedPlates.value]
-  dialogVisible.value = true
-}
-const confirmSearch = () => {
-  searchKeyword.value = tempSearchKeyword.value
-  selectedPlates.value = [...tempSelectedPlates.value]
-  dialogVisible.value = false
+watch([selectedOrg, selectedStatus, searchKeyword, selectedPlates, statusFilter], () => {
   updateMarkersVisibility()
-}
-const cancelSearch = () => { dialogVisible.value = false }
-const selectAll = () => {
-  const allPlates = dialogFilteredVehicles.value.map(v => v.plate)
-  const allSelected = allPlates.every(p => tempSelectedPlates.value.includes(p))
-  if (allSelected) {
-    tempSelectedPlates.value = tempSelectedPlates.value.filter(p => !allPlates.includes(p))
-  } else {
-    const toAdd = allPlates.filter(p => !tempSelectedPlates.value.includes(p))
-    tempSelectedPlates.value = [...tempSelectedPlates.value, ...toAdd]
-  }
-}
+}, { deep: true })
+
+const handleSearch = () => {}
+
 const resetAll = () => {
   selectedOrg.value = ''
   selectedStatus.value = ''
   searchKeyword.value = ''
-  tempSearchKeyword.value = ''
   selectedPlates.value = []
-  tempSelectedPlates.value = []
   statusFilter.value = 'all'
   closePopup()
   updateMarkersVisibility()
 }
 
-// ============================================================
-// 列表折叠 + 拖拽
-// ============================================================
 const isListCollapsed = ref(false)
 const toggleList = () => { isListCollapsed.value = !isListCollapsed.value }
 
-const listWidth = ref(220)
+const listWidth = ref(260)
 const isResizing = ref(false)
 const startResize = (e) => {
   e.preventDefault()
@@ -1298,7 +1402,7 @@ const startResize = (e) => {
   const startWidth = listWidth.value
   const onMouseMove = (ev) => {
     const newWidth = startWidth + (ev.clientX - startX)
-    listWidth.value = Math.min(400, Math.max(200, newWidth))
+    listWidth.value = Math.min(440, Math.max(220, newWidth))
   }
   const onMouseUp = () => {
     isResizing.value = false
@@ -1311,11 +1415,30 @@ const startResize = (e) => {
 
 onMounted(async () => {
   await nextTick()
+  if (isCustomer) await loadMyCustomerId()
   await loadVehicles(false)
   await initMap()
+  document.body.style.overflow = 'hidden'
+  document.documentElement.style.overflow = 'hidden'
+})
+
+onActivated(async () => {
+  if (isCustomer && !myCustomerId.value) await loadMyCustomerId()
+  await loadOrganizations()
+  await syncVehicleOrgFields()
+  if (isMapReady.value) {
+    addMarkers()
+    updateMarkersVisibility()
+  }
 })
 
 onBeforeUnmount(() => {
+  document.body.style.overflow = ''
+  document.documentElement.style.overflow = ''
+  if (rafId) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
   if (map) {
     try { map.off('click', onMapClick) } catch (e) {}
     try { map.off('click', onRangingClick) } catch (e) {}
@@ -1331,11 +1454,38 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.fullmap { height: 100vh; width: 100%; overflow: hidden; padding: 12px; box-sizing: border-box; background: #f0f2f5; }
-.map-stage { position: relative; height: 100%; width: 100%; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06); background: #F8FAFC; }
-.map-container { position: absolute; inset: 0; width: 100%; height: 100%; }
-
-/* ===== SVG 流光覆盖层 ===== */
+/* ============================================================
+   页面基础
+   ============================================================ */
+.fullmap {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  padding: 12px;
+  box-sizing: border-box;
+  background: #f0f2f5;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+.map-stage {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  background: #F8FAFC;
+  overscroll-behavior: none;
+}
+.map-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
 .ranging-svg {
   position: absolute;
   inset: 0;
@@ -1346,10 +1496,16 @@ onBeforeUnmount(() => {
   overflow: visible;
 }
 
+/* 顶部栏 */
 .top-bar {
-  position: absolute; top: 16px; right: 16px; left: 260px;
-  z-index: 50; display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; pointer-events: none;
+  position: absolute;
+  top: 16px; right: 16px; left: 300px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
 }
 .left-group { display: flex; align-items: center; gap: 10px; pointer-events: auto; min-width: 0; }
 .stats-pills {
@@ -1428,7 +1584,7 @@ onBeforeUnmount(() => {
 .ctrl-btn.active:hover { color: #ffffff; box-shadow: 0 6px 16px rgba(200, 16, 46, 0.5); }
 .ctrl-btn .el-icon { font-size: 13px; }
 
-/* 测距总览面板 */
+/* 测距摘要 */
 .ranging-summary {
   position: absolute;
   bottom: 24px;
@@ -1470,105 +1626,350 @@ onBeforeUnmount(() => {
 .summary-slide-enter-active, .summary-slide-leave-active { transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .summary-slide-enter-from, .summary-slide-leave-to { opacity: 0; transform: translateX(-50%) translateY(20px); }
 
+/* 悬浮左侧面板 */
 .floating-sidebar {
-  position: absolute; top: 16px; bottom: 16px; left: 16px; z-index: 60;
-  background: rgba(255, 255, 255, 0.88);
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 60;
+  height: calc(100% - 32px);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
-  display: flex; flex-direction: column; overflow: hidden;
-  transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); min-width: 44px;
+  overflow: hidden;
+  transition:
+    width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+    height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    border-radius 0.3s;
+  min-width: 44px;
+  will-change: width, height;
 }
-.sidebar-content { display: flex; flex-direction: column; height: 100%; overflow: hidden; width: 100%; }
-.sidebar-filter { padding: 12px; border-bottom: 1px solid rgba(226, 232, 240, 0.6); flex-shrink: 0; }
-:deep(.sidebar-filter .el-input__wrapper), :deep(.sidebar-filter .el-select__wrapper) {
-  border-radius: 8px !important; background: rgba(248, 250, 252, 0.8) !important;
+.floating-sidebar.collapsed {
+  height: 56px;
+  border-radius: 999px;
 }
-:deep(.sidebar-filter .el-input__wrapper.is-focus), :deep(.sidebar-filter .el-select__wrapper.is-focused) {
-  box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.15), 0 0 0 1px #c8102e inset !important; background: #ffffff !important;
+
+.sidebar-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition:
+    opacity 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0.24s;
+  will-change: opacity;
+  visibility: visible;
+  opacity: 1;
 }
-.search-trigger :deep(.el-input__wrapper) { cursor: pointer; }
-.search-trigger :deep(.el-input__inner) { cursor: pointer; }
+.sidebar-content.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0s;
+}
+
+/* 筛选栏 */
+.sidebar-filter {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  flex-shrink: 0;
+}
+:deep(.sidebar-filter .el-input__wrapper),
+:deep(.sidebar-filter .el-select__wrapper) {
+  border-radius: 8px !important;
+  background: rgba(248, 250, 252, 0.8) !important;
+}
+:deep(.sidebar-filter .el-input__wrapper.is-focus),
+:deep(.sidebar-filter .el-select__wrapper.is-focused) {
+  box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.15), 0 0 0 1px #c8102e inset !important;
+  background: #ffffff !important;
+}
+.search-row { margin-top: 8px; }
 .filter-buttons { display: flex; gap: 8px; margin-top: 8px; }
 .btn-reset, .btn-search { flex: 1; border-radius: 8px !important; font-weight: 600 !important; font-size: 12px !important; }
-.btn-reset { border-color: #CBD5E1; color: #334155; }
+.btn-reset { border-color: #CBD5E1; color: #334155; background: #fff; }
 .btn-reset:hover { border-color: #c8102e; color: #c8102e; background: #FEF2F2; }
 .btn-search { background: linear-gradient(135deg, #c8102e, #a00d24) !important; border: none !important; color: #ffffff !important; }
 .btn-search:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(200, 16, 46, 0.3); }
 
+/* 头部 */
 .sidebar-list-header {
-  padding: 10px 12px; display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px;
+  display: flex; align-items: center; gap: 6px;
   font-size: 13px; font-weight: 700; color: #0F172A;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.6); flex-shrink: 0;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  flex-shrink: 0;
 }
-.list-icon { color: #c8102e; font-size: 15px; }
-.list-count { color: #94A3B8; font-weight: 600; font-size: 12px; }
+.list-icon { color: #c8102e; font-size: 15px; flex-shrink: 0; }
+.header-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: 0.3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.list-count { color: #c8102e; font-weight: 700; font-size: 12px; font-family: 'Courier New', monospace; flex-shrink: 0; }
 .collapse-btn {
-  margin-left: auto; width: 24px; height: 24px;
+  width: 24px; height: 24px;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 6px; cursor: pointer; color: #64748B; font-size: 13px; transition: all 0.25s;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #64748B; font-size: 13px;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  flex-shrink: 0;
 }
-.collapse-btn:hover { background: #F1F5F9; color: #c8102e; transform: scale(1.1); }
-.sidebar-list { flex: 1; overflow-y: auto; padding: 6px; }
-.sidebar-list::-webkit-scrollbar { width: 4px; }
-.sidebar-list::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 2px; }
+.collapse-btn:hover { background: #F1F5F9; color: #c8102e; transform: scale(1.15); }
+.collapse-btn:hover .collapse-icon { transform: translateX(-2px); }
+.collapse-icon { transition: transform 0.3s; }
 
-.vehicle-item {
-  display: flex; align-items: center; gap: 6px; padding: 7px 8px; margin-bottom: 2px;
-  border-radius: 7px; cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  border-left: 2px solid transparent; font-size: 12.5px; white-space: nowrap; overflow: hidden;
+/* 组织树 */
+.sidebar-tree {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 2px;
+  scrollbar-width: thin;
 }
-.vehicle-item:hover { background: rgba(248, 250, 252, 0.9); transform: translateX(3px); }
-.vehicle-item.active { background: rgba(254, 242, 242, 0.95); border-left-color: #c8102e; box-shadow: 0 2px 6px rgba(200, 16, 46, 0.08); }
-.vehicle-item.no-loc { opacity: 0.45; }
-.vehicle-item.no-loc:hover { transform: none; }
-.vehicle-status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.vehicle-status-dot.行驶 { background: #10B981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18); animation: dotPulseGreen 2s ease-in-out infinite; }
-.vehicle-status-dot.静止 { background: #F59E0B; box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18); }
-.vehicle-status-dot.离线 { background: #64748B; }
-.vehicle-plate { font-weight: 700; color: #0F172A; font-size: 12.5px; flex-shrink: 0; }
-.vehicle-vin { color: #94A3B8; font-size: 11px; font-family: 'Courier New', monospace; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.vehicle-status-tag { margin-left: auto; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px; flex-shrink: 0; }
-.vehicle-status-tag.行驶 { background: #D1FAE5; color: #065F46; }
-.vehicle-status-tag.静止 { background: #FEF3C7; color: #92400E; }
-.vehicle-status-tag.离线 { background: #F1F5F9; color: #475569; }
+.sidebar-tree::-webkit-scrollbar { width: 4px; }
+.sidebar-tree::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 2px; }
+.sidebar-tree::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 
-.list-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 40px 20px; color: #94A3B8; font-size: 12px; }
+.org-tree { background: transparent; }
+
+.org-tree :deep(.el-tree-node__content) {
+  height: 24px;
+  line-height: 24px;
+  border-radius: 4px;
+  margin: 0;
+  padding: 0 !important;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.org-tree :deep(.el-tree-node__content:hover) {
+  background: rgba(254, 242, 242, 0.7);
+}
+.org-tree :deep(.el-tree-node.is-current > .el-tree-node__content) {
+  background: rgba(254, 242, 242, 0.85);
+}
+
+/* 三角图标统一宽度 */
+.org-tree :deep(.el-tree-node__expand-icon) {
+  width: 24px;
+  padding: 0;
+  font-size: 11px;
+  color: #94A3B8;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.org-tree :deep(.el-tree-node__expand-icon.is-leaf) {
+  color: transparent;
+  cursor: default;
+}
+
+.tree-node {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding-right: 4px;
+}
+
+/* 组织节点 */
+.tree-node-org .org-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #0F172A;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+.tree-node-org.type-root .org-label {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  font-size: 12.5px;
+}
+.tree-node-org .org-count {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #c8102e;
+  font-family: 'Courier New', monospace;
+  letter-spacing: -0.3px;
+  line-height: 1;
+}
+.tree-node-org .org-count.empty {
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+/* 车辆节点 */
+.tree-node-vehicle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 4px 0 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 0;
+  flex: 1;
+  line-height: 1;
+}
+.tree-node-vehicle:hover {
+  background: rgba(254, 242, 242, 0.6);
+}
+.tree-node-vehicle.active {
+  background: linear-gradient(90deg, rgba(254, 202, 202, 0.55), rgba(254, 242, 242, 0.25));
+  box-shadow: none;
+}
+.tree-node-vehicle.no-loc {
+  opacity: 0.45;
+}
+
+.tree-node-vehicle .vehicle-plate {
+  font-weight: 600;
+  color: #0F172A;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+  letter-spacing: 0.2px;
+}
+
+.tree-node-vehicle .vehicle-status-tag {
+  flex-shrink: 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 0 5px;
+  line-height: 15px;
+  height: 15px;
+  border-radius: 7.5px;
+  letter-spacing: 0.1px;
+  display: inline-flex;
+  align-items: center;
+}
+.tree-node-vehicle .vehicle-status-tag.行驶 { background: #D1FAE5; color: #065F46; }
+.tree-node-vehicle .vehicle-status-tag.静止 { background: #FEF3C7; color: #92400E; }
+.tree-node-vehicle .vehicle-status-tag.离线 { background: #F1F5F9; color: #64748B; }
+
+.list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 50px 20px;
+  color: #94A3B8;
+  font-size: 12px;
+}
 .list-empty .el-icon { font-size: 26px; color: #CBD5E1; }
 
-.sidebar-collapsed { display: flex; flex-direction: column; height: 100%; align-items: center; padding: 8px 0; }
-.collapse-btn-vertical {
-  width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 8px; cursor: pointer; color: #64748B;
-  transition: all 0.25s; background: rgba(241, 245, 249, 0.6);
+/* 收起态 */
+.sidebar-collapsed {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0.2s;
 }
-.collapse-btn-vertical:hover { background: #FEF2F2; color: #c8102e; transform: scale(1.1); }
+.sidebar-collapsed.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1) 0.12s,
+    visibility 0s linear 0s;
+}
+.collapse-btn-vertical {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #475569;
+  background: linear-gradient(135deg, #ffffff, #F8FAFC);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(203, 213, 225, 0.6) inset;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.collapse-btn-vertical:hover {
+  color: #c8102e;
+  background: linear-gradient(135deg, #FEF2F2, #FEE2E2);
+  transform: scale(1.12);
+  box-shadow:
+    0 4px 14px rgba(200, 16, 46, 0.25),
+    0 0 0 1px rgba(200, 16, 46, 0.3) inset;
+}
+.collapse-btn-vertical:hover .collapse-icon { transform: translateX(2px); }
 
-.resizer { position: absolute; top: 0; right: -3px; width: 6px; height: 100%; cursor: col-resize; z-index: 10; }
+.resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+}
 .resizer:hover { background: rgba(200, 16, 46, 0.08); }
 .resizer::after {
-  content: ''; position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%); width: 2px; height: 24px;
-  background: #CBD5E1; border-radius: 1px; opacity: 0;
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px; height: 24px;
+  background: #CBD5E1;
+  border-radius: 1px;
+  opacity: 0;
 }
 .resizer:hover::after { opacity: 1; }
 
-.list-item-enter-active, .list-item-leave-active { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.list-item-enter-from { opacity: 0; transform: translateX(-20px); }
-.list-item-leave-to { opacity: 0; transform: translateX(20px); }
-
+/* 加载 & 空状态 */
 .map-loading-overlay {
-  position: absolute; inset: 0;
+  position: absolute;
+  inset: 0;
   background: rgba(248, 250, 252, 0.9);
   backdrop-filter: blur(8px);
-  display: flex; align-items: center; justify-content: center; z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
 }
 .loading-card {
-  background: #ffffff; border-radius: 16px; padding: 28px 40px;
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 28px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
   box-shadow: 0 20px 60px rgba(200, 16, 46, 0.15);
   animation: loadingCardIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -1585,17 +1986,29 @@ onBeforeUnmount(() => {
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
 .map-empty {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  z-index: 150; text-align: center; padding: 30px 40px;
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 150;
+  text-align: center;
+  padding: 30px 40px;
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px); border-radius: 16px;
+  backdrop-filter: blur(8px);
+  border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
 }
 .empty-icon-wrap {
-  display: flex; width: 72px; height: 72px; border-radius: 50%;
+  display: flex;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
   background: linear-gradient(135deg, #FEF2F2, #FCA5A5);
-  align-items: center; justify-content: center;
+  align-items: center;
+  justify-content: center;
   animation: emptyFloat 3s ease-in-out infinite;
 }
 .empty-icon-wrap.warning { background: linear-gradient(135deg, #FFFBEB, #FCD34D); }
@@ -1604,21 +2017,6 @@ onBeforeUnmount(() => {
 @keyframes emptyFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 .map-empty p { margin: 0; font-size: 16px; color: #0F172A; font-weight: 700; }
 .map-empty span { font-size: 13px; color: #64748B; font-weight: 500; }
-
-:deep(.amap-info-content) { padding: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important; }
-:deep(.amap-info-window) { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
-:deep(.amap-info-close) { display: none !important; }
-
-:deep(.vehicle-dialog .el-dialog) { border-radius: 12px; overflow: hidden; }
-:deep(.vehicle-dialog .el-dialog__header) { padding: 16px 20px; border-bottom: 1px solid #F1F5F9; }
-:deep(.vehicle-dialog .el-dialog__title) { font-weight: 700; color: #0F172A; }
-:deep(.vehicle-dialog .el-dialog__body) { padding: 16px 20px; }
-.dialog-search-row { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
-.dialog-list { max-height: 380px; overflow-y: auto; padding: 4px 0; }
-.dialog-item { padding: 6px 0; }
-.dialog-empty { text-align: center; color: #94A3B8; padding: 30px 0; font-size: 13px; }
-:deep(.btn-primary) { background-color: #c8102e !important; border-color: #c8102e !important; color: #fff !important; font-weight: 600; }
-:deep(.btn-primary:hover) { background-color: #a00d24 !important; border-color: #a00d24 !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(200, 16, 46, 0.3); }
 
 @media (max-width: 1400px) {
   .pill-label { display: none; }
@@ -1638,7 +2036,7 @@ onBeforeUnmount(() => {
 </style>
 
 <!-- ==========================================
-   非 scoped：地图标记 + InfoWindow + 测距
+   非 scoped：地图标记 + InfoWindow + 测距样式
    ========================================== -->
 <style>
 .custom-marker {
@@ -1748,9 +2146,6 @@ onBeforeUnmount(() => {
 .amap-info-content { padding: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important; }
 .amap-info-window { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
 
-/* ==========================================
-   SVG 流光线条
-   ========================================== */
 .ranging-svg-base {
   stroke: #3B82F6;
   stroke-width: 5;
@@ -1759,7 +2154,6 @@ onBeforeUnmount(() => {
   stroke-linejoin: round;
   filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.7));
 }
-
 .ranging-svg-flow {
   stroke: #E0F2FE;
   stroke-width: 2.5;
@@ -1769,15 +2163,11 @@ onBeforeUnmount(() => {
   filter: drop-shadow(0 0 5px #93C5FD) drop-shadow(0 0 10px #3B82F6);
   animation: rangingFlowMove 1.4s linear infinite;
 }
-
 @keyframes rangingFlowMove {
   from { stroke-dashoffset: 0; }
   to { stroke-dashoffset: -44; }
 }
 
-/* ==========================================
-   测距节点
-   ========================================== */
 .ranging-point {
   display: flex;
   flex-direction: column;
@@ -1791,7 +2181,6 @@ onBeforeUnmount(() => {
   60% { opacity: 1; transform: translateY(2px) scale(1.18); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
-
 .ranging-point-icon {
   position: relative;
   width: 28px;
@@ -1811,7 +2200,6 @@ onBeforeUnmount(() => {
   user-select: none;
   z-index: 2;
 }
-
 .ranging-point.start .ranging-point-icon {
   background: linear-gradient(135deg, #34D399, #059669);
   box-shadow: 0 3px 10px rgba(16, 185, 129, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.06);
@@ -1829,12 +2217,10 @@ onBeforeUnmount(() => {
   0% { transform: scale(0.85); opacity: 0.9; }
   100% { transform: scale(1.9); opacity: 0; }
 }
-
 .ranging-point.mid .ranging-point-icon {
   background: linear-gradient(135deg, #60A5FA, #3B82F6);
   box-shadow: 0 3px 10px rgba(59, 130, 246, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
-
 .ranging-point.end .ranging-point-icon {
   background: linear-gradient(135deg, #F87171, #DC2626);
   box-shadow: 0 3px 12px rgba(220, 38, 38, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.06);
@@ -1845,9 +2231,6 @@ onBeforeUnmount(() => {
   50% { box-shadow: 0 3px 16px rgba(220, 38, 38, 0.75), 0 0 0 1px rgba(0, 0, 0, 0.06); }
 }
 
-/* ==========================================
-   距离标签 / 预览 / 分组总计
-   ========================================== */
 .ranging-distance-label {
   padding: 3px 9px;
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
@@ -1866,7 +2249,6 @@ onBeforeUnmount(() => {
   from { opacity: 0; transform: scale(0.5); }
   to { opacity: 1; transform: scale(1); }
 }
-
 .ranging-preview-label {
   padding: 2px 7px;
   background: rgba(59, 130, 246, 0.92);
@@ -1908,9 +2290,7 @@ onBeforeUnmount(() => {
   opacity: 0.9;
   filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.6));
 }
-.group-total-text {
-  letter-spacing: 0.3px;
-}
+.group-total-text { letter-spacing: 0.3px; }
 @keyframes groupTotalPop {
   0% { opacity: 0; transform: scale(0.4) rotate(-8deg); }
   60% { transform: scale(1.15) rotate(2deg); }

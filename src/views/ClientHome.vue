@@ -36,11 +36,43 @@ const countUp = (target, setter, duration = 900) => {
 const loadData = async () => {
   loading.value = true
   try {
-    // 客户只查自己的车辆
-    let query = supabase.from('vehicles').select('*').order('updated_at', { ascending: false })
-    if (currentUser?.role === 'customer' && currentUser?.customerId) {
-      query = query.eq('customer_id', currentUser.customerId)
+    // ============================================================
+    // ⭐ 客户：永远按 phone 反查 customers 表拿真实的 uuid
+    // 不信 localStorage 里的 customerId（可能是整数或脏数据）
+    // ============================================================
+    let customerId = null
+
+    if (currentUser?.role === 'customer') {
+      if (!currentUser?.phone) {
+        console.warn('[ClientHome] 客户账号没有 phone 字段')
+        myVehicles.value = []
+        return
+      }
+      const { data: c, error: cErr } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('phone', currentUser.phone)
+        .limit(1)
+      if (cErr) throw cErr
+      if (Array.isArray(c) && c[0]) {
+        customerId = c[0].id                    // uuid
+        console.log('[ClientHome] 反查到的 customerId =', customerId)
+      } else {
+        console.warn('[ClientHome] customers 表里找不到 phone =', currentUser.phone)
+        myVehicles.value = []
+        return
+      }
     }
+
+    let query = supabase
+      .from('vehicles')
+      .select('*')
+      .order('updated_at', { ascending: false })
+
+    if (currentUser?.role === 'customer') {
+      query = query.eq('customer_id', customerId)     // uuid 对上 uuid
+    }
+
     const { data, error } = await query
     if (error) throw error
 

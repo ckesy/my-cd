@@ -41,10 +41,19 @@ onBeforeUnmount(() => {
 })
 
 // ============================================================
+// 解析角色权限
+// ============================================================
+const parseRolePerms = (p) => {
+  if (Array.isArray(p)) return p
+  if (p && typeof p === 'object' && Array.isArray(p.client)) return p.client
+  return []
+}
+
+// ============================================================
 // 登录
 // ============================================================
 const handleLogin = async () => {
-  if (!phone.value) { ElMessage.warning('请输入手机号'); return }
+  if (!phone.value) { ElMessage.warning('请输入登录账号 / 手机号'); return }
   if (!agreed.value) { ElMessage.warning('请先阅读并同意用户协议'); return }
 
   if (activeTab.value === 'password') {
@@ -54,76 +63,264 @@ const handleLogin = async () => {
   }
 
   try {
-    // 👇 关键：在查询数据库前先确保匿名登录
     await ensureAnonymousLogin()
 
-    // ① 先查 admins 表（不加 status 过滤，查到再判断）
-    const { data: adminData, error: adminError } = await supabase
-      .from('admins')
+    // ============================================================
+    // 1️⃣ 查询用户
+    // ============================================================
+    let userData = null
+
+    const res1 = await supabase
+      .from('users')
       .select('*')
-      .eq('phone', phone.value)
+      .eq('account', phone.value)
       .maybeSingle()
 
-    if (adminError && adminError.code !== 'PGRST116') throw adminError
+    if (res1.data) userData = res1.data
 
-    if (adminData) {
-      if (activeTab.value === 'password' && adminData.password !== password.value) {
-        ElMessage.error('手机号或密码不正确')
-        return
-      }
-      if (Number(adminData.status) !== 1) {
-        ElMessage.error('账号已被禁用，请联系管理员')
-        return
-      }
+    if (!userData) {
+      const res2 = await supabase
+        .from('users')
+        .select('*')
+        .eq('phone', phone.value)
+        .limit(1)
 
-      const account = {
-        id: adminData.id,
-        phone: adminData.phone,
-        name: adminData.name,
-        role: 'admin',
+      if (res2.data && res2.data.length > 0) {
+        userData = res2.data[0]
       }
-      localStorage.setItem('currentUser', JSON.stringify(account))
-      localStorage.setItem('originalUser', JSON.stringify(account))
-      playWelcome('/portal')
+    }
+
+    console.log('[登录调试] 查到用户:', userData)
+
+    if (!userData) {
+      ElMessage.error('账号或密码不正确')
       return
     }
 
-    // ② 再查 customers 表（不加 status 过滤）
-    const { data: customerData, error: customerError } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('phone', phone.value)
-      .maybeSingle()
-
-    if (customerError && customerError.code !== 'PGRST116') throw customerError
-
-    if (!customerData) {
-      ElMessage.error('手机号或密码不正确')
+    // 密码校验
+    if (activeTab.value === 'password' && userData.password !== password.value) {
+      ElMessage.error('账号或密码不正确')
       return
     }
 
-    if (activeTab.value === 'password' && customerData.password !== password.value) {
-      ElMessage.error('手机号或密码不正确')
-      return
-    }
-
-    if (Number(customerData.status) !== 1) {
+    // 状态校验
+    if (Number(userData.status) !== 1) {
       ElMessage.error('账号已被禁用，请联系管理员')
       return
     }
 
-    const account = {
-      id: customerData.id,
-      phone: customerData.phone,
-      name: customerData.name,
-      role: 'customer',
-      customerId: customerData.id,
-      platforms: customerData.platforms || [],
-      permissions: customerData.permissions || {},
+    // ============================================================
+    // 2️⃣ ⭐ 判断是否子账号（owner_account 有值且不等于自己）
+    //    这个字段是最可靠的判据：有它一定不是系统管理员
+    // ============================================================
+    const ownerAccount = String(userData.owner_account || '').trim()
+    const isSubAccount = !!ownerAccount && ownerAccount !== userData.account
+
+    // 查主账号信息
+    let masterUser = null
+    if (isSubAccount) {
+      try {
+        const { data: master } = await supabase
+          .from('users')
+          .select('id, account, name, phone, email')
+          .eq('account', ownerAccount)
+          .maybeSingle()
+        if (master) masterUser = master
+      } catch (err) {
+        console.warn('[登录] 查询主账号失败:', err)
+      }
     }
+
+    console.log('[登录调试] 主账号:', masterUser, '| 是否子账号:', isSubAccount)
+
+    // ============================================================
+    // 3️⃣ 判断角色类型（⭐ 子账号强制不是管理员）
+    // ============================================================
+    const roleId = Number(userData.role_id) || 0
+    let isAdmin = false
+    let roleData = null
+
+    // ⭐⭐⭐ 子账号一定不是管理员，跳过所有管理员判定
+    if (!isSubAccount) {
+      // 第一层：查 roles 表
+      if (roleId > 0) {
+        try {
+          const { data } = await supabase
+            .from('roles')
+            .select('code, name, permissions')
+            .eq('id', roleId)
+            .maybeSingle()
+          roleData = data || null
+
+          if (roleData) {
+            const roleCode = String(roleData.code || '').toLowerCase().trim()
+            const roleName = String(roleData.name || '')
+            isAdmin = roleCode === 'admin' || roleName.includes('管理员')
+          }
+        } catch (err) {
+          console.warn('[登录] 查询角色表失败:', err)
+        }
+      }
+
+      // 第二层：看 users.name
+      if (!isAdmin) {
+        const userName = String(userData.name || '').toLowerCase()
+        if (userName.includes('管理员') || userName.includes('admin')) {
+          isAdmin = true
+        }
+      }
+
+      // 第三层：role_id = 1/2 的旧约定
+      if (!isAdmin && [1, 2].includes(roleId)) {
+        isAdmin = true
+      }
+    } else {
+      // 子账号也需要 roleData 来显示角色名（但不参与管理员判定）
+      if (roleId > 0) {
+        try {
+          const { data } = await supabase
+            .from('roles')
+            .select('code, name, permissions')
+            .eq('id', roleId)
+            .maybeSingle()
+          roleData = data || null
+        } catch (err) {
+          console.warn('[登录] 查询子账号角色失败:', err)
+        }
+      }
+    }
+
+    // ============================================================
+    // 4️⃣ 计算最终权限
+    // ============================================================
+    const rolePermissions = parseRolePerms(roleData?.permissions)
+    const userPermissions = parseRolePerms(userData.permissions)
+
+    let mergedPermissions = Array.from(
+      new Set([...rolePermissions, ...userPermissions])
+    )
+
+    // ⭐⭐ 子账号：剔除 system（系统管理只能管理员/主账号使用）
+    if (isSubAccount) {
+      mergedPermissions = mergedPermissions.filter(p => p !== 'system')
+    }
+
+    const roleType = isAdmin ? 'admin' : 'customer'
+    const clientPerms = isAdmin ? [] : mergedPermissions
+
+    // ============================================================
+    // 5️⃣ 计算最终显示名 / 主账号信息
+    // ============================================================
+    const customerName = masterUser?.name || userData.name || ''
+    const masterAccount = masterUser?.account || ''
+    const masterName = masterUser?.name || ''
+    const masterPhone = masterUser?.phone || ''
+
+    const account = {
+      id: userData.id,
+      account: userData.account,
+      phone: userData.phone,
+      name: userData.name,
+      email: userData.email,
+      role: roleType,
+      roleId: userData.role_id,
+      roleName: roleData?.name || '',
+      orgId: userData.org_id,
+      org: userData.org || '',
+      customerId: isAdmin ? undefined : userData.id,
+      platforms: userData.platforms || [],
+      permissions: {
+        client: clientPerms,
+      },
+      // ⭐ 子账号信息
+      ownerAccount,
+      masterAccount,
+      masterName,
+      masterPhone,
+      customerName,
+      // ⭐ 明确标记
+      isSubAccount,
+    }
+
+    // ============================================================
+    // 6️⃣ ⭐ 主账号登录：从 customers 表读权限（管理端配的）
+    //    ⭐ 子账号登录：不读 customers（权限来自自己的 users.permissions）
+    // ============================================================
+    if (!isAdmin && !isSubAccount && userData.phone) {
+      try {
+        const { data: cList, error: cErr } = await supabase
+          .from('customers')
+          .select('id, permissions, platforms, status')
+          .eq('phone', userData.phone)
+          .limit(1)
+
+        if (cErr) throw cErr
+
+        if (Array.isArray(cList) && cList[0]) {
+          const c = cList[0]
+
+          // 挂上真实 uuid
+          account.customerId = c.id
+
+          // 解析 customers.permissions
+          let cp = []
+          if (Array.isArray(c.permissions)) {
+            cp = c.permissions
+          } else if (c.permissions && typeof c.permissions === 'object') {
+            cp = Array.isArray(c.permissions.client) ? c.permissions.client : []
+          }
+
+          // 覆盖权限
+          if (cp.length > 0) {
+            account.permissions = { client: cp }
+            console.log('[登录] ✅ 主账号权限已从 customers 表加载:', cp)
+          } else {
+            console.warn('[登录] ⚠️ customers.permissions 为空，保留 roles/users 合并权限:', clientPerms)
+          }
+
+          if (Array.isArray(c.platforms)) {
+            account.platforms = c.platforms
+          }
+        } else {
+          console.warn('[登录] customers 表里找不到 phone =', userData.phone)
+        }
+      } catch (e) {
+        console.warn('[登录] 查询 customers.permissions 失败:', e)
+      }
+    }
+
+    // ============================================================
+    // 7️⃣ ⭐ 子账号：从主账号 customers 表拿 customerId（用于查车辆）
+    //    但不覆盖权限（权限是子账号自己的）
+    // ============================================================
+    if (!isAdmin && isSubAccount && masterUser?.phone) {
+      try {
+        const { data: cList } = await supabase
+          .from('customers')
+          .select('id, platforms')
+          .eq('phone', masterUser.phone)
+          .limit(1)
+        if (Array.isArray(cList) && cList[0]) {
+          account.customerId = cList[0].id
+          if (Array.isArray(cList[0].platforms)) {
+            account.platforms = cList[0].platforms
+          }
+        }
+      } catch (e) {
+        console.warn('[登录] 查询主账号 customers 失败:', e)
+      }
+    }
+
+    console.log('[登录调试] 最终 currentUser:', account)
+
     localStorage.setItem('currentUser', JSON.stringify(account))
     localStorage.setItem('originalUser', JSON.stringify(account))
-    playWelcome('/dashboard')
+
+    if (isAdmin) {
+      playWelcome('/portal')
+    } else {
+      playWelcome('/dashboard')
+    }
   } catch (e) {
     console.error(e)
     ElMessage.error('登录异常：' + (e?.message || e))
@@ -160,25 +357,14 @@ const playWelcome = (target = '/dashboard') => {
 
 <template>
   <div class="login-page">
-    <!-- ========== 全屏背景视频 ========== -->
-    <video
-      class="bg-video"
-      autoplay
-      muted
-      loop
-      playsinline
-      webkit-playsinline
-      preload="auto"
-    >
+    <video class="bg-video" autoplay muted loop playsinline webkit-playsinline preload="auto">
       <source src="/login-bg.mp4" type="video/mp4" />
     </video>
 
-    <!-- ========== 顶部栏：Logo + 用户图标 ========== -->
     <div class="top-bar">
       <div class="logo-wrap">
         <img src="/DFLOGO.png" alt="东风商用车" class="logo-img" />
       </div>
-
       <button class="user-btn" @click="openLogin" title="登录">
         <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="8" r="4" />
@@ -187,7 +373,6 @@ const playWelcome = (target = '/dashboard') => {
       </button>
     </div>
 
-    <!-- ========== 登录弹层 ========== -->
     <transition name="backdrop">
       <div v-if="showLogin" class="backdrop" @click="handleBackdropClick">
         <transition name="login-card" appear>
@@ -212,7 +397,7 @@ const playWelcome = (target = '/dashboard') => {
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </div>
-                <input v-model="phone" type="tel" placeholder="请输入手机号" class="field" maxlength="11" />
+                <input v-model="phone" type="text" placeholder="请输入登录账号 / 手机号" class="field" maxlength="32" />
               </div>
 
               <div v-if="activeTab === 'password'" class="input-wrap">
@@ -273,7 +458,6 @@ const playWelcome = (target = '/dashboard') => {
       </div>
     </transition>
 
-    <!-- ========== 登录成功 · 全屏欢迎动画 ========== -->
     <div v-if="showWelcome" class="welcome-overlay" :class="{ leaving: welcomeLeaving }">
       <div class="welcome-particles">
         <span
@@ -311,9 +495,6 @@ const playWelcome = (target = '/dashboard') => {
 </template>
 
 <style scoped>
-/* ==========================================
-   页面基础
-   ========================================== */
 .login-page {
   position: relative;
   width: 100vw;
@@ -333,9 +514,6 @@ const playWelcome = (target = '/dashboard') => {
   pointer-events: none;
 }
 
-/* ==========================================
-   顶部栏
-   ========================================== */
 .top-bar {
   position: absolute;
   top: -50px;
@@ -393,9 +571,6 @@ const playWelcome = (target = '/dashboard') => {
 .user-btn svg { transition: transform 0.3s; }
 .user-btn:hover svg { transform: scale(1.08); }
 
-/* ==========================================
-   登录弹层
-   ========================================== */
 .backdrop {
   position: fixed;
   inset: 0;
@@ -614,9 +789,6 @@ const playWelcome = (target = '/dashboard') => {
 .agreement-text a { color: #0f172a; text-decoration: none; font-weight: 600; transition: color 0.2s; }
 .agreement-text a:hover { color: #1e40af; text-decoration: underline; }
 
-/* ==========================================
-   登录成功 · 全屏欢迎动画
-   ========================================== */
 .welcome-overlay {
   position: fixed;
   inset: 0;
@@ -823,9 +995,6 @@ const playWelcome = (target = '/dashboard') => {
   100% { background-position: 200% 0; }
 }
 
-/* ==========================================
-   响应式
-   ========================================== */
 @media (max-width: 1024px) {
   .logo-img { height: 180px; }
 }

@@ -103,7 +103,8 @@ const handleSubmit = async () => {
     await formRef.value.validate()
 
     if (dialogMode.value === 'add') {
-      const { error } = await supabase.from('admins').insert({
+      // ① 写 admins 表（管理员档案）
+      const { error: adminsErr } = await supabase.from('admins').insert({
         name: form.name,
         phone: form.phone,
         password: form.password,
@@ -111,9 +112,54 @@ const handleSubmit = async () => {
         status: form.status,
         remark: form.remark || null,
       })
-      if (error) throw error
+      if (adminsErr) throw adminsErr
+
+      // ② 同步写 users 表（登录账号）—— ⭐ 关键
+      // 先查 users 表有没有同 phone/account 的记录
+      const { data: exist } = await supabase
+        .from('users')
+        .select('id')
+        .or(`account.eq.${form.phone},phone.eq.${form.phone}`)
+        .limit(1)
+
+      if (exist && exist.length > 0) {
+        // 已存在 → 更新
+        const { error: usersErr } = await supabase
+          .from('users')
+          .update({
+            account: form.phone,
+            name: form.name,
+            phone: form.phone,
+            password: form.password,
+            status: form.status,
+            owner_account: null,   // ⭐ 管理员不是子账号
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', exist[0].id)
+        if (usersErr) throw usersErr
+      } else {
+        // 不存在 → 新建
+        const { error: usersErr } = await supabase
+          .from('users')
+          .insert({
+            account: form.phone,
+            name: form.name,
+            phone: form.phone,
+            password: form.password,
+            role_id: null,         // ⭐ 管理员角色：靠 name 兜底识别
+            org_id: null,
+            status: form.status,
+            owner_account: null,   // ⭐ 管理员不是子账号
+            remark: '管理员账号',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+        if (usersErr) throw usersErr
+      }
+
       ElMessage.success('管理员创建成功')
     } else {
+      // 编辑管理员
       const updateData = {
         name: form.name,
         phone: form.phone,
@@ -123,8 +169,37 @@ const handleSubmit = async () => {
       }
       if (form.password) updateData.password = form.password
 
-      const { error } = await supabase.from('admins').update(updateData).eq('id', form.id)
-      if (error) throw error
+      // ① 改 admins
+      const { error: adminsErr } = await supabase.from('admins').update(updateData).eq('id', form.id)
+      if (adminsErr) throw adminsErr
+
+      // ② 同步 users（用旧 phone 找，再改）
+      const oldRow = tableData.value.find(r => r.id === form.id)
+      const oldPhone = oldRow?.phone || form.phone
+
+      const { data: uList } = await supabase
+        .from('users')
+        .select('id')
+        .or(`account.eq.${oldPhone},phone.eq.${oldPhone}`)
+        .limit(1)
+
+      if (uList && uList[0]) {
+        const usersUpdate = {
+          account: form.phone,
+          name: form.name,
+          phone: form.phone,
+          status: form.status,
+          updated_at: new Date().toISOString(),
+        }
+        if (form.password) usersUpdate.password = form.password
+
+        const { error: usersErr } = await supabase
+          .from('users')
+          .update(usersUpdate)
+          .eq('id', uList[0].id)
+        if (usersErr) throw usersErr
+      }
+
       ElMessage.success('管理员信息已更新')
     }
     dialogVisible.value = false
@@ -144,8 +219,20 @@ const handleDelete = (row) => {
     '删除确认',
     { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
   ).then(async () => {
-    const { error } = await supabase.from('admins').delete().eq('id', row.id)
-    if (error) { ElMessage.error('删除失败：' + error.message); return }
+    // ① 删 admins
+    const { error: adminsErr } = await supabase.from('admins').delete().eq('id', row.id)
+    if (adminsErr) { ElMessage.error('删除失败：' + adminsErr.message); return }
+
+    // ② 同步删 users 表里的登录账号 —— ⭐ 关键
+    if (row.phone) {
+      const { error: usersErr } = await supabase
+        .from('users')
+        .delete()
+        .or(`account.eq.${row.phone},phone.eq.${row.phone}`)
+        .is('owner_account', null)   // ⭐ 只删管理员主账号，不动子账号
+      if (usersErr) console.warn('删除 users 记录失败:', usersErr)
+    }
+
     ElMessage.success('删除成功')
     fetchData()
   }).catch(() => {})
@@ -172,11 +259,27 @@ const submitResetPassword = async () => {
   if (!passwordFormRef.value) return
   try {
     await passwordFormRef.value.validate()
-    const { error } = await supabase
+    const newPwd = passwordForm.newPassword
+    const now = new Date().toISOString()
+
+    // ① 改 admins
+    const { error: adminsErr } = await supabase
       .from('admins')
-      .update({ password: passwordForm.newPassword, updated_at: new Date().toISOString() })
+      .update({ password: newPwd, updated_at: now })
       .eq('id', passwordForm.id)
-    if (error) throw error
+    if (adminsErr) throw adminsErr
+
+    // ② 同步 users —— ⭐ 关键
+    const target = tableData.value.find(r => r.id === passwordForm.id)
+    if (target?.phone) {
+      const { error: usersErr } = await supabase
+        .from('users')
+        .update({ password: newPwd, updated_at: now })
+        .or(`account.eq.${target.phone},phone.eq.${target.phone}`)
+        .is('owner_account', null)
+      if (usersErr) console.warn('同步 users 密码失败:', usersErr)
+    }
+
     ElMessage.success(`管理员「${passwordForm.name}」密码已重置`)
     passwordDialogVisible.value = false
   } catch (e) {

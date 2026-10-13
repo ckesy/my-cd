@@ -1,7 +1,12 @@
 <script setup>
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
-import { Search, Plus, Delete, Edit, Key, Van, Upload, Download, CircleClose, CircleCheck } from '@element-plus/icons-vue'
+import {
+  Search, Plus, Delete, Edit, Key, Van, Upload, Download,
+  CircleClose, CircleCheck,
+  List, Share, User, UserFilled, OfficeBuilding,
+  Expand, Fold, Refresh,
+} from '@element-plus/icons-vue'
 import { supabase } from '@/utils/supabase'
 import * as XLSX from 'xlsx'
 import ExcelJS from 'exceljs'
@@ -16,6 +21,11 @@ const withTimeout = (promise, timeoutMs = 10000, errorMessage = '请求超时，
   })
   return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId))
 }
+
+// ============================================================
+// 视图切换
+// ============================================================
+const viewMode = ref('list') // 'list' | 'tree'
 
 // ============================================================
 // 省市区数据
@@ -233,11 +243,23 @@ const confirmAction = async () => {
   confirmVisible.value = false
 
   try {
-    const { error } = await supabase
+    const now = new Date().toISOString()
+
+    // ① 更新 customers
+    const { error: cErr } = await supabase
       .from('customers')
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .update({ status: newStatus, updated_at: now })
       .eq('id', row.id)
-    if (error) throw error
+    if (cErr) throw cErr
+
+    // ② 同步 users（登录真正用的表）—— ⭐ 关键
+    if (row.phone) {
+      const { error: uErr } = await supabase
+        .from('users')
+        .update({ status: newStatus, updated_at: now })
+        .eq('phone', row.phone)
+      if (uErr) throw uErr
+    }
 
     ElMessage.success(`已${action}客户「${row.name}」`)
     fetchData()
@@ -371,6 +393,71 @@ const buildPayload = () => {
     permissions,
   }
 }
+// ============================================================
+// ⭐ 同步客户主账号到 users 表
+// 作用：让客户能用手机号登录系统，走"客户"分支逻辑
+// 客户本人账号：owner_account = NULL（不是别人的子账号）
+// ============================================================
+const syncCreateUserMaster = async ({ phone, name, password }) => {
+  if (!phone) return { ok: false, msg: '手机号缺失' }
+
+  try {
+    // ① 查是否已存在（按 account 或 phone 匹配）
+    const { data: exist, error: queryErr } = await supabase
+      .from('users')
+      .select('id, account, phone')
+      .or(`account.eq.${phone},phone.eq.${phone}`)
+      .limit(1)
+    if (queryErr) throw queryErr
+
+    // ② 已存在 → 更新基础信息（密码不为空才更新密码）
+    if (exist && exist.length > 0) {
+      const updatePayload = {
+        account: phone,              // 同步登录账号（手机号可能变过）
+        name,
+        phone,
+        status: 1,
+        updated_at: new Date().toISOString(),
+      }
+      if (password) updatePayload.password = password
+
+      const { error: updateErr } = await supabase
+        .from('users')
+        .update(updatePayload)
+        .eq('id', exist[0].id)
+      if (updateErr) throw updateErr
+
+      return { ok: true, msg: '主账号已同步' }
+    }
+
+    // ③ 不存在 → 新建客户主账号
+    const insertPayload = {
+      account: phone,              // 用手机号作为登录账号
+      name,
+      phone,
+      password: password || '123456',  // 兜底密码，正常流程会传
+      role_id: null,               // ⭐ 客户角色：NULL，登录时走"客户"分支
+      org_id: null,                // 客户主账号不属于任何组织
+      status: 1,
+      owner_account: null,         // ⭐ 客户本人 owner_account = NULL
+      remark: '客户主账号（系统自动创建）',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error: insertErr } = await supabase
+      .from('users')
+      .insert(insertPayload)
+    if (insertErr) throw insertErr
+
+    return { ok: true, msg: '主账号创建成功' }
+  } catch (e) {
+    console.error('同步客户主账号失败:', e)
+    // 不抛异常，避免阻塞客户创建流程（客户已插入 customers 表就让它成功）
+    ElMessage.warning('客户已创建，但主账号同步失败：' + (e?.message || e))
+    return { ok: false, msg: e?.message || '同步失败' }
+  }
+}
 
 const handleSubmit = async () => {
   if (!formRef.value) return
@@ -389,15 +476,59 @@ const handleSubmit = async () => {
     const payload = buildPayload()
 
     if (dialogMode.value === 'add') {
+      // 检查手机号是否已存在
+      const { data: existed } = await supabase
+        .from('customers').select('id').eq('phone', form.phone).limit(1)
+      if (existed && existed.length > 0) {
+        ElMessage.error(`登录手机号 ${form.phone} 已被其他客户使用`)
+        return
+      }
+
       payload.password = form.password
       const { error } = await supabase.from('customers').insert(payload)
       if (error) throw error
+
+      // ⭐ 同步创建 users 表主账号
+      await syncCreateUserMaster({
+        phone: form.phone,
+        name: form.name,
+        password: form.password,
+      })
+
       ElMessage.success('客户创建成功')
     } else {
+      // 编辑：检查手机号是否被别的客户用
+      const { data: existed } = await supabase
+        .from('customers').select('id').eq('phone', form.phone).limit(1)
+      if (existed && existed.length > 0 && existed[0].id !== form.id) {
+        ElMessage.error(`登录手机号 ${form.phone} 已被其他客户使用`)
+        return
+      }
+
+      // 取旧客户名（用于同步 users）
+      const oldRow = tableData.value.find(r => r.id === form.id)
+
       payload.updated_at = new Date().toISOString()
       if (form.password) payload.password = form.password
       const { error } = await supabase.from('customers').update(payload).eq('id', form.id)
       if (error) throw error
+
+      // ⭐ 同步 users 表（用旧 phone 找到记录再更新）
+      const syncPhone = oldRow?.phone || form.phone
+      await syncCreateUserMaster({
+        phone: syncPhone,
+        name: form.name,
+        password: form.password || oldRow?.password,  // 没改密码就传旧密码
+      })
+
+      // 如果手机号变了，还要把 users 表的 account 也改了
+      if (oldRow?.phone && oldRow.phone !== form.phone) {
+        await supabase
+          .from('users')
+          .update({ account: form.phone, phone: form.phone })
+          .eq('account', oldRow.phone)
+      }
+
       ElMessage.success('客户信息已更新')
     }
     dialogVisible.value = false
@@ -422,6 +553,13 @@ const handleCreateAndAddVehicle = async () => {
       return
     }
 
+    const { data: existed } = await supabase
+      .from('customers').select('id').eq('phone', form.phone).limit(1)
+    if (existed && existed.length > 0) {
+      ElMessage.error(`登录手机号 ${form.phone} 已被其他客户使用`)
+      return
+    }
+
     const payload = buildPayload()
     payload.password = form.password
 
@@ -432,6 +570,13 @@ const handleCreateAndAddVehicle = async () => {
       .single()
 
     if (error) throw error
+
+    // ⭐ 同步创建 users 表主账号
+    await syncCreateUserMaster({
+      phone: form.phone,
+      name: form.name,
+      password: form.password,
+    })
 
     ElMessage.success('客户创建成功，请上传车辆档案')
     dialogVisible.value = false
@@ -459,12 +604,36 @@ const handleEditAndAddVehicle = async () => {
       return
     }
 
+    const { data: existed } = await supabase
+      .from('customers').select('id').eq('phone', form.phone).limit(1)
+    if (existed && existed.length > 0 && existed[0].id !== form.id) {
+      ElMessage.error(`登录手机号 ${form.phone} 已被其他客户使用`)
+      return
+    }
+
+    const oldRow = tableData.value.find(r => r.id === form.id)
+
     const payload = buildPayload()
     payload.updated_at = new Date().toISOString()
     if (form.password) payload.password = form.password
 
     const { error } = await supabase.from('customers').update(payload).eq('id', form.id)
     if (error) throw error
+
+    // ⭐ 同步 users
+    const syncPhone = oldRow?.phone || form.phone
+    await syncCreateUserMaster({
+      phone: syncPhone,
+      name: form.name,
+      password: form.password || oldRow?.password,
+    })
+
+    if (oldRow?.phone && oldRow.phone !== form.phone) {
+      await supabase
+        .from('users')
+        .update({ account: form.phone, phone: form.phone })
+        .eq('account', oldRow.phone)
+    }
 
     ElMessage.success('修改已保存，请上传车辆档案')
     dialogVisible.value = false
@@ -768,6 +937,14 @@ const handleDelete = async (row) => {
       .delete()
       .eq('id', row.id)
     if (deleteError) throw deleteError
+    if (row.phone) {
+  const { error: deleteUserErr } = await supabase
+    .from('users')
+    .delete()
+    .eq('phone', row.phone)
+    .is('owner_account', null)     // 只删客户主账号，别误删子账号
+  if (deleteUserErr) console.warn('删除 users 主账号失败:', deleteUserErr)
+}
 
     if (vehicleCount > 0) {
       ElMessage.success(`已删除客户，并释放 ${vehicleCount} 台车辆`)
@@ -788,7 +965,7 @@ const handleDelete = async (row) => {
 // ============================================================
 const passwordDialogVisible = ref(false)
 const passwordFormRef = ref(null)
-const passwordForm = reactive({ id: '', name: '', newPassword: '' })
+const passwordForm = reactive({ id: '', name: '', phone: '', newPassword: '' })
 const passwordRules = {
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
@@ -797,7 +974,7 @@ const passwordRules = {
 }
 
 const openResetPassword = (row) => {
-  Object.assign(passwordForm, { id: row.id, name: row.name, newPassword: '' })
+  Object.assign(passwordForm, { id: row.id, name: row.name, phone: row.phone,newPassword: '' })
   passwordDialogVisible.value = true
   passwordFormRef.value?.clearValidate?.()
 }
@@ -806,11 +983,45 @@ const submitResetPassword = async () => {
   if (!passwordFormRef.value) return
   try {
     await passwordFormRef.value.validate()
-    const { error } = await supabase
-      .from('customers')
-      .update({ password: passwordForm.newPassword, updated_at: new Date().toISOString() })
-      .eq('id', passwordForm.id)
-    if (error) throw error
+    const newPwd = passwordForm.newPassword
+    const now = new Date().toISOString()
+    const phone = passwordForm.phone || ''      // ⭐ 依赖下面补的 phone 字段
+
+    // ① 更新 customers（如果这条记录存在）
+    let customerUpdated = 0
+    if (passwordForm.id) {
+      const { data: cData, error: cErr } = await supabase
+        .from('customers')
+        .update({ password: newPwd, updated_at: now })
+        .eq('id', passwordForm.id)
+        .select('id')
+      if (cErr) throw cErr
+      customerUpdated = cData?.length || 0
+    }
+
+    // ② 更新 users（登录真正用的表）—— ⭐ 关键
+    let userUpdated = 0
+    if (phone) {
+      const { data: uData, error: uErr } = await supabase
+        .from('users')
+        .update({ password: newPwd, updated_at: now })
+        .eq('phone', phone)
+        .select('id')
+      if (uErr) throw uErr
+      userUpdated = uData?.length || 0
+    }
+
+    // ③ 反馈
+    if (customerUpdated === 0 && userUpdated === 0) {
+      ElMessage.warning('没有匹配到账号，请检查手机号是否正确')
+      return
+    }
+    if (userUpdated === 0) {
+      ElMessage.warning(`密码已更新到客户档案，但未找到对应的登录账号（users 表）。请确认该客户是否已创建主账号`)
+      passwordDialogVisible.value = false
+      return
+    }
+
     ElMessage.success(`客户「${passwordForm.name}」密码已重置`)
     passwordDialogVisible.value = false
   } catch (e) {
@@ -818,116 +1029,392 @@ const submitResetPassword = async () => {
   }
 }
 
-onMounted(fetchData)
+// ============================================================
+// 组织机构视图 —— 树数据
+// ============================================================
+const orgTreeRef = ref(null)
+const orgTreeData = ref([])
+const orgLoading = ref(false)
+const orgExpandAll = ref(true)
+const orgSearchKeyword = ref('')
+const treeProps = { children: 'children', label: 'label' }
+
+const loadOrgTree = async () => {
+  orgLoading.value = true
+  try {
+    // 并行拉取所有基础数据
+    const [
+      { data: orgs },
+      { data: fleets },
+      { data: users },
+      { data: roles },
+    ] = await Promise.all([
+      supabase.from('organizations').select('*').order('id'),
+      supabase.from('fleets').select('*').order('id'),
+      supabase.from('users').select('*').order('id'),
+      supabase.from('roles').select('*').order('id'),
+    ])
+
+    const orgsList = orgs || []
+    const fleetsList = fleets || []
+    const usersList = users || []
+    const rolesList = roles || []
+
+    const roleMap = {}
+    rolesList.forEach(r => { roleMap[r.id] = r.name })
+
+    // 构造用户节点
+    const buildUserNode = (u) => {
+      const owner = usersList.find(x => x.account === u.owner_account)
+      return {
+        key: 'user-' + u.id,
+        type: 'user',
+        label: u.name || u.account,
+        account: u.account,
+        status: u.status,
+        isAdmin: u.role_id === 1 || u.role_id === 2,
+        roleName: roleMap[u.role_id] || '--',
+        ownerName: owner ? owner.name : '',
+      }
+    }
+
+    // 构造某个客户下的组织子树（通过 owner_account === 客户登录手机号 匹配）
+    const buildCustomerOrgs = (customerAccount) => {
+      const customerOrgs = orgsList.filter(o => o.owner_account === customerAccount)
+
+      return customerOrgs.map(org => {
+        const hasFleets = fleetsList.some(f => f.org_id === org.id)
+
+        // 车队层
+        const orgFleets = fleetsList
+          .filter(f => f.org_id === org.id)
+          .map(fleet => {
+            const fleetUsers = usersList
+              .filter(u => u.org_id === org.id)
+              .map(u => buildUserNode(u))
+            return {
+              key: 'fleet-' + fleet.id,
+              type: 'fleet',
+              label: fleet.name,
+              children: fleetUsers,
+            }
+          })
+
+        // 组织下没有车队时，用户直接挂在组织下
+        const orgUsers = hasFleets
+          ? []
+          : usersList
+              .filter(u => u.org_id === org.id)
+              .map(u => buildUserNode(u))
+
+        return {
+          key: 'org-' + org.id,
+          type: 'org',
+          label: org.name,
+          children: [...orgFleets, ...orgUsers],
+        }
+      })
+    }
+
+    // 构造客户节点
+    const customerNodes = tableData.value.map(c => ({
+      key: 'customer-' + c.id,
+      type: 'customer',
+      label: c.name,
+      account: c.phone,
+      status: c.status,
+      vehicleCount: c.vehicleCount,
+      children: buildCustomerOrgs(c.phone),
+    }))
+
+    // 根节点
+    orgTreeData.value = [{
+      key: 'root-all',
+      type: 'root',
+      label: '全部客户',
+      children: customerNodes,
+    }]
+  } catch (e) {
+    console.error('加载组织树失败:', e)
+    ElMessage.error('加载组织树失败：' + (e?.message || e))
+  } finally {
+    orgLoading.value = false
+  }
+}
+
+const toggleOrgExpandAll = () => {
+  orgExpandAll.value = !orgExpandAll.value
+  nextTick(() => {
+    const nodes = orgTreeRef.value?.store?.nodesMap || {}
+    Object.values(nodes).forEach(node => { node.expanded = orgExpandAll.value })
+  })
+}
+
+const filterOrgNode = (value, data) => {
+  if (!value) return true
+  const kw = value.toLowerCase()
+  if (data.label && data.label.toLowerCase().includes(kw)) return true
+  if (data.account && data.account.toLowerCase().includes(kw)) return true
+  return false
+}
+
+watch(orgSearchKeyword, (val) => { orgTreeRef.value?.filter(val) })
+
+// ============================================================
+// 生命周期
+// ============================================================
+onMounted(async () => {
+  await fetchData()
+})
+
+// 切换视图时按需加载
+watch(viewMode, async (val) => {
+  if (val === 'tree') {
+    if (tableData.value.length === 0) {
+      await fetchData()
+    }
+    await loadOrgTree()
+  }
+})
 </script>
 
 <template>
   <div class="admin-customer">
-    <section class="light-panel">
-      <div class="filter-grid">
-        <el-input v-model="filters.name" placeholder="客户名称" clearable />
-        <el-input v-model="filters.phone" placeholder="登录手机号" clearable />
-        <el-input v-model="filters.contactPerson" placeholder="联系人" clearable />
-        <el-input v-model="filters.contactPhone" placeholder="联系电话" clearable />
-        <el-select v-model="filters.platform" placeholder="开通平台" clearable popper-class="light-select-popper">
-          <el-option v-for="p in platformFilterOptions" :key="p.value" :label="p.label" :value="p.value" />
-        </el-select>
-        <el-select v-model="filters.status" placeholder="状态" clearable popper-class="light-select-popper">
-          <el-option v-for="s in statusFilterOptions" :key="s.value" :label="s.label" :value="s.value" />
-        </el-select>
-      </div>
+    <!-- ============================================================ -->
+    <!-- 视图切换 -->
+    <!-- ============================================================ -->
+    <div class="view-switch">
+      <button class="view-btn" :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'">
+        <el-icon><List /></el-icon> 列表视图
+      </button>
+      <button class="view-btn" :class="{ active: viewMode === 'tree' }" @click="viewMode = 'tree'">
+        <el-icon><Share /></el-icon> 组织机构
+      </button>
+      <span class="scope-tip">
+        <el-icon><OfficeBuilding /></el-icon>
+        全部客户组织结构视图
+      </span>
+    </div>
 
-      <div class="filter-actions">
-        <button class="action-btn primary" @click="handleSearch">
-          <el-icon><Search /></el-icon> 搜索
-        </button>
-        <button class="action-btn" @click="openAdd">
-          <el-icon><Plus /></el-icon> 新增客户
-        </button>
-        <button class="action-btn ghost" @click="handleReset">重置</button>
-      </div>
-    </section>
+    <!-- ============================================================ -->
+    <!-- 列表视图 -->
+    <!-- ============================================================ -->
+    <template v-if="viewMode === 'list'">
+      <section class="light-panel">
+        <div class="filter-grid">
+          <el-input v-model="filters.name" placeholder="客户名称" clearable />
+          <el-input v-model="filters.phone" placeholder="登录手机号" clearable />
+          <el-input v-model="filters.contactPerson" placeholder="联系人" clearable />
+          <el-input v-model="filters.contactPhone" placeholder="联系电话" clearable />
+          <el-select v-model="filters.platform" placeholder="开通平台" clearable popper-class="light-select-popper">
+            <el-option v-for="p in platformFilterOptions" :key="p.value" :label="p.label" :value="p.value" />
+          </el-select>
+          <el-select v-model="filters.status" placeholder="状态" clearable popper-class="light-select-popper">
+            <el-option v-for="s in statusFilterOptions" :key="s.value" :label="s.label" :value="s.value" />
+          </el-select>
+        </div>
 
-    <section class="light-panel table-panel">
-      <div class="panel-title">
-        <span class="dot"></span>
-        <span>客户列表</span>
-        <span class="count">共 {{ total }} 条</span>
-      </div>
+        <div class="filter-actions">
+          <button class="action-btn primary" @click="handleSearch">
+            <el-icon><Search /></el-icon> 搜索
+          </button>
+          <button class="action-btn" @click="openAdd">
+            <el-icon><Plus /></el-icon> 新增客户
+          </button>
+          <button class="action-btn ghost" @click="handleReset">重置</button>
+        </div>
+      </section>
 
-      <el-table
-        :data="tableData"
-        v-loading="loading"
-        class="light-table"
-        empty-text="暂无客户"
-        stripe
-      >
-        <el-table-column prop="name" label="客户名称" min-width="160" />
-        <el-table-column prop="phone" label="登录手机号" min-width="130" />
-        <el-table-column label="地区" min-width="130">
-          <template #default="{ row }">
-            {{ row.province && row.city ? `${row.province} · ${row.city}` : '--' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="contactPerson" label="联系人" min-width="90">
-          <template #default="{ row }">{{ row.contactPerson || '--' }}</template>
-        </el-table-column>
-        <el-table-column prop="contactPhone" label="联系电话" min-width="130">
-          <template #default="{ row }">{{ row.contactPhone || '--' }}</template>
-        </el-table-column>
-        <el-table-column label="开通平台" min-width="110">
-          <template #default="{ row }">
-            <span v-if="row.platforms?.includes('client')" class="platform-tag client">客户端</span>
-            <span v-else style="color:#94A3B8;">--</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="vehicleCount" label="车辆数" width="80" align="center" />
-        <el-table-column label="状态" width="90" align="center">
-          <template #default="{ row }">
-            <span class="status-tag" :class="row.status === 1 ? 'on' : 'off'">
-              {{ row.status === 1 ? '启用' : '停用' }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="320" fixed="right">
-          <template #default="{ row }">
-            <button class="row-btn" @click="openEdit(row)">
-              <el-icon><Edit /></el-icon> 编辑
-            </button>
-            <button class="row-btn" @click="openResetPassword(row)">
-              <el-icon><Key /></el-icon> 重置密码
-            </button>
-            <button
-              class="row-btn"
-              :class="row.status === 1 ? 'warning' : 'success'"
-              @click="handleToggleStatus(row)"
+      <section class="light-panel table-panel">
+        <div class="panel-title">
+          <span class="dot"></span>
+          <span>客户列表</span>
+          <span class="count">共 {{ total }} 条</span>
+        </div>
+
+        <el-table
+          :data="tableData"
+          v-loading="loading"
+          class="light-table"
+          empty-text="暂无客户"
+          stripe
+        >
+          <el-table-column prop="name" label="客户名称" min-width="160" />
+          <el-table-column prop="phone" label="登录手机号" min-width="130" />
+          <el-table-column label="地区" min-width="130">
+            <template #default="{ row }">
+              {{ row.province && row.city ? `${row.province} · ${row.city}` : '--' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="contactPerson" label="联系人" min-width="90">
+            <template #default="{ row }">{{ row.contactPerson || '--' }}</template>
+          </el-table-column>
+          <el-table-column prop="contactPhone" label="联系电话" min-width="130">
+            <template #default="{ row }">{{ row.contactPhone || '--' }}</template>
+          </el-table-column>
+          <el-table-column label="开通平台" min-width="110">
+            <template #default="{ row }">
+              <span v-if="row.platforms?.includes('client')" class="platform-tag client">客户端</span>
+              <span v-else style="color:#94A3B8;">--</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="vehicleCount" label="车辆数" width="80" align="center" />
+          <el-table-column label="状态" width="90" align="center">
+            <template #default="{ row }">
+              <span class="status-tag" :class="row.status === 1 ? 'on' : 'off'">
+                {{ row.status === 1 ? '启用' : '停用' }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="320" fixed="right">
+            <template #default="{ row }">
+              <button class="row-btn" @click="openEdit(row)">
+                <el-icon><Edit /></el-icon> 编辑
+              </button>
+              <button class="row-btn" @click="openResetPassword(row)">
+                <el-icon><Key /></el-icon> 重置密码
+              </button>
+              <button
+                class="row-btn"
+                :class="row.status === 1 ? 'warning' : 'success'"
+                @click="handleToggleStatus(row)"
+              >
+                <el-icon>
+                  <CircleClose v-if="row.status === 1" />
+                  <CircleCheck v-else />
+                </el-icon>
+                {{ row.status === 1 ? '停用' : '启用' }}
+              </button>
+              <button class="row-btn danger" @click="handleDelete(row)">
+                <el-icon><Delete /></el-icon> 删除
+              </button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div class="pagination-wrap">
+          <el-pagination
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="total"
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            @size-change="fetchData"
+            @current-change="fetchData"
+          />
+        </div>
+      </section>
+    </template>
+
+    <!-- ============================================================ -->
+    <!-- 组织机构视图 -->
+    <!-- ============================================================ -->
+    <template v-else>
+      <div class="org-view-card">
+        <div class="org-view-header">
+          <div class="org-view-title">
+            <el-icon><Share /></el-icon>
+            组织机构
+            <span class="org-view-sub">（全局视图 · 客户名称即为最大组织）</span>
+          </div>
+          <div class="org-view-actions">
+            <el-input
+              v-model="orgSearchKeyword"
+              placeholder="搜索客户/组织/车队/用户"
+              clearable
+              size="default"
+              class="org-search-input"
             >
-              <el-icon>
-                <CircleClose v-if="row.status === 1" />
-                <CircleCheck v-else />
-              </el-icon>
-              {{ row.status === 1 ? '停用' : '启用' }}
+              <template #prefix><el-icon><Search /></el-icon></template>
+            </el-input>
+            <button
+              class="icon-btn"
+              :class="{ active: orgExpandAll }"
+              @click="toggleOrgExpandAll"
+              :title="orgExpandAll ? '全部收起' : '全部展开'"
+            >
+              <el-icon><component :is="orgExpandAll ? Fold : Expand" /></el-icon>
             </button>
-            <button class="row-btn danger" @click="handleDelete(row)">
-              <el-icon><Delete /></el-icon> 删除
+            <button class="icon-btn" @click="loadOrgTree" title="刷新">
+              <el-icon><Refresh /></el-icon>
             </button>
-          </template>
-        </el-table-column>
-      </el-table>
+          </div>
+        </div>
 
-      <div class="pagination-wrap">
-        <el-pagination
-          background
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          @size-change="fetchData"
-          @current-change="fetchData"
-        />
+        <div class="org-view-body" v-loading="orgLoading">
+          <el-tree
+            v-if="orgTreeData.length > 0"
+            ref="orgTreeRef"
+            :data="orgTreeData"
+            node-key="key"
+            :props="treeProps"
+            :default-expand-all="orgExpandAll"
+            :filter-node-method="filterOrgNode"
+            :expand-on-click-node="false"
+            class="org-tree"
+          >
+            <template #default="{ node, data }">
+              <div class="tree-node" :class="'type-' + data.type">
+                <!-- 根节点 -->
+                <template v-if="data.type === 'root'">
+                  <span class="node-icon root-icon"><el-icon><OfficeBuilding /></el-icon></span>
+                  <span class="node-label">{{ data.label }}</span>
+                  <span class="node-count">{{ data.children?.length || 0 }} 个客户</span>
+                </template>
+
+                <!-- 客户节点（最大组织） -->
+                <template v-else-if="data.type === 'customer'">
+                  <span class="node-icon customer-icon"><el-icon><UserFilled /></el-icon></span>
+                  <span class="node-label">{{ data.label }}</span>
+                  <span class="node-account">{{ data.account }}</span>
+                  <span v-if="data.vehicleCount > 0" class="node-vehicles">
+                    <el-icon><Van /></el-icon> {{ data.vehicleCount }} 辆
+                  </span>
+                  <span class="status-tag mini" :class="data.status === 1 ? 'on' : 'off'">
+                    {{ data.status === 1 ? '启用' : '停用' }}
+                  </span>
+                </template>
+
+                <!-- 组织节点 -->
+                <template v-else-if="data.type === 'org'">
+                  <span class="node-icon org-icon"><el-icon><OfficeBuilding /></el-icon></span>
+                  <span class="node-label">{{ data.label }}</span>
+                  <span class="node-count">{{ data.children?.length || 0 }} 项</span>
+                </template>
+
+                <!-- 车队节点 -->
+                <template v-else-if="data.type === 'fleet'">
+                  <span class="node-icon fleet-icon"><el-icon><Van /></el-icon></span>
+                  <span class="node-label">{{ data.label }}</span>
+                  <span class="node-count">{{ data.children?.length || 0 }} 个用户</span>
+                </template>
+
+                <!-- 用户节点 -->
+                <template v-else-if="data.type === 'user'">
+                  <span class="node-icon user-icon" :class="{ admin: data.isAdmin }">
+                    <el-icon><component :is="data.isAdmin ? UserFilled : User" /></el-icon>
+                  </span>
+                  <span class="node-label">{{ data.label }}</span>
+                  <span class="node-account">{{ data.account }}</span>
+                  <span class="node-role" :class="{ admin: data.isAdmin }">{{ data.roleName }}</span>
+                  <span class="status-tag mini" :class="data.status === 1 ? 'on' : 'off'">
+                    {{ data.status === 1 ? '启用' : '禁用' }}
+                  </span>
+                  <span v-if="data.ownerName" class="node-owner">由 {{ data.ownerName }} 创建</span>
+                </template>
+              </div>
+            </template>
+          </el-tree>
+
+          <div v-else class="org-empty">
+            <el-icon class="empty-icon"><Share /></el-icon>
+            <p>暂无组织机构数据</p>
+            <span class="empty-tip">请先在「用户管理」中为客户创建组织、车队及用户</span>
+          </div>
+        </div>
       </div>
-    </section>
+    </template>
 
     <!-- 新增/编辑客户弹窗（内容不变） -->
     <el-dialog
@@ -1144,14 +1631,11 @@ onMounted(fetchData)
       </template>
     </el-dialog>
 
-    <!-- ============================================================ -->
-    <!-- 停用/启用 确认弹窗（自定义，带动画） -->
-    <!-- ============================================================ -->
+    <!-- 停用/启用 确认弹窗 -->
     <transition name="confirm-fade">
       <div v-if="confirmVisible" class="confirm-mask" @click.self="closeConfirm">
         <transition name="confirm-pop" appear>
           <div class="confirm-card" :class="`confirm-${confirmType}`">
-            <!-- 图标区 -->
             <div class="confirm-icon-wrap">
               <span class="confirm-ring ring-1"></span>
               <span class="confirm-ring ring-2"></span>
@@ -1189,6 +1673,52 @@ onMounted(fetchData)
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ============================================================
+   视图切换
+   ============================================================ */
+.view-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+.view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid #E2E8F0;
+  background: #fff;
+  color: #64748B;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-family: inherit;
+}
+.view-btn:hover {
+  border-color: #FCA5A5; color: #c8102e; background: #FEF2F2;
+  transform: translateY(-1px);
+}
+.view-btn.active {
+  border-color: #c8102e; color: #fff;
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+  box-shadow: 0 3px 10px rgba(200, 16, 46, 0.3);
+}
+.view-btn .el-icon { font-size: 14px; }
+.scope-tip {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-left: auto; font-size: 12.5px;
+  color: #c8102e; font-weight: 600;
+  padding: 4px 12px; background: #FEF2F2;
+  border-radius: 20px; border: 1px solid #FECACA;
+}
+.scope-tip .el-icon { font-size: 14px; }
+
 .platform-tag {
   display: inline-flex;
   align-items: center;
@@ -1215,6 +1745,7 @@ onMounted(fetchData)
 }
 .status-tag.on  { color: #059669; background: #D1FAE5; }
 .status-tag.off { color: #64748B; background: #F1F5F9; }
+.status-tag.mini { padding: 1px 8px; font-size: 11px; }
 
 /* 停用/启用按钮 */
 .row-btn.warning {
@@ -1240,6 +1771,134 @@ onMounted(fetchData)
   border-color: transparent;
   box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
 }
+
+/* ============================================================
+   组织机构视图
+   ============================================================ */
+.org-view-card {
+  background: #fff; border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  padding: 16px; flex: 1;
+  display: flex; flex-direction: column;
+  min-height: 520px;
+}
+.org-view-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #F1F5F9;
+  margin-bottom: 12px;
+}
+.org-view-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 700; color: #0F172A;
+}
+.org-view-title .el-icon { color: #c8102e; font-size: 18px; }
+.org-view-sub { font-size: 12.5px; color: #94A3B8; font-weight: 500; }
+.org-view-actions { display: flex; align-items: center; gap: 8px; }
+.org-search-input { width: 240px; }
+.org-search-input :deep(.el-input__wrapper) {
+  border-radius: 6px !important;
+  background: #F8FAFC !important;
+  box-shadow: 0 0 0 1px #E2E8F0 inset !important;
+  min-height: 30px;
+}
+.org-search-input :deep(.el-input__wrapper.is-focus) {
+  background: #fff !important;
+  box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.15), 0 0 0 1px #c8102e inset !important;
+}
+.org-view-body { flex: 1; overflow: auto; padding: 8px; }
+
+.icon-btn {
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid #E2E8F0; background: #fff;
+  border-radius: 6px; color: #64748B; font-size: 14px;
+  cursor: pointer;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.icon-btn:hover {
+  border-color: #c8102e; color: #c8102e; background: #FEF2F2;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(200, 16, 46, 0.15);
+}
+.icon-btn.active {
+  border-color: #c8102e; color: #fff;
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+  box-shadow: 0 3px 10px rgba(200, 16, 46, 0.35);
+}
+.icon-btn:active { transform: translateY(0) scale(0.95); }
+
+.org-tree { background: transparent; }
+.org-tree :deep(.el-tree-node__content) {
+  height: 40px; border-radius: 6px;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  padding: 2px 4px;
+}
+.org-tree :deep(.el-tree-node__content:hover) { background: #FEF2F2; }
+.org-tree :deep(.el-tree-node.is-current > .el-tree-node__content) { background: #FEE2E2; }
+
+.tree-node {
+  display: flex; align-items: center; gap: 8px;
+  flex: 1; font-size: 13px;
+}
+.node-icon {
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.node-icon .el-icon { font-size: 14px; color: #fff; }
+.tree-node.type-root .node-icon { background: linear-gradient(135deg, #7C3AED, #5B21B6); box-shadow: 0 2px 10px rgba(124, 58, 237, 0.4); }
+.tree-node.type-customer .node-icon { background: linear-gradient(135deg, #c8102e, #7F1D1D); box-shadow: 0 2px 10px rgba(200, 16, 46, 0.45); }
+.tree-node.type-org .node-icon { background: linear-gradient(135deg, #c8102e, #a00d24); box-shadow: 0 2px 8px rgba(200, 16, 46, 0.35); }
+.tree-node.type-fleet .node-icon { background: linear-gradient(135deg, #F59E0B, #D97706); box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3); }
+.tree-node.type-user .node-icon { background: linear-gradient(135deg, #60A5FA, #3B82F6); box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); }
+.tree-node.type-user .node-icon.admin { background: linear-gradient(135deg, #c8102e, #a00d24); }
+.tree-node:hover .node-icon { transform: scale(1.1) rotate(-4deg); }
+
+.node-label { font-weight: 600; color: #0F172A; }
+.tree-node.type-root .node-label { font-size: 15px; font-weight: 800; color: #0F172A; letter-spacing: 0.3px; }
+.tree-node.type-customer .node-label { font-size: 14.5px; font-weight: 800; color: #7F1D1D; letter-spacing: 0.3px; }
+.tree-node.type-org .node-label { font-size: 14px; font-weight: 700; }
+.tree-node.type-fleet .node-label { font-size: 13.5px; }
+
+.node-count {
+  font-size: 11.5px; color: #94A3B8;
+  padding: 1px 8px; border-radius: 8px;
+  background: #F1F5F9; margin-left: 4px;
+}
+.node-account {
+  font-size: 12px; color: #94A3B8;
+  font-family: 'Courier New', monospace;
+  padding: 1px 6px; background: #F8FAFC; border-radius: 4px;
+}
+.node-role {
+  font-size: 11.5px; color: #5B21B6;
+  padding: 1px 8px; border-radius: 8px;
+  background: #EDE9FE; font-weight: 600;
+}
+.node-role.admin { background: #FEE2E2; color: #991B1B; }
+.node-owner {
+  font-size: 11.5px; color: #D97706;
+  padding: 1px 8px; border-radius: 8px;
+  background: #FEF3C7; font-weight: 600;
+  margin-left: auto;
+}
+.node-vehicles {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 11.5px; color: #0369A1; font-weight: 700;
+  padding: 1px 8px; border-radius: 8px;
+  background: #E0F2FE;
+}
+.node-vehicles .el-icon { font-size: 12px; }
+
+.org-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 80px 20px; color: #94A3B8;
+}
+.org-empty .empty-icon { font-size: 48px; color: #CBD5E1; }
+.org-empty p { font-size: 15px; font-weight: 600; color: #64748B; margin: 0; }
+.org-empty .empty-tip { font-size: 12.5px; color: #CBD5E1; }
 
 /* ============================================================
    停用/启用 确认弹窗
@@ -1294,7 +1953,6 @@ onMounted(fetchData)
   overflow: hidden;
 }
 
-/* 顶部彩色流光条 */
 .confirm-card::before {
   content: '';
   position: absolute;
@@ -1317,7 +1975,6 @@ onMounted(fetchData)
   100% { background-position: 200% 0; }
 }
 
-/* 图标区 */
 .confirm-icon-wrap {
   position: relative;
   width: 88px;
@@ -1375,7 +2032,6 @@ onMounted(fetchData)
   100% { transform: scale(1) rotate(0deg); }
 }
 
-/* 标题和描述 */
 .confirm-title {
   margin: 0 0 10px;
   font-size: 18px;
@@ -1404,7 +2060,6 @@ onMounted(fetchData)
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* 底部按钮 */
 .confirm-actions {
   display: flex;
   gap: 12px;
@@ -1880,5 +2535,6 @@ onMounted(fetchData)
   .section-body.grid-2,
   .section-body.grid-3 { grid-template-columns: 1fr; }
   .perm-group { grid-template-columns: 1fr; }
+  .org-search-input { width: 150px; }
 }
 </style>

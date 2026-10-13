@@ -2,10 +2,7 @@
   <el-container style="height:100vh; overflow: hidden; background-color: #F8FAFC;">
     <!-- 侧边栏 -->
     <el-aside width="220px" class="sidebar-container">
-      <SidebarMenu
-        :active-path="activeMenu"
-        @menu-select="handleMenuSelect"
-      />
+      <SidebarMenu :active-path="activeMenu" @menu-select="handleMenuSelect" />
     </el-aside>
     <el-container>
       <!-- 顶部标题栏 -->
@@ -13,17 +10,13 @@
         <div class="dashboard-title">车队管理平台</div>
         <div class="dashboard-actions">
           <el-button size="small" plain class="action-btn settings-btn" @click="handleSettings">
-            <el-icon><Setting /></el-icon> 设置
+            <el-icon>
+              <Setting />
+            </el-icon> 设置
           </el-button>
 
           <!-- 👇 管理员模拟进入客户端时显示"返回入口"，放在设置与退出之间 -->
-          <el-button
-            v-if="isImpersonatingAdmin"
-            size="small"
-            plain
-            class="action-btn back-btn"
-            @click="goBackToPortal"
-          >
+          <el-button v-if="isImpersonatingAdmin" size="small" plain class="action-btn back-btn" @click="goBackToPortal">
             返回入口
           </el-button>
 
@@ -33,16 +26,8 @@
 
       <!-- 标签页栏 -->
       <div class="page-tabs">
-        <el-tag
-          v-for="tab in tabs"
-          :key="tab.path"
-          :type="tab.path === route.path ? 'danger' : 'info'"
-          size="small"
-          closable
-          @click="openTab(tab)"
-          @close="closeTab(tab)"
-          class="tab-item"
-        >
+        <el-tag v-for="tab in tabs" :key="tab.path" :type="tab.path === route.path ? 'danger' : 'info'" size="small"
+          closable @click="openTab(tab)" @close="closeTab(tab)" class="tab-item">
           {{ tab.title }}
         </el-tag>
       </div>
@@ -98,6 +83,16 @@
           <template v-else-if="route.path === '/ele-fence/alert-query'">
             <EleFenceAlertQuery />
           </template>
+          <!-- 系统管理 -->
+          <template v-else-if="route.path === '/dashboard/user'">
+            <UserManage />
+          </template>
+         <template v-else-if="route.path === '/dashboard/role'">
+            <RoleManage />
+          </template>
+          <template v-else-if="route.path === '/dashboard/org'">
+            <OrgManage />
+          </template>
 
           <!-- 其他页面（占位） -->
           <template v-else>
@@ -136,6 +131,10 @@ import DriverArchive from '../views/DriverArchive.vue'
 import EleFenceSetting from '../views/EleFenceSetting.vue'
 import EleFenceAlertSetting from '../views/EleFenceAlertSetting.vue'
 import EleFenceAlertQuery from '../views/EleFenceAlertQuery.vue'
+
+import UserManage from '../views/UserManage.vue'
+import RoleManage from '../views/RoleManage.vue'
+import OrgManage from '../views/OrgManage.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -194,6 +193,10 @@ const routePermissionMap = {
   '/vehicle-archive': 'vehicle_archive',
   '/driver-archive': 'driver_archive',
   '/dashboard/系统管理': 'system',
+  '/dashboard/user': 'system',
+  '/dashboard/role': 'system',
+  '/dashboard/org': 'system',
+
 }
 
 const isPermitted = computed(() => {
@@ -261,6 +264,9 @@ const pathLabels = {
   '/ele-fence/setting': '围栏设置',
   '/ele-fence/alert-setting': '提醒设置',
   '/ele-fence/alert-query': '提醒事件查询',
+  '/dashboard/user': '用户管理',
+  '/dashboard/role': '角色管理',
+  '/dashboard/org': '组织管理',
 }
 
 const currentPage = computed(() => {
@@ -383,12 +389,14 @@ const goLogin = () => {
   border-bottom: 1px solid #F1F5F9;
   z-index: 9;
 }
+
 .dashboard-title {
   font-size: 16px;
   font-weight: 600;
   color: #1E293B;
   letter-spacing: 0.5px;
 }
+
 .dashboard-actions {
   display: flex;
   align-items: center;
@@ -401,15 +409,26 @@ const goLogin = () => {
   padding: 4px 12px;
   font-size: 12px;
 }
+
 .action-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(211, 47, 47, 0.1);
 }
+
 .action-btn:active {
   transform: translateY(0) scale(0.98);
 }
-.settings-btn { border-color: #E2E8F0; color: #64748B; }
-.settings-btn:hover { border-color: #D32F2F; color: #D32F2F; background: #FEF2F2; }
+
+.settings-btn {
+  border-color: #E2E8F0;
+  color: #64748B;
+}
+
+.settings-btn:hover {
+  border-color: #D32F2F;
+  color: #D32F2F;
+  background: #FEF2F2;
+}
 
 /* 👇 返回入口按钮：与设置按钮同风格，悬停变红 */
 .back-btn {
@@ -417,6 +436,7 @@ const goLogin = () => {
   color: #64748B !important;
   background: #FFFFFF !important;
 }
+
 .back-btn:hover {
   border-color: #D32F2F !important;
   color: #D32F2F !important;
@@ -424,6 +444,7 @@ const goLogin = () => {
   transform: translateY(-1px) !important;
   box-shadow: 0 4px 12px rgba(211, 47, 47, 0.12) !important;
 }
+
 .back-btn:active {
   transform: translateY(0) scale(0.98) !important;
 }
@@ -433,6 +454,7 @@ const goLogin = () => {
   color: #FFFFFF;
   border-color: #D32F2F;
 }
+
 .logout-btn:hover {
   background-color: #B91C1C;
   border-color: #B91C1C;
@@ -451,7 +473,10 @@ const goLogin = () => {
   min-height: 36px;
   background: #FFFFFF;
 }
-.page-tabs::-webkit-scrollbar { display: none; }
+
+.page-tabs::-webkit-scrollbar {
+  display: none;
+}
 
 .page-tabs::after {
   content: '';
@@ -461,10 +486,9 @@ const goLogin = () => {
   width: 100%;
   height: 2px;
   background: linear-gradient(90deg,
-    rgba(211, 47, 47, 0) 0%,
-    rgba(211, 47, 47, 0.8) 50%,
-    rgba(211, 47, 47, 0) 100%
-  );
+      rgba(211, 47, 47, 0) 0%,
+      rgba(211, 47, 47, 0.8) 50%,
+      rgba(211, 47, 47, 0) 100%);
   box-shadow: 0 2px 6px rgba(211, 47, 47, 0.15);
   z-index: 1;
 }
@@ -481,17 +505,20 @@ const goLogin = () => {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
 }
+
 .tab-item:hover {
   background: #F1F5F9;
   color: #1E293B;
   transform: translateY(-1px);
 }
+
 .tab-item.el-tag--danger {
   background: #FEF2F2;
   color: #D32F2F;
   border: 1px solid #FECACA;
   font-weight: 600;
 }
+
 .tab-item.el-tag--danger:hover {
   background: #FEE2E2;
   border-color: #FCA5A5;
@@ -507,13 +534,16 @@ const goLogin = () => {
   transition: all 0.2s;
   overflow: hidden;
 }
+
 .tab-item:hover .el-tag__close {
   opacity: 1;
   width: 14px;
 }
+
 .tab-item.el-tag--danger .el-tag__close {
   color: #D32F2F;
 }
+
 .tab-item .el-tag__close:hover {
   background: rgba(211, 47, 47, 0.1);
   color: #B91C1C;
@@ -542,15 +572,35 @@ const goLogin = () => {
 .animate-fade-up {
   animation: fadeUp 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
+
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(15px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.main-content::-webkit-scrollbar { width: 6px; }
-.main-content::-webkit-scrollbar-track { background: transparent; }
-.main-content::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
-.main-content::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+.main-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.main-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.main-content::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
 
 h2 {
   margin: 0 0 12px 0;
@@ -569,30 +619,50 @@ h2 {
   padding: 40px 20px;
   animation: noPermIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 @keyframes noPermIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 .no-permission-icon {
   font-size: 64px;
   line-height: 1;
   filter: drop-shadow(0 6px 16px rgba(200, 16, 46, 0.25));
   animation: noPermFloat 3s ease-in-out infinite;
 }
+
 @keyframes noPermFloat {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-10px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
 }
+
 .no-permission h2 {
   font-size: 20px;
   color: #0F172A;
   margin: 0;
 }
+
 .no-permission p {
   font-size: 13px;
   color: #64748B;
   margin: 0;
 }
+
 .back-btn-home {
   margin-top: 8px;
   padding: 10px 28px;
@@ -608,6 +678,7 @@ h2 {
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-family: inherit;
 }
+
 .back-btn-home:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 28px rgba(200, 16, 46, 0.45);
@@ -629,9 +700,23 @@ h2 {
 }
 
 @keyframes goodbyeBlackout {
-  0%   { background: rgba(0, 0, 0, 0); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
-  70%  { background: rgba(0, 0, 0, 1); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); }
-  100% { background: rgba(0, 0, 0, 1); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); }
+  0% {
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+
+  70% {
+    background: rgba(0, 0, 0, 1);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+  }
+
+  100% {
+    background: rgba(0, 0, 0, 1);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+  }
 }
 
 .goodbye-text {
@@ -655,10 +740,33 @@ h2 {
 }
 
 @keyframes goodbyeTextFocus {
-  0%   { opacity: 0; filter: blur(20px); letter-spacing: 32px; transform: scale(1.1); }
-  55%  { opacity: 1; filter: blur(0);    letter-spacing: 14px; transform: scale(1); }
-  70%  { opacity: 1; filter: blur(0);    letter-spacing: 14px; transform: scale(1); }
-  100% { opacity: 0; filter: blur(4px);  letter-spacing: 14px; transform: scale(4); }
+  0% {
+    opacity: 0;
+    filter: blur(20px);
+    letter-spacing: 32px;
+    transform: scale(1.1);
+  }
+
+  55% {
+    opacity: 1;
+    filter: blur(0);
+    letter-spacing: 14px;
+    transform: scale(1);
+  }
+
+  70% {
+    opacity: 1;
+    filter: blur(0);
+    letter-spacing: 14px;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    filter: blur(4px);
+    letter-spacing: 14px;
+    transform: scale(4);
+  }
 }
 
 @media (max-width: 768px) {
@@ -667,11 +775,35 @@ h2 {
     letter-spacing: 8px;
     text-indent: 8px;
   }
+
   @keyframes goodbyeTextFocus {
-    0%   { opacity: 0; filter: blur(16px); letter-spacing: 22px; transform: scale(1.1); }
-    55%  { opacity: 1; filter: blur(0);    letter-spacing: 8px;  transform: scale(1); }
-    70%  { opacity: 1; filter: blur(0);    letter-spacing: 8px;  transform: scale(1); }
-    100% { opacity: 0; filter: blur(4px);  letter-spacing: 8px;  transform: scale(4); }
+    0% {
+      opacity: 0;
+      filter: blur(16px);
+      letter-spacing: 22px;
+      transform: scale(1.1);
+    }
+
+    55% {
+      opacity: 1;
+      filter: blur(0);
+      letter-spacing: 8px;
+      transform: scale(1);
+    }
+
+    70% {
+      opacity: 1;
+      filter: blur(0);
+      letter-spacing: 8px;
+      transform: scale(1);
+    }
+
+    100% {
+      opacity: 0;
+      filter: blur(4px);
+      letter-spacing: 8px;
+      transform: scale(4);
+    }
   }
 }
 </style>
@@ -686,14 +818,27 @@ h2 {
   min-width: 80px !important;
   max-width: 110px !important;
 }
-.settings-popover .el-popover__title { display: none; }
-.settings-option { color: #D32F2F !important; font-weight: 500; padding: 4px 0; }
-.settings-option:hover { color: #B91C1C !important; background: transparent; }
+
+.settings-popover .el-popover__title {
+  display: none;
+}
+
+.settings-option {
+  color: #D32F2F !important;
+  font-weight: 500;
+  padding: 4px 0;
+}
+
+.settings-option:hover {
+  color: #B91C1C !important;
+  background: transparent;
+}
 
 .dirty-confirm-box .el-overlay-dialog {
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
+
 .dirty-confirm-box .el-message-box {
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
@@ -707,7 +852,10 @@ h2 {
   box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
   transition: box-shadow 0.3s;
 }
-.light-panel:hover { box-shadow: 0 6px 22px rgba(15, 23, 42, 0.06); }
+
+.light-panel:hover {
+  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.06);
+}
 
 .panel-title {
   display: flex;
@@ -718,12 +866,15 @@ h2 {
   color: #0F172A;
   margin-bottom: 14px;
 }
+
 .panel-title .dot {
-  width: 8px; height: 8px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #c8102e;
   box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.15);
 }
+
 .panel-title .count {
   font-size: 12px;
   color: #94A3B8;
