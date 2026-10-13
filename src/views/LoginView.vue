@@ -2,7 +2,7 @@
 import { ref, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { supabase } from '@/utils/supabase'
+import { supabase, ensureAnonymousLogin } from '@/utils/supabase'
 
 const router = useRouter()
 
@@ -54,6 +54,9 @@ const handleLogin = async () => {
   }
 
   try {
+    // 👇 关键：在查询数据库前先确保匿名登录
+    await ensureAnonymousLogin()
+
     // ① 先查 admins 表（不加 status 过滤，查到再判断）
     const { data: adminData, error: adminError } = await supabase
       .from('admins')
@@ -80,7 +83,7 @@ const handleLogin = async () => {
         role: 'admin',
       }
       localStorage.setItem('currentUser', JSON.stringify(account))
-      localStorage.setItem('originalUser', JSON.stringify(account))   // 👈 保留原始身份
+      localStorage.setItem('originalUser', JSON.stringify(account))
       playWelcome('/portal')
       return
     }
@@ -119,7 +122,7 @@ const handleLogin = async () => {
       permissions: customerData.permissions || {},
     }
     localStorage.setItem('currentUser', JSON.stringify(account))
-    localStorage.setItem('originalUser', JSON.stringify(account))    // 👈 保留原始身份
+    localStorage.setItem('originalUser', JSON.stringify(account))
     playWelcome('/dashboard')
   } catch (e) {
     console.error(e)
@@ -728,7 +731,6 @@ const playWelcome = (target = '/dashboard') => {
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Logo 与文字间距 */
 .welcome-logo {
   margin-bottom: 40px;
   transform: translateX(-22px);
