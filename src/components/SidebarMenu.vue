@@ -40,7 +40,8 @@
       <span>运营管理</span>
     </el-menu-item>
 
-    <el-sub-menu v-if="hasPerm('waybill') || hasPerm('report')" index="transport-management">
+    <!-- 运输管理 ⭐ 加路线管理 -->
+    <el-sub-menu v-if="hasPerm('waybill') || hasPerm('report') || hasPerm('route')" index="transport-management">
       <template #title>
         <el-icon>
           <Tickets />
@@ -48,6 +49,7 @@
         <span>运输管理</span>
       </template>
       <el-menu-item v-if="hasPerm('waybill')" index="/waybill">运单管理</el-menu-item>
+      <el-menu-item index="/route/manage">路线管理</el-menu-item>
       <el-menu-item v-if="hasPerm('report')" index="/report">车队运营报告</el-menu-item>
     </el-sub-menu>
 

@@ -1,24 +1,20 @@
 <template>
-  <el-dialog
-    v-model="visible"
-    :title="isEdit ? '围栏设置 - 编辑' : '围栏设置 - 新增'"
-    width="1050px"
-    top="5vh"
-    destroy-on-close
-    :close-on-click-modal="false"
-    class="fence-dialog"
-    @close="handleClose"
-  >
+  <el-dialog v-model="visible" :title="isEdit ? '围栏设置 - 编辑' : '围栏设置 - 新增'" width="1050px" top="5vh" destroy-on-close
+    :close-on-click-modal="false" class="fence-dialog" @close="handleClose">
     <div class="dialog-layout">
       <div class="map-panel">
         <div id="fence-map-container" class="map-container"></div>
         <div class="map-glow-bar"></div>
         <div class="map-tip">
-          <el-icon><InfoFilled /></el-icon>
+          <el-icon>
+            <InfoFilled />
+          </el-icon>
           {{ mapTipText }}
         </div>
         <div class="locate-btn" @click="locateUser" title="回到我的位置">
-          <el-icon><Location /></el-icon>
+          <el-icon>
+            <Location />
+          </el-icon>
         </div>
         <transition name="fade">
           <div v-if="located" class="locate-radar"></div>
@@ -26,15 +22,8 @@
       </div>
 
       <div class="form-panel">
-        <el-form
-          :model="form"
-          :rules="rules"
-          ref="formRef"
-          label-position="top"
-          size="default"
-          class="stagger-form"
-          status-icon
-        >
+        <el-form :model="form" :rules="rules" ref="formRef" label-position="top" size="default" class="stagger-form"
+          status-icon>
           <el-form-item label="围栏形状">
             <el-radio-group v-model="form.shape" @change="handleShapeChange" :disabled="isEdit">
               <el-radio label="circle">圆形</el-radio>
@@ -46,41 +35,40 @@
           </el-form-item>
 
           <el-form-item v-if="form.shape !== 'district'" label="请输入位置">
-            <el-input
-              v-model="searchKeyword"
-              placeholder="请先搜索地址"
-              clearable
-              @keyup.enter="handleSearchAddress"
-            >
+            <el-input v-model="searchKeyword" placeholder="请先搜索地址" clearable @keyup.enter="handleSearchAddress">
               <template #suffix>
-                <el-icon class="search-icon" @click="handleSearchAddress"><Search /></el-icon>
+                <el-icon class="search-icon" @click="handleSearchAddress">
+                  <Search />
+                </el-icon>
               </template>
             </el-input>
           </el-form-item>
 
-          <!-- 👇 围栏名称：带重名校验 -->
           <el-form-item label="电子围栏名称" prop="name">
-            <el-input
-              v-model="form.name"
-              placeholder="仅支持中文、英文、数字、下划线和横线"
-              maxlength="128"
-              show-word-limit
-              clearable
-              @input="handleNameInput"
-              @blur="handleNameBlur"
-            >
+            <el-input v-model="form.name" placeholder="仅支持中文、英文、数字、下划线和横线" maxlength="128" show-word-limit clearable
+              @input="handleNameInput" @blur="handleNameBlur">
               <template #suffix>
-                <el-icon v-if="nameChecking" class="is-loading name-status-icon"><Loading /></el-icon>
-                <el-icon v-else-if="nameValidated && !nameExists && form.name" class="name-status-icon success"><CircleCheck /></el-icon>
-                <el-icon v-else-if="nameExists && form.name" class="name-status-icon error"><CircleClose /></el-icon>
+                <el-icon v-if="nameChecking" class="is-loading name-status-icon">
+                  <Loading />
+                </el-icon>
+                <el-icon v-else-if="nameValidated && !nameExists && form.name" class="name-status-icon success">
+                  <CircleCheck />
+                </el-icon>
+                <el-icon v-else-if="nameExists && form.name" class="name-status-icon error">
+                  <CircleClose />
+                </el-icon>
               </template>
             </el-input>
           </el-form-item>
 
           <el-form-item label="所属机构" prop="org">
-            <el-select v-model="form.org" placeholder="请选择所属车队" style="width: 100%;">
-              <el-option label="西马物流新能源车队" value="西马物流新能源车队" />
-              <el-option label="其他机构" value="其他机构" />
+            <el-select v-model="form.org" placeholder="请选择所属车队" style="width: 100%;" filterable>
+              <el-option v-for="o in orgOptions" :key="o.id" :label="o.name" :value="o.name" />
+              <template #empty>
+                <div style="padding: 16px; text-align: center; color: #94A3B8; font-size: 12.5px;">
+                  暂无机构，请先去"组织管理"创建
+                </div>
+              </template>
             </el-select>
           </el-form-item>
 
@@ -94,18 +82,11 @@
 
           <el-form-item v-if="form.shape === 'circle'" label="围栏半径" prop="radius">
             <div class="radius-control">
-              <el-slider
-                v-model="form.radius"
-                :min="50" :max="50000" :step="50"
-                :marks="radiusMarks"
-                :format-tooltip="formatRadiusTooltip"
-                class="radius-slider"
-              />
+              <el-slider v-model="form.radius" :min="50" :max="50000" :step="50" :marks="radiusMarks"
+                :format-tooltip="formatRadiusTooltip" class="radius-slider" />
               <div class="radius-input-row">
-                <el-input-number
-                  v-model="form.radius" :min="50" :max="50000" :step="100"
-                  controls-position="right" size="default" style="width: 140px;"
-                />
+                <el-input-number v-model="form.radius" :min="50" :max="50000" :step="100" controls-position="right"
+                  size="default" style="width: 140px;" />
                 <span class="radius-unit">米</span>
                 <span class="radius-hint">({{ (form.radius / 1000).toFixed(2) }} km)</span>
               </div>
@@ -114,17 +95,11 @@
 
           <el-form-item v-if="form.shape === 'polyline'" label="沿线偏移距离" prop="bufferradius">
             <div class="radius-control">
-              <el-slider
-                v-model="form.bufferradius"
-                :min="1" :max="300" :step="1"
-                :marks="{ 1: '1m', 100: '100m', 300: '300m' }"
-                class="radius-slider"
-              />
+              <el-slider v-model="form.bufferradius" :min="1" :max="300" :step="1"
+                :marks="{ 1: '1m', 100: '100m', 300: '300m' }" class="radius-slider" />
               <div class="radius-input-row">
-                <el-input-number
-                  v-model="form.bufferradius" :min="1" :max="300" :step="1"
-                  controls-position="right" size="default" style="width: 140px;"
-                />
+                <el-input-number v-model="form.bufferradius" :min="1" :max="300" :step="1" controls-position="right"
+                  size="default" style="width: 140px;" />
                 <span class="radius-unit">米</span>
               </div>
             </div>
@@ -132,7 +107,8 @@
 
           <template v-if="form.shape === 'district'">
             <el-form-item label="省 / 直辖市" prop="province">
-              <el-select v-model="form.province" placeholder="请选择省份" style="width: 100%;" @change="handleProvinceChange">
+              <el-select v-model="form.province" placeholder="请选择省份" style="width: 100%;"
+                @change="handleProvinceChange">
                 <el-option v-for="p in provinceOptions" :key="p.adcode" :label="p.name" :value="p.adcode" />
               </el-select>
             </el-form-item>
@@ -144,30 +120,19 @@
           </template>
 
           <el-form-item v-if="form.shape !== 'district'" label="坐标点">
-            <el-input
-              v-model="form.pointsDisplay"
-              type="textarea"
-              :rows="2"
-              readonly
-              :placeholder="pointsPlaceholder"
-              resize="none"
-            />
+            <el-input v-model="form.pointsDisplay" type="textarea" :rows="2" readonly :placeholder="pointsPlaceholder"
+              resize="none" />
           </el-form-item>
 
           <el-form-item label="地理位置">
-            <el-input
-              v-model="form.location"
-              type="textarea"
-              :rows="2"
-              readonly
-              placeholder="绘制后自动显示"
-              resize="none"
-            />
+            <el-input v-model="form.location" type="textarea" :rows="2" readonly placeholder="绘制后自动显示" resize="none" />
           </el-form-item>
 
           <el-form-item v-if="form.lastActionTime" label="操作时间">
             <div class="time-tag">
-              <el-icon><Clock /></el-icon>
+              <el-icon>
+                <Clock />
+              </el-icon>
               <span>{{ form.lastActionText }}：{{ form.lastActionTime }}</span>
             </div>
           </el-form-item>
@@ -181,13 +146,8 @@
         <el-button v-if="!isEdit" class="btn-continue" @click="submitForm(true)" :loading="submitting">
           提交并继续创建
         </el-button>
-        <el-button
-          type="primary"
-          class="btn-submit"
-          @click="submitForm(false)"
-          :loading="submitting"
-          :disabled="nameExists"
-        >
+        <el-button type="primary" class="btn-submit" @click="submitForm(false)" :loading="submitting"
+          :disabled="nameExists">
           <span v-if="!submitting">{{ isEdit ? '保存修改' : '提交' }}</span>
           <span v-else>提交中...</span>
         </el-button>
@@ -201,11 +161,7 @@
           <div class="submit-ring">
             <svg viewBox="0 0 100 100" width="120" height="120">
               <circle cx="50" cy="50" r="42" class="ring-track" />
-              <circle
-                cx="50" cy="50" r="42"
-                class="ring-progress"
-                :style="{ strokeDashoffset: ringOffset }"
-              />
+              <circle cx="50" cy="50" r="42" class="ring-progress" :style="{ strokeDashoffset: ringOffset }" />
             </svg>
             <div class="ring-percent">{{ Math.round(submitProgress) }}%</div>
           </div>
@@ -256,10 +212,46 @@ const searchKeyword = ref('')
 const located = ref(false)
 const showSuccess = ref(false)
 
-// 👇 HTTP 网关地址
+// HTTP 网关地址
 const API_BASE = 'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com'
 
+// ============================================================
+// 当前登录用户
+// ============================================================
+const currentUser = (() => {
+  try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
+  catch { return {} }
+})()
+const isAdmin = currentUser.role === 'admin'
+const isCustomer = !isAdmin
+const myAccount = currentUser.masterAccount || currentUser.account || ''
+
+// ============================================================
+// 所属机构下拉选项
+// ============================================================
+const orgOptions = ref([])
+
+const loadOrgOptions = async () => {
+  try {
+    let q = supabase.from('organizations').select('id, name').order('id')
+    if (isCustomer) q = q.eq('owner_account', myAccount)
+    const { data, error } = await q
+    if (error) throw error
+
+    const list = [...(data || [])]
+    if (isCustomer) {
+      const rootLabel = currentUser.name || currentUser.account || '我的组织'
+      list.unshift({ id: '__root__', name: rootLabel, isRoot: true })
+    }
+    orgOptions.value = list
+  } catch (e) {
+    console.error('加载组织失败：', e)
+  }
+}
+
+// ============================================================
 // 提交动画进度
+// ============================================================
 const submitProgress = ref(0)
 const submitText = ref('正在准备...')
 let progressTimer = null
@@ -269,9 +261,9 @@ const isEdit = computed(() => !!(props.editData && props.editData.gfid))
 const RING_LENGTH = 263.89
 const ringOffset = computed(() => RING_LENGTH * (1 - submitProgress.value / 100))
 
-// ============================================
-// 👇 围栏名称重名校验状态
-// ============================================
+// ============================================================
+// 围栏名称重名校验
+// ============================================================
 const nameChecking = ref(false)
 const nameExists = ref(false)
 const nameValidated = ref(false)
@@ -295,18 +287,9 @@ const form = reactive({
   lastActionText: '',
 })
 
-// ============================================
-// 👇 自定义校验器：围栏名称
-// ============================================
 const validateName = async (rule, value, callback) => {
-  if (!value) {
-    callback(new Error('请输入围栏名称'))
-    return
-  }
-  if (value.length > 128) {
-    callback(new Error('围栏名称不能超过 128 个字符'))
-    return
-  }
+  if (!value) { callback(new Error('请输入围栏名称')); return }
+  if (value.length > 128) { callback(new Error('围栏名称不能超过 128 个字符')); return }
   const validPattern = /^[\u4e00-\u9fa5a-zA-Z0-9_-]+$/
   if (!validPattern.test(value)) {
     callback(new Error('围栏名称仅支持中文、英文字母、数字、下划线和横线'))
@@ -328,39 +311,21 @@ const validateName = async (rule, value, callback) => {
   callback()
 }
 
-// ============================================
-// 👇 查询名称是否已存在
-// ============================================
 const checkNameExists = async (name) => {
   try {
-    let query = supabase
-      .from('ele_fences')
-      .select('id, gfid, name')
-      .eq('name', name)
-
+    let query = supabase.from('ele_fences').select('id, gfid, name').eq('name', name)
     if (isEdit.value && props.editData && props.editData.id) {
       query = query.neq('id', props.editData.id)
     }
-
     const { data, error } = await query.limit(1)
-    if (error) {
-      console.warn('重名校验失败：', error)
-      return false
-    }
+    if (error) { console.warn('重名校验失败：', error); return false }
     return data && data.length > 0
-  } catch (e) {
-    console.warn('重名校验异常：', e)
-    return false
-  }
+  } catch (e) { console.warn('重名校验异常：', e); return false }
 }
 
-// ============================================
-// 👇 名称输入：防抖校验
-// ============================================
 const handleNameInput = () => {
   nameExists.value = false
   nameValidated.value = false
-
   if (nameCheckTimer) clearTimeout(nameCheckTimer)
 
   const currentName = form.name.trim()
@@ -377,7 +342,7 @@ const handleNameInput = () => {
     if (exists) {
       nameExists.value = true
       nameValidated.value = false
-      formRef.value?.validateField('name').catch(() => {})
+      formRef.value?.validateField('name').catch(() => { })
     } else {
       nameExists.value = false
       nameValidated.value = true
@@ -386,11 +351,8 @@ const handleNameInput = () => {
 }
 
 const handleNameBlur = () => {
-  if (nameCheckTimer) {
-    clearTimeout(nameCheckTimer)
-    nameCheckTimer = null
-  }
-  formRef.value?.validateField('name').catch(() => {})
+  if (nameCheckTimer) { clearTimeout(nameCheckTimer); nameCheckTimer = null }
+  formRef.value?.validateField('name').catch(() => { })
 }
 
 const rules = {
@@ -399,9 +361,7 @@ const rules = {
   attr: [{ required: true, message: '请选择围栏属性', trigger: 'change' }],
 }
 
-const radiusMarks = {
-  50: '50m', 5000: '5km', 10000: '10km', 25000: '25km', 50000: '50km',
-}
+const radiusMarks = { 50: '50m', 5000: '5km', 10000: '10km', 25000: '25km', 50000: '50km' }
 const formatRadiusTooltip = (val) => val < 1000 ? val + '米' : (val / 1000).toFixed(2) + '公里'
 
 const mapTipText = computed(() => {
@@ -441,68 +401,57 @@ let userLng = null
 let userLat = null
 
 const DEFAULT_CENTER = [114.206, 30.581]
-
 const provinceOptions = ref([])
 const cityOptions = ref([])
 
-// ============================================
-// 提交进度动画控制
-// ============================================
+// ============================================================
+// 提交进度动画
+// ============================================================
 const startProgressAnimation = () => {
   submitProgress.value = 0
   submitText.value = '正在连接高德服务器...'
-
   progressTimer = setInterval(() => {
     if (submitProgress.value < 85) {
       submitProgress.value = Math.min(85, submitProgress.value + Math.random() * 6 + 2)
     }
-    if (submitProgress.value < 30) {
-      submitText.value = '正在连接高德服务器...'
-    } else if (submitProgress.value < 55) {
-      submitText.value = '正在创建围栏数据...'
-    } else if (submitProgress.value < 80) {
-      submitText.value = '正在同步到本地数据库...'
-    } else {
-      submitText.value = '即将完成，请稍候...'
-    }
+    if (submitProgress.value < 30) submitText.value = '正在连接高德服务器...'
+    else if (submitProgress.value < 55) submitText.value = '正在创建围栏数据...'
+    else if (submitProgress.value < 80) submitText.value = '正在同步到本地数据库...'
+    else submitText.value = '即将完成，请稍候...'
   }, 220)
 }
 
 const finishProgressAnimation = () => {
-  if (progressTimer) {
-    clearInterval(progressTimer)
-    progressTimer = null
-  }
+  if (progressTimer) { clearInterval(progressTimer); progressTimer = null }
   submitProgress.value = 100
   submitText.value = '完成！'
 }
 
 const resetProgressAnimation = () => {
-  if (progressTimer) {
-    clearInterval(progressTimer)
-    progressTimer = null
-  }
+  if (progressTimer) { clearInterval(progressTimer); progressTimer = null }
   submitProgress.value = 0
   submitText.value = '正在准备...'
 }
 
+// ============================================================
+// 监听弹窗显隐
+// ============================================================
 watch(() => props.modelValue, async (val) => {
   visible.value = val
   if (val) {
+    await loadOrgOptions()
     await nextTick()
     await initMap()
-    if (props.editData) {
-      loadEditData()
-    }
+    if (props.editData) loadEditData()
   } else {
     destroyMap()
   }
 })
 watch(visible, (val) => emit('update:modelValue', val))
 
-// ============================================
+// ============================================================
 // 初始化地图
-// ============================================
+// ============================================================
 const initMap = async () => {
   try {
     AMapInstance = await AMapLoader.load({
@@ -539,10 +488,7 @@ const initMap = async () => {
   } catch (e) { console.error(e) }
 
   loadProvinces()
-
-  if (!isEdit.value) {
-    locateUser()
-  }
+  if (!isEdit.value) locateUser()
 
   try {
     if (autoComplete) {
@@ -555,8 +501,15 @@ const initMap = async () => {
       })
     }
 
-    if (!isEdit.value && form.shape === 'circle') {
-      map.on('click', onMapClickCircle)
+    // ⭐ 根据当前形状激活绘制工具
+    if (!isEdit.value) {
+      if (form.shape === 'circle') {
+        map.on('click', onMapClickCircle)
+      } else if (form.shape === 'polygon') {
+        startPolygonDraw()
+      } else if (form.shape === 'polyline') {
+        startPolylineDraw()
+      }
     }
 
     watch(() => form.radius, (val) => {
@@ -565,9 +518,9 @@ const initMap = async () => {
   } catch (e) { console.error(e) }
 }
 
-// ============================================
+// ============================================================
 // 编辑模式：加载已有数据
-// ============================================
+// ============================================================
 const loadEditData = () => {
   const d = props.editData
   if (!d) return
@@ -595,26 +548,17 @@ const loadEditData = () => {
 
   if (d.shape === 'district' && d.adcode) {
     nextTick(() => {
-      const districtSearch = new AMapInstance.DistrictSearch({
-        level: 'district',
-        extensions: 'base',
-      })
+      const districtSearch = new AMapInstance.DistrictSearch({ level: 'district', extensions: 'base' })
       districtSearch.search(d.adcode.toString(), (status, result) => {
         if (status === 'complete' && result.districtList && result.districtList[0]) {
           const provincePrefix = String(d.adcode).substring(0, 2)
-          const matchedProvince = provinceOptions.value.find(p =>
-            String(p.adcode).startsWith(provincePrefix)
-          )
+          const matchedProvince = provinceOptions.value.find(p => String(p.adcode).startsWith(provincePrefix))
           if (matchedProvince) {
             form.province = matchedProvince.adcode
-            const provinceSearch = new AMapInstance.DistrictSearch({
-              level: 'province', subdistrict: 1, extensions: 'all',
-            })
+            const provinceSearch = new AMapInstance.DistrictSearch({ level: 'province', subdistrict: 1, extensions: 'all' })
             provinceSearch.search(matchedProvince.adcode.toString(), (s, r) => {
               if (s === 'complete' && r.districtList && r.districtList[0]) {
-                cityOptions.value = (r.districtList[0].districtList || []).map(c => ({
-                  name: c.name, adcode: c.adcode,
-                }))
+                cityOptions.value = (r.districtList[0].districtList || []).map(c => ({ name: c.name, adcode: c.adcode }))
                 const cityPrefix = String(d.adcode).substring(0, 4)
                 const matchedCity = cityOptions.value.find(c =>
                   String(c.adcode).startsWith(cityPrefix) || c.adcode === d.adcode
@@ -645,6 +589,9 @@ const loadEditData = () => {
   })
 }
 
+// ============================================================
+// 从已有 points 恢复多边形
+// ============================================================
 const drawPolygonFromPoints = (pointsStr) => {
   const path = pointsStr.split(';').filter(Boolean).map(p => {
     const [lng, lat] = p.split(',').map(Number)
@@ -685,9 +632,7 @@ const drawPolylineFromPoints = (pointsStr) => {
 }
 
 const loadDistrictBoundary = (adcode) => {
-  const districtSearch = new AMapInstance.DistrictSearch({
-    level: 'district', extensions: 'all',
-  })
+  const districtSearch = new AMapInstance.DistrictSearch({ level: 'district', extensions: 'all' })
   districtSearch.search(adcode.toString(), (status, result) => {
     if (status === 'complete' && result.districtList && result.districtList[0]) {
       const boundaries = result.districtList[0].boundaries
@@ -705,23 +650,35 @@ const loadDistrictBoundary = (adcode) => {
   })
 }
 
+// ============================================================
+// ⭐ 切换形状：恢复正确的绘制工具激活逻辑
+// ============================================================
 const handleShapeChange = () => {
   if (isEdit.value) return
   clearDrawings()
-  if (!map || !mouseTool) return
-  mouseTool.close(false)
 
-  if (form.shape === 'circle') {
-    map.on('click', onMapClickCircle)
-  } else if (form.shape === 'polygon') {
-    map.off('click', onMapClickCircle)
-    startPolygonDraw()
-  } else if (form.shape === 'polyline') {
-    map.off('click', onMapClickCircle)
-    startPolylineDraw()
-  } else if (form.shape === 'district') {
-    map.off('click', onMapClickCircle)
+  if (!map || !mouseTool) {
+    console.warn('[Fence] map 或 mouseTool 未初始化')
+    return
   }
+
+  // 先关闭之前的绘制工具（清掉未完成的绘制）
+  try { mouseTool.close(false) } catch (e) { /* ignore */ }
+
+  // 移除地图点击监听
+  try { map.off('click', onMapClickCircle) } catch (e) { /* ignore */ }
+
+  // 等 Vue 更新完再激活新工具
+  nextTick(() => {
+    if (form.shape === 'circle') {
+      map.on('click', onMapClickCircle)
+    } else if (form.shape === 'polygon') {
+      startPolygonDraw()
+    } else if (form.shape === 'polyline') {
+      startPolylineDraw()
+    }
+    // district 不需要地图交互
+  })
 }
 
 const onMapClickCircle = (e) => {
@@ -729,24 +686,40 @@ const onMapClickCircle = (e) => {
   drawCircle(e.lnglat.getLng(), e.lnglat.getLat())
 }
 
+// ============================================================
+// ⭐ 多边形绘制：加防御 + 只绑定一次
+// ============================================================
 const startPolygonDraw = () => {
+  if (!mouseTool) return
+  try { mouseTool.off && mouseTool.off('draw') } catch (e) { /* ignore */ }
+
   mouseTool.polygon({
     strokeColor: '#D32F2F', strokeWeight: 2,
     fillColor: '#D32F2F', fillOpacity: 0.12,
   })
+
   mouseTool.on('draw', (event) => {
+    if (polygon && map) {
+      try { map.remove(polygon) } catch (e) { /* ignore */ }
+    }
     polygon = event.obj
+
     polygonEditor = new AMapInstance.PolygonEditor(map, polygon)
     polygonEditor.open()
     updatePolygonData()
     polygonEditor.on('adjust', updatePolygonData)
     polygonEditor.on('move', updatePolygonData)
+
+    // 绘制完后关闭 mouseTool，避免继续绘制
+    try { mouseTool.close(false) } catch (e) { /* ignore */ }
   })
 }
 
 const updatePolygonData = () => {
   if (!polygon) return
   const path = polygon.getPath()
+  if (!path || path.length === 0) return
+
   const coords = path.map(p => p.getLng().toFixed(6) + ',' + p.getLat().toFixed(6))
   form.points = coords.join(';')
   form.pointsDisplay = coords.join('\n')
@@ -758,23 +731,38 @@ const updatePolygonData = () => {
   geocodeAddress(centerLng, centerLat)
 }
 
+// ============================================================
+// ⭐ 线形绘制：加防御 + 只绑定一次
+// ============================================================
 const startPolylineDraw = () => {
+  if (!mouseTool) return
+  try { mouseTool.off && mouseTool.off('draw') } catch (e) { /* ignore */ }
+
   mouseTool.polyline({
     strokeColor: '#D32F2F', strokeWeight: 4, strokeOpacity: 0.8,
   })
+
   mouseTool.on('draw', (event) => {
+    if (polyline && map) {
+      try { map.remove(polyline) } catch (e) { /* ignore */ }
+    }
     polyline = event.obj
+
     polylineEditor = new AMapInstance.PolylineEditor(map, polyline)
     polylineEditor.open()
     updatePolylineData()
     polylineEditor.on('adjust', updatePolylineData)
     polylineEditor.on('move', updatePolylineData)
+
+    try { mouseTool.close(false) } catch (e) { /* ignore */ }
   })
 }
 
 const updatePolylineData = () => {
   if (!polyline) return
   const path = polyline.getPath()
+  if (!path || path.length === 0) return
+
   const coords = path.map(p => p.getLng().toFixed(6) + ',' + p.getLat().toFixed(6))
   form.points = coords.join(';')
   form.pointsDisplay = coords.join('\n')
@@ -784,16 +772,15 @@ const updatePolylineData = () => {
   }
 }
 
+// ============================================================
+// 省市区加载
+// ============================================================
 const loadProvinces = () => {
   if (!AMapInstance) return
-  const districtSearch = new AMapInstance.DistrictSearch({
-    level: 'country', subdistrict: 1, extensions: 'base',
-  })
+  const districtSearch = new AMapInstance.DistrictSearch({ level: 'country', subdistrict: 1, extensions: 'base' })
   districtSearch.search('中国', (status, result) => {
     if (status === 'complete' && result.districtList && result.districtList[0]) {
-      provinceOptions.value = result.districtList[0].districtList.map(p => ({
-        name: p.name, adcode: p.adcode,
-      }))
+      provinceOptions.value = result.districtList[0].districtList.map(p => ({ name: p.name, adcode: p.adcode }))
     }
   })
 }
@@ -804,14 +791,10 @@ const handleProvinceChange = (adcode) => {
   cityOptions.value = []
 
   if (!adcode || !AMapInstance) return
-  const districtSearch = new AMapInstance.DistrictSearch({
-    level: 'province', subdistrict: 1, extensions: 'all',
-  })
+  const districtSearch = new AMapInstance.DistrictSearch({ level: 'province', subdistrict: 1, extensions: 'all' })
   districtSearch.search(adcode.toString(), (status, result) => {
     if (status === 'complete' && result.districtList && result.districtList[0]) {
-      cityOptions.value = (result.districtList[0].districtList || []).map(c => ({
-        name: c.name, adcode: c.adcode,
-      }))
+      cityOptions.value = (result.districtList[0].districtList || []).map(c => ({ name: c.name, adcode: c.adcode }))
     }
   })
 }
@@ -824,6 +807,9 @@ const handleCityChange = (adcode) => {
   form.location = name
 }
 
+// ============================================================
+// 圆形绘制
+// ============================================================
 const drawCircle = (lng, lat) => {
   form.center = lng.toFixed(6) + ',' + lat.toFixed(6)
 
@@ -878,6 +864,9 @@ const handleSearchAddress = () => {
   })
 }
 
+// ============================================================
+// 定位
+// ============================================================
 const locateUser = async () => {
   if (!AMapInstance || !map) return
   const loadingMsg = ElMessage({ message: '正在获取您的位置...', duration: 0, icon: 'el-icon-loading' })
@@ -1007,12 +996,15 @@ const addUserLocationMarker = (lng, lat, isDefault = false) => {
   })
 }
 
+// ============================================================
+// 清空绘制
+// ============================================================
 const clearDrawings = () => {
   if (!map) return
-  if (circle) { map.remove(circle); circle = null; circleEditor = null }
-  if (polygon) { map.remove(polygon); polygon = null; polygonEditor = null }
-  if (polyline) { map.remove(polyline); polyline = null; polylineEditor = null }
-  if (districtPolygon) { map.remove(districtPolygon); districtPolygon = null }
+  if (circle) { try { map.remove(circle) } catch (e) { } circle = null; circleEditor = null }
+  if (polygon) { try { map.remove(polygon) } catch (e) { } polygon = null; polygonEditor = null }
+  if (polyline) { try { map.remove(polyline) } catch (e) { } polyline = null; polylineEditor = null }
+  if (districtPolygon) { try { map.remove(districtPolygon) } catch (e) { } districtPolygon = null }
   form.points = ''
   form.pointsDisplay = ''
   form.center = ''
@@ -1020,7 +1012,7 @@ const clearDrawings = () => {
 }
 
 const destroyMap = () => {
-  if (map) { map.destroy(); map = null }
+  if (map) { try { map.destroy() } catch (e) { } map = null }
   circle = null; circleEditor = null
   polygon = null; polygonEditor = null
   polyline = null; polylineEditor = null
@@ -1048,8 +1040,13 @@ const handleClose = () => {
   if (nameCheckTimer) { clearTimeout(nameCheckTimer); nameCheckTimer = null }
 }
 
+// ============================================================
+// 提交表单（新增 / 编辑）
+// ============================================================
 // ============================================
 // 提交表单（新增 or 编辑）
+// ⭐ 新增：数据库先写 → 高德建 → 高德失败回滚
+// ⭐ 编辑：高德先改 → 数据库后改
 // ============================================
 const submitForm = (isContinue) => {
   formRef.value.validate(async (valid) => {
@@ -1069,58 +1066,47 @@ const submitForm = (isContinue) => {
     startProgressAnimation()
 
     try {
-      const payload = {
+      // ============================================================
+      // 1️⃣ 构造高德请求 payload
+      // ============================================================
+      const amapPayload = {
         shape: form.shape,
         name: form.name,
         desc: form.attr,
-        center: form.center,
-        radius: form.radius,
-        points: form.points,
-        bufferradius: form.bufferradius,
-        adcode: form.adcode,
+      }
+
+      let polygonPointsForDB = null
+
+      if (form.shape === 'circle') {
+        amapPayload.center = form.center
+        amapPayload.radius = form.radius
+      } else if (form.shape === 'polygon') {
+        // ⭐ 多边形首尾点闭合（高德要求）
+        let list = String(form.points || '')
+          .split(';')
+          .map(s => s.trim())
+          .filter(Boolean)
+        if (list.length >= 3 && list[0] !== list[list.length - 1]) {
+          list.push(list[0])
+        }
+        amapPayload.points = list.join(';')
+        polygonPointsForDB = amapPayload.points
+      } else if (form.shape === 'polyline') {
+        amapPayload.points = form.points
+        amapPayload.bufferradius = form.bufferradius
+      } else if (form.shape === 'district') {
+        amapPayload.adcode = form.adcode
       }
 
       let functionName = 'amap-geofence'
       if (isEdit.value) {
-        payload.gfid = props.editData.gfid
+        amapPayload.gfid = props.editData.gfid
         functionName = 'amap-geofence-update'
       }
 
-      // 👇 用 fetch 调用 HTTP 网关（新建/更新）
-      const response = await fetch(`${API_BASE}/${functionName}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-      const data = await response.json()
-
-      // 把 20003 也当作成功（高德"假错误"，实际已成功）
-      const isSuccess = data.errcode === 0 || data.errcode === 10000 || data.errcode === 20003
-      if (!isSuccess) {
-        finishProgressAnimation()
-        setTimeout(() => {
-          submitting.value = false
-          resetProgressAnimation()
-          console.error('【高德返回】', data)
-
-          const errmsg = String(data.errmsg || '')
-          let friendlyMsg = (isEdit.value ? '更新' : '创建') + '失败：' + (errmsg || '未知错误')
-
-          if (errmsg.includes('EXISTING_ELEMENT') || errmsg.includes('DUPLICATE') || errmsg.includes('existed')) {
-            friendlyMsg = `围栏名称「${form.name}」已存在，请修改名称后重试`
-            nameExists.value = true
-          } else if (data.errcode === 20001 || data.errcode === 20800) {
-            friendlyMsg = '参数错误，请检查围栏名称是否包含非法字符（仅支持中文、英文、数字、_ 和 -）'
-          }
-
-          ElMessage({ type: 'error', message: friendlyMsg, duration: 5000, showClose: true })
-        }, 400)
-        return
-      }
-
+      // ============================================================
+      // 2️⃣ 构造数据库 payload
+      // ============================================================
       const now = new Date().toISOString()
       const dbPayload = {
         name: form.name,
@@ -1128,32 +1114,156 @@ const submitForm = (isContinue) => {
         shape: form.shape,
         org: form.org,
         attr: form.attr,
-        radius: form.shape === 'circle' ? form.radius : null,
-        bufferradius: form.shape === 'polyline' ? form.bufferradius : null,
-        center: form.center || null,
-        points: form.points || null,
-        adcode: form.adcode || null,
         location: form.location,
+        owner_account: myAccount,
         updated_at: now,
       }
+      if (form.shape === 'circle') {
+        dbPayload.radius = form.radius
+        dbPayload.center = form.center
+      } else if (form.shape === 'polygon') {
+        dbPayload.points = polygonPointsForDB
+      } else if (form.shape === 'polyline') {
+        dbPayload.points = form.points
+        dbPayload.bufferradius = form.bufferradius
+      } else if (form.shape === 'district') {
+        dbPayload.adcode = form.adcode
+      }
 
-      let dbError = null
-      if (isEdit.value) {
-        const { error } = await supabase
+      // ============================================================
+      // 3️⃣ 分支：新增 vs 编辑
+      // ============================================================
+      let dbRecordId = null   // 用于新增时回滚
+
+      if (!isEdit.value) {
+        // ⭐⭐⭐ 新增：先写数据库（gfid=null）
+        const { data: dbData, error: dbErr } = await supabase
+          .from('ele_fences')
+          .insert({
+            ...dbPayload,
+            gfid: null,
+            created_at: now,
+          })
+          .select('id')
+          .single()
+
+        if (dbErr) {
+          console.error('数据库写入失败：', dbErr)
+          finishProgressAnimation()
+          setTimeout(() => {
+            submitting.value = false
+            resetProgressAnimation()
+            ElMessage.error('保存失败：' + dbErr.message)
+          }, 400)
+          return
+        }
+
+        dbRecordId = dbData.id
+        console.log('[新增围栏] 数据库已写入，id =', dbRecordId)
+      }
+
+      // ============================================================
+      // 4️⃣ 调高德
+      // ============================================================
+      let amapSuccess = false
+      let amapData = null
+      let amapErrorMsg = ''
+
+      try {
+        const response = await fetch(`${API_BASE}/${functionName}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(amapPayload),
+        })
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        amapData = await response.json()
+
+        // 20003 也算成功（高德"假错误"）
+        amapSuccess = amapData.errcode === 0 || amapData.errcode === 10000 || amapData.errcode === 20003
+        if (!amapSuccess) {
+          amapErrorMsg = String(amapData.errmsg || '未知错误')
+        }
+      } catch (netErr) {
+        amapErrorMsg = netErr.message || '网络异常'
+      }
+
+      // ============================================================
+      // 5️⃣ 高德失败 → 回滚数据库（仅新增模式）
+      // ============================================================
+      if (!amapSuccess) {
+        console.error('【高德返回】', amapData || amapErrorMsg)
+
+        // ⭐ 新增模式：删掉刚才插入的数据库记录
+        if (!isEdit.value && dbRecordId) {
+          try {
+            const { error: rollbackErr } = await supabase
+              .from('ele_fences')
+              .delete()
+              .eq('id', dbRecordId)
+            if (rollbackErr) {
+              console.error('回滚数据库失败：', rollbackErr)
+            } else {
+              console.log('[新增围栏] 高德失败，已回滚数据库记录 id =', dbRecordId)
+            }
+          } catch (e) {
+            console.error('回滚异常：', e)
+          }
+        }
+
+        finishProgressAnimation()
+        setTimeout(() => {
+          submitting.value = false
+          resetProgressAnimation()
+
+          let friendlyMsg = (isEdit.value ? '更新' : '创建') + '失败：' + (amapErrorMsg || '未知错误')
+
+          if (amapData && typeof amapData.errmsg === 'string') {
+            const errmsg = amapData.errmsg
+            if (errmsg.includes('EXISTING_ELEMENT') || errmsg.includes('DUPLICATE') || errmsg.includes('existed')) {
+              friendlyMsg = `围栏名称「${form.name}」已存在，请修改名称后重试`
+              nameExists.value = true
+            } else if (amapData.errcode === 20001 || amapData.errcode === 20800) {
+              friendlyMsg = '参数错误，请检查围栏参数或名称是否合法'
+            }
+          }
+
+          ElMessage({ type: 'error', message: friendlyMsg, duration: 5000, showClose: true })
+        }, 400)
+        return
+      }
+
+      // ============================================================
+      // 6️⃣ 高德成功
+      // ============================================================
+      console.log('【高德返回】', amapData)
+
+      if (!isEdit.value && dbRecordId) {
+        // ⭐ 新增：回填 gfid
+        const newGfid = (amapData && amapData.data && amapData.data.gfid) || (amapData && amapData.gfid) || null
+        if (newGfid) {
+          const { error: updateErr } = await supabase
+            .from('ele_fences')
+            .update({ gfid: newGfid })
+            .eq('id', dbRecordId)
+          if (updateErr) {
+            console.error('回填 gfid 失败：', updateErr)
+            ElMessage.warning('信息暂时没有同步成功哈～～')
+          } else {
+            console.log('[新增围栏] 回填 gfid =', newGfid)
+          }
+        } else {
+          console.warn('[新增围栏] 高德返回没有 gfid')
+        }
+      } else if (isEdit.value) {
+        // ⭐ 编辑：更新数据库
+        const { error: dbErr } = await supabase
           .from('ele_fences')
           .update(dbPayload)
           .eq('gfid', props.editData.gfid)
-        dbError = error
-      } else {
-        const newGfid = (data && data.data && data.data.gfid) || (data && data.gfid) || null
-        const { error } = await supabase
-          .from('ele_fences')
-          .insert({ ...dbPayload, gfid: newGfid, created_at: now })
-        dbError = error
-      }
-
-      if (dbError) {
-        console.error('写入 Supabase 失败：', dbError)
+        if (dbErr) {
+          console.error('数据库更新失败：', dbErr)
+          ElMessage.warning('信息暂时没有同步成功哈～～')
+        }
       }
 
       finishProgressAnimation()
@@ -1204,226 +1314,515 @@ const submitForm = (isContinue) => {
 
 <style scoped>
 :deep(.fence-dialog .el-dialog) {
-  border-radius: 12px; overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   animation: dialogBounceIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 @keyframes dialogBounceIn {
-  from { opacity: 0; transform: scale(0.92) translateY(20px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
+
 :deep(.fence-dialog .el-dialog__header) {
-  padding: 16px 24px; margin: 0;
-  border-bottom: 1px solid #F1F5F9; position: relative;
+  padding: 16px 24px;
+  margin: 0;
+  border-bottom: 1px solid #F1F5F9;
+  position: relative;
 }
+
 :deep(.fence-dialog .el-dialog__header::after) {
-  content: ''; position: absolute; left: 0; bottom: -1px;
-  width: 100%; height: 2px;
-  background: linear-gradient(90deg, rgba(211,47,47,0) 0%, rgba(211,47,47,0.7) 50%, rgba(211,47,47,0) 100%);
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(211, 47, 47, 0) 0%, rgba(211, 47, 47, 0.7) 50%, rgba(211, 47, 47, 0) 100%);
   animation: headerGlow 2.5s ease-in-out infinite;
 }
-@keyframes headerGlow { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-:deep(.fence-dialog .el-dialog__title) { font-size: 16px; font-weight: 600; color: #1E293B; }
-:deep(.fence-dialog .el-dialog__body) { padding: 0; position: relative; }
 
-.dialog-layout { display: flex; height: 68vh; min-height: 540px; }
+@keyframes headerGlow {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+:deep(.fence-dialog .el-dialog__title) {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+:deep(.fence-dialog .el-dialog__body) {
+  padding: 0;
+  position: relative;
+}
+
+.dialog-layout {
+  display: flex;
+  height: 68vh;
+  min-height: 540px;
+}
+
 .map-panel {
-  flex: 1.6; position: relative;
+  flex: 1.6;
+  position: relative;
   background-color: #F8FAFC;
-  border-right: 1px solid #F1F5F9; overflow: hidden;
+  border-right: 1px solid #F1F5F9;
+  overflow: hidden;
 }
-.map-container { width: 100%; height: 100%; animation: mapZoomIn 0.8s ease-out; }
+
+.map-container {
+  width: 100%;
+  height: 100%;
+  animation: mapZoomIn 0.8s ease-out;
+}
+
 @keyframes mapZoomIn {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
+
 .map-glow-bar {
-  position: absolute; top: 0; left: 0;
-  width: 100%; height: 2px;
-  background: linear-gradient(90deg, rgba(211,47,47,0) 0%, rgba(211,47,47,0.8) 50%, rgba(211,47,47,0) 100%);
-  box-shadow: 0 2px 8px rgba(211,47,47,0.3);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(211, 47, 47, 0) 0%, rgba(211, 47, 47, 0.8) 50%, rgba(211, 47, 47, 0) 100%);
+  box-shadow: 0 2px 8px rgba(211, 47, 47, 0.3);
   z-index: 50;
   animation: glowSlide 3s ease-in-out infinite;
 }
+
 @keyframes glowSlide {
-  0%, 100% { transform: translateX(-20%); opacity: 0.6; }
-  50% { transform: translateX(20%); opacity: 1; }
+
+  0%,
+  100% {
+    transform: translateX(-20%);
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: translateX(20%);
+    opacity: 1;
+  }
 }
+
 .map-tip {
-  position: absolute; top: 12px; left: 12px;
-  background: rgba(255,255,255,0.95);
-  padding: 6px 12px; border-radius: 6px;
-  font-size: 12px; color: #D32F2F; font-weight: 600;
-  display: flex; align-items: center; gap: 4px;
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #D32F2F;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   animation: tipSlideIn 0.6s ease-out 0.3s both;
 }
+
 @keyframes tipSlideIn {
-  from { opacity: 0; transform: translateX(-20px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
+
 .locate-btn {
-  position: absolute; top: 12px; right: 12px;
-  width: 36px; height: 36px; background: #ffffff;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  background: #ffffff;
   border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   color: #64748B;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: 100;
 }
+
 .locate-btn:hover {
   color: #D32F2F;
-  box-shadow: 0 4px 14px rgba(211,47,47,0.25);
+  box-shadow: 0 4px 14px rgba(211, 47, 47, 0.25);
   transform: translateY(-2px) scale(1.08);
 }
+
 .locate-radar {
-  position: absolute; inset: 0;
-  pointer-events: none; z-index: 1;
-  background: radial-gradient(circle at center, rgba(211,47,47,0.06) 0%, rgba(211,47,47,0) 60%);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(circle at center, rgba(211, 47, 47, 0.06) 0%, rgba(211, 47, 47, 0) 60%);
   animation: radarFlash 1.5s ease-out;
 }
+
 @keyframes radarFlash {
-  0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; }
+  0% {
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
 }
-.fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 
 .form-panel {
-  flex: 1; padding: 20px; overflow-y: auto; background-color: #FFFFFF;
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background-color: #FFFFFF;
 }
-.form-panel::-webkit-scrollbar { width: 4px; }
-.form-panel::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 2px; }
+
+.form-panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+.form-panel::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 2px;
+}
 
 .stagger-form :deep(.el-form-item) {
   margin-bottom: 16px;
   animation: fieldSlideIn 0.4s ease-out backwards;
 }
-.stagger-form :deep(.el-form-item:nth-child(1)) { animation-delay: 0.05s; }
-.stagger-form :deep(.el-form-item:nth-child(2)) { animation-delay: 0.10s; }
-.stagger-form :deep(.el-form-item:nth-child(3)) { animation-delay: 0.15s; }
-.stagger-form :deep(.el-form-item:nth-child(4)) { animation-delay: 0.20s; }
-.stagger-form :deep(.el-form-item:nth-child(5)) { animation-delay: 0.25s; }
-.stagger-form :deep(.el-form-item:nth-child(6)) { animation-delay: 0.30s; }
-.stagger-form :deep(.el-form-item:nth-child(7)) { animation-delay: 0.35s; }
+
+.stagger-form :deep(.el-form-item:nth-child(1)) {
+  animation-delay: 0.05s;
+}
+
+.stagger-form :deep(.el-form-item:nth-child(2)) {
+  animation-delay: 0.10s;
+}
+
+.stagger-form :deep(.el-form-item:nth-child(3)) {
+  animation-delay: 0.15s;
+}
+
+.stagger-form :deep(.el-form-item:nth-child(4)) {
+  animation-delay: 0.20s;
+}
+
+.stagger-form :deep(.el-form-item:nth-child(5)) {
+  animation-delay: 0.25s;
+}
+
+.stagger-form :deep(.el-form-item:nth-child(6)) {
+  animation-delay: 0.30s;
+}
+
+.stagger-form :deep(.el-form-item:nth-child(7)) {
+  animation-delay: 0.35s;
+}
+
 @keyframes fieldSlideIn {
-  from { opacity: 0; transform: translateX(20px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
+
 :deep(.el-form-item__label) {
-  padding-bottom: 4px; font-size: 13px; color: #475569; font-weight: 500;
+  padding-bottom: 4px;
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
 }
-.edit-hint { font-size: 11px; color: #94A3B8; margin-top: 4px; }
+
+.edit-hint {
+  font-size: 11px;
+  color: #94A3B8;
+  margin-top: 4px;
+}
+
 :deep(.el-input__wrapper) {
   border-radius: 6px;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-:deep(.el-input__wrapper:hover) { box-shadow: 0 0 0 1px #D32F2F inset; }
-:deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 2px rgba(211,47,47,0.15), 0 0 0 1px #D32F2F inset !important;
+
+:deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px #D32F2F inset;
 }
-.search-icon { cursor: pointer; color: #94A3B8; transition: all 0.25s; }
-.search-icon:hover { color: #D32F2F; transform: scale(1.15) rotate(10deg); }
+
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.15), 0 0 0 1px #D32F2F inset !important;
+}
+
+.search-icon {
+  cursor: pointer;
+  color: #94A3B8;
+  transition: all 0.25s;
+}
+
+.search-icon:hover {
+  color: #D32F2F;
+  transform: scale(1.15) rotate(10deg);
+}
 
 .name-status-icon {
   font-size: 16px;
   transition: all 0.2s;
 }
-.name-status-icon.success { color: #10B981; }
-.name-status-icon.error { color: #EF4444; }
+
+.name-status-icon.success {
+  color: #10B981;
+}
+
+.name-status-icon.error {
+  color: #EF4444;
+}
+
 .name-status-icon.is-loading {
   color: #94A3B8;
   animation: rotating 1.2s linear infinite;
 }
+
 @keyframes rotating {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.radius-control { width: 100%; }
-.radius-slider { padding: 0 4px; margin-bottom: 4px; }
+.radius-control {
+  width: 100%;
+}
+
+.radius-slider {
+  padding: 0 4px;
+  margin-bottom: 4px;
+}
+
 .radius-slider :deep(.el-slider__runway) {
   background: linear-gradient(90deg, #FEE2E2 0%, #FECACA 100%);
-  height: 6px; border-radius: 3px;
+  height: 6px;
+  border-radius: 3px;
 }
+
 .radius-slider :deep(.el-slider__bar) {
   background: linear-gradient(90deg, #EF4444, #B91C1C);
-  height: 6px; border-radius: 3px;
+  height: 6px;
+  border-radius: 3px;
 }
+
 .radius-slider :deep(.el-slider__button) {
-  width: 18px; height: 18px;
-  border: 3px solid #D32F2F; background: #FFFFFF;
-  box-shadow: 0 2px 8px rgba(211,47,47,0.35);
+  width: 18px;
+  height: 18px;
+  border: 3px solid #D32F2F;
+  background: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(211, 47, 47, 0.35);
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .radius-slider :deep(.el-slider__button:hover) {
   transform: scale(1.25);
-  box-shadow: 0 4px 14px rgba(211,47,47,0.5);
+  box-shadow: 0 4px 14px rgba(211, 47, 47, 0.5);
 }
+
 .radius-slider :deep(.el-slider__marks-text) {
-  font-size: 10px; color: #94A3B8; margin-top: 8px;
+  font-size: 10px;
+  color: #94A3B8;
+  margin-top: 8px;
 }
+
 .radius-input-row {
-  display: flex; align-items: center; gap: 8px; margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
 }
-.radius-unit { font-size: 13px; color: #475569; }
-.radius-hint { font-size: 12px; color: #94A3B8; margin-left: auto; }
+
+.radius-unit {
+  font-size: 13px;
+  color: #475569;
+}
+
+.radius-hint {
+  font-size: 12px;
+  color: #94A3B8;
+  margin-left: auto;
+}
 
 .time-tag {
-  display: inline-flex; align-items: center; gap: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 12px;
   background: #F0FDF4;
   border: 1px solid #BBF7D0;
   border-radius: 6px;
   color: #15803D;
-  font-size: 12px; font-weight: 500;
+  font-size: 12px;
+  font-weight: 500;
   animation: timePulse 0.6s ease-out;
 }
-.time-tag .el-icon { color: #10B981; }
+
+.time-tag .el-icon {
+  color: #10B981;
+}
+
 @keyframes timePulse {
-  0% { opacity: 0; transform: scale(0.9); }
-  60% { transform: scale(1.02); }
-  100% { opacity: 1; transform: scale(1); }
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  60% {
+    transform: scale(1.02);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .dialog-footer {
-  display: flex; justify-content: flex-end; gap: 12px;
-  padding: 16px 24px; background: #F8FAFC;
-  border-top: 1px solid #F1F5F9; position: relative;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  background: #F8FAFC;
+  border-top: 1px solid #F1F5F9;
+  position: relative;
 }
+
 .dialog-footer::before {
-  content: ''; position: absolute; top: -1px; left: 0;
-  width: 100%; height: 1px;
-  background: linear-gradient(90deg, rgba(211,47,47,0) 0%, rgba(211,47,47,0.6) 50%, rgba(211,47,47,0) 100%);
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(211, 47, 47, 0) 0%, rgba(211, 47, 47, 0.6) 50%, rgba(211, 47, 47, 0) 100%);
 }
+
 :deep(.dialog-footer .el-button) {
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   border-radius: 6px;
 }
+
 :deep(.dialog-footer .el-button:hover) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(211,47,47,0.15);
+  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.15);
 }
-.btn-cancel { border-color: #E2E8F0; color: #64748B; }
-.btn-cancel:hover { border-color: #D32F2F; color: #D32F2F; background: #FEF2F2; }
-.btn-continue { background-color: #FEF2F2; border-color: #FECACA; color: #D32F2F; }
-.btn-continue:hover { background-color: #FEE2E2; border-color: #FCA5A5; color: #B91C1C; }
+
+.btn-cancel {
+  border-color: #E2E8F0;
+  color: #64748B;
+}
+
+.btn-cancel:hover {
+  border-color: #D32F2F;
+  color: #D32F2F;
+  background: #FEF2F2;
+}
+
+.btn-continue {
+  background-color: #FEF2F2;
+  border-color: #FECACA;
+  color: #D32F2F;
+}
+
+.btn-continue:hover {
+  background-color: #FEE2E2;
+  border-color: #FCA5A5;
+  color: #B91C1C;
+}
+
 .btn-submit {
-  background-color: #D32F2F; border-color: #D32F2F; color: #FFF;
-  position: relative; overflow: hidden;
+  background-color: #D32F2F;
+  border-color: #D32F2F;
+  color: #FFF;
+  position: relative;
+  overflow: hidden;
 }
+
 .btn-submit::after {
-  content: ''; position: absolute; top: 0; left: -100%;
-  width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
   animation: btnShine 3s ease-in-out infinite;
 }
-@keyframes btnShine { 0%, 100% { left: -100%; } 50% { left: 100%; } }
-.btn-submit:hover {
-  background-color: #B91C1C; border-color: #B91C1C;
-  box-shadow: 0 6px 16px rgba(211,47,47,0.35) !important;
+
+@keyframes btnShine {
+
+  0%,
+  100% {
+    left: -100%;
+  }
+
+  50% {
+    left: 100%;
+  }
 }
+
+.btn-submit:hover {
+  background-color: #B91C1C;
+  border-color: #B91C1C;
+  box-shadow: 0 6px 16px rgba(211, 47, 47, 0.35) !important;
+}
+
 .btn-submit:disabled {
   background-color: #FCA5A5;
   border-color: #FCA5A5;
@@ -1449,9 +1848,17 @@ const submitForm = (isContinue) => {
   gap: 16px;
   animation: submitFadeIn 0.4s ease-out;
 }
+
 @keyframes submitFadeIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .submit-ring {
@@ -1459,12 +1866,17 @@ const submitForm = (isContinue) => {
   width: 120px;
   height: 120px;
 }
-.submit-ring svg { transform: rotate(-90deg); }
+
+.submit-ring svg {
+  transform: rotate(-90deg);
+}
+
 .ring-track {
   fill: none;
   stroke: #FEE2E2;
   stroke-width: 6;
 }
+
 .ring-progress {
   fill: none;
   stroke: #D32F2F;
@@ -1474,6 +1886,7 @@ const submitForm = (isContinue) => {
   transition: stroke-dashoffset 0.3s ease-out;
   filter: drop-shadow(0 2px 6px rgba(211, 47, 47, 0.4));
 }
+
 .ring-percent {
   position: absolute;
   top: 50%;
@@ -1485,16 +1898,26 @@ const submitForm = (isContinue) => {
   letter-spacing: 1px;
   text-shadow: 0 2px 8px rgba(211, 47, 47, 0.2);
 }
+
 .submit-text {
   font-size: 14px;
   color: #475569;
   font-weight: 500;
   animation: textPulse 1.6s ease-in-out infinite;
 }
+
 @keyframes textPulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
+
 .submit-bar {
   width: 240px;
   height: 6px;
@@ -1503,6 +1926,7 @@ const submitForm = (isContinue) => {
   overflow: hidden;
   position: relative;
 }
+
 .submit-bar-inner {
   height: 100%;
   background: linear-gradient(90deg, #EF4444, #B91C1C);
@@ -1510,22 +1934,33 @@ const submitForm = (isContinue) => {
   transition: width 0.3s ease-out;
   position: relative;
 }
+
 .submit-bar-inner::after {
   content: '';
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
   animation: barShine 1.5s ease-in-out infinite;
 }
+
 @keyframes barShine {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
+
 .submit-dots {
   display: flex;
   gap: 6px;
 }
+
 .submit-dots span {
   width: 8px;
   height: 8px;
@@ -1533,82 +1968,202 @@ const submitForm = (isContinue) => {
   background: #D32F2F;
   animation: dotBounce 1.4s ease-in-out infinite;
 }
-.submit-dots span:nth-child(2) { animation-delay: 0.2s; }
-.submit-dots span:nth-child(3) { animation-delay: 0.4s; }
-@keyframes dotBounce {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-  40% { transform: scale(1.1); opacity: 1; }
+
+.submit-dots span:nth-child(2) {
+  animation-delay: 0.2s;
 }
 
-.loading-fade-enter-active, .loading-fade-leave-active {
+.submit-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dotBounce {
+
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+
+  40% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+.loading-fade-enter-active,
+.loading-fade-leave-active {
   transition: opacity 0.35s ease;
 }
-.loading-fade-enter-from, .loading-fade-leave-to { opacity: 0; }
+
+.loading-fade-enter-from,
+.loading-fade-leave-to {
+  opacity: 0;
+}
 
 .success-overlay {
-  position: absolute; inset: 0;
-  background: rgba(255,255,255,0.85);
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(6px);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  z-index: 9999; border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  border-radius: 12px;
 }
-.success-circle { width: 80px; height: 80px; margin-bottom: 16px; }
+
+.success-circle {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 16px;
+}
+
 .checkmark {
-  width: 100%; height: 100%;
-  stroke: #10B981; stroke-width: 3;
-  stroke-linecap: round; stroke-linejoin: round; fill: none;
-  filter: drop-shadow(0 4px 12px rgba(16,185,129,0.3));
+  width: 100%;
+  height: 100%;
+  stroke: #10B981;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  filter: drop-shadow(0 4px 12px rgba(16, 185, 129, 0.3));
 }
+
 .checkmark circle {
-  stroke-dasharray: 166; stroke-dashoffset: 166;
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
   animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 }
+
 .checkmark path {
-  stroke-dasharray: 48; stroke-dashoffset: 48;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
   animation: stroke 0.4s cubic-bezier(0.65, 0, 0.45, 1) 0.5s forwards;
 }
-@keyframes stroke { 100% { stroke-dashoffset: 0; } }
+
+@keyframes stroke {
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
 .success-text {
-  font-size: 16px; font-weight: 600; color: #10B981; margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #10B981;
+  margin: 0;
   animation: successTextIn 0.5s ease-out 0.8s both;
 }
+
 @keyframes successTextIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.success-enter-active { transition: opacity 0.3s; }
-.success-leave-active { transition: opacity 0.4s; }
-.success-enter-from, .success-leave-to { opacity: 0; }
+
+.success-enter-active {
+  transition: opacity 0.3s;
+}
+
+.success-leave-active {
+  transition: opacity 0.4s;
+}
+
+.success-enter-from,
+.success-leave-to {
+  opacity: 0;
+}
 </style>
 
 <style>
-.location-marker { position: relative; width: 24px; height: 32px; cursor: pointer; }
+.location-marker {
+  position: relative;
+  width: 24px;
+  height: 32px;
+  cursor: pointer;
+}
+
 .location-marker .pin-wrapper {
-  position: absolute; top: 0; left: 0;
-  width: 100%; height: 100%; z-index: 2;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
   animation: pinDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   transition: transform 0.25s ease;
 }
+
 @keyframes pinDrop {
-  from { transform: translateY(-20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
-.location-marker:hover .pin-wrapper { transform: scale(1.2); }
+
+.location-marker:hover .pin-wrapper {
+  transform: scale(1.2);
+}
+
 .location-marker .pulse-ring {
-  position: absolute; bottom: 0; left: 50%;
-  width: 20px; height: 20px; border-radius: 50%;
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
   transform: translate(-50%, 50%);
   animation: userPulse 2s ease-out infinite;
   z-index: 1;
 }
-.user-location-marker .pin-wrapper { filter: drop-shadow(0 3px 6px rgba(185,28,28,0.5)); }
-.user-location-marker:hover .pin-wrapper { filter: drop-shadow(0 4px 10px rgba(185,28,28,0.7)); }
-.user-location-marker .pulse-ring { background: rgba(211,47,47,0.5); }
-.default-location-marker .pin-wrapper { filter: drop-shadow(0 3px 6px rgba(180,83,9,0.5)); }
-.default-location-marker:hover .pin-wrapper { filter: drop-shadow(0 4px 10px rgba(180,83,9,0.7)); }
-.default-location-marker .pulse-ring { background: rgba(245,158,11,0.5); }
+
+.user-location-marker .pin-wrapper {
+  filter: drop-shadow(0 3px 6px rgba(185, 28, 28, 0.5));
+}
+
+.user-location-marker:hover .pin-wrapper {
+  filter: drop-shadow(0 4px 10px rgba(185, 28, 28, 0.7));
+}
+
+.user-location-marker .pulse-ring {
+  background: rgba(211, 47, 47, 0.5);
+}
+
+.default-location-marker .pin-wrapper {
+  filter: drop-shadow(0 3px 6px rgba(180, 83, 9, 0.5));
+}
+
+.default-location-marker:hover .pin-wrapper {
+  filter: drop-shadow(0 4px 10px rgba(180, 83, 9, 0.7));
+}
+
+.default-location-marker .pulse-ring {
+  background: rgba(245, 158, 11, 0.5);
+}
+
 @keyframes userPulse {
-  0% { transform: translate(-50%, 50%) scale(0.5); opacity: 0.9; }
-  100% { transform: translate(-50%, 50%) scale(6); opacity: 0; }
+  0% {
+    transform: translate(-50%, 50%) scale(0.5);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translate(-50%, 50%) scale(6);
+    opacity: 0;
+  }
 }
 </style>

@@ -93,7 +93,8 @@
               <el-option label="全部车队" value=""></el-option>
               <el-option v-for="org in orgOptions" :key="org" :label="org" :value="org"></el-option>
             </el-select>
-            <el-select v-model="selectedStatus" placeholder="请选择车辆状态" size="small" style="width: 100%; margin-top: 8px;" clearable>
+            <el-select v-model="selectedStatus" placeholder="请选择车辆状态" size="small" style="width: 100%; margin-top: 8px;"
+              clearable>
               <el-option v-for="s in statusOptions" :key="s" :label="s" :value="s"></el-option>
             </el-select>
             <div class="search-row">
@@ -121,38 +122,21 @@
           </div>
 
           <div class="sidebar-tree" v-loading="treeLoading" element-loading-text="加载中…">
-            <el-tree
-              v-if="displayTreeData.length > 0"
-              ref="orgTreeRef"
-              :data="displayTreeData"
-              node-key="key"
-              :props="{ children: 'children', label: 'label' }"
-              :default-expand-all="true"
-              :expand-on-click-node="false"
-              highlight-current
-              :indent="0"
-              class="org-tree"
-            >
+            <el-tree v-if="displayTreeData.length > 0" ref="orgTreeRef" :data="displayTreeData" node-key="key"
+              :props="{ children: 'children', label: 'label' }" :default-expand-all="true" :expand-on-click-node="false"
+              highlight-current :indent="0" class="org-tree">
               <template #default="{ data }">
                 <!-- 车辆节点 -->
-                <div
-                  v-if="data.type === 'vehicle'"
-                  class="tree-node tree-node-vehicle"
+                <div v-if="data.type === 'vehicle'" class="tree-node tree-node-vehicle"
                   :class="{ active: isVehicleHighlighted(data.plate), 'no-loc': !data.hasLocation }"
-                  :style="{ paddingLeft: (data.level || 0) * 18 + 'px' }"
-                  @click.stop="highlightVehicle(data.plate)"
-                >
+                  :style="{ paddingLeft: (data.level || 0) * 18 + 'px' }" @click.stop="highlightVehicle(data.plate)">
                   <span class="vehicle-plate">{{ data.label }}</span>
                   <span class="vehicle-status-tag" :class="data.status">{{ data.status }}</span>
                 </div>
 
                 <!-- 组织节点 -->
-                <div
-                  v-else
-                  class="tree-node tree-node-org"
-                  :class="'type-' + data.type"
-                  :style="{ paddingLeft: (data.level || 0) * 18 + 'px' }"
-                >
+                <div v-else class="tree-node tree-node-org" :class="'type-' + data.type"
+                  :style="{ paddingLeft: (data.level || 0) * 18 + 'px' }">
                   <span class="org-label">{{ data.label }}</span>
                   <span class="org-count" :class="{ empty: data.vehicleCount === 0 }">
                     ({{ data.vehicleCount }})
@@ -183,8 +167,7 @@
             <div class="loading-ring">
               <svg viewBox="0 0 100 100" width="72" height="72">
                 <circle cx="50" cy="50" r="42" class="ring-track" />
-                <circle cx="50" cy="50" r="42" class="ring-progress"
-                  :style="{ strokeDashoffset: ringOffset }" />
+                <circle cx="50" cy="50" r="42" class="ring-progress" :style="{ strokeDashoffset: ringOffset }" />
               </svg>
               <div class="loading-percent">{{ Math.round(loadPercent) }}%</div>
             </div>
@@ -225,12 +208,11 @@ import dayjs from 'dayjs'
 const AMAP_KEY = '273f5c474604b71906674aac159b8f45'
 const DONGFENG_API_URL = 'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com/dongfeng-lostlocation'
 
-const CONCURRENCY = 5
+const CONCURRENCY = 15
 const CACHE_TTL = 3 * 60 * 1000
-const CACHE_KEY = 'fullmap_vehicle_locations_cache'
 
 // ============================================================
-// ⭐ 当前登录用户 & 主账号信息
+// ⭐ 当前登录用户 & 权限判断（必须先定义）
 // ============================================================
 const currentUser = (() => {
   try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
@@ -240,21 +222,22 @@ const currentUser = (() => {
 const isAdmin = currentUser.role === 'admin'
 const isCustomer = currentUser.role === 'customer'
 
-// ⭐ 主账号信息（子账号登录时，由 LoginView 查好存入）
+// ⭐ 缓存 key（用函数动态生成，避免时机问题）
+const getCacheKey = () => {
+  if (isAdmin) return 'fullmap_vehicle_locations_cache_admin'
+  if (currentUser.isSubAccount) return 'fullmap_vehicle_locations_cache_sub_' + (currentUser.account || 'unknown')
+  return 'fullmap_vehicle_locations_cache_cust_' + (currentUser.account || 'guest')
+}
+
+// ⭐ 主账号信息
 const masterAccount = currentUser.masterAccount || ''
 const masterPhone = currentUser.masterPhone || ''
 const masterName = currentUser.masterName || ''
 const customerName = currentUser.customerName || ''
 
-// 用于查 organizations.owner_account
 const myAccount = masterAccount || currentUser.account || ''
-// 用于查 customers.phone
 const myPhone = masterPhone || currentUser.phone || ''
 
-// ⭐ 显示用的根节点名称
-// 管理员：全部组织
-// 子账号：主账号名（如"测试客户4"）
-// 主账号：自己的 name
 const rootNodeName = isAdmin
   ? '全部组织'
   : (customerName || masterName || currentUser.name || '我的组织')
@@ -355,12 +338,12 @@ const isAccOn = (accStatus) => {
 
 const readCache = () => {
   try {
-    const raw = sessionStorage.getItem(CACHE_KEY)
+    const raw = sessionStorage.getItem(getCacheKey())
     if (!raw) return null
     const obj = JSON.parse(raw)
     if (!obj || !obj.ts) return null
     if (Date.now() - obj.ts > CACHE_TTL) {
-      sessionStorage.removeItem(CACHE_KEY)
+      sessionStorage.removeItem(getCacheKey())
       return null
     }
     return obj.data
@@ -368,21 +351,28 @@ const readCache = () => {
 }
 
 const writeCache = (data) => {
-  try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data })) } catch (e) {}
+  try { sessionStorage.setItem(getCacheKey(), JSON.stringify({ ts: Date.now(), data })) } catch (e) { }
 }
 
 const clearCache = () => {
-  try { sessionStorage.removeItem(CACHE_KEY) } catch (e) {}
+  try { sessionStorage.removeItem(getCacheKey()) } catch (e) { }
 }
 
 const fetchDongfengLocation = async (vin) => {
   if (!vin || vin.length < 8) return { success: false, reason: 'VIN 长度不足' }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 8000)
+
   try {
     const response = await fetch(DONGFENG_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ vin }),
+      signal: controller.signal,
     })
+    clearTimeout(timeoutId)
+
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const result = await response.json()
     if (result.code !== 1 || !Array.isArray(result.data) || result.data.length === 0) {
@@ -414,19 +404,23 @@ const fetchDongfengLocation = async (vin) => {
       dayOffset,
     }
   } catch (err) {
-    console.warn(`获取车辆 ${vin} 定位失败：`, err.message)
-    return { success: false, reason: err.message }
+    clearTimeout(timeoutId)
+    const reason = err.name === 'AbortError' ? '请求超时（8s）' : err.message
+    console.warn(`获取车辆 ${vin} 定位失败：`, reason)
+    return { success: false, reason }
   }
 }
 
 // ============================================================
-// ⭐ 客户 ID（子账号用主账号 phone 查）
+// ⭐ 客户 ID & 子账号所属组织名
 // ============================================================
-const myCustomerId = ref(null)
+const myCustomerId = ref(currentUser.customerId || null)
+const myOrgName = ref(null)
 
 const loadMyCustomerId = async () => {
   if (!isCustomer) return
-  // ⭐ 用主账号 phone 查 customers
+  // 优先用 currentUser.customerId
+  if (myCustomerId.value) return
   if (!myPhone) return
   try {
     const { data } = await supabase
@@ -437,6 +431,22 @@ const loadMyCustomerId = async () => {
     if (data) myCustomerId.value = data.id
   } catch (e) {
     console.warn('查询客户信息失败:', e)
+  }
+}
+
+const loadMyOrgName = async () => {
+  if (!isCustomer) return
+  if (!currentUser.isSubAccount) return
+  if (!currentUser.orgId) return
+  try {
+    const { data } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', currentUser.orgId)
+      .maybeSingle()
+    if (data) myOrgName.value = data.name
+  } catch (e) {
+    console.warn('查询所属组织失败:', e)
   }
 }
 
@@ -462,11 +472,32 @@ const loadVehicles = async (forceRefresh = false) => {
   locationTotal.value = 0
   locatedCount.value = 0
   try {
-    let query = supabase.from('vehicles').select('*').order('updated_at', { ascending: false })
-    // ⭐ 客户视角：用 myCustomerId 过滤（myCustomerId 已由主账号 phone 查得）
-    if (isCustomer && myCustomerId.value) {
-      query = query.eq('customer_id', myCustomerId.value)
+    // ⭐⭐⭐ 客户视角必须有 myCustomerId，否则返回空（防止查全量）
+    if (isCustomer && !myCustomerId.value) {
+      console.warn('[FullMap] 客户账号未关联 customers，返回空防止越权')
+      vehicles.value = []
+      orgOptions.value = []
+      return
     }
+
+    let query = supabase.from('vehicles').select('*').order('updated_at', { ascending: false })
+
+    if (isCustomer) {
+      query = query.eq('customer_id', myCustomerId.value)
+
+      // ⭐⭐⭐ 子账号：只显示所属组织下的车辆
+      if (currentUser.isSubAccount && myOrgName.value) {
+        query = query.eq('org', myOrgName.value)
+      }
+      // 子账号但没查到组织名 → 返回空（防越权）
+      if (currentUser.isSubAccount && !myOrgName.value) {
+        console.warn('[FullMap] 子账号组织未查到，返回空')
+        vehicles.value = []
+        orgOptions.value = []
+        return
+      }
+    }
+
     const { data, error } = await query
     if (error) throw error
     if (!data || data.length === 0) {
@@ -725,7 +756,7 @@ const createBaseLine = (p1, p2) => {
   const step = () => {
     opacity += 0.08
     if (opacity >= 0.95) opacity = 0.95
-    try { line.setOptions({ strokeOpacity: opacity }) } catch (e) {}
+    try { line.setOptions({ strokeOpacity: opacity }) } catch (e) { }
     if (opacity < 0.95) requestAnimationFrame(step)
   }
   requestAnimationFrame(step)
@@ -780,8 +811,8 @@ const clearSvgLines = () => {
     return
   }
   svgLines.forEach(r => {
-    try { r.baseEl.remove() } catch (e) {}
-    try { r.flowEl.remove() } catch (e) {}
+    try { r.baseEl.remove() } catch (e) { }
+    try { r.flowEl.remove() } catch (e) { }
   })
   svgLines = []
 }
@@ -806,7 +837,7 @@ const createDistanceLabel = (p1, p2, distance) => {
 const showGroupTotalLabel = (point, total, groupIdx) => {
   const existing = groupTotalLabels.find(l => l.groupIdx === groupIdx)
   if (existing) {
-    try { map.remove(existing.marker) } catch (e) {}
+    try { map.remove(existing.marker) } catch (e) { }
     groupTotalLabels.splice(groupTotalLabels.indexOf(existing), 1)
   }
   const container = document.createElement('div')
@@ -828,7 +859,7 @@ const showGroupTotalLabel = (point, total, groupIdx) => {
 
 const clearGroupTotalLabels = () => {
   groupTotalLabels.forEach(l => {
-    try { map.remove(l.marker) } catch (e) {}
+    try { map.remove(l.marker) } catch (e) { }
   })
   groupTotalLabels = []
 }
@@ -865,20 +896,20 @@ const recalcTotals = () => {
 
 const hidePreview = () => {
   if (previewLine) {
-    try { previewLine.setMap(null) } catch (e) {}
+    try { previewLine.setMap(null) } catch (e) { }
   }
   if (previewLabel) {
-    try { previewLabel.setMap(null) } catch (e) {}
+    try { previewLabel.setMap(null) } catch (e) { }
   }
 }
 
 const destroyPreview = () => {
   if (previewLine) {
-    try { map.remove(previewLine) } catch (e) {}
+    try { map.remove(previewLine) } catch (e) { }
     previewLine = null
   }
   if (previewLabel) {
-    try { map.remove(previewLabel) } catch (e) {}
+    try { map.remove(previewLabel) } catch (e) { }
     previewLabel = null
   }
 }
@@ -904,7 +935,7 @@ const updatePreview = (mouseLng, mouseLat) => {
     })
   } else {
     previewLine.setPath(path)
-    try { previewLine.setMap(map) } catch (e) {}
+    try { previewLine.setMap(map) } catch (e) { }
   }
 
   const dist = calcDistance(lastPoint, { lng: mouseLng, lat: mouseLat })
@@ -924,15 +955,15 @@ const updatePreview = (mouseLng, mouseLat) => {
     previewLabel.setPosition([mouseLng, mouseLat])
     const c = previewLabel.getContent()
     if (c) c.textContent = previewText
-    try { previewLabel.setMap(map) } catch (e) {}
+    try { previewLabel.setMap(map) } catch (e) { }
   }
 }
 
 const clearAllRanging = () => {
   if (!map) return
-  nodeInfos.forEach(i => { try { map.remove(i.marker) } catch (e) {} })
-  segmentInfos.forEach(s => { try { map.remove(s.line) } catch (e) {} })
-  distanceLabels.forEach(l => { try { map.remove(l) } catch (e) {} })
+  nodeInfos.forEach(i => { try { map.remove(i.marker) } catch (e) { } })
+  segmentInfos.forEach(s => { try { map.remove(s.line) } catch (e) { } })
+  distanceLabels.forEach(l => { try { map.remove(l) } catch (e) { } })
   clearGroupTotalLabels()
   destroyPreview()
   clearSvgLines()
@@ -1213,9 +1244,6 @@ const setStatusFilter = (type) => {
   updateMarkersVisibility()
 }
 
-// ============================================================
-// 状态优先级排序
-// ============================================================
 const getStatusPriority = (v) => {
   if (!v.hasLocation) return 4
   if (v.status === '行驶') return 1
@@ -1234,9 +1262,6 @@ const sortByStatusPriority = (list) => {
     .map(item => item.v)
 }
 
-// ============================================================
-// 组织树构建
-// ============================================================
 const orgTreeRef = ref(null)
 const treeLoading = ref(false)
 
@@ -1270,7 +1295,6 @@ const buildVehicleNode = (v, level = 0) => ({
   level,
 })
 
-// ⭐ 构建树：根节点名用 rootNodeName（子账号 = 主账号名）
 const displayTreeData = computed(() => {
   const list = filteredVehicles.value
   const orgs = organizations.value
@@ -1323,16 +1347,13 @@ const displayTreeData = computed(() => {
   return [{
     key: 'root',
     type: 'root',
-    label: rootNodeName,   // ⭐ 子账号 = 主账号名
+    label: rootNodeName,
     vehicleCount: list.length,
     level: 0,
     children: [...root.nodes, ...unassignedNodes, ...rootVehicleNodes],
   }]
 })
 
-// ============================================================
-// 选中车辆 / 定位
-// ============================================================
 const highlightVehicle = (plate) => {
   const vehicle = vehicles.value.find(v => v.plate === plate)
   if (vehicle && !vehicle.hasLocation) {
@@ -1377,7 +1398,7 @@ watch([selectedOrg, selectedStatus, searchKeyword, selectedPlates, statusFilter]
   updateMarkersVisibility()
 }, { deep: true })
 
-const handleSearch = () => {}
+const handleSearch = () => { }
 
 const resetAll = () => {
   selectedOrg.value = ''
@@ -1415,8 +1436,12 @@ const startResize = (e) => {
 
 onMounted(async () => {
   await nextTick()
-  if (isCustomer) await loadMyCustomerId()
-  await loadVehicles(false)
+  if (isCustomer) {
+    await loadMyCustomerId()
+    await loadMyOrgName()
+  }
+  // ⭐ 每次进入 FullMap 都强制重新拉（跳过缓存）
+  await loadVehicles(true)
   await initMap()
   document.body.style.overflow = 'hidden'
   document.documentElement.style.overflow = 'hidden'
@@ -1424,8 +1449,17 @@ onMounted(async () => {
 
 onActivated(async () => {
   if (isCustomer && !myCustomerId.value) await loadMyCustomerId()
+
+  // ⭐ 每次都重新加载组织名（组织名可能被主账号改过）
+  if (isCustomer && currentUser.isSubAccount) {
+    await loadMyOrgName()
+  }
+
+  // ⭐⭐⭐ 每次切回来都重新拉车辆（跳过缓存，确保看到最新组织分配）
+  await loadVehicles(true)
+
   await loadOrganizations()
-  await syncVehicleOrgFields()
+
   if (isMapReady.value) {
     addMarkers()
     updateMarkersVisibility()
@@ -1440,14 +1474,14 @@ onBeforeUnmount(() => {
     rafId = null
   }
   if (map) {
-    try { map.off('click', onMapClick) } catch (e) {}
-    try { map.off('click', onRangingClick) } catch (e) {}
-    try { map.off('rightclick', onRangingRightClick) } catch (e) {}
-    try { map.off('mousemove', onRangingMouseMove) } catch (e) {}
-    try { map.off('mouseout', onRangingMouseOut) } catch (e) {}
-    try { map.off('mapmove', updateAllSvgLines) } catch (e) {}
-    try { map.off('zoomchange', updateAllSvgLines) } catch (e) {}
-    try { map.destroy() } catch (e) {}
+    try { map.off('click', onMapClick) } catch (e) { }
+    try { map.off('click', onRangingClick) } catch (e) { }
+    try { map.off('rightclick', onRangingRightClick) } catch (e) { }
+    try { map.off('mousemove', onRangingMouseMove) } catch (e) { }
+    try { map.off('mouseout', onRangingMouseOut) } catch (e) { }
+    try { map.off('mapmove', updateAllSvgLines) } catch (e) { }
+    try { map.off('zoomchange', updateAllSvgLines) } catch (e) { }
+    try { map.destroy() } catch (e) { }
     map = null
   }
 })
@@ -1761,7 +1795,6 @@ onBeforeUnmount(() => {
   background: rgba(254, 242, 242, 0.85);
 }
 
-/* 三角图标统一宽度 */
 .org-tree :deep(.el-tree-node__expand-icon) {
   width: 24px;
   padding: 0;
@@ -1787,7 +1820,6 @@ onBeforeUnmount(() => {
   padding-right: 4px;
 }
 
-/* 组织节点 */
 .tree-node-org .org-label {
   flex: 1;
   min-width: 0;
@@ -1818,7 +1850,6 @@ onBeforeUnmount(() => {
   font-weight: 500;
 }
 
-/* 车辆节点 */
 .tree-node-vehicle {
   display: flex;
   align-items: center;
@@ -1841,7 +1872,6 @@ onBeforeUnmount(() => {
 .tree-node-vehicle.no-loc {
   opacity: 0.45;
 }
-
 .tree-node-vehicle .vehicle-plate {
   font-weight: 600;
   color: #0F172A;
@@ -1854,7 +1884,6 @@ onBeforeUnmount(() => {
   min-width: 0;
   letter-spacing: 0.2px;
 }
-
 .tree-node-vehicle .vehicle-status-tag {
   flex-shrink: 0;
   font-size: 9.5px;

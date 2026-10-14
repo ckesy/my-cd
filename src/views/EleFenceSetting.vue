@@ -17,16 +17,24 @@
 
         <div class="search-btns">
           <el-button type="primary" size="default" class="btn-primary" @click="handleSearch">
-            <el-icon><Search /></el-icon> 搜索
+            <el-icon>
+              <Search />
+            </el-icon> 搜索
           </el-button>
           <el-button size="default" class="btn-outline" @click="handleReset">
-            <el-icon><Refresh /></el-icon> 重置
+            <el-icon>
+              <Refresh />
+            </el-icon> 重置
           </el-button>
           <el-button type="primary" size="default" class="btn-primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon> 新增
+            <el-icon>
+              <Plus />
+            </el-icon> 新增
           </el-button>
           <el-button type="danger" size="default" plain class="btn-danger-outline" @click="handleExport">
-            <el-icon><Download /></el-icon> 导出
+            <el-icon>
+              <Download />
+            </el-icon> 导出
           </el-button>
         </div>
       </div>
@@ -34,16 +42,9 @@
 
     <!-- 表格卡片 -->
     <div class="table-card fade-up" style="animation-delay: 0.1s">
-      <el-table
-        :data="tableData"
-        border
-        stripe
-        style="width: 100%;"
-        size="default"
-        v-loading="loading"
+      <el-table :data="tableData" border stripe style="width: 100%;" size="default" v-loading="loading"
         class="custom-table"
-        :header-cell-style="{ background: '#F1F5F9', color: '#0F172A', fontWeight: '700', fontSize: '13px' }"
-      >
+        :header-cell-style="{ background: '#F1F5F9', color: '#0F172A', fontWeight: '700', fontSize: '13px' }">
         <el-table-column prop="name" label="围栏名称" min-width="160" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <div class="name-wrap">
@@ -82,7 +83,9 @@
 
         <template #empty>
           <div class="empty-state">
-            <el-icon class="empty-icon"><MapLocation /></el-icon>
+            <el-icon class="empty-icon">
+              <MapLocation />
+            </el-icon>
             <p>暂无电子围栏数据</p>
             <span class="empty-sub">点击右上角"新增"创建你的第一个围栏吧</span>
           </div>
@@ -91,25 +94,13 @@
 
       <div class="pagination-wrapper">
         <span class="total-text">共 {{ total }} 条</span>
-        <el-pagination
-          background
-          layout="sizes, prev, pager, next, jumper"
-          :total="total"
-          :page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          v-model:current-page="currentPage"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-          class="custom-pagination"
-        />
+        <el-pagination background layout="sizes, prev, pager, next, jumper" :total="total" :page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]" v-model:current-page="currentPage" @size-change="handleSizeChange"
+          @current-change="handleCurrentChange" class="custom-pagination" />
       </div>
     </div>
 
-    <AddEleFenceDialog
-      v-model="showFenceDialog"
-      :edit-data="editingRow"
-      @success="handleDialogSuccess"
-    />
+    <AddEleFenceDialog v-model="showFenceDialog" :edit-data="editingRow" @success="handleDialogSuccess" />
 
     <!-- 删除中动画遮罩 -->
     <transition name="delete-fade">
@@ -118,14 +109,11 @@
           <div class="delete-ring">
             <svg viewBox="0 0 100 100" width="110" height="110">
               <circle cx="50" cy="50" r="42" class="del-ring-track" />
-              <circle
-                cx="50" cy="50" r="42"
-                class="del-ring-progress"
-                :style="{ strokeDashoffset: delRingOffset }"
-              />
+              <circle cx="50" cy="50" r="42" class="del-ring-progress" :style="{ strokeDashoffset: delRingOffset }" />
             </svg>
             <div class="del-trash">
-              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#D32F2F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#D32F2F" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="3 6 5 6 21 6"></polyline>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                 <line x1="10" y1="11" x2="10" y2="17"></line>
@@ -156,6 +144,14 @@ import AddEleFenceDialog from '@/components/AddEleFenceDialog.vue'
 
 // 👇 HTTP 网关地址
 const API_BASE = 'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com'
+// ⭐ 当前登录用户
+const currentUser = (() => {
+  try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
+  catch { return {} }
+})()
+const isAdmin = currentUser.role === 'admin'
+const isCustomer = !isAdmin
+const myAccount = currentUser.masterAccount || currentUser.account || ''
 
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '--'
@@ -219,64 +215,46 @@ const resetDeleteAnimation = () => {
 // ============================================
 // 👇 关键改动：数据源改为高德 list 接口
 // ============================================
+// ============================================
+// ⭐ 数据源：只查数据库（不再调高德 list 接口）
+// 高德 list 配额只有 100 次/天，列表查询会频繁调用会超额
+// 增/删/改依然同步到高德
+// ============================================
 const fetchData = async () => {
   loading.value = true
   try {
-    // 1️⃣ 从高德拿最新的围栏列表
-    const response = await fetch(`${API_BASE}/amap-geofence-list`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    })
-    if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    const result = await response.json()
+    // ⭐ 从数据库查（客户视角按 owner_account 隔离）
+    let q = supabase
+      .from('ele_fences')
+      .select('*')
+      .order('updated_at', { ascending: false })
 
-    if (result.errcode !== 10000 && result.errcode !== 0) {
-      throw new Error(result.errmsg || '获取围栏列表失败')
+    if (isCustomer) {
+      q = q.eq('owner_account', myAccount)
     }
 
-    const amapList = (result.data && result.data.results) || []
-    const gfids = amapList.map(item => item.gfid).filter(Boolean)
+    const { data, error } = await q
+    if (error) throw error
 
-    // 2️⃣ 用 gfid 从数据库补业务字段（org、shape、center、points、location 等）
-    let dbMap = {}
-    if (gfids.length > 0) {
-      const { data: dbRows, error: dbError } = await supabase
-        .from('ele_fences')
-        .select('*')
-        .in('gfid', gfids)
-      if (dbError) {
-        console.warn('从数据库补充字段失败：', dbError)
-      }
-      if (dbRows) {
-        dbRows.forEach(row => { dbMap[row.gfid] = row })
-      }
-    }
+    fullList.value = (data || []).map(row => ({
+      id: row.id,
+      gfid: row.gfid,
+      name: row.name,
+      desc: row.desc,
+      shape: row.shape,
+      org: row.org,
+      attr: row.attr || row.desc || '',
+      radius: row.radius,
+      bufferradius: row.bufferradius,
+      center: row.center,
+      points: row.points,
+      adcode: row.adcode,
+      location: row.location || '',
+      owner_account: row.owner_account,
+      updated_at: row.updated_at,
+    }))
 
-    // 3️⃣ 合并：高德是主，数据库补字段
-    const merged = amapList.map(item => {
-      const dbRow = dbMap[item.gfid] || {}
-      return {
-        id: dbRow.id || null,
-        gfid: item.gfid,
-        name: item.name,
-        desc: item.desc,
-        shape: dbRow.shape || '',
-        org: dbRow.org || '',
-        attr: dbRow.attr || item.desc || '',
-        radius: dbRow.radius,
-        bufferradius: dbRow.bufferradius,
-        center: dbRow.center,
-        points: dbRow.points,
-        adcode: dbRow.adcode,
-        location: dbRow.location || '',
-        updated_at: item.modifytime
-          ? dayjs(item.modifytime).format('YYYY-MM-DD HH:mm:ss')
-          : (dbRow.updated_at || ''),
-      }
-    })
-
-    fullList.value = merged
+    console.log('[围栏设置] 从数据库加载', fullList.value.length, '条')
     applyLocalFilter()
   } catch (err) {
     console.error('加载围栏数据失败：', err)
@@ -301,7 +279,11 @@ const applyLocalFilter = () => {
   tableData.value = filtered.slice(from, to)
 }
 
-const handleSearch = () => { currentPage.value = 1; applyLocalFilter() }
+const handleSearch = async () => {
+  currentPage.value = 1
+  await fetchData()        // ⭐ 重新从高德拉 + 补数据库字段
+  applyLocalFilter()
+}
 
 const handleReset = () => {
   searchForm.org = ''
@@ -364,7 +346,10 @@ const handleDelete = (row) => {
       // 清理数据库里的对应记录（如果存在）
       if (row.id) {
         const { error: dbError } = await supabase.from('ele_fences').delete().eq('id', row.id)
-        if (dbError) console.warn('清理数据库记录失败：', dbError)
+        if (dbError) {
+          console.warn('清理数据库记录失败：', dbError)
+          ElMessage.warning('信息暂时没有同步成功哈～～')
+        }
       }
 
       finishDeleteAnimation()
@@ -380,7 +365,7 @@ const handleDelete = (row) => {
         ElMessage.error('删除失败：' + (err.message || err.errMsg || '未知错误'))
       }, 400)
     }
-  }).catch(() => {})
+  }).catch(() => { })
 }
 
 const handleSizeChange = (val) => {
@@ -408,14 +393,17 @@ onMounted(() => { fetchData() })
   color: #1E293B;
 }
 
-.search-card, .table-card {
+.search-card,
+.table-card {
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   padding: 16px;
   transition: box-shadow 0.3s ease;
 }
-.search-card:hover, .table-card:hover {
+
+.search-card:hover,
+.table-card:hover {
   box-shadow: 0 6px 24px rgba(200, 16, 46, 0.06);
 }
 
@@ -425,8 +413,15 @@ onMounted(() => { fetchData() })
   gap: 12px;
   align-items: center;
 }
-.search-select { width: 180px; }
-.search-input { width: 200px; }
+
+.search-select {
+  width: 180px;
+}
+
+.search-input {
+  width: 200px;
+}
+
 .search-btns {
   display: flex;
   gap: 10px;
@@ -438,32 +433,39 @@ onMounted(() => { fetchData() })
   border-radius: 6px;
   font-weight: 600;
 }
+
 :deep(.el-button:hover) {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(200, 16, 46, 0.15);
 }
+
 :deep(.btn-primary) {
   background-color: #c8102e;
   border-color: #c8102e;
   color: #fff;
 }
+
 :deep(.btn-primary:hover) {
   background-color: #a00d24;
   border-color: #a00d24;
 }
+
 :deep(.btn-outline) {
   border-color: #CBD5E1;
   color: #334155;
 }
+
 :deep(.btn-outline:hover) {
   border-color: #c8102e;
   color: #c8102e;
   background-color: #FEF2F2;
 }
+
 :deep(.btn-danger-outline) {
   border-color: #c8102e;
   color: #c8102e;
 }
+
 :deep(.btn-danger-outline:hover) {
   background-color: #c8102e;
   color: #fff;
@@ -475,13 +477,17 @@ onMounted(() => { fetchData() })
 }
 
 /* ========== 表格 ========== */
-.custom-table { border-radius: 8px; overflow: hidden; }
+.custom-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
 
 :deep(.custom-table .el-table__cell) {
   color: #1E293B;
   font-weight: 500;
   font-size: 13px;
 }
+
 :deep(.custom-table th.el-table__cell) {
   color: #0F172A !important;
   font-weight: 700 !important;
@@ -493,11 +499,13 @@ onMounted(() => { fetchData() })
 :deep(.el-table__row) {
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
+
 :deep(.el-table__row:hover) {
   background-color: #FEF2F2 !important;
   transform: scale(1.002);
   box-shadow: 0 2px 8px rgba(200, 16, 46, 0.08);
 }
+
 :deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
   background: #FAFBFC;
 }
@@ -514,11 +522,13 @@ onMounted(() => { fetchData() })
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   max-width: 100%;
 }
+
 .name-wrap:hover {
   border-color: #FCA5A5;
   box-shadow: 0 3px 10px rgba(200, 16, 46, 0.12);
   transform: translateY(-1px);
 }
+
 .name-bar {
   display: inline-block;
   width: 3px;
@@ -528,6 +538,7 @@ onMounted(() => { fetchData() })
   box-shadow: 0 0 4px rgba(211, 47, 47, 0.4);
   flex-shrink: 0;
 }
+
 .name-text {
   font-size: 13px;
   font-weight: 700;
@@ -547,21 +558,25 @@ onMounted(() => { fetchData() })
   font-weight: 700;
   letter-spacing: 0.3px;
 }
+
 .shape-tag.circle {
   background: #DBEAFE;
   color: #1E40AF;
   border: 1px solid #93C5FD;
 }
+
 .shape-tag.polygon {
   background: #D1FAE5;
   color: #065F46;
   border: 1px solid #6EE7B7;
 }
+
 .shape-tag.polyline {
   background: #FEF3C7;
   color: #92400E;
   border: 1px solid #FCD34D;
 }
+
 .shape-tag.district {
   background: #EDE9FE;
   color: #5B21B6;
@@ -586,12 +601,20 @@ onMounted(() => { fetchData() })
   transition: all 0.2s;
   padding: 0 4px;
 }
-.action-btn.edit { color: #c8102e; }
+
+.action-btn.edit {
+  color: #c8102e;
+}
+
 .action-btn.edit:hover {
   color: #7F1D1D;
   text-decoration: underline;
 }
-.action-btn.delete { color: #64748B; }
+
+.action-btn.delete {
+  color: #64748B;
+}
+
 .action-btn.delete:hover {
   color: #c8102e;
   text-decoration: underline;
@@ -604,21 +627,32 @@ onMounted(() => { fetchData() })
   align-items: center;
   gap: 6px;
 }
+
 .empty-icon {
   font-size: 48px;
   color: #94A3B8;
   animation: float 3s ease-in-out infinite;
 }
+
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
 }
+
 .empty-state p {
   margin: 0;
   font-size: 15px;
   color: #334155;
   font-weight: 700;
 }
+
 .empty-sub {
   font-size: 13px;
   color: #64748B;
@@ -632,26 +666,33 @@ onMounted(() => { fetchData() })
   border-top: 1px solid #E2E8F0;
   margin-top: 16px;
 }
+
 .total-text {
   font-size: 13px;
   color: #334155;
   font-weight: 700;
 }
+
 :deep(.custom-pagination .el-pager li) {
   transition: all 0.2s;
   font-weight: 600;
   color: #334155;
 }
+
 :deep(.custom-pagination .el-pager li:hover) {
   color: #c8102e;
   transform: scale(1.1);
 }
+
 :deep(.custom-pagination .el-pager li.is-active) {
   background-color: #c8102e !important;
   color: #fff !important;
   box-shadow: 0 2px 6px rgba(200, 16, 46, 0.35);
 }
-:deep(.custom-pagination button:hover) { color: #c8102e; }
+
+:deep(.custom-pagination button:hover) {
+  color: #c8102e;
+}
 
 .delete-loading-overlay {
   position: fixed;
@@ -664,6 +705,7 @@ onMounted(() => { fetchData() })
   justify-content: center;
   z-index: 9999;
 }
+
 .delete-loading-content {
   background: #ffffff;
   border-radius: 16px;
@@ -675,21 +717,35 @@ onMounted(() => { fetchData() })
   gap: 16px;
   animation: deleteContentIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 @keyframes deleteContentIn {
-  from { opacity: 0; transform: scale(0.85) translateY(20px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
+
 .delete-ring {
   position: relative;
   width: 110px;
   height: 110px;
 }
-.delete-ring svg { transform: rotate(-90deg); }
+
+.delete-ring svg {
+  transform: rotate(-90deg);
+}
+
 .del-ring-track {
   fill: none;
   stroke: #FEE2E2;
   stroke-width: 6;
 }
+
 .del-ring-progress {
   fill: none;
   stroke: #D32F2F;
@@ -699,6 +755,7 @@ onMounted(() => { fetchData() })
   transition: stroke-dashoffset 0.3s ease-out;
   filter: drop-shadow(0 2px 6px rgba(211, 47, 47, 0.4));
 }
+
 .del-trash {
   position: absolute;
   top: 50%;
@@ -706,20 +763,34 @@ onMounted(() => { fetchData() })
   transform: translate(-50%, -50%);
   animation: trashShake 1.2s ease-in-out infinite;
 }
+
 @keyframes trashShake {
-  0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
-  25% { transform: translate(-50%, -50%) rotate(-8deg); }
-  75% { transform: translate(-50%, -50%) rotate(8deg); }
+
+  0%,
+  100% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  25% {
+    transform: translate(-50%, -50%) rotate(-8deg);
+  }
+
+  75% {
+    transform: translate(-50%, -50%) rotate(8deg);
+  }
 }
+
 .delete-text {
   font-size: 15px;
   color: #0F172A;
   font-weight: 600;
 }
+
 .delete-name {
   color: #D32F2F;
   font-weight: 800;
 }
+
 .delete-bar {
   width: 240px;
   height: 6px;
@@ -727,6 +798,7 @@ onMounted(() => { fetchData() })
   border-radius: 3px;
   overflow: hidden;
 }
+
 .delete-bar-inner {
   height: 100%;
   background: linear-gradient(90deg, #EF4444, #B91C1C);
@@ -734,40 +806,68 @@ onMounted(() => { fetchData() })
   transition: width 0.3s ease-out;
   position: relative;
 }
+
 .delete-bar-inner::after {
   content: '';
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
   animation: barShine 1.5s ease-in-out infinite;
 }
+
 @keyframes barShine {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
+
 .delete-tip {
   font-size: 12px;
   color: #64748B;
   font-weight: 500;
   animation: textPulse 1.6s ease-in-out infinite;
 }
+
 @keyframes textPulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
-.delete-fade-enter-active, .delete-fade-leave-active {
+
+.delete-fade-enter-active,
+.delete-fade-leave-active {
   transition: opacity 0.35s ease;
 }
-.delete-fade-enter-from, .delete-fade-leave-to { opacity: 0; }
+
+.delete-fade-enter-from,
+.delete-fade-leave-to {
+  opacity: 0;
+}
 
 .fade-up {
   animation: fadeUp 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
   opacity: 0;
   transform: translateY(20px);
 }
+
 @keyframes fadeUp {
-  to { opacity: 1; transform: translateY(0); }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
 
@@ -779,18 +879,24 @@ onMounted(() => { fetchData() })
   font-weight: 700 !important;
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .btn-danger-confirm:hover {
   background-color: #B91C1C !important;
   border-color: #B91C1C !important;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(211, 47, 47, 0.35);
 }
-.delete-confirm-box .el-message-box__header { padding: 16px 20px 8px; }
+
+.delete-confirm-box .el-message-box__header {
+  padding: 16px 20px 8px;
+}
+
 .delete-confirm-box .el-message-box__title {
   font-weight: 700;
   color: #0F172A;
   font-size: 16px;
 }
+
 .delete-confirm-box .el-message-box__content {
   padding: 8px 20px 16px;
   font-size: 14px;

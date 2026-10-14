@@ -1,193 +1,431 @@
+<template>
+  <div class="role-page">
+    <!-- 搜索卡片 -->
+    <div class="search-card fade-up">
+      <div class="search-row">
+        <div class="search-field">
+          <label class="field-label">角色名称</label>
+          <el-input v-model="searchForm.name" placeholder="请输入角色名称" clearable style="width: 220px"
+            @keyup.enter="handleSearch" />
+        </div>
+
+        <div class="search-btns">
+          <el-button type="primary" class="btn-primary" @click="handleSearch">
+            <el-icon>
+              <Search />
+            </el-icon> 查询
+          </el-button>
+          <el-button class="btn-outline" @click="handleReset">
+            <el-icon>
+              <RefreshLeft />
+            </el-icon> 重置
+          </el-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 表格卡片 -->
+    <Teleport to="body" :disabled="!isFullscreen">
+      <div class="table-card-wrap" :class="{ 'is-fullscreen': isFullscreen }">
+        <div class="table-card">
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <span class="toolbar-bar"></span>
+              <span class="toolbar-title">角色列表</span>
+              <span class="toolbar-total">共 {{ total }} 条</span>
+            </div>
+
+            <div class="toolbar-right">
+              <el-button type="primary" class="btn-primary" @click="handleAdd">
+                <el-icon>
+                  <CirclePlus />
+                </el-icon> 新增角色
+              </el-button>
+
+              <el-tooltip content="刷新" placement="top" :show-after="300">
+                <button class="icon-btn" :class="{ spinning: refreshing }" @click="handleRefresh">
+                  <el-icon>
+                    <Refresh />
+                  </el-icon>
+                </button>
+              </el-tooltip>
+
+              <el-dropdown trigger="click" popper-class="density-dropdown-red" @command="handleDensityChange">
+                <button class="icon-btn" title="表格密度">
+                  <el-icon>
+                    <Operation />
+                  </el-icon>
+                </button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="large"><span class="density-item"
+                        :class="{ active: tableSize === 'large' }">宽松</span></el-dropdown-item>
+                    <el-dropdown-item command="default"><span class="density-item"
+                        :class="{ active: tableSize === 'default' }">默认</span></el-dropdown-item>
+                    <el-dropdown-item command="small"><span class="density-item"
+                        :class="{ active: tableSize === 'small' }">紧凑</span></el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+
+              <el-popover v-model:visible="columnPopoverVisible" placement="bottom-end" :width="280" trigger="click"
+                popper-class="column-setting-popper">
+                <template #reference>
+                  <button class="icon-btn" :class="{ active: columnPopoverVisible }" title="列设置">
+                    <el-icon>
+                      <Setting />
+                    </el-icon>
+                  </button>
+                </template>
+                <div class="column-setting">
+                  <div class="column-setting-header">
+                    <span class="col-title"><el-icon>
+                        <Grid />
+                      </el-icon> 列展示</span>
+                    <span class="col-reset" @click="resetColumns">重置</span>
+                  </div>
+                  <div class="column-setting-body">
+                    <div v-for="(col, index) in columnConfig" :key="col.prop" class="column-item"
+                      :class="{ dragging: dragIndex === index, dragOver: dragOverIndex === index }" draggable="true"
+                      @dragstart="dragIndex = index" @dragover.prevent="dragOverIndex = index" @drop="onDrop(index)"
+                      @dragend="dragIndex = -1; dragOverIndex = -1">
+                      <span class="drag-handle"><el-icon>
+                          <Rank />
+                        </el-icon></span>
+                      <el-checkbox v-model="col.visible" class="col-checkbox">{{ col.label }}</el-checkbox>
+                      <div class="fix-actions">
+                        <button class="fix-btn" :class="{ active: col.fixed === 'left' }"
+                          @click.stop="toggleFix(col, 'left')"><el-icon>
+                            <DArrowLeft />
+                          </el-icon></button>
+                        <button class="fix-btn" :class="{ active: col.fixed === 'right' }"
+                          @click.stop="toggleFix(col, 'right')"><el-icon>
+                            <DArrowRight />
+                          </el-icon></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </el-popover>
+
+              <button class="icon-btn" :class="{ active: isFullscreen }" @click="toggleFullscreen"
+                :title="isFullscreen ? '退出全屏' : '全屏'">
+                <el-icon>
+                  <component :is="isFullscreen ? Close : FullScreen" />
+                </el-icon>
+              </button>
+            </div>
+          </div>
+
+          <!-- 表格 -->
+          <div class="table-wrap">
+            <el-table :data="tableData" border stripe :size="tableSize" v-loading="loading" element-loading-text="加载中…"
+              element-loading-background="rgba(255,255,255,0.88)" height="100%" class="custom-table">
+              <template v-for="col in visibleColumns" :key="col.prop">
+                <!-- 角色名称 -->
+                <el-table-column v-if="col.prop === 'name'" prop="name" :label="col.label" :min-width="col.minWidth"
+                  :align="col.align" :fixed="col.fixed || false" show-overflow-tooltip>
+                  <template #default="{ row }">
+                    <div class="name-wrap">
+                      <span class="name-bar"></span>
+                      <span class="name-text">{{ row.name }}</span>
+                      <span v-if="isAdminRole(row)" class="name-admin-tag">
+                        <el-icon>
+                          <StarFilled />
+                        </el-icon> 管理员
+                      </span>
+                    </div>
+                  </template>
+                </el-table-column>
+
+                <!-- 所属组织 -->
+                <el-table-column v-else-if="col.prop === 'org'" prop="org" :label="col.label" :min-width="col.minWidth"
+                  :align="col.align" :fixed="col.fixed || false" show-overflow-tooltip>
+                  <template #default="{ row }">
+                    <span v-if="row.org" class="org-chip">
+                      <el-icon>
+                        <OfficeBuilding />
+                      </el-icon>
+                      {{ row.org }}
+                    </span>
+                    <span v-else class="text-muted">--</span>
+                  </template>
+                </el-table-column>
+
+                <!-- 备注 -->
+                <el-table-column v-else-if="col.prop === 'description'" prop="description" :label="col.label"
+                  :min-width="col.minWidth" :align="col.align" :fixed="col.fixed || false" show-overflow-tooltip>
+                  <template #default="{ row }">
+                    <span :class="row.description ? 'text-content' : 'text-muted'">
+                      {{ row.description || '--' }}
+                    </span>
+                  </template>
+                </el-table-column>
+
+                <!-- 状态 -->
+                <el-table-column v-else-if="col.prop === 'status'" :label="col.label" :min-width="col.minWidth"
+                  :align="col.align" :fixed="col.fixed || false">
+                  <template #default="{ row }">
+                    <span class="status-tag" :class="isRowActive(row) ? 'on' : 'off'">
+                      <span class="status-dot"></span>
+                      {{ isRowActive(row) ? '启用' : '停用' }}
+                    </span>
+                  </template>
+                </el-table-column>
+
+                <!-- 创建时间 -->
+                <el-table-column v-else-if="col.prop === 'created_at'" :label="col.label" :min-width="col.minWidth"
+                  :align="col.align" :fixed="col.fixed || false">
+                  <template #default="{ row }">
+                    <span class="time-text">{{ formatDateTime(row.created_at) }}</span>
+                  </template>
+                </el-table-column>
+
+                <!-- ⭐ 操作列：编辑 / 功能配置 / 删除 -->
+                <el-table-column v-else-if="col.prop === 'action'" :label="col.label" :width="col.width || 280"
+                  :align="col.align" :fixed="col.fixed || false">
+                  <template #default="{ row }">
+                    <div class="action-cell">
+                      <button class="op-btn op-view" @click="handleEdit(row)" title="编辑">
+                        <el-icon>
+                          <Edit />
+                        </el-icon>
+                        <span>编辑</span>
+                      </button>
+                      <button class="op-btn op-perm" @click="openPermDialog(row)" title="功能配置">
+                        <el-icon>
+                          <Setting />
+                        </el-icon>
+                        <span>功能配置</span>
+                      </button>
+                      <button class="op-btn op-delete" @click="handleDelete(row)" title="删除">
+                        <el-icon>
+                          <Delete />
+                        </el-icon>
+                        <span>删除</span>
+                      </button>
+                    </div>
+                  </template>
+                </el-table-column>
+              </template>
+
+              <template #empty>
+                <div class="empty-state">
+                  <el-icon class="empty-icon">
+                    <User />
+                  </el-icon>
+                  <p>暂无角色</p>
+                  <span class="empty-tip">点击右上角「新增角色」创建第一个角色</span>
+                </div>
+              </template>
+            </el-table>
+          </div>
+
+          <div class="pagination-wrapper">
+            <span class="total-text">共 {{ total }} 条</span>
+            <el-pagination background layout="sizes, prev, pager, next, jumper" :total="total" :page-size="pageSize"
+              :page-sizes="[10, 20, 50, 100]" v-model:current-page="currentPage" @size-change="handleSizeChange"
+              @current-change="handleCurrentChange" class="custom-pagination" />
+          </div>
+        </div>
+
+        <transition name="fs-fade">
+          <button v-if="isFullscreen" class="fs-exit-btn" @click="toggleFullscreen">
+            <el-icon>
+              <Close />
+            </el-icon> 退出全屏
+          </button>
+        </transition>
+      </div>
+    </Teleport>
+
+    <!-- 新增 / 编辑角色弹窗 -->
+    <el-dialog v-model="formVisible" :title="isEdit ? '编辑角色' : '新增角色'" width="540px" top="15vh" destroy-on-close
+      :close-on-click-modal="false" class="role-form-dialog">
+      <el-form :model="form" label-width="90px" label-position="right" size="default">
+        <el-form-item label="角色名称" required>
+          <el-input v-model="form.name" placeholder="请输入角色名称" maxlength="20" show-word-limit />
+        </el-form-item>
+
+        <!-- ⭐ 所属组织（客户名根节点 + 下级机构） -->
+        <el-form-item label="所属组织" required>
+          <el-select v-model="form.org" placeholder="请选择所属组织" clearable filterable style="width:100%" popper-class="role-org-popper">
+            <el-option v-for="o in sortedOrgList" :key="o.id || o.name" :label="o.name" :value="o.name" />
+          </el-select>
+          <div class="form-tip">
+            <el-icon>
+              <InfoFilled />
+            </el-icon>
+            <span>该角色归属于哪个组织/车队</span>
+          </div>
+        </el-form-item>
+
+        <el-form-item label="备注">
+          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="请输入角色说明" maxlength="100"
+            show-word-limit />
+        </el-form-item>
+
+        <el-form-item label="状态">
+          <el-radio-group v-model="form.status">
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="0">停用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="formVisible = false">取消</el-button>
+        <el-button type="primary" class="btn-primary" :loading="saving" @click="handleSubmit">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 功能配置弹窗 -->
+    <FunctionPermissionDialog v-model="permDialogVisible" :role-id="permCurrentRole?.id"
+      :role-name="permCurrentRole?.name" :value="permCurrentKeys" @confirm="handlePermConfirm" />
+  </div>
+</template>
+
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Search, Refresh, CirclePlus, Operation, Setting, FullScreen, Close,
-  Edit, Delete, Setting as SettingIcon,
-  Grid, Rank, DArrowLeft, DArrowRight, Lock,
+  Search, RefreshLeft, Refresh, CirclePlus, Edit, Delete,
+  Operation, Setting, FullScreen, Close, Grid, Rank,
+  DArrowLeft, DArrowRight, User, InfoFilled, StarFilled,
+  OfficeBuilding,
 } from '@element-plus/icons-vue'
-import { supabase } from '@/utils/supabase'
 import dayjs from 'dayjs'
+import { supabase } from '@/utils/supabase'
+import FunctionPermissionDialog from '@/components/FunctionPermissionDialog.vue'
 
 // ============================================================
-// ⭐ 当前登录用户 & 角色判断
+// 数据隔离
 // ============================================================
 const currentUser = (() => {
   try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
   catch { return {} }
 })()
 const isAdmin = currentUser.role === 'admin'
-const isCustomer = !isAdmin                      // ⭐ 非管理员一律按客户处理
-const myAccount = currentUser.account || ''
+const isCustomer = !isAdmin
+const isSubAccount = !!currentUser.isSubAccount
+const myAccount = currentUser.masterAccount || currentUser.account || ''
+const myPhone = currentUser.masterPhone || currentUser.phone || ''
+const myCustomerId = ref(currentUser.customerId || null)
+const myOrgName = ref(null)
+
+const loadMyCustomerId = async () => {
+  if (!isCustomer || myCustomerId.value || !myPhone) return
+  try {
+    const { data } = await supabase.from('customers').select('id, name').eq('phone', myPhone).maybeSingle()
+    if (data) {
+      myCustomerId.value = data.id
+      // ⭐ 缓存客户名，用于机构下拉的虚拟根节点
+      if (data.name && !currentUser.customerName) {
+        currentUser.customerName = data.name
+      }
+    }
+  } catch (e) { }
+}
+const loadMyOrgName = async () => {
+  if (!isCustomer || !isSubAccount || !currentUser.orgId) return
+  try {
+    const { data } = await supabase.from('organizations').select('name').eq('id', currentUser.orgId).maybeSingle()
+    if (data) myOrgName.value = data.name
+  } catch (e) { }
+}
 
 // ============================================================
-// 功能权限分组
-// ============================================================
-const PERMISSION_GROUPS_ALL = [
-  {
-    key: 'home',
-    label: '首页',
-    items: [
-      { key: 'home', label: '首页 / 数据总览' },
-    ],
-  },
-  {
-    key: 'driving',
-    label: '行车管理',
-    items: [
-      { key: 'driving_fullmap', label: '全图监控' },
-      { key: 'vehicle_fault', label: '车辆故障管理' },
-      { key: 'appearance_inspect', label: '外观巡检管理' },
-    ],
-  },
-  {
-    key: 'ele_fence',
-    label: '电子围栏管理',
-    items: [
-      { key: 'ele_fence', label: '电子围栏管理' },
-    ],
-  },
-  {
-    key: 'operation',
-    label: '运营管理',
-    items: [
-      { key: 'operation', label: '运营管理' },
-    ],
-  },
-  {
-    key: 'transport',
-    label: '运输管理',
-    items: [
-      { key: 'waybill', label: '运单管理' },
-      { key: 'report', label: '车队运营报告' },
-    ],
-  },
-  {
-    key: 'base_data',
-    label: '基础数据管理',
-    items: [
-      { key: 'vehicle_archive', label: '车辆档案' },
-      { key: 'driver_archive', label: '司机档案' },
-    ],
-  },
-  {
-    key: 'system',
-    label: '系统管理',
-    items: [
-      { key: 'system', label: '系统管理' },
-    ],
-  },
-]
-
-// ⭐ 客户视角：隐藏"系统管理"分组
-const PERMISSION_GROUPS = computed(() => {
-  if (isCustomer) {
-    return PERMISSION_GROUPS_ALL.filter(g => g.key !== 'system')
-  }
-  return PERMISSION_GROUPS_ALL
-})
-
-// ============================================================
-// 数据源
+// 状态
 // ============================================================
 const loading = ref(false)
-const allTableData = ref([])
+const refreshing = ref(false)
+const tableData = ref([])
+const total = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(10)
+
 const searchForm = reactive({ name: '' })
 
-// ============================================================
-// 生成唯一 code（客户创建的角色前缀固定，避免撞管理员 code）
-// ============================================================
-const genRoleCode = () => {
-  return 'role_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
-}
+// 原始组织列表
+const orgList = ref([])
 
-// ============================================================
-// 判断是否管理员角色（code / name 双判）
-// ============================================================
-// ⭐ 判断是否"系统管理员角色"——只看 code，不看名字
-// 客户可以给自己的角色起名"管理员"，只要 code 不是 admin 就视为普通角色
-const isAdminRole = (role) => {
-  const code = String(role?.code || '').toLowerCase().trim()
-  return code === 'admin' || code === 'super_admin'
-}
+// ⭐ 排序后的机构列表：客户公司名 → 根 → 子
+const sortedOrgList = computed(() => {
+  const list = [...orgList.value]
+  const roots = list.filter(o => !o.parent_id)
+  const children = list.filter(o => o.parent_id)
+  const sorted = [...roots, ...children]
 
-// ============================================================
-// 读取角色数据
-// ============================================================
-const fetchData = async () => {
-  loading.value = true
-  try {
-    let query = supabase
-      .from('roles')
-      .select('*')
-      .order('id', { ascending: true })
+  // 客户公司名（虚拟根），排第一
+  const customerName =
+    currentUser.customerName ||
+    currentUser.masterName ||
+    currentUser.name ||
+    ''
 
-    if (isCustomer) {
-      query = query.eq('owner_account', myAccount)
+  if (customerName) {
+    const existedIdx = sorted.findIndex(o => o.name === customerName)
+    if (existedIdx >= 0) {
+      const [existed] = sorted.splice(existedIdx, 1)
+      sorted.unshift(existed)
+    } else {
+      sorted.unshift({
+        id: '__customer_root__',
+        name: customerName,
+        parent_id: null,
+        _virtual: true,
+      })
     }
-
-    const { data, error } = await query
-    if (error) throw error
-
-    let list = data || []
-    if (isCustomer) {
-      list = list.filter(r => !isAdminRole(r))
-    }
-
-    allTableData.value = list.map(item => ({
-      ...item,
-      remark: item.description || '--',
-      hasPermissionConfig: !isAdminRole(item),
-    }))
-  } catch (e) {
-    console.error('加载角色失败:', e)
-    ElMessage.error('加载角色失败：' + (e?.message || e))
-  } finally {
-    loading.value = false
   }
-}
 
-// ============================================================
-// 搜索过滤
-// ============================================================
-const filteredData = computed(() => {
-  return allTableData.value.filter(row => {
-    if (searchForm.name && !(row.name || '').includes(searchForm.name)) return false
-    return true
-  })
+  return sorted
 })
 
-const handleSearch = () => {}
-const handleReset = () => {
-  searchForm.name = ''
+// 表格设置
+const tableSize = ref('default')
+const handleDensityChange = (cmd) => { tableSize.value = cmd }
+
+// 全屏
+const isFullscreen = ref(false)
+const toggleFullscreen = () => { isFullscreen.value = !isFullscreen.value }
+const onEscKeydown = (e) => {
+  if (e.key === 'Escape' && isFullscreen.value) isFullscreen.value = false
 }
 
-// ============================================================
-// 表格密度 / 列设置 / 全屏
-// ============================================================
-const DENSITY_KEY = 'role_manage_density' + (isCustomer ? `_cust_${myAccount}` : '_admin')
-const tableSize = ref(sessionStorage.getItem(DENSITY_KEY) || 'default')
-const densityMultiplier = computed(() => {
-  if (tableSize.value === 'large') return 1.15
-  if (tableSize.value === 'small') return 0.85
-  return 1
+// 新增 / 编辑弹窗
+const formVisible = ref(false)
+const isEdit = ref(false)
+const saving = ref(false)
+const form = reactive({
+  id: null,
+  name: '',
+  org: '',
+  description: '',
+  status: 1,
 })
-const handleDensityChange = (cmd) => {
-  tableSize.value = cmd
-  sessionStorage.setItem(DENSITY_KEY, cmd)
-}
 
+// 权限配置弹窗
+const permDialogVisible = ref(false)
+const permCurrentRole = ref(null)
+const permCurrentKeys = ref([])
+
+// ============================================================
+// 列设置
+// ============================================================
 const columnPopoverVisible = ref(false)
+
 const DEFAULT_COLUMNS = [
-  { prop: 'name',       label: '角色名称', visible: true, fixed: false, minWidth: 140, align: 'center' },
-  { prop: 'remark',     label: '备注',     visible: true, fixed: false, minWidth: 200, align: 'left' },
-  { prop: 'created_at', label: '创建时间', visible: true, fixed: false, minWidth: 150, align: 'center' },
-  { prop: 'updated_at', label: '更新时间', visible: true, fixed: false, minWidth: 150, align: 'center' },
-  { prop: 'action',     label: '操作',     visible: true, fixed: 'right', width: 240, align: 'center' },
+  { prop: 'name', label: '角色名称', visible: true, fixed: 'left', minWidth: 180, align: 'left' },
+  { prop: 'org', label: '所属组织', visible: true, fixed: false, minWidth: 200, align: 'center' },
+  { prop: 'description', label: '备注', visible: true, fixed: false, minWidth: 180, align: 'left' },
+  { prop: 'status', label: '状态', visible: true, fixed: false, minWidth: 100, align: 'center' },
+  { prop: 'created_at', label: '创建时间', visible: true, fixed: false, minWidth: 170, align: 'center' },
+  { prop: 'action', label: '操作', visible: true, fixed: 'right', width: 280, align: 'center' },
 ]
 const columnConfig = ref(JSON.parse(JSON.stringify(DEFAULT_COLUMNS)))
 const visibleColumns = computed(() => columnConfig.value.filter(c => c.visible))
-
 const resetColumns = () => {
   columnConfig.value = JSON.parse(JSON.stringify(DEFAULT_COLUMNS))
   ElMessage.success('已重置列设置')
@@ -196,132 +434,169 @@ const toggleFix = (col, side) => { col.fixed = col.fixed === side ? false : side
 
 const dragIndex = ref(-1)
 const dragOverIndex = ref(-1)
-const onDragStart = (index) => { dragIndex.value = index }
-const onDragOver = (index) => { dragOverIndex.value = index }
 const onDrop = (index) => {
   if (dragIndex.value === -1 || dragIndex.value === index) { dragIndex.value = -1; dragOverIndex.value = -1; return }
   const list = [...columnConfig.value]
   const [item] = list.splice(dragIndex.value, 1)
   list.splice(index, 0, item)
   columnConfig.value = list
-  dragIndex.value = -1
-  dragOverIndex.value = -1
+  dragIndex.value = -1; dragOverIndex.value = -1
 }
-const onDragEnd = () => { dragIndex.value = -1; dragOverIndex.value = -1 }
 
-const isTableFullscreen = ref(false)
-const toggleTableFullscreen = () => { isTableFullscreen.value = !isTableFullscreen.value }
-const onEscKeydown = (e) => {
-  if (e.key === 'Escape' && isTableFullscreen.value) isTableFullscreen.value = false
+// ============================================================
+// 工具
+// ============================================================
+const formatDateTime = (d) => d ? dayjs(d).format('YYYY-MM-DD HH:mm:ss') : '--'
+
+const isRowActive = (row) => {
+  const s = row.status
+  if (typeof s === 'number') return s === 1
+  if (typeof s === 'string') {
+    return s === '1' || s === 'active' || s === 'enabled'
+  }
+  return false
 }
+
+const isAdminRole = (row) => {
+  return row.code === 'admin' || row.name === '管理员' || row.name === 'admin'
+}
+
+// ============================================================
+// 数据隔离
+// ============================================================
+const applyIsolation = (q) => {
+  if (isAdmin) return q
+  if (isSubAccount && myOrgName.value) return q.eq('org', myOrgName.value)
+  if (myAccount) return q.eq('owner_account', myAccount)
+  return q.eq('owner_account', '__NO_PERMISSION__')
+}
+
+// ============================================================
+// 加载角色
+// ============================================================
+const fetchRoles = async () => {
+  loading.value = true
+  try {
+    let q = supabase
+      .from('roles')
+      .select('*', { count: 'exact' })
+      .order('id', { ascending: true })
+
+    q = applyIsolation(q)
+    if (searchForm.name) q = q.ilike('name', `%${searchForm.name}%`)
+
+    const from = (currentPage.value - 1) * pageSize.value
+    const { data, error, count } = await q.range(from, from + pageSize.value - 1)
+    if (error) throw error
+
+    tableData.value = data || []
+    total.value = count || 0
+  } catch (e) {
+    console.error('[role] 加载失败', e)
+    ElMessage.error('加载失败：' + e.message)
+  } finally {
+    loading.value = false
+  }
+}
+
+// ============================================================
+// 加载组织列表
+// ============================================================
+const loadOrgOptions = async () => {
+  try {
+    let q = supabase.from('organizations').select('id, name, parent_id').order('id')
+    if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
+    const { data, error } = await q
+    if (error) throw error
+    orgList.value = data || []
+  } catch (e) {
+    console.warn('[role] 加载组织失败', e)
+  }
+}
+
+// ============================================================
+// 交互
+// ============================================================
+const handleSearch = () => { currentPage.value = 1; fetchRoles() }
+const handleReset = () => {
+  searchForm.name = ''
+  currentPage.value = 1
+  fetchRoles()
+}
+const handleRefresh = async () => {
+  refreshing.value = true
+  await fetchRoles()
+  setTimeout(() => { refreshing.value = false }, 400)
+  ElMessage.success({ message: '已刷新', duration: 1200 })
+}
+
+const handleSizeChange = (v) => { pageSize.value = v; currentPage.value = 1; fetchRoles() }
+const handleCurrentChange = (v) => { currentPage.value = v; fetchRoles() }
 
 // ============================================================
 // 新增 / 编辑
 // ============================================================
-const dialogVisible = ref(false)
-const isEdit = ref(false)
-const saving = ref(false)
-const formRef = ref(null)
-
-const form = reactive({
-  id: null,
-  name: '',
-  remark: '',
-})
-
-const rules = {
-  name: [
-    { required: true, message: '请输入角色名称', trigger: 'blur' },
-    { max: 50, message: '角色名称不能超过50个字符', trigger: 'blur' },
-  ],
-  remark: [
-    { max: 200, message: '备注不能超过200个字符', trigger: 'blur' },
-  ],
-}
-
-const resetForm = () => {
-  form.id = null
-  form.name = ''
-  form.remark = ''
-  formRef.value?.clearValidate?.()
-}
-
 const handleAdd = () => {
   isEdit.value = false
-  resetForm()
-  dialogVisible.value = true
+  form.id = null
+  form.name = ''
+  // ⭐ 默认填充客户公司名（虚拟根）
+  form.org = currentUser.customerName || currentUser.masterName || currentUser.name || ''
+  form.description = ''
+  form.status = 1
+  formVisible.value = true
 }
 
 const handleEdit = (row) => {
   isEdit.value = true
-  resetForm()
-  Object.assign(form, {
-    id: row.id,
-    name: row.name,
-    remark: row.remark === '--' ? '' : row.remark,
-  })
-  dialogVisible.value = true
+  form.id = row.id
+  form.name = row.name || ''
+  form.org = row.org || ''
+  form.description = row.description || ''
+  form.status = isRowActive(row) ? 1 : 0
+  formVisible.value = true
 }
 
-// ============================================================
-// 保存角色
-// ⭐ 不再限制角色名，通过 code 前缀 + permissions 过滤来限制能力
-// ============================================================
-const saveRole = async () => {
-  if (!formRef.value) return
-  try {
-    await formRef.value.validate()
-    saving.value = true
+const handleSubmit = async () => {
+  if (!form.name.trim()) return ElMessage.warning('请输入角色名称')
+  if (!form.org) return ElMessage.warning('请选择所属组织')
 
-    // ⭐⭐⭐ 前端重名检查（同客户内不允许同名）
-    const dup = allTableData.value.find(r =>
-      r.name === form.name && r.id !== form.id
-    )
-    if (dup) {
-      ElMessage.warning(`角色名「${form.name}」已存在`)
-      saving.value = false
-      return
+  saving.value = true
+  try {
+    const payload = {
+      name: form.name.trim(),
+      org: form.org,
+      description: form.description?.trim() || null,
+      status: Number(form.status),
+      owner_account: isAdmin ? null : myAccount,
+      updated_at: new Date().toISOString(),
     }
 
     if (isEdit.value) {
-      const payload = {
-        name: form.name,
-        description: form.remark || null,
-        updated_at: new Date().toISOString(),
-      }
-
-      const current = allTableData.value.find(r => r.id === form.id)
-      if (!current?.code) {
-        payload.code = genRoleCode()
-      }
-
-      const { error } = await supabase
-        .from('roles')
-        .update(payload)
-        .eq('id', form.id)
+      let q = supabase.from('roles').update(payload).eq('id', form.id)
+      if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
+      const { error } = await q
       if (error) throw error
-      ElMessage.success('角色更新成功')
+      ElMessage.success('更新成功')
     } else {
-      const payload = {
-        name: form.name,
-        description: form.remark || null,
-        code: genRoleCode(),
-        status: 1,
-        permissions: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-      if (isCustomer) payload.owner_account = myAccount
+      payload.permissions = { client: [] }
+      payload.created_at = new Date().toISOString()
 
       const { error } = await supabase.from('roles').insert(payload)
-      if (error) throw error
-      ElMessage.success('角色新增成功')
+      if (error) {
+        if (String(error.message).includes('unique') || String(error.code) === '23505') {
+          throw new Error('该角色名称已存在')
+        }
+        throw error
+      }
+      ElMessage.success('新增成功')
     }
 
-    dialogVisible.value = false
-    await fetchData()
+    formVisible.value = false
+    fetchRoles()
   } catch (e) {
-    if (e?.message) ElMessage.error('保存失败：' + e.message)
+    console.error('[role] 保存失败', e)
+    ElMessage.error('保存失败：' + e.message)
   } finally {
     saving.value = false
   }
@@ -330,116 +605,70 @@ const saveRole = async () => {
 // ============================================================
 // 删除
 // ============================================================
-const handleDelete = (row) => {
-  ElMessageBox.confirm(`确定删除角色「${row.name}」吗？删除后不可恢复。`, '删除确认', {
-    confirmButtonText: '确定删除',
-    cancelButtonText: '取消',
-    type: 'warning',
-    confirmButtonClass: 'el-button--danger',
-  }).then(async () => {
-    try {
-      const { error } = await supabase.from('roles').delete().eq('id', row.id)
-      if (error) throw error
-      ElMessage.success('删除成功')
-      await fetchData()
-    } catch (e) {
-      ElMessage.error('删除失败：' + e.message)
-    }
-  }).catch(() => {})
-}
-
-// ============================================================
-// ⭐ 功能配置弹窗
-// ============================================================
-const permDialogVisible = ref(false)
-const permTargetRole = ref(null)
-const permSelected = ref([])
-const permSaving = ref(false)
-
-const totalPermCount = computed(() => {
-  return PERMISSION_GROUPS.value.reduce((sum, g) => sum + g.items.length, 0)
-})
-
-const isAllSelected = computed(() => {
-  return totalPermCount.value > 0 && permSelected.value.length === totalPermCount.value
-})
-
-const parseRolePerms = (role) => {
-  const p = role?.permissions
-  if (Array.isArray(p)) return p
-  if (p && typeof p === 'object' && Array.isArray(p.client)) return p.client
-  return []
-}
-
-const handlePermissionConfig = (row) => {
-  permTargetRole.value = row
-
-  // ⭐ 客户视角：过滤掉 system（双保险）
-  let perms = parseRolePerms(row)
-  if (isCustomer) {
-    perms = perms.filter(p => p !== 'system')
+const handleDelete = async (row) => {
+  if (isAdminRole(row)) {
+    ElMessage.warning('管理员角色不可删除')
+    return
   }
-  permSelected.value = perms
+  try {
+    await ElMessageBox.confirm(
+      `确定删除角色「${row.name}」吗？删除后该角色下的用户将失去对应权限。`,
+      '删除确认',
+      {
+        type: 'warning',
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        confirmButtonClass: 'btn-danger-confirm',
+        customClass: 'delete-confirm-box',
+      }
+    )
+    let q = supabase.from('roles').delete().eq('id', row.id)
+    if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
+    const { error } = await q
+    if (error) throw error
+    ElMessage.success('删除成功')
+    fetchRoles()
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error('删除失败：' + (e.message || ''))
+  }
+}
 
+// ============================================================
+// 功能配置弹窗
+// ============================================================
+const openPermDialog = (row) => {
+  permCurrentRole.value = row
+  let list = []
+  try {
+    const p = row.permissions
+    if (p) {
+      const obj = typeof p === 'string' ? JSON.parse(p) : p
+      list = Array.isArray(obj.client) ? [...obj.client] : []
+    }
+  } catch (e) {
+    console.warn('[role] 解析 permissions 失败', e)
+    list = []
+  }
+  permCurrentKeys.value = list
   permDialogVisible.value = true
 }
 
-const toggleAllPerms = (val) => {
-  if (val) {
-    const all = []
-    PERMISSION_GROUPS.value.forEach(g => g.items.forEach(i => all.push(i.key)))
-    permSelected.value = all
-  } else {
-    permSelected.value = []
-  }
-}
-
-const isGroupAllSelected = (group) => {
-  return group.items.every(i => permSelected.value.includes(i.key))
-}
-
-const toggleGroupAll = (group) => {
-  if (isGroupAllSelected(group)) {
-    group.items.forEach(i => {
-      const idx = permSelected.value.indexOf(i.key)
-      if (idx > -1) permSelected.value.splice(idx, 1)
-    })
-  } else {
-    group.items.forEach(i => {
-      if (!permSelected.value.includes(i.key)) {
-        permSelected.value.push(i.key)
-      }
-    })
-  }
-}
-
-const savePermissions = async () => {
-  if (!permTargetRole.value) return
+const handlePermConfirm = async ({ roleId, permissions }) => {
   try {
-    permSaving.value = true
-
-    // ⭐⭐ 客户视角：保存前强制过滤 system（核心防线）
-    let perms = [...permSelected.value]
-    if (isCustomer) {
-      perms = perms.filter(p => p !== 'system')
+    const payload = {
+      permissions: { client: permissions || [] },
+      updated_at: new Date().toISOString(),
     }
-
-    const { error } = await supabase
-      .from('roles')
-      .update({
-        permissions: perms,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', permTargetRole.value.id)
+    let q = supabase.from('roles').update(payload).eq('id', roleId)
+    if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
+    const { error } = await q
     if (error) throw error
 
-    ElMessage.success(`「${permTargetRole.value.name}」功能权限已更新`)
-    permDialogVisible.value = false
-    await fetchData()
+    ElMessage.success(`功能配置已保存，共 ${permissions.length} 项`)
+    fetchRoles()
   } catch (e) {
-    ElMessage.error('保存失败：' + (e?.message || e))
-  } finally {
-    permSaving.value = false
+    console.error('[role] 保存权限失败', e)
+    ElMessage.error('保存权限失败：' + e.message)
   }
 }
 
@@ -448,7 +677,12 @@ const savePermissions = async () => {
 // ============================================================
 onMounted(async () => {
   document.addEventListener('keydown', onEscKeydown)
-  await fetchData()
+  if (isCustomer) {
+    await loadMyCustomerId()
+    await loadMyOrgName()
+  }
+  await loadOrgOptions()
+  fetchRoles()
 })
 
 onBeforeUnmount(() => {
@@ -456,902 +690,990 @@ onBeforeUnmount(() => {
 })
 </script>
 
-<template>
-  <div class="role-manage-page">
-    <!-- ============ 搜索卡片 ============ -->
-    <div class="search-card">
-      <div class="search-row">
-        <div class="search-item">
-          <label>角色名称</label>
-          <el-input v-model="searchForm.name" placeholder="请输入角色名称" clearable size="default" />
-        </div>
-        <div class="search-actions">
-          <el-button type="primary" class="btn-primary" size="default" @click="handleSearch">
-            <el-icon><Search /></el-icon> 查询
-          </el-button>
-          <el-button class="btn-outline" size="default" @click="handleReset">
-            <el-icon><Refresh /></el-icon> 重置
-          </el-button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============ 表格卡片 ============ -->
-    <Teleport to="body" :disabled="!isTableFullscreen">
-      <div class="table-card-wrap" :class="{ 'is-fullscreen': isTableFullscreen }">
-        <div class="table-card">
-          <div class="toolbar">
-            <div class="toolbar-left">
-              <span class="total-hint">共 <b>{{ filteredData.length }}</b> 条</span>
-            </div>
-            <div class="toolbar-right">
-              <el-button type="primary" class="btn-primary" size="default" @click="handleAdd">
-                <el-icon><CirclePlus /></el-icon> 新增角色
-              </el-button>
-
-              <button class="icon-btn" @click="fetchData" title="刷新">
-                <el-icon><Refresh /></el-icon>
-              </button>
-
-              <el-dropdown trigger="click" popper-class="density-dropdown-red" @command="handleDensityChange">
-                <button class="icon-btn" title="密度">
-                  <el-icon><Operation /></el-icon>
-                </button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="large"><span class="density-item" :class="{ active: tableSize === 'large' }">宽松</span></el-dropdown-item>
-                    <el-dropdown-item command="default"><span class="density-item" :class="{ active: tableSize === 'default' }">默认</span></el-dropdown-item>
-                    <el-dropdown-item command="small"><span class="density-item" :class="{ active: tableSize === 'small' }">紧凑</span></el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-
-              <el-popover v-model:visible="columnPopoverVisible" placement="bottom-end" :width="280" trigger="click" popper-class="column-setting-popper">
-                <template #reference>
-                  <button class="icon-btn" :class="{ active: columnPopoverVisible }" title="列设置">
-                    <el-icon><Setting /></el-icon>
-                  </button>
-                </template>
-                <div class="column-setting">
-                  <div class="column-setting-header">
-                    <span class="col-title"><el-icon><Grid /></el-icon> 列展示</span>
-                    <span class="col-reset" @click="resetColumns">重置</span>
-                  </div>
-                  <div class="column-setting-body">
-                    <div
-                      v-for="(col, index) in columnConfig"
-                      :key="col.prop"
-                      class="column-item"
-                      :class="{ dragging: dragIndex === index, dragOver: dragOverIndex === index }"
-                      draggable="true"
-                      @dragstart="onDragStart(index)"
-                      @dragover.prevent="onDragOver(index)"
-                      @drop="onDrop(index)"
-                      @dragend="onDragEnd"
-                    >
-                      <span class="drag-handle"><el-icon><Rank /></el-icon></span>
-                      <el-checkbox v-model="col.visible" class="col-checkbox">{{ col.label }}</el-checkbox>
-                      <div class="fix-actions">
-                        <button class="fix-btn" :class="{ active: col.fixed === 'left' }" @click="toggleFix(col, 'left')" title="左固定"><el-icon><DArrowLeft /></el-icon></button>
-                        <button class="fix-btn" :class="{ active: col.fixed === 'right' }" @click="toggleFix(col, 'right')" title="右固定"><el-icon><DArrowRight /></el-icon></button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </el-popover>
-
-              <button class="icon-btn" :class="{ active: isTableFullscreen }" @click="toggleTableFullscreen" :title="isTableFullscreen ? '退出全屏' : '表格全屏'">
-                <el-icon><component :is="isTableFullscreen ? Close : FullScreen" /></el-icon>
-              </button>
-            </div>
-          </div>
-
-          <el-table
-            :data="filteredData"
-            v-loading="loading"
-            border
-            stripe
-            :size="tableSize"
-            class="custom-table"
-            :header-cell-style="{ background:'#F8FAFC', color:'#0F172A', fontWeight:'700' }"
-          >
-            <template v-for="col in visibleColumns" :key="col.prop">
-              <el-table-column
-                v-if="col.prop === 'created_at' || col.prop === 'updated_at'"
-                :label="col.label"
-                :min-width="Math.round(col.minWidth * densityMultiplier)"
-                :align="col.align"
-                :fixed="col.fixed || false"
-              >
-                <template #default="{ row }">
-                  <span class="time-text">
-                    {{ row[col.prop] ? dayjs(row[col.prop]).format('YYYY-MM-DD HH:mm:ss') : '--' }}
-                  </span>
-                </template>
-              </el-table-column>
-
-              <el-table-column
-                v-else-if="col.prop === 'action'"
-                :label="col.label"
-                :width="col.width ? Math.round(col.width * densityMultiplier) : 240"
-                :align="col.align"
-                :fixed="col.fixed || false"
-              >
-                <template #default="{ row }">
-                  <div class="action-cell">
-                    <el-button type="text" class="action-btn action-edit" @click="handleEdit(row)">
-                      <el-icon><Edit /></el-icon> 编辑
-                    </el-button>
-                    <el-button
-                      v-if="row.hasPermissionConfig"
-                      type="text"
-                      class="action-btn action-perm"
-                      @click="handlePermissionConfig(row)"
-                    >
-                      <el-icon><SettingIcon /></el-icon> 功能配置
-                    </el-button>
-                    <el-button type="text" class="action-btn action-delete" @click="handleDelete(row)">
-                      <el-icon><Delete /></el-icon> 删除
-                    </el-button>
-                  </div>
-                </template>
-              </el-table-column>
-
-              <el-table-column
-                v-else
-                :prop="col.prop"
-                :label="col.label"
-                :min-width="Math.round(col.minWidth * densityMultiplier)"
-                :align="col.align"
-                :fixed="col.fixed || false"
-                show-overflow-tooltip
-              >
-                <template #default="{ row }">
-                  <span v-if="col.prop === 'name'" class="role-name-tag">{{ row.name }}</span>
-                  <span v-else class="text-content">{{ row[col.prop] || '--' }}</span>
-                </template>
-              </el-table-column>
-            </template>
-
-            <template #empty>
-              <div class="empty-state">
-                <el-icon class="empty-icon"><Lock /></el-icon>
-                <p>暂无角色数据</p>
-              </div>
-            </template>
-          </el-table>
-        </div>
-
-        <transition name="fs-fade">
-          <button v-if="isTableFullscreen" class="fs-exit-btn" @click="toggleTableFullscreen">
-            <el-icon><Close /></el-icon> 退出全屏
-          </button>
-        </transition>
-      </div>
-    </Teleport>
-
-    <!-- ============ 新增/编辑弹窗 ============ -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="isEdit ? '编辑角色' : '新增角色'"
-      width="520px"
-      destroy-on-close
-      :close-on-click-modal="false"
-      class="role-dialog"
-    >
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="90px" class="role-form">
-        <el-form-item label="角色名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入角色名称" maxlength="50" clearable />
-        </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input
-            v-model="form.remark"
-            type="textarea"
-            :rows="4"
-            placeholder="请输入备注"
-            maxlength="200"
-            show-word-limit
-          />
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <button class="action-btn-footer ghost" @click="dialogVisible = false">取消</button>
-        <button class="action-btn-footer primary" :disabled="saving" @click="saveRole">
-          {{ saving ? '保存中...' : '确定' }}
-        </button>
-      </template>
-    </el-dialog>
-
-    <!-- ============ 功能配置弹窗 ============ -->
-    <el-dialog
-      v-model="permDialogVisible"
-      width="720px"
-      top="6vh"
-      destroy-on-close
-      :close-on-click-modal="false"
-      class="perm-config-dialog"
-    >
-      <template #header>
-        <div class="perm-header">
-          <span class="perm-header-title">功能配置</span>
-          <span class="perm-header-role">{{ permTargetRole?.name }}</span>
-        </div>
-      </template>
-
-      <div class="perm-body">
-        <div class="perm-toolbar">
-          <label class="perm-select-all">
-            <el-checkbox
-              :model-value="isAllSelected"
-              :indeterminate="permSelected.length > 0 && !isAllSelected"
-              @change="toggleAllPerms"
-            />
-            <span class="perm-select-all-text">全选</span>
-          </label>
-          <div class="perm-count">
-            已选 <b>{{ permSelected.length }}</b> / {{ totalPermCount }}
-          </div>
-        </div>
-
-        <el-checkbox-group v-model="permSelected" class="perm-groups">
-          <div
-            v-for="group in PERMISSION_GROUPS"
-            :key="group.key"
-            class="perm-group"
-          >
-            <div class="perm-group-header">
-              <span class="perm-group-name">{{ group.label }}</span>
-              <button
-                type="button"
-                class="perm-group-toggle"
-                @click.stop="toggleGroupAll(group)"
-              >
-                {{ isGroupAllSelected(group) ? '取消全选' : '全选' }}
-              </button>
-            </div>
-
-            <div class="perm-list">
-              <el-checkbox
-                v-for="item in group.items"
-                :key="item.key"
-                :label="item.key"
-                class="perm-item"
-              >
-                {{ item.label }}
-              </el-checkbox>
-            </div>
-          </div>
-        </el-checkbox-group>
-      </div>
-
-      <template #footer>
-        <div class="perm-footer">
-          <button class="action-btn-footer ghost" @click="permDialogVisible = false">取消</button>
-          <button
-            class="action-btn-footer primary"
-            :disabled="permSaving"
-            @click="savePermissions"
-          >
-            {{ permSaving ? '保存中...' : '确定保存' }}
-          </button>
-        </div>
-      </template>
-    </el-dialog>
-  </div>
-</template>
-
 <style scoped>
-.role-manage-page {
-  padding: 12px;
+.role-page {
+  padding: 6px 16px 16px;
+  background-color: #F8FAFC;
+  height: calc(100vh - 101px);
+  max-height: calc(100vh - 101px);
+  box-sizing: border-box;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 100%;
-  background: #F8FAFC;
   font-size: 13px;
-  animation: pageIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  color: #1E293B;
 }
 
-@keyframes pageIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ============ 搜索卡片 ============ */
 .search-card {
-  background: #fff; border-radius: 10px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  padding: 12px 16px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  padding: 14px 16px;
+  flex-shrink: 0;
 }
-.search-row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
-.search-item { display: flex; align-items: center; gap: 8px; }
-.search-item label { font-size: 13px; color: #334155; font-weight: 600; white-space: nowrap; }
-.search-item :deep(.el-input) { width: 220px; }
-.search-item :deep(.el-input__wrapper) {
-  border-radius: 6px !important;
+
+.search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.search-btns {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+
+:deep(.el-button) {
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+:deep(.el-button:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.15);
+}
+
+:deep(.btn-primary) {
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+  border: none;
+  color: #fff;
+}
+
+:deep(.btn-primary:hover) {
+  background: linear-gradient(135deg, #a00d24, #7F1D1D);
+}
+
+:deep(.btn-outline) {
+  border-color: #CBD5E1;
+  color: #334155;
+  background: #fff;
+}
+
+:deep(.btn-outline:hover) {
+  border-color: #c8102e;
+  color: #c8102e;
+  background-color: #FEF2F2;
+}
+
+.search-row :deep(.el-input__wrapper) {
+  border-radius: 8px !important;
   background: #F8FAFC !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
-  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   min-height: 32px;
 }
-.search-item :deep(.el-input__wrapper:hover) {
+
+.search-row :deep(.el-input__wrapper:hover) {
   background: #FEF2F2 !important;
   box-shadow: 0 0 0 1px #FCA5A5 inset !important;
 }
-.search-item :deep(.el-input__wrapper.is-focus) {
-  background: #ffffff !important;
-  box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.15), 0 0 0 1px #c8102e inset !important;
-  transform: translateY(-1px);
-}
-.search-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
-/* ============ 按钮样式 ============ */
-.btn-primary {
-  background: linear-gradient(135deg, #c8102e, #a00d24) !important;
-  border: none !important; color: #fff !important;
-  font-weight: 600; border-radius: 6px !important;
-  box-shadow: 0 3px 10px rgba(200, 16, 46, 0.25);
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-}
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(200, 16, 46, 0.4); }
-.btn-outline {
-  border-radius: 6px !important;
-  border-color: #CBD5E1 !important; color: #334155;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+.search-row :deep(.el-input__wrapper.is-focus) {
   background: #fff !important;
+  box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.15), 0 0 0 1px #c8102e inset !important;
 }
-.btn-outline:hover { border-color: #c8102e !important; color: #c8102e !important; background: #FEF2F2 !important; transform: translateY(-1px); }
 
-/* ============ 表格卡片 ============ */
-.table-card-wrap { display: flex; flex-direction: column; }
+.table-card-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .table-card-wrap.is-fullscreen {
-  position: fixed; inset: 0; z-index: 9999; padding: 24px;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(200, 16, 46, 0.08) 0%, transparent 60%),
-    radial-gradient(circle at 80% 80%, rgba(200, 16, 46, 0.06) 0%, transparent 60%),
-    rgba(248, 250, 252, 0.75);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  animation: fullscreenFadeIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  padding: 24px;
+  background: rgba(248, 250, 252, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  animation: fs-fade-in 0.3s;
 }
-@keyframes fullscreenFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes fs-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 .table-card-wrap.is-fullscreen .table-card {
-  flex: 1; border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(200, 16, 46, 0.18), 0 0 0 1px rgba(200, 16, 46, 0.08);
-  animation: fullscreenCardIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(200, 16, 46, 0.18);
 }
-@keyframes fullscreenCardIn {
-  from { opacity: 0; transform: scale(0.94) translateY(20px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-.fs-exit-btn {
-  position: absolute; top: 36px; right: 36px; z-index: 10001;
-  display: flex; align-items: center; gap: 4px;
-  padding: 8px 16px; border: none;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
-  color: #fff; font-size: 13px; font-weight: 600;
-  border-radius: 8px; cursor: pointer;
-  box-shadow: 0 6px 20px rgba(200, 16, 46, 0.4);
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  font-family: inherit;
-}
-.fs-exit-btn:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 10px 28px rgba(200, 16, 46, 0.55); }
-.fs-fade-enter-active, .fs-fade-leave-active { transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.fs-fade-enter-from, .fs-fade-leave-to { opacity: 0; transform: translateY(-10px) scale(0.9); }
 
 .table-card {
-  background: #fff; border-radius: 10px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  padding: 12px 16px; flex: 1;
-  display: flex; flex-direction: column;
-  transition: all 0.3s;
-}
-.toolbar { display: flex; align-items: center; margin-bottom: 10px; gap: 8px; }
-.toolbar-left { display: flex; align-items: center; gap: 8px; }
-.total-hint { font-size: 13px; color: #64748B; }
-.total-hint b { color: #c8102e; font-family: 'Courier New', monospace; font-size: 14px; }
-.toolbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-
-.icon-btn {
-  width: 32px; height: 32px;
-  display: flex; align-items: center; justify-content: center;
-  border: 1px solid #E2E8F0; background: #fff;
-  border-radius: 6px; color: #64748B; font-size: 15px;
-  cursor: pointer;
-  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.icon-btn:hover {
-  border-color: #c8102e; color: #c8102e; background: #FEF2F2;
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(200, 16, 46, 0.15);
-}
-.icon-btn.active {
-  border-color: #c8102e; color: #fff;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
-  box-shadow: 0 3px 10px rgba(200, 16, 46, 0.35);
-}
-.icon-btn:active { transform: translateY(0) scale(0.95); }
-
-/* ============================================================
-   表格样式
-   ============================================================ */
-.custom-table {
   flex: 1;
-  border-radius: 8px;
+  min-height: 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   overflow: hidden;
-  font-size: 13.5px;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
-:deep(.custom-table .el-table__cell) {
-  color: #1E293B;
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
   border-bottom: 1px solid #F1F5F9;
 }
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.toolbar-bar {
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #c8102e, #a00d24);
+  box-shadow: 0 0 8px rgba(200, 16, 46, 0.35);
+}
+
+.toolbar-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: 0.3px;
+}
+
+.toolbar-total {
+  font-size: 12.5px;
+  color: #94A3B8;
+  font-weight: 500;
+  padding-left: 8px;
+  border-left: 1px solid #E2E8F0;
+}
+
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #E2E8F0;
+  background: #fff;
+  border-radius: 8px;
+  color: #64748B;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  padding: 0;
+}
+
+.icon-btn:hover {
+  border-color: #c8102e;
+  color: #c8102e;
+  background: #FEF2F2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.15);
+}
+
+.icon-btn.active {
+  border-color: #c8102e;
+  color: #fff;
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.35);
+}
+
+.icon-btn.spinning .el-icon {
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.custom-table {
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 12.5px;
+}
+
 :deep(.custom-table th.el-table__cell) {
   background: #F8FAFC !important;
   color: #0F172A;
   font-weight: 700;
-  font-size: 13.5px;
+  font-size: 12.5px;
   border-bottom: 1px solid #E2E8F0;
+  padding: 9px 0;
 }
-:deep(.custom-table .el-table__row:hover td) { background: #FEF2F2 !important; }
 
-:deep(.custom-table.el-table--large .el-table__cell) { padding: 12px 0; }
-:deep(.custom-table.el-table--default .el-table__cell) { padding: 8px 0; }
-:deep(.custom-table.el-table--small .el-table__cell) { padding: 5px 0; }
+:deep(.custom-table td.el-table__cell) {
+  color: #1E293B;
+  font-size: 12.5px;
+  font-weight: 500;
+  border-bottom: 1px solid #F1F5F9;
+}
 
-.role-name-tag {
+:deep(.custom-table .el-table__row:hover td) {
+  background: #FEF2F2 !important;
+}
+
+:deep(.custom-table .el-table__body tr.el-table__row--striped td.el-table__cell) {
+  background: #FAFBFC;
+}
+
+.name-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px 3px 8px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.name-wrap:hover {
+  border-color: #FCA5A5;
+  box-shadow: 0 3px 10px rgba(200, 16, 46, 0.12);
+  transform: translateY(-1px);
+}
+
+.name-bar {
+  display: inline-block;
+  width: 3px;
+  height: 16px;
+  background: linear-gradient(180deg, #EF4444, #B91C1C);
+  border-radius: 2px;
+  box-shadow: 0 0 4px rgba(211, 47, 47, 0.4);
+  flex-shrink: 0;
+}
+
+.name-text {
+  font-size: 13px;
   font-weight: 700;
   color: #0F172A;
-}
-.text-content { color: #334155; }
-.time-text {
-  color: #475569;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 12.5px;
-  letter-spacing: -0.2px;
+  letter-spacing: 0.3px;
 }
 
-/* ============================================================
-   操作列
-   ============================================================ */
+.name-admin-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+  color: #92400E;
+  border: 1px solid #FCD34D;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.name-admin-tag .el-icon {
+  font-size: 10px;
+}
+
+.org-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  background: #EFF6FF;
+  color: #1E40AF;
+  border: 1px solid #BFDBFE;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.org-chip .el-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  color: #3B82F6;
+}
+
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 12px 3px 10px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.status-tag.on {
+  background: #ECFDF5;
+  color: #059669;
+  border: 1px solid #6EE7B7;
+}
+
+.status-tag.off {
+  background: #FEF2F2;
+  color: #991B1B;
+  border: 1px solid #FCA5A5;
+}
+
+.status-tag .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 20%, transparent);
+}
+
+.status-tag.on .status-dot {
+  animation: dotPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.05);
+  }
+}
+
+.time-text {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #475569;
+}
+
+.text-content {
+  color: #334155;
+  font-size: 12.5px;
+}
+
+.text-muted {
+  color: #CBD5E1;
+  font-size: 12.5px;
+}
+
 .action-cell {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-}
-.action-cell :deep(.el-button) {
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  background: transparent !important;
-  height: auto !important;
-}
-.action-cell :deep(.el-button + .el-button) {
-  margin-left: 0 !important;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  height: 24px;
-  padding: 0 4px;
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.2s;
-  white-space: nowrap;
-  user-select: none;
-}
-.action-btn .el-icon { font-size: 13px; }
-
-.action-edit { color: #c8102e; }
-.action-edit:hover { color: #7F1D1D; background: #FEF2F2; }
-
-.action-perm { color: #c8102e; }
-.action-perm:hover { color: #7F1D1D; background: #FEF2F2; }
-
-.action-delete { color: #c8102e; }
-.action-delete:hover { color: #7F1D1D; background: #FEF2F2; }
-
-/* 空状态 */
-.empty-state {
-  padding: 50px 20px; display: flex; flex-direction: column;
-  align-items: center; gap: 10px; color: #94A3B8;
-}
-.empty-icon { font-size: 44px; color: #CBD5E1; }
-.empty-state p { font-size: 14px; margin: 0; }
-
-/* ============================================================
-   新增/编辑弹窗
-   ============================================================ */
-:deep(.role-dialog .el-dialog) {
-  border-radius: 12px; overflow: hidden;
-  animation: dialogIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-@keyframes dialogIn {
-  from { opacity: 0; transform: scale(0.92) translateY(20px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-:deep(.role-dialog .el-dialog__header) { padding: 16px 20px; border-bottom: 1px solid #F1F5F9; }
-:deep(.role-dialog .el-dialog__title) { font-weight: 700; color: #0F172A; font-size: 15px; }
-:deep(.role-dialog .el-dialog__body) { padding: 20px 24px; }
-
-.role-form :deep(.el-form-item) { margin-bottom: 20px; }
-.role-form :deep(.el-form-item__label) { font-weight: 600; color: #334155; font-size: 13px; }
-.role-form :deep(.el-input__wrapper),
-.role-form :deep(.el-textarea__inner) {
-  border-radius: 8px !important;
-  background: #F8FAFC !important;
-  box-shadow: 0 0 0 1px #E2E8F0 inset !important;
-  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.role-form :deep(.el-input__wrapper:hover),
-.role-form :deep(.el-textarea__inner:hover) {
-  background: #FFFFFF !important;
-  box-shadow: 0 0 0 1px rgba(200, 16, 46, 0.4) inset !important;
-}
-.role-form :deep(.el-input__wrapper.is-focus),
-.role-form :deep(.el-textarea__inner:focus) {
-  background: #FFFFFF !important;
-  box-shadow: 0 0 0 1px #c8102e inset, 0 0 0 3px rgba(200, 16, 46, 0.1) !important;
-}
-
-/* 底部按钮 */
-.action-btn-footer {
+.op-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 8px 20px;
-  border-radius: 8px;
-  font-size: 13.5px;
+  padding: 0 10px;
+  height: 26px;
+  border-radius: 13px;
+  border: 1px solid;
+  background: #fff;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-family: inherit;
-  border: none;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.action-btn-footer.ghost {
-  background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0;
-}
-.action-btn-footer.ghost:hover { background: #E2E8F0; color: #1E293B; transform: translateY(-2px); }
-.action-btn-footer.primary {
-  color: #FFFFFF;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
-  box-shadow: 0 6px 20px rgba(200, 16, 46, 0.4);
-}
-.action-btn-footer.primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(200, 16, 46, 0.55); }
-.action-btn-footer.primary:disabled { opacity: 0.6; cursor: not-allowed; }
-
-/* ============================================================
-   功能配置弹窗
-   ============================================================ */
-:deep(.perm-config-dialog .el-dialog) {
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
-}
-:deep(.perm-config-dialog .el-dialog__header) {
-  padding: 18px 24px 16px;
-  margin: 0;
-  border-bottom: 1px solid #F1F5F9;
-}
-:deep(.perm-config-dialog .el-dialog__body) {
-  padding: 0;
-  background: #FFFFFF;
-}
-:deep(.perm-config-dialog .el-dialog__footer) {
-  padding: 0;
-  border-top: 1px solid #F1F5F9;
+  white-space: nowrap;
+  line-height: 1;
+  letter-spacing: 0.2px;
+  outline: none;
 }
 
-.perm-header {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-.perm-header-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0F172A;
-  letter-spacing: 0.3px;
-}
-.perm-header-role {
+.op-btn .el-icon {
   font-size: 13px;
-  color: #64748B;
-  font-weight: 500;
 }
 
-.perm-body {
-  padding: 16px 24px 20px;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-.perm-body::-webkit-scrollbar { width: 6px; }
-.perm-body::-webkit-scrollbar-track { background: transparent; }
-.perm-body::-webkit-scrollbar-thumb {
-  background: #E2E8F0;
-  border-radius: 3px;
-}
-.perm-body::-webkit-scrollbar-thumb:hover {
-  background: #CBD5E1;
+.op-btn:active {
+  transform: translateY(0) scale(0.96);
 }
 
-.perm-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: #F8FAFC;
-  border-radius: 8px;
-  margin-bottom: 16px;
+.op-view {
+  color: #2563EB;
+  border-color: #93C5FD;
+  background: #EFF6FF;
 }
-.perm-select-all {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
+
+.op-view:hover {
+  background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+  color: #fff;
+  border-color: #2563EB;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.35);
 }
-.perm-select-all :deep(.el-checkbox) {
-  margin-right: 0;
-  height: auto;
-}
-.perm-select-all :deep(.el-checkbox__label) {
-  padding-left: 0;
-}
-.perm-select-all :deep(.el-checkbox__inner) {
-  width: 16px !important;
-  height: 16px !important;
-  border-radius: 4px !important;
-  border-color: #CBD5E1;
-}
-.perm-select-all :deep(.el-checkbox__input.is-checked .el-checkbox__inner),
-.perm-select-all :deep(.el-checkbox__input.is-indeterminate .el-checkbox__inner) {
-  background-color: #c8102e;
-  border-color: #c8102e;
-}
-.perm-select-all-text {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #0F172A;
-}
-.perm-count {
-  font-size: 13px;
-  color: #64748B;
-}
-.perm-count b {
+
+.op-perm {
   color: #c8102e;
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  font-weight: 700;
-  margin: 0 2px;
+  border-color: #FCA5A5;
+  background: #FEF2F2;
 }
 
-.perm-groups {
+.op-perm:hover {
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+  color: #fff;
+  border-color: #c8102e;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(200, 16, 46, 0.35);
+}
+
+.op-delete {
+  color: #64748B;
+  border-color: #E2E8F0;
+  background: #fff;
+}
+
+.op-delete:hover {
+  color: #fff;
+  background: linear-gradient(135deg, #EF4444, #DC2626);
+  border-color: #DC2626;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(220, 38, 38, 0.35);
+}
+
+.empty-state {
+  padding: 50px 20px;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  align-items: center;
+  gap: 8px;
 }
 
-.perm-group {
-  padding: 14px 0;
-  border-bottom: 1px solid #F1F5F9;
-}
-.perm-group:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-.perm-group:first-child {
-  padding-top: 0;
+.empty-icon {
+  font-size: 44px;
+  color: #CBD5E1;
+  animation: float 3s ease-in-out infinite;
 }
 
-.perm-group-header {
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.empty-state p {
+  font-size: 14px;
+  margin: 0;
+  color: #334155;
+  font-weight: 700;
+}
+
+.empty-tip {
+  font-size: 12px;
+  color: #94A3B8;
+}
+
+.pagination-wrapper {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
-}
-.perm-group-name {
-  position: relative;
-  padding-left: 12px;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #0F172A;
-  letter-spacing: 0.3px;
-}
-.perm-group-name::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 12px;
-  border-radius: 2px;
-  background: #c8102e;
-}
-.perm-group-toggle {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #c8102e;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  border-radius: 4px;
-  transition: background 0.2s;
-}
-.perm-group-toggle:hover {
-  background: #FEF2F2;
-  text-decoration: underline;
+  padding-top: 10px;
+  border-top: 1px solid #F1F5F9;
+  flex-shrink: 0;
 }
 
-.perm-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px 16px;
-  padding-left: 12px;
-}
-
-.perm-item {
-  margin: 0 !important;
-  height: auto !important;
-  display: flex;
-  align-items: center;
-}
-.perm-item :deep(.el-checkbox__label) {
+.total-text {
   font-size: 13px;
   color: #334155;
-  padding-left: 8px;
-  line-height: 1.4;
-  font-weight: 400;
-}
-.perm-item :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
-  color: #c8102e;
   font-weight: 600;
 }
-.perm-item :deep(.el-checkbox__inner) {
-  width: 15px !important;
-  height: 15px !important;
-  border-radius: 3px !important;
-  border-color: #CBD5E1;
+
+:deep(.custom-pagination .el-pager li) {
   transition: all 0.2s;
-}
-.perm-item:hover :deep(.el-checkbox__inner) {
-  border-color: #c8102e;
-}
-.perm-item :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-  background-color: #c8102e;
-  border-color: #c8102e;
+  font-weight: 600;
+  color: #334155;
+  min-width: 26px;
+  height: 26px;
+  line-height: 26px;
+  font-size: 13px;
 }
 
-.perm-footer {
+:deep(.custom-pagination .el-pager li:hover) {
+  color: #c8102e;
+  transform: scale(1.08);
+}
+
+:deep(.custom-pagination .el-pager li.is-active) {
+  background-color: #c8102e !important;
+  color: #fff !important;
+  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.35);
+}
+
+.fs-exit-btn {
+  position: fixed;
+  top: 36px;
+  right: 40px;
+  z-index: 10001;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  gap: 4px;
+  padding: 8px 16px;
+  border: none;
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(200, 16, 46, 0.4);
+  transition: all 0.25s;
+  font-family: inherit;
+}
+
+.fs-exit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(200, 16, 46, 0.55);
+}
+
+.fs-fade-enter-active,
+.fs-fade-leave-active {
+  transition: all 0.3s;
+}
+
+.fs-fade-enter-from,
+.fs-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.form-tip {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+.form-tip .el-icon {
+  color: #c8102e;
+  font-size: 12px;
+}
+
+/* ⭐ 组织下拉选项 */
+.org-option {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  padding: 14px 22px;
-  background: #FFFFFF;
+  padding: 4px 0;
+}
+
+.org-icon {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 12px;
+  flex-shrink: 0;
+  background: #F1F5F9;
+  color: #64748B;
+}
+
+.org-icon.root {
+  background: linear-gradient(135deg, #FEF2F2, #FEE2E2);
+  color: #c8102e;
+  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.15);
+}
+
+.org-name {
+  flex: 1;
+  font-size: 14px;
+  color: #0F172A;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.org-tag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #c8102e;
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+}
+
+.fade-up {
+  animation: fadeUp 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+@keyframes fadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 900px) {
-  .perm-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 640px) {
-  .perm-list { grid-template-columns: 1fr; }
+  .search-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-btns {
+    margin-left: 0;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar-right {
+    justify-content: flex-end;
+  }
 }
 </style>
 
 <style>
-/* ============================================================
-   全局样式
-   ============================================================ */
+/* 密度下拉 */
 .density-dropdown-red.el-dropdown__popper.el-popper {
   border: 2px solid #FFFFFF !important;
-  box-shadow: 0 10px 32px rgba(200, 16, 46, 0.18), 0 0 0 1px rgba(200, 16, 46, 0.15) !important;
-  border-radius: 10px !important; overflow: hidden; background: #FFFFFF !important;
+  box-shadow: 0 10px 32px rgba(200, 16, 46, 0.18), 0 0 0 1px rgba(200, 16, 46, 0.12) !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+  background: #FFFFFF !important;
 }
-.density-dropdown-red .el-dropdown-menu { padding: 4px !important; background: #FFFFFF !important; }
+
+.density-dropdown-red .el-dropdown-menu {
+  padding: 4px !important;
+}
+
 .density-dropdown-red .el-dropdown-menu__item {
-  font-size: 13px !important; color: #c8102e !important;
-  font-weight: 600 !important; border-radius: 6px !important;
+  font-size: 13px !important;
+  color: #c8102e !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
   padding: 6px 16px !important;
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  transition: all 0.25s;
 }
+
 .density-dropdown-red .el-dropdown-menu__item:hover {
-  color: #ffffff !important;
+  color: #fff !important;
   background: linear-gradient(135deg, #c8102e, #a00d24) !important;
   transform: translateX(2px);
 }
-.density-dropdown-red .el-dropdown-menu__item .density-item {
-  display: inline-block; padding: 2px 6px; border-radius: 4px;
-  transition: all 0.25s;
-}
-.density-dropdown-red .el-dropdown-menu__item .density-item.active { color: #c8102e; font-weight: 700; }
-.density-dropdown-red .el-dropdown-menu__item:hover .density-item.active { color: #ffffff; }
 
+.density-dropdown-red .density-item.active {
+  color: #c8102e;
+  font-weight: 700;
+}
+
+.density-dropdown-red .el-dropdown-menu__item:hover .density-item.active {
+  color: #fff;
+}
+
+/* 列设置 */
 .column-setting-popper.el-popover.el-popper {
+  border: 2px solid #FFFFFF !important;
+  box-shadow: 0 10px 32px rgba(200, 16, 46, 0.18), 0 0 0 1px rgba(200, 16, 46, 0.12) !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+  background: #FFFFFF !important;
   padding: 0 !important;
-  border-radius: 12px !important;
-  box-shadow: 0 12px 36px rgba(200, 16, 46, 0.18), 0 0 0 1px rgba(200, 16, 46, 0.12) !important;
-  border: 2px solid #FFFFFF !important; overflow: hidden; background: #FFFFFF !important;
 }
-.column-setting-popper .el-popover__title { display: none; }
-.column-setting { padding: 0; background: #FFFFFF; }
+
+.column-setting-popper .el-popover__title {
+  display: none;
+}
+
 .column-setting-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; border-bottom: 1px solid #FEE2E2; background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #FEE2E2;
 }
+
 .col-title {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 13px; font-weight: 700; color: #c8102e;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #c8102e;
 }
-.col-title .el-icon { color: #c8102e; font-size: 14px; }
+
 .col-reset {
-  font-size: 12.5px; color: #c8102e; cursor: pointer;
-  font-weight: 700; padding: 2px 6px; border-radius: 4px;
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-size: 12.5px;
+  color: #c8102e;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
-.col-reset:hover { background: #FEE2E2; text-decoration: underline; transform: scale(1.05); }
-.column-setting-body { max-height: 400px; overflow-y: auto; padding: 6px; background: #FFFFFF; }
-.column-setting-body::-webkit-scrollbar { width: 4px; }
-.column-setting-body::-webkit-scrollbar-thumb { background: #FCA5A5; border-radius: 2px; }
+
+.col-reset:hover {
+  background: #FEE2E2;
+  text-decoration: underline;
+}
+
+.column-setting-body {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
 .column-item {
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 8px; border-radius: 6px; cursor: grab;
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: grab;
+  transition: all 0.25s;
   user-select: none;
 }
-.column-item:hover { background: #FEF2F2; }
-.column-item.dragging { opacity: 0.4; cursor: grabbing; }
-.column-item.dragOver { background: #FEE2E2; transform: scale(1.02); box-shadow: 0 0 0 1px rgba(200, 16, 46, 0.2) inset; }
-.drag-handle {
-  display: flex; align-items: center;
-  color: #FCA5A5; cursor: grab; font-size: 14px; transition: color 0.2s;
-}
-.column-item:hover .drag-handle { color: #c8102e; }
-.col-checkbox { flex: 1; font-size: 13px; }
-.col-checkbox :deep(.el-checkbox__label) {
-  font-size: 13px; color: #c8102e; font-weight: 600; transition: color 0.2s;
-}
-.col-checkbox :deep(.el-checkbox__inner) {
-  border-color: #FCA5A5;
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.col-checkbox:hover :deep(.el-checkbox__inner) { border-color: #c8102e; }
-.col-checkbox :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-  background-color: #c8102e; border-color: #c8102e;
-}
-.col-checkbox :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
-  color: #c8102e; font-weight: 700;
-}
-.fix-actions { display: flex; gap: 2px; }
-.fix-btn {
-  width: 22px; height: 22px;
-  display: flex; align-items: center; justify-content: center;
-  border: none; background: transparent;
-  border-radius: 4px; color: #FCA5A5; font-size: 13px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.fix-btn:hover { color: #c8102e; background: #FEE2E2; transform: scale(1.1); }
-.fix-btn.active {
-  color: #ffffff;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
-  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.35);
+
+.column-item:hover {
+  background: #FEF2F2;
 }
 
-.el-message-box__btns .el-button--primary {
-  background: linear-gradient(135deg, #c8102e, #a00d24) !important;
-  border-color: #c8102e !important;
+.column-item.dragging {
+  opacity: 0.4;
+}
+
+.column-item.dragOver {
+  background: #FEE2E2;
+  transform: scale(1.02);
+}
+
+.drag-handle {
+  display: flex;
+  color: #FCA5A5;
+  cursor: grab;
+  font-size: 14px;
+}
+
+.column-item:hover .drag-handle {
+  color: #c8102e;
+}
+
+.col-checkbox {
+  flex: 1;
+}
+
+.col-checkbox :deep(.el-checkbox__label) {
+  font-size: 13px;
+  color: #c8102e;
+  font-weight: 600;
+}
+
+.col-checkbox :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+  background-color: #c8102e;
+  border-color: #c8102e;
+}
+
+.fix-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.fix-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: #FCA5A5;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.fix-btn:hover {
+  color: #c8102e;
+  background: #FEE2E2;
+  transform: scale(1.1);
+}
+
+.fix-btn.active {
+  color: #fff;
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+}
+
+/* 删除确认框 */
+.btn-danger-confirm {
+  background-color: #D32F2F !important;
+  border-color: #D32F2F !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-danger-confirm:hover {
+  background-color: #B91C1C !important;
+  border-color: #B91C1C !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.35);
+}
+
+.delete-confirm-box .el-message-box__title {
+  font-weight: 700;
+  color: #0F172A;
+  font-size: 16px;
+}
+
+.delete-confirm-box .el-message-box__content {
+  font-size: 14px;
+  color: #334155;
+  font-weight: 500;
+}
+
+/* 角色表单弹窗 */
+.role-form-dialog .el-dialog {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 24px 72px rgba(15, 23, 42, 0.22);
+}
+
+.role-form-dialog .el-dialog__header {
+  padding: 18px 24px;
+  margin: 0;
+  border-bottom: 1px solid #F1F5F9;
+  background: linear-gradient(180deg, #FFFFFF, #FAFBFC);
+}
+
+.role-form-dialog .el-dialog__title {
+  font-weight: 800;
+  color: #0F172A;
+  font-size: 16px;
+  letter-spacing: 0.3px;
+}
+
+.role-form-dialog .el-dialog__body {
+  padding: 22px 26px;
+  background: #fff;
+}
+
+.role-form-dialog .el-dialog__footer {
+  padding: 14px 24px;
+  background: #FAFBFC;
+  border-top: 1px solid #F1F5F9;
+}
+
+.role-form-dialog .el-form-item__label {
+  font-weight: 700;
+  color: #334155;
+  font-size: 13px;
+}
+
+.role-form-dialog .el-input__wrapper,
+.role-form-dialog .el-textarea__inner,
+.role-form-dialog .el-select__wrapper {
+  border-radius: 10px !important;
+  background: #F8FAFC !important;
+  box-shadow: 0 0 0 1px #E2E8F0 inset !important;
+  transition: all 0.25s;
+}
+
+.role-form-dialog .el-input__wrapper:hover,
+.role-form-dialog .el-textarea__inner:hover,
+.role-form-dialog .el-select__wrapper:hover {
+  background: #fff !important;
+  box-shadow: 0 0 0 1px rgba(200, 16, 46, 0.35) inset !important;
+}
+
+.role-form-dialog .el-input__wrapper.is-focus,
+.role-form-dialog .el-textarea__inner:focus,
+.role-form-dialog .el-select__wrapper.is-focused {
+  background: #fff !important;
+  box-shadow: 0 0 0 1px #c8102e inset, 0 0 0 3px rgba(200, 16, 46, 0.12) !important;
+}
+/* ============================================================
+   ⭐ 所属组织下拉框：纯文本 + 高亮
+   ============================================================ */
+.role-org-popper.el-select-dropdown {
+  padding: 6px !important;
+  border-radius: 10px !important;
+}
+.role-org-popper .el-select-dropdown__item {
+  height: 40px;
+  line-height: 40px;
+  padding: 0 14px;
+  font-size: 14px;
+  color: #1E293B;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s;
+  margin-bottom: 2px;
+}
+.role-org-popper .el-select-dropdown__item.is-hovering {
+  background: #FEF2F2;
+  color: #c8102e;
+  font-weight: 600;
+}
+.role-org-popper .el-select-dropdown__item.is-selected {
+  color: #c8102e;
+  font-weight: 800;
+  background: #FEF2F2;
+}
+.role-org-popper .el-select-dropdown__item.is-selected::after {
+  color: #c8102e;
 }
 </style>

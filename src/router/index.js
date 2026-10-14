@@ -48,6 +48,13 @@ const routes = [
     component: () => import('../views/Dashboard.vue'),
   },
 
+  // ⭐ 路线管理（客户端布局，和 waybill 平级）
+  {
+    path: '/route/manage',
+    name: 'RouteManage',
+    component: () => import('../views/Dashboard.vue'),
+  },
+
   // ==========================================
   // 👇 电子围栏管理模块
   // ==========================================
@@ -115,6 +122,7 @@ const routes = [
         name: 'AdminAccounts',
         component: () => import('../views/admin/AdminAccounts.vue'),
       },
+      // ⭐ 原来在这里的 /route/manage 已挪到客户端区域
     ],
   },
 ]

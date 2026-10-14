@@ -221,6 +221,17 @@ import { supabase } from '@/utils/supabase'
 const router = useRouter()
 const route = useRoute()
 
+// ============================================================
+// ⭐ 数据隔离
+// ============================================================
+const currentUser = (() => {
+  try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
+  catch { return {} }
+})()
+const isAdmin = currentUser.role === 'admin'
+const isCustomer = !isAdmin
+const myAccount = currentUser.masterAccount || currentUser.account || ''
+
 // ---------- 任务颜色池 ----------
 const taskColors = [
   '#f0f8ff', '#f0fff0', '#fff0f5', '#f5f5dc', '#fafad2',
@@ -250,7 +261,7 @@ const getItemLabel = (method, index) => {
 const totalQuantity = computed(() => form.cargoList.reduce((sum, item) => sum + (item.quantity || 0), 0))
 const totalFreight = computed(() => form.cargoList.reduce((sum, item) => sum + (item.freight || 0), 0))
 
-// ---------- 从数据库加载运单 ----------
+// ---------- 从数据库加载运单（含隔离） ----------
 const loadWaybill = async () => {
   const waybillNo = route.query.waybill_no
   if (!waybillNo) {
@@ -260,15 +271,21 @@ const loadWaybill = async () => {
   }
 
   try {
-    const { data, error } = await supabase
+    // ⭐ 加隔离过滤
+    let q = supabase
       .from('waybills')
       .select('*')
       .eq('waybill_no', waybillNo)
-      .single()
+
+    if (isCustomer && myAccount) {
+      q = q.eq('owner_account', myAccount)
+    }
+
+    const { data, error } = await q.single()
 
     if (error) throw error
     if (!data) {
-      ElMessage.error('运单不存在')
+      ElMessage.error('运单不存在或无权限访问')
       router.push('/waybill')
       return
     }
@@ -393,7 +410,7 @@ onMounted(() => {
   overflow-y: auto !important;
   padding: 16px 20px;
   box-sizing: border-box;
-  background: #ffffff;
+  background: #f8fafc;
 }
 
 /* ===== 页面头部 ===== */
@@ -401,68 +418,125 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 2px solid #c8102e;
-  padding-bottom: 10px;
+  margin-bottom: 14px;
+  padding: 14px 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 .page-header h2 {
   margin: 0;
-  color: #c8102e;
-  font-weight: 600;
-  font-size: 20px;
+  color: #0F172A;
+  font-weight: 800;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.3px;
+}
+.page-header h2::before {
+  content: '';
+  width: 4px;
+  height: 18px;
+  background: linear-gradient(180deg, #c8102e, #a00d24);
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(200, 16, 46, 0.35);
 }
 
 /* ===== 分区标题 ===== */
 .section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #c8102e;
-  margin: 20px 0 12px 0;
-  padding-left: 10px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 16px 0 12px 0;
+  padding: 10px 14px;
+  background: linear-gradient(90deg, #FEF2F2 0%, #ffffff 100%);
+  border-radius: 8px;
   border-left: 4px solid #c8102e;
   line-height: 1.2;
   text-align: left;
+  box-shadow: 0 2px 8px rgba(200, 16, 46, 0.05);
+  letter-spacing: 0.3px;
 }
 
 /* ===== 打卡行 ===== */
 .checkin-row {
   margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+.checkin-row .el-form-item {
+  margin-bottom: 0;
 }
 .hint-text {
   font-size: 12px;
-  color: #888;
+  color: #94A3B8;
   margin-left: 12px;
+  font-weight: 500;
 }
 
 /* ===== 任务卡片 ===== */
 .task-card {
-  border-radius: 8px;
-  padding: 12px 16px 8px 16px;
+  position: relative;
+  border-radius: 12px;
+  padding: 14px 18px 10px 18px;
   margin-bottom: 16px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+.task-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #c8102e, #a00d24);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.task-card:hover {
+  box-shadow: 0 8px 24px rgba(200, 16, 46, 0.1);
+  transform: translateY(-2px);
+  border-color: #FCA5A5;
+}
+.task-card:hover::before {
+  opacity: 1;
 }
 .task-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 .task-name-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex: 1;
 }
 .task-label {
-  font-weight: 600;
+  font-weight: 800;
   font-size: 14px;
-  color: #333;
   white-space: nowrap;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+  color: #fff;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.25);
+  letter-spacing: 0.3px;
 }
 .task-name-display {
   font-size: 14px;
-  color: #333;
-  font-weight: 500;
+  color: #0F172A;
+  font-weight: 600;
 }
 
 /* ===== 起/终行 ===== */
@@ -483,11 +557,16 @@ onMounted(() => {
   border-radius: 50%;
   background-color: #c8102e;
   color: #fff;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 13px;
   text-align: center;
   flex-shrink: 0;
   margin-top: 2px;
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.35);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.badge-circle:hover {
+  transform: scale(1.1) rotate(-6deg);
 }
 .field-group {
   flex: 1;
@@ -505,8 +584,8 @@ onMounted(() => {
 .field-label {
   white-space: nowrap;
   font-size: 13px;
-  color: #333;
-  font-weight: 500;
+  color: #334155;
+  font-weight: 600;
 }
 .required-star {
   color: #c8102e;
@@ -527,6 +606,10 @@ onMounted(() => {
   gap: 16px 32px;
   margin: 0 0 10px 0;
   align-items: center;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 .info-item {
   display: flex;
@@ -535,21 +618,28 @@ onMounted(() => {
   font-size: 14px;
 }
 .info-label {
-  color: #555;
+  color: #475569;
   white-space: nowrap;
+  font-weight: 600;
 }
 .info-value {
-  font-weight: 600;
+  font-weight: 800;
   color: #c8102e;
   font-size: 16px;
+  font-family: 'Courier New', monospace;
 }
 
 /* ===== 货物行 ===== */
 .cargo-row {
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 8px 16px;
   margin-bottom: 8px;
-  border: 1px solid #eee;
+  border: 1px solid #E2E8F0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.cargo-row:hover {
+  box-shadow: 0 6px 20px rgba(200, 16, 46, 0.08);
+  border-color: #FCA5A5;
 }
 .cargo-row .el-row {
   flex-wrap: nowrap;
@@ -566,10 +656,15 @@ onMounted(() => {
 
 /* ===== 指派卡片 ===== */
 .assign-card {
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 8px 16px;
   margin-bottom: 8px;
-  border: 1px solid #eee;
+  border: 1px solid #E2E8F0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.assign-card:hover {
+  box-shadow: 0 6px 20px rgba(200, 16, 46, 0.08);
+  border-color: #FCA5A5;
 }
 .assign-card .el-row {
   flex-wrap: nowrap;
@@ -596,15 +691,20 @@ onMounted(() => {
   height: 100%;
 }
 
-/* ===== 底部按钮 ===== */
+/* ===== 底部按钮（吸底） ===== */
 .form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 30px;
-  padding-top: 16px;
-  border-top: 1px solid #e8e8e8;
+  margin-top: 20px;
+  padding: 14px 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
   flex-wrap: wrap;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
 }
 
 /* ===== 响应式 ===== */

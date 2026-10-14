@@ -104,6 +104,9 @@
               <span v-if="speeding.fence_ids.length > 0" class="block-badge speeding-block-badge">
                 {{ speeding.fence_ids.length }} 个
               </span>
+              <span v-else class="block-badge global-badge">
+                全域提醒
+              </span>
             </div>
             <div class="block-body">
               <el-popover
@@ -121,7 +124,9 @@
                     @click="openPicker('speeding')"
                   >
                     <el-icon class="trigger-icon"><MapLocation /></el-icon>
-                    <span v-if="speeding.fence_ids.length === 0" class="trigger-text">点击选择围栏</span>
+                    <span v-if="speeding.fence_ids.length === 0" class="trigger-text">
+                      点击选择围栏（不选 = 全域提醒）
+                    </span>
                     <span v-else class="trigger-text active-text">
                       已选 {{ speeding.fence_ids.length }} 个围栏
                     </span>
@@ -209,6 +214,10 @@
               <div v-if="fenceList.length === 0" class="empty-hint">
                 没有围栏？
                 <a class="link-btn" @click.stop="goToFenceSetting">去创建 →</a>
+              </div>
+              <div v-else-if="speeding.fence_ids.length === 0" class="global-hint speeding-global-hint">
+                <el-icon><InfoFilled /></el-icon>
+                未选择围栏 = <b>全域提醒</b>，所有车辆不分位置都会监控超速
               </div>
             </div>
           </div>
@@ -309,6 +318,9 @@
               <span v-if="staying.fence_ids.length > 0" class="block-badge staying-block-badge">
                 {{ staying.fence_ids.length }} 个
               </span>
+              <span v-else class="block-badge global-badge staying-global-badge">
+                全域提醒
+              </span>
             </div>
             <div class="block-body">
               <el-popover
@@ -326,7 +338,9 @@
                     @click="openPicker('staying')"
                   >
                     <el-icon class="trigger-icon"><MapLocation /></el-icon>
-                    <span v-if="staying.fence_ids.length === 0" class="trigger-text">点击选择围栏</span>
+                    <span v-if="staying.fence_ids.length === 0" class="trigger-text">
+                      点击选择围栏（不选 = 全域提醒）
+                    </span>
                     <span v-else class="trigger-text active-text">
                       已选 {{ staying.fence_ids.length }} 个围栏
                     </span>
@@ -410,6 +424,11 @@
                   </el-icon>
                 </span>
               </transition-group>
+
+              <div v-if="staying.fence_ids.length === 0" class="global-hint staying-global-hint">
+                <el-icon><InfoFilled /></el-icon>
+                未选择围栏 = <b>全域提醒</b>，所有车辆不分位置都会监控停留
+              </div>
             </div>
           </div>
 
@@ -554,12 +573,22 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Bell, Refresh, Check, Odometer, Location,
-  MapLocation, Clock, Timer, Aim, Search, Close, ArrowDown, Select
+  MapLocation, Clock, Timer, Aim, Search, Close, ArrowDown, Select, InfoFilled
 } from '@element-plus/icons-vue'
 import { supabase } from '@/utils/supabase'
+// ============================================================
+// ⭐ 当前登录用户 & 隔离
+// ============================================================
+const currentUser = (() => {
+  try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
+  catch { return {} }
+})()
+const isAdmin = currentUser.role === 'admin'
+const isCustomer = !isAdmin
+const myAccount = currentUser.masterAccount || currentUser.account || ''
 
 const router = useRouter()
 
@@ -705,12 +734,12 @@ const removeFence = (type, id) => {
 // ============================================
 const loadFenceList = async () => {
   try {
-    const { data, error } = await supabase
-      .from('ele_fences')
-      .select('id, name, gfid')
-      .order('updated_at', { ascending: false })
+    let q = supabase.from('ele_fences').select('id, name, gfid').order('updated_at', { ascending: false })
+    if (isCustomer) q = q.eq('owner_account', myAccount)
+    const { data, error } = await q
     if (error) throw error
     fenceList.value = data || []
+    console.log('[AlertSetting] 加载围栏:', fenceList.value.length, '条')
   } catch (e) {
     console.error('加载围栏列表失败：', e)
   }
@@ -721,8 +750,12 @@ const loadFenceList = async () => {
 // ============================================
 const loadAlertSettings = async () => {
   try {
-    const { data, error } = await supabase.from('ele_fence_alerts').select('*')
+    let q = supabase.from('ele_fence_alerts').select('*')
+    if (isCustomer) q = q.eq('owner_account', myAccount)
+    const { data, error } = await q
     if (error) throw error
+
+    console.log('[AlertSetting] 加载配置:', data?.length || 0, '条')
 
     if (data && data.length > 0) {
       data.forEach(item => {
@@ -780,16 +813,41 @@ const goToFenceSetting = () => {
 }
 
 // ============================================
-// 保存
+// ⭐ 保存（支持全域提醒：不选围栏弹确认）
 // ============================================
 const handleSave = async () => {
+  // ⭐ 超速：未选围栏 → 弹确认框
   if (speeding.enabled && speeding.fence_ids.length === 0) {
-    ElMessage.warning('请至少选择一个超速提醒的围栏')
-    return
+    try {
+      await ElMessageBox.confirm(
+        '超速提醒未选择任何围栏，将启用【全域提醒】——所有车辆不分位置都会监控超速行为。是否确认提交？',
+        '全域提醒确认',
+        {
+          confirmButtonText: '确认提交',
+          cancelButtonText: '返回选择',
+          type: 'warning',
+          confirmButtonClass: 'btn-warn-confirm',
+          customClass: 'global-alert-confirm-box',
+        }
+      )
+    } catch { return }
   }
+
+  // ⭐ 停留：未选围栏 → 弹确认框
   if (staying.enabled && staying.fence_ids.length === 0) {
-    ElMessage.warning('请至少选择一个停留提醒的围栏')
-    return
+    try {
+      await ElMessageBox.confirm(
+        '停留提醒未选择任何围栏，将启用【全域提醒】——所有车辆不分位置都会监控停留行为。是否确认提交？',
+        '全域提醒确认',
+        {
+          confirmButtonText: '确认提交',
+          cancelButtonText: '返回选择',
+          type: 'warning',
+          confirmButtonClass: 'btn-warn-confirm',
+          customClass: 'global-alert-confirm-box',
+        }
+      )
+    } catch { return }
   }
 
   saving.value = true
@@ -801,31 +859,45 @@ const handleSave = async () => {
         enabled: speeding.enabled,
         fence_id: JSON.stringify(speeding.fence_ids),
         fence_name: JSON.stringify(speeding.fence_names),
+        fence_gfid: null,
         speed_threshold: speeding.speed_threshold,
         monitor_start: speeding.monitor_start,
         monitor_end: speeding.monitor_end,
         updated_at: now,
+        owner_account: myAccount,
       },
       {
         alert_type: 'staying',
         enabled: staying.enabled,
         fence_id: JSON.stringify(staying.fence_ids),
         fence_name: JSON.stringify(staying.fence_names),
+        fence_gfid: null,
         stay_count: staying.stay_count,
         stay_duration: staying.stay_duration,
         stay_radius: staying.stay_radius,
         monitor_start: staying.monitor_start,
         monitor_end: staying.monitor_end,
         updated_at: now,
+        owner_account: myAccount,
       },
     ]
 
-    await supabase.from('ele_fence_alerts').delete().in('alert_type', ['speeding', 'staying'])
+    // ⭐ 只删当前客户的记录
+    let deleteQ = supabase.from('ele_fence_alerts').delete().in('alert_type', ['speeding', 'staying'])
+    if (isCustomer) deleteQ = deleteQ.eq('owner_account', myAccount)
+    await deleteQ
     const { error } = await supabase.from('ele_fence_alerts').insert(records)
     if (error) throw error
 
     showSuccess.value = true
     setTimeout(() => { showSuccess.value = false }, 2000)
+
+    if (speeding.enabled && speeding.fence_ids.length === 0) {
+      ElMessage.info({ message: '已启用超速全域提醒', duration: 2000 })
+    }
+    if (staying.enabled && staying.fence_ids.length === 0) {
+      ElMessage.info({ message: '已启用停留全域提醒', duration: 2000 })
+    }
   } catch (e) {
     console.error(e)
     ElMessage.error('保存失败：' + e.message)
@@ -872,7 +944,7 @@ onMounted(async () => {
   color: #1E293B;
 }
 
-/* ========== 页面头部 ========== */
+/* ========== 页面头部 ⭐ 滚动时固定 ========== */
 .page-header {
   background: #ffffff;
   border-radius: 12px;
@@ -881,6 +953,10 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  /* ⭐ 新增：滚动时固定在顶部 */
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 .header-left {
   display: flex;
@@ -1385,6 +1461,21 @@ onMounted(async () => {
   color: #1E40AF;
   border: 1px solid #93C5FD;
 }
+.global-badge {
+  background: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FCD34D;
+  animation: badgePulse 2s ease-in-out infinite;
+}
+.staying-global-badge {
+  background: #EFF6FF;
+  color: #1E40AF;
+  border: 1px solid #93C5FD;
+}
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0); }
+}
 
 .block-icon-wrap {
   width: 26px;
@@ -1425,9 +1516,7 @@ onMounted(async () => {
   gap: 8px;
 }
 
-/* ==========================================
-   围栏选择触发器
-   ========================================== */
+/* 围栏选择触发器 */
 .fence-select-trigger {
   display: flex;
   align-items: center;
@@ -1502,9 +1591,7 @@ onMounted(async () => {
   color: #2563EB;
 }
 
-/* ==========================================
-   已选 tag 展示
-   ========================================== */
+/* 已选 tag 展示 */
 .selected-tags {
   display: flex;
   flex-wrap: wrap;
@@ -1570,6 +1657,33 @@ onMounted(async () => {
   opacity: 0;
   transform: translateX(10px) scale(0.9);
 }
+
+/* 全域提示 */
+.global-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  background: #FEF3C7;
+  color: #92400E;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-left: 3px solid #F59E0B;
+}
+.global-hint b {
+  color: #B45309;
+  font-weight: 800;
+  margin: 0 2px;
+}
+.global-hint .el-icon { font-size: 13px; flex-shrink: 0; }
+
+.staying-global-hint {
+  background: #EFF6FF;
+  color: #1E40AF;
+  border-left-color: #3B82F6;
+}
+.staying-global-hint b { color: #1D4ED8; }
 
 /* 数值显示 */
 .value-display {
@@ -1731,9 +1845,6 @@ onMounted(async () => {
 }
 </style>
 
-<!-- ==========================================
-     非 scoped：围栏选择弹层 + 保存成功动画
-     ========================================== -->
 <style>
 /* ========== 围栏选择弹层 ========== */
 .fence-picker-popper.el-popover {
@@ -1794,7 +1905,6 @@ onMounted(async () => {
   color: #2563EB;
 }
 
-/* 列表 */
 .picker-list {
   flex: 1;
   overflow-y: auto;
@@ -1889,7 +1999,6 @@ onMounted(async () => {
   transition: transform 0.3s;
 }
 
-/* 底部按钮 */
 .picker-footer {
   display: flex;
   justify-content: flex-end;
@@ -1913,6 +2022,32 @@ onMounted(async () => {
 .staying-confirm-btn:hover {
   background-color: #1D4ED8 !important;
   border-color: #1D4ED8 !important;
+}
+
+/* ========== 全域提醒确认框 ========== */
+.global-alert-confirm-box {
+  border-radius: 12px !important;
+}
+.global-alert-confirm-box .el-message-box__title {
+  font-weight: 700 !important;
+  color: #0F172A !important;
+  font-size: 16px !important;
+}
+.global-alert-confirm-box .el-message-box__content {
+  font-size: 14px !important;
+  color: #334155 !important;
+  line-height: 1.6 !important;
+  font-weight: 500 !important;
+}
+.btn-warn-confirm {
+  background: linear-gradient(135deg, #F59E0B, #D97706) !important;
+  border-color: #F59E0B !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+.btn-warn-confirm:hover {
+  background: linear-gradient(135deg, #D97706, #B45309) !important;
+  border-color: #D97706 !important;
 }
 
 /* ========== 保存成功动画 ========== */

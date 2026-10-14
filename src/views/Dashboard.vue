@@ -15,7 +15,6 @@
             </el-icon> 设置
           </el-button>
 
-          <!-- 👇 管理员模拟进入客户端时显示"返回入口"，放在设置与退出之间 -->
           <el-button v-if="isImpersonatingAdmin" size="small" plain class="action-btn back-btn" @click="goBackToPortal">
             返回入口
           </el-button>
@@ -60,6 +59,10 @@
           <template v-else-if="route.path === '/waybill/create'">
             <WaybillCreate ref="waybillCreateRef" />
           </template>
+          <!-- ⭐ 路线管理 -->
+          <template v-else-if="route.path === '/route/manage'">
+            <RouteManage />
+          </template>
           <!-- 车队运营报告 -->
           <template v-else-if="route.path === '/report'">
             <Report />
@@ -87,7 +90,7 @@
           <template v-else-if="route.path === '/dashboard/user'">
             <UserManage />
           </template>
-         <template v-else-if="route.path === '/dashboard/role'">
+          <template v-else-if="route.path === '/dashboard/role'">
             <RoleManage />
           </template>
           <template v-else-if="route.path === '/dashboard/org'">
@@ -135,6 +138,9 @@ import EleFenceAlertQuery from '../views/EleFenceAlertQuery.vue'
 import UserManage from '../views/UserManage.vue'
 import RoleManage from '../views/RoleManage.vue'
 import OrgManage from '../views/OrgManage.vue'
+
+// ⭐ 路线管理
+import RouteManage from '../views/RouteManage.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -189,6 +195,8 @@ const routePermissionMap = {
   '/waybill': 'waybill',
   '/waybill/create': 'waybill',
   '/waybill/detail': 'waybill',
+  // ⭐ 路线管理暂时不做权限限制（新功能，等业务明确后再加 'route'）
+  // '/route/manage': 'route',
   '/report': 'report',
   '/vehicle-archive': 'vehicle_archive',
   '/driver-archive': 'driver_archive',
@@ -196,11 +204,12 @@ const routePermissionMap = {
   '/dashboard/user': 'system',
   '/dashboard/role': 'system',
   '/dashboard/org': 'system',
-
 }
 
 const isPermitted = computed(() => {
   if (clientPerms.value === null) return true
+  // ⭐ 空权限数组也视为"不过滤"（兼容旧账号还没配权限）
+  if (Array.isArray(clientPerms.value) && clientPerms.value.length === 0) return true
   if (route.path === '/dashboard' && !route.params.page) return true
   const permKey = routePermissionMap[route.path]
   if (!permKey) return true
@@ -257,6 +266,8 @@ const pathLabels = {
   '/dashboard/基础数据管理': '基础数据管理',
   '/dashboard/系统管理': '系统管理',
   '/waybill': '运单管理',
+  // ⭐ 路线管理标签
+  '/route/manage': '路线管理',
   '/report': '车队运营报告',
   '/waybill/create': '新建运单',
   '/vehicle-archive': '车辆档案',
@@ -359,7 +370,6 @@ const goLogin = () => {
   if (showGoodbye.value) return
   showGoodbye.value = true
   setTimeout(() => {
-    // 退出时清掉原始身份记录
     localStorage.removeItem('originalUser')
     router.push('/')
     setTimeout(() => { showGoodbye.value = false }, 200)
@@ -430,7 +440,6 @@ const goLogin = () => {
   background: #FEF2F2;
 }
 
-/* 👇 返回入口按钮：与设置按钮同风格，悬停变红 */
 .back-btn {
   border-color: #E2E8F0 !important;
   color: #64748B !important;

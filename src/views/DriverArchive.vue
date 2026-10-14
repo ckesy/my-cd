@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, onActivated, watch, nextTick } from 'vue'
 import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import {
   Upload, Search, Refresh, Delete, Download,
@@ -14,30 +14,35 @@ import dayjs from 'dayjs'
 const formatDateTime = (d) => d ? dayjs(d).format('YYYY-MM-DD HH:mm:ss') : '--'
 
 // ============================================================
-// 当前登录用户
+// ⭐ 当前登录用户 & 权限判断
 // ============================================================
 const currentUser = (() => {
   try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
   catch { return {} }
 })()
 const isAdmin = currentUser.role === 'admin'
-const isCustomer = currentUser.role === 'customer'
-const myAccount = currentUser.account || ''
-const myPhone = currentUser.phone || ''
+const isCustomer = !isAdmin                        // ⭐ 非管理员一律按客户处理
+const isSubAccount = !!currentUser.isSubAccount    // ⭐ 子账号
+const myAccount = currentUser.masterAccount || currentUser.account || ''
+const myPhone = currentUser.masterPhone || currentUser.phone || ''
 
-const myCustomerId = ref(null)
+// ⭐ 客户 ID
+const myCustomerId = ref(currentUser.customerId || null)
 const loadMyCustomerId = async () => {
-  if (!isCustomer || !myPhone) return
+  if (!isCustomer) return
+  if (myCustomerId.value) return
+  if (!myPhone) return
   try {
-    const { data } = await supabase.from('customers').select('id').eq('phone', myPhone).maybeSingle()
+    const { data } = await supabase
+      .from('customers').select('id').eq('phone', myPhone).maybeSingle()
     if (data) myCustomerId.value = data.id
   } catch (e) {}
 }
 
 // ============================================================
-// 缓存
+// 缓存（key 加用户区分）
 // ============================================================
-const userKey = isCustomer ? `_cust_${myAccount}` : '_admin'
+const userKey = isAdmin ? '_admin' : `_cust_${currentUser.account || 'guest'}`
 const CACHE_KEY = 'driver_archive_cache' + userKey
 const STATE_KEY = 'driver_archive_state' + userKey
 const DENSITY_KEY = 'driver_archive_density' + userKey
@@ -87,7 +92,7 @@ const loadOrgOptions = async () => {
 }
 
 // ============================================================
-// 密度（sessionStorage 持久化）/ 列设置 / 全屏
+// 密度 / 列设置 / 全屏
 // ============================================================
 const tableSize = ref(sessionStorage.getItem(DENSITY_KEY) || 'default')
 const densityMultiplier = computed(() => tableSize.value === 'large' ? 1.15 : tableSize.value === 'small' ? 0.85 : 1)
@@ -136,7 +141,7 @@ const onEscKeydown = (e) => {
 }
 
 // ============================================================
-// 批量删除
+// 批量删除（仅主账号/管理员）
 // ============================================================
 const batchDeleteMode = ref(false)
 const selectedIds = ref([])
@@ -157,6 +162,7 @@ watch(
 )
 
 const confirmDelete = async () => {
+  if (isSubAccount) { ElMessage.warning('子账号无权删除'); return }
   if (!selectedIds.value.length) return
   try {
     await ElMessageBox.confirm(
@@ -190,6 +196,7 @@ const editFormData = ref(null)
 const editSaving = ref(false)
 
 const handleEdit = (row) => {
+  if (isSubAccount) { ElMessage.warning('子账号无权编辑'); return }
   const data = JSON.parse(JSON.stringify(row))
   const plates = data.bound_vehicle ? data.bound_vehicle.split(',').map(s => s.trim()).filter(Boolean) : []
   data.vehicleDisplay = !plates.length ? '' : plates.length <= 2 ? plates.join('；') : `已选 ${plates.length} 辆车`
@@ -197,14 +204,16 @@ const handleEdit = (row) => {
   editDialogVisible.value = true
 }
 const openEditFromView = () => {
+  if (isSubAccount) return
   if (currentDetailRow.value) { handleEdit(currentDetailRow.value); detailDialogVisible.value = false }
 }
 
 const saveEdit = async () => {
+  if (isSubAccount) { ElMessage.warning('子账号无权编辑'); return }
   if (!editFormData.value) return
   editSaving.value = true
   try {
-    const { id, created_at, updated_at, vehicleDisplay, ...fields } = editFormData.value
+    const { id, created_at, updated_at, vehicleDisplay, customer_id, ...fields } = editFormData.value
     const { error } = await supabase.from('drivers').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', id)
     if (error) throw error
     ElMessage.success('更新成功')
@@ -224,21 +233,26 @@ const addFormData = reactive({
 const addSaving = ref(false)
 
 const handleAdd = () => {
+  if (isSubAccount) { ElMessage.warning('子账号无权新增'); return }
   Object.assign(addFormData, {
     driver_name: '', org: '', gender: '', age: null, license_type: '', phone: '',
-    bound_vehicle: '', vehicleDisplay: '', operator: '管理员',
+    bound_vehicle: '', vehicleDisplay: '', operator: currentUser.name || '管理员',
   })
   addDialogVisible.value = true
 }
 
 const saveAdd = async () => {
+  if (isSubAccount) { ElMessage.warning('子账号无权新增'); return }
   if (!addFormData.driver_name || !addFormData.phone) {
     ElMessage.warning('司机姓名和手机号为必填项')
     return
   }
   addSaving.value = true
   try {
-    const { data: existing, error: checkError } = await supabase.from('drivers').select('phone').eq('phone', addFormData.phone)
+    // ⭐ 查重也按客户隔离
+    let checkQ = supabase.from('drivers').select('phone').eq('phone', addFormData.phone)
+    if (isCustomer && myCustomerId.value) checkQ = checkQ.eq('customer_id', myCustomerId.value)
+    const { data: existing, error: checkError } = await checkQ
     if (checkError) throw checkError
     if (existing && existing.length > 0) {
       ElMessage.error(`手机号 ${addFormData.phone} 已存在`)
@@ -256,6 +270,10 @@ const saveAdd = async () => {
       operator: addFormData.operator || '管理员',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+    }
+    // ⭐ 客户新增：写入 customer_id
+    if (isCustomer && myCustomerId.value) {
+      insertData.customer_id = myCustomerId.value
     }
     const { error } = await supabase.from('drivers').insert([insertData])
     if (error) throw error
@@ -294,13 +312,11 @@ const loadVehicleList = async () => {
   if (vehicleList.value.length) return
   try {
     let q = supabase.from('vehicles').select('plate')
-    // ⭐ 客户视角只加载自己名下的车辆
     if (isCustomer && myCustomerId.value) {
       q = q.eq('customer_id', myCustomerId.value)
     }
     const { data, error } = await q
     if (error) {
-      // 如果 drivers 表不支持 customer_id 过滤，降级查全部
       const { data: d2 } = await supabase.from('vehicles').select('plate')
       vehicleList.value = d2 || []
     } else {
@@ -311,6 +327,7 @@ const loadVehicleList = async () => {
 }
 
 const openVehicleSelect = async (target, binding = false) => {
+  if (isSubAccount) { ElMessage.warning('子账号无权操作'); return }
   if (!target) return
   vehicleTarget.value = target
   isBindingMode.value = binding
@@ -350,6 +367,7 @@ const confirmVehicleSelect = async () => {
   target.vehicleDisplay = !plates.length ? '' : plates.length <= 2 ? plates.join('；') : `已选 ${plates.length} 辆车`
 
   if (isBindingMode.value) {
+    if (isSubAccount) { ElMessage.warning('子账号无权绑定'); return }
     if (!target.id) {
       ElMessage.error('数据异常，无法更新')
       vehicleSelectDialogVisible.value = false
@@ -380,18 +398,26 @@ const clearVehicleSelection = (target) => {
   target.vehicleDisplay = ''
 }
 
-const handleBindVehicle = (row) => { openVehicleSelect(row, true) }
+const handleBindVehicle = (row) => {
+  if (isSubAccount) { ElMessage.warning('子账号无权绑定'); return }
+  openVehicleSelect(row, true)
+}
 
 // ============================================================
 // 同步：司机绑定车辆 → 车辆档案 driver 字段
 // ============================================================
 const syncVehicleBoundDriver = async () => {
   try {
-    const { data: drivers, error } = await supabase.from('drivers').select('driver_name, bound_vehicle')
+    // ⭐ 只查当前客户下的 drivers
+    let dq = supabase.from('drivers').select('driver_name, bound_vehicle')
+    if (isCustomer && myCustomerId.value) {
+      dq = dq.eq('customer_id', myCustomerId.value)
+    }
+    const { data: drivers, error } = await dq
     if (error) throw error
 
     const plateToDrivers = {}
-    drivers.forEach(d => {
+    ;(drivers || []).forEach(d => {
       if (d.bound_vehicle) {
         d.bound_vehicle.split(',').map(s => s.trim()).filter(Boolean).forEach(p => {
           if (!plateToDrivers[p]) plateToDrivers[p] = []
@@ -400,11 +426,17 @@ const syncVehicleBoundDriver = async () => {
       }
     })
 
+    // ⭐ 只查当前客户下的 vehicles
+    let vq = supabase.from('vehicles').select('plate')
+    if (isCustomer && myCustomerId.value) {
+      vq = vq.eq('customer_id', myCustomerId.value)
+    }
+    const { data: allVehicles } = await vq
+
     const updates = []
     for (const plate of Object.keys(plateToDrivers)) {
       updates.push(supabase.from('vehicles').update({ driver: plateToDrivers[plate].join(',') }).eq('plate', plate))
     }
-    const { data: allVehicles } = await supabase.from('vehicles').select('plate')
     ;(allVehicles || []).forEach(v => {
       if (!plateToDrivers[v.plate]) {
         updates.push(supabase.from('vehicles').update({ driver: '' }).eq('plate', v.plate))
@@ -421,6 +453,13 @@ const exportData = async () => {
   const li = ElLoading.service({ fullscreen: true, text: '正在导出...', background: 'rgba(0,0,0,0.6)' })
   try {
     let q = supabase.from('drivers').select('*').order('updated_at', { ascending: false })
+
+    // ⭐⭐⭐ 客户隔离
+    if (isCustomer) {
+      if (!myCustomerId.value) { ElMessage.warning('未关联客户，无法导出'); return }
+      q = q.eq('customer_id', myCustomerId.value)
+    }
+
     if (searchForm.org) q = q.eq('org', searchForm.org)
     if (searchForm.driverName) q = q.ilike('driver_name', `%${searchForm.driverName}%`)
     if (searchForm.phone) q = q.ilike('phone', `%${searchForm.phone}%`)
@@ -459,9 +498,20 @@ const exportData = async () => {
 // 获取数据
 // ============================================================
 const fetchDrivers = async () => {
+  // ⭐⭐⭐ 客户必须有 customerId，否则返回空（防止越权）
+  if (isCustomer && !myCustomerId.value) {
+    console.warn('[DriverArchive] 客户账号未关联 customers，返回空')
+    tableData.value = []; total.value = 0; saveData(); return
+  }
   loading.value = true
   try {
     let q = supabase.from('drivers').select('*', { count: 'exact' }).order('updated_at', { ascending: false })
+
+    // ⭐⭐⭐ 客户隔离：主账号+子账号都按主账号的 customer_id 过滤
+    if (isCustomer) {
+      q = q.eq('customer_id', myCustomerId.value)
+    }
+
     if (searchForm.org) q = q.eq('org', searchForm.org)
     if (searchForm.driverName) q = q.ilike('driver_name', `%${searchForm.driverName}%`)
     if (searchForm.phone) q = q.ilike('phone', `%${searchForm.phone}%`)
@@ -491,7 +541,7 @@ const handleGotoPage = (v) => {
 }
 
 // ============================================================
-// 导入
+// 导入（仅主账号/管理员）
 // ============================================================
 const showImportDialog = ref(false)
 const uploadRef = ref(null)
@@ -526,7 +576,10 @@ const handleFileChange = (f) => { uploadFile.value = f.raw; uploadFileName.value
 const handleFileRemove = () => { uploadFile.value = null; uploadFileName.value = ''; importErrors.value = [] }
 
 const confirmImport = async () => {
+  if (isSubAccount) { ElMessage.warning('子账号无权导入'); return }
   if (!uploadFile.value) { ElMessage.warning('请先选择文件'); return }
+  if (isCustomer && !myCustomerId.value) { ElMessage.error('未关联客户，无法导入'); return }
+
   importing.value = true; importErrors.value = []
   try {
     const file = uploadFile.value
@@ -547,7 +600,7 @@ const confirmImport = async () => {
       const n = i + 2
       const [driverName, org, gender, age, licenseType, phone, boundVehicle, operator] = row.map(c => (c || '').toString().trim())
       if (!driverName || !phone) { errors.push(`第 ${n} 行：缺少必填字段`); return }
-      validData.push({
+      const obj = {
         driver_name: driverName,
         org: org || null,
         gender: gender || null,
@@ -558,18 +611,37 @@ const confirmImport = async () => {
         operator: operator || '管理员',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      })
+      }
+      // ⭐ 客户导入：写入 customer_id
+      if (isCustomer && myCustomerId.value) {
+        obj.customer_id = myCustomerId.value
+      }
+      validData.push(obj)
     })
     if (errors.length) { importErrors.value = errors.slice(0, 20); ElMessage.error(`存在 ${errors.length} 条错误`); return }
     if (!validData.length) { ElMessage.warning('没有有效数据'); return }
 
+    // ⭐ 查重按客户隔离
     const existingPhones = new Set()
-    const { data: ex } = await supabase.from('drivers').select('phone').in('phone', validData.map(v => v.phone))
+    let eq = supabase.from('drivers').select('phone').in('phone', validData.map(v => v.phone))
+    if (isCustomer && myCustomerId.value) {
+      eq = eq.eq('customer_id', myCustomerId.value)
+    }
+    const { data: ex } = await eq
     ;(ex || []).forEach(i => existingPhones.add(i.phone))
 
     const upd = [], ins = []
     validData.forEach(item => existingPhones.has(item.phone) ? upd.push(item) : ins.push(item))
-    for (const item of upd) { const { error } = await supabase.from('drivers').update(item).eq('phone', item.phone); if (error) throw error }
+
+    // ⭐ 更新时也按客户隔离（避免跨客户更新）
+    for (const item of upd) {
+      let uq = supabase.from('drivers').update(item).eq('phone', item.phone)
+      if (isCustomer && myCustomerId.value) {
+        uq = uq.eq('customer_id', myCustomerId.value)
+      }
+      const { error } = await uq
+      if (error) throw error
+    }
     if (ins.length) { const { error } = await supabase.from('drivers').insert(ins); if (error) throw error }
 
     ElMessage.success(`导入完成：更新 ${upd.length} 条，新增 ${ins.length} 条`)
@@ -590,7 +662,14 @@ onMounted(async () => {
   if (isCustomer) await loadMyCustomerId()
   await loadOrgOptions()
   restoreState()
-  if (!restoreData()) await fetchDrivers()
+  // ⭐ 每次进入页面都主动拉取最新数据（不走缓存短路）
+  await fetchDrivers()
+})
+
+// ⭐ 兼容 keep-alive 场景
+onActivated(async () => {
+  if (isCustomer && !myCustomerId.value) await loadMyCustomerId()
+  await fetchDrivers()
 })
 
 onBeforeUnmount(() => {
@@ -625,22 +704,26 @@ onBeforeUnmount(() => {
             <span class="total-hint">共 <b>{{ total }}</b> 条</span>
 
             <div class="toolbar-right">
-              <el-button type="primary" class="btn-primary" @click="handleAdd">
+              <!-- ⭐ 子账号不显示"新增" -->
+              <el-button v-if="!isSubAccount" type="primary" class="btn-primary" @click="handleAdd">
                 <el-icon><User /></el-icon> 新增
               </el-button>
 
-              <el-button class="btn-outline" @click="toggleBatchDelete">
-                <el-icon><Delete /></el-icon> {{ batchDeleteMode ? '取消' : '删除' }}
-              </el-button>
-              <el-button v-if="batchDeleteMode" type="danger" @click="confirmDelete" :disabled="!selectedIds.length">
-                确认删除 ({{ selectedIds.length }})
-              </el-button>
+              <!-- ⭐ 子账号不显示"删除" -->
+              <template v-if="!isSubAccount">
+                <el-button class="btn-outline" @click="toggleBatchDelete">
+                  <el-icon><Delete /></el-icon> {{ batchDeleteMode ? '取消' : '删除' }}
+                </el-button>
+                <el-button v-if="batchDeleteMode" type="danger" @click="confirmDelete" :disabled="!selectedIds.length">
+                  确认删除 ({{ selectedIds.length }})
+                </el-button>
+              </template>
 
-              <!-- ⭐ 导入用 Download（向下箭头） -->
-              <el-button class="btn-outline" @click="showImportDialog = true">
+              <!-- ⭐ 子账号不显示"导入" -->
+              <el-button v-if="!isSubAccount" class="btn-outline" @click="showImportDialog = true">
                 <el-icon><Download /></el-icon> 导入
               </el-button>
-              <!-- ⭐ 导出用 Upload（向上箭头） -->
+              <!-- ⭐ 导出对子账号开放 -->
               <el-button class="btn-outline" @click="exportData">
                 <el-icon><Upload /></el-icon> 导出
               </el-button>
@@ -712,7 +795,7 @@ onBeforeUnmount(() => {
               class="custom-table"
               @selection-change="handleSelectionChange"
             >
-              <el-table-column v-if="batchDeleteMode" type="selection" width="46" align="center" />
+              <el-table-column v-if="batchDeleteMode && !isSubAccount" type="selection" width="46" align="center" />
 
               <template v-for="col in visibleColumns" :key="col.prop">
                 <el-table-column
@@ -724,13 +807,16 @@ onBeforeUnmount(() => {
                 >
                   <template #default="{ row }">
                     <div class="action-cell">
-                      <el-button type="text" class="action-btn action-bind" @click="handleBindVehicle(row)">
+                      <!-- ⭐ 子账号不显示"绑定车辆" -->
+                      <el-button v-if="!isSubAccount" type="text" class="action-btn action-bind" @click="handleBindVehicle(row)">
                         <el-icon><Van /></el-icon> 绑定车辆
                       </el-button>
+                      <!-- ⭐ 查看：所有人可见 -->
                       <el-button type="text" class="action-btn action-view" @click="handleView(row)">
                         <el-icon><View /></el-icon> 查看
                       </el-button>
-                      <el-button type="text" class="action-btn action-edit" @click="handleEdit(row)">
+                      <!-- ⭐ 子账号不显示"编辑" -->
+                      <el-button v-if="!isSubAccount" type="text" class="action-btn action-edit" @click="handleEdit(row)">
                         <el-icon><Edit /></el-icon> 编辑
                       </el-button>
                     </div>
@@ -792,7 +878,7 @@ onBeforeUnmount(() => {
                 <div class="empty-state">
                   <el-icon class="empty-icon"><User /></el-icon>
                   <p>暂无司机档案</p>
-                  <span class="empty-tip">{{ isCustomer ? '点击右上角「新增」或「导入」添加司机' : '暂无数据' }}</span>
+                  <span class="empty-tip">{{ isSubAccount ? '暂无数据' : (isCustomer ? '点击右上角「新增」或「导入」添加司机' : '暂无数据') }}</span>
                 </div>
               </template>
             </el-table>
@@ -882,11 +968,12 @@ onBeforeUnmount(() => {
       </div>
       <template #footer>
         <button class="action-btn-footer ghost" @click="detailDialogVisible = false">关闭</button>
-        <button class="action-btn-footer primary" @click="openEditFromView">编辑</button>
+        <!-- ⭐ 子账号不显示"编辑"按钮 -->
+        <button v-if="!isSubAccount" class="action-btn-footer primary" @click="openEditFromView">编辑</button>
       </template>
     </el-dialog>
 
-    <!-- 编辑 -->
+    <!-- 编辑（仅主账号可用） -->
     <el-dialog v-model="editDialogVisible" width="720px" top="6vh" destroy-on-close :close-on-click-modal="false" class="va-dialog">
       <template #header>
         <div class="detail-header">
@@ -951,7 +1038,7 @@ onBeforeUnmount(() => {
       </template>
     </el-dialog>
 
-    <!-- 新增 -->
+    <!-- 新增（仅主账号可用） -->
     <el-dialog v-model="addDialogVisible" width="720px" top="6vh" destroy-on-close :close-on-click-modal="false" class="va-dialog">
       <template #header>
         <div class="detail-header">

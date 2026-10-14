@@ -6,22 +6,15 @@ import { Van, Location, Warning, Aim, Right } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
-// 当前登录用户
 const currentUser = (() => {
-  try {
-    return JSON.parse(localStorage.getItem('currentUser') || 'null')
-  } catch { return null }
+  try { return JSON.parse(localStorage.getItem('currentUser') || 'null') }
+  catch { return null }
 })()
 
-// 显示用的数字（滚动动画）
 const displayStats = ref({ total: 0, online: 0, offline: 0, alert: 0 })
-
-// 我的车辆列表
 const myVehicles = ref([])
-
 const loading = ref(false)
 
-// 数字滚动
 const countUp = (target, setter, duration = 900) => {
   const start = performance.now()
   const tick = (now) => {
@@ -33,44 +26,77 @@ const countUp = (target, setter, duration = 900) => {
   requestAnimationFrame(tick)
 }
 
+const setEmpty = () => {
+  myVehicles.value = []
+  countUp(0, v => { displayStats.value.total = v })
+  countUp(0, v => { displayStats.value.online = v })
+  countUp(0, v => { displayStats.value.offline = v })
+  countUp(0, v => { displayStats.value.alert = v })
+}
+
 const loadData = async () => {
   loading.value = true
   try {
     // ============================================================
-    // ⭐ 客户：永远按 phone 反查 customers 表拿真实的 uuid
-    // 不信 localStorage 里的 customerId（可能是整数或脏数据）
+    // ① 拿 customerId
     // ============================================================
-    let customerId = null
+    let customerId = currentUser?.customerId || null
 
-    if (currentUser?.role === 'customer') {
-      if (!currentUser?.phone) {
-        console.warn('[ClientHome] 客户账号没有 phone 字段')
-        myVehicles.value = []
-        return
-      }
-      const { data: c, error: cErr } = await supabase
+    if (currentUser?.role === 'customer' && !customerId && currentUser?.phone) {
+      const { data: c } = await supabase
         .from('customers')
         .select('id')
         .eq('phone', currentUser.phone)
         .limit(1)
-      if (cErr) throw cErr
-      if (Array.isArray(c) && c[0]) {
-        customerId = c[0].id                    // uuid
-        console.log('[ClientHome] 反查到的 customerId =', customerId)
-      } else {
-        console.warn('[ClientHome] customers 表里找不到 phone =', currentUser.phone)
-        myVehicles.value = []
-        return
-      }
+      if (Array.isArray(c) && c[0]) customerId = c[0].id
     }
 
+    if (currentUser?.role === 'customer' && !customerId) {
+      console.warn('[ClientHome] 客户账号未关联 customers，返回空')
+      setEmpty()
+      return
+    }
+
+    // ============================================================
+    // ② 查询车辆
+    // ============================================================
     let query = supabase
       .from('vehicles')
       .select('*')
       .order('updated_at', { ascending: false })
 
     if (currentUser?.role === 'customer') {
-      query = query.eq('customer_id', customerId)     // uuid 对上 uuid
+      query = query.eq('customer_id', customerId)
+
+      // ============================================================
+      // ⭐⭐ 子账号隔离
+      //   org_id 为空 → 一级机构 → 等同主账号，不加 org 过滤
+      //   org_id 有值 → 二级机构 → 按 org 过滤
+      // ============================================================
+      if (currentUser.isSubAccount) {
+        const subOrgId = currentUser.orgId
+
+        if (subOrgId) {
+          // 二级机构：反查 org 名，按 org 过滤
+          const { data: orgData } = await supabase
+            .from('organizations')
+            .select('name')
+            .eq('id', subOrgId)
+            .maybeSingle()
+
+          if (orgData?.name) {
+            console.log('[ClientHome] 子账号挂二级机构 → 隔离 org =', orgData.name)
+            query = query.eq('org', orgData.name)
+          } else {
+            console.warn('[ClientHome] 子账号组织不存在:', subOrgId)
+            setEmpty()
+            return
+          }
+        } else {
+          // ⭐ 一级机构：等同主账号，不加 org 过滤
+          console.log('[ClientHome] 子账号挂一级机构 → 等同主账号')
+        }
+      }
     }
 
     const { data, error } = await query
@@ -115,7 +141,6 @@ const statCards = computed(() => [
   { key: 'alert',   label: '今日告警', value: displayStats.value.alert,   tone: 'orange', icon: Warning },
 ])
 
-// 车辆按燃料分布
 const fuelDist = computed(() => {
   const map = new Map()
   myVehicles.value.forEach(v => {
@@ -128,10 +153,8 @@ const fuelDist = computed(() => {
   return arr.map(x => ({ ...x, percent: Math.round((x.count / max) * 100) }))
 })
 
-// 最近添加的车辆
 const recentVehicles = computed(() => myVehicles.value.slice(0, 6))
 
-// 进入地图
 const goMap = () => router.push('/fullmap')
 
 onMounted(loadData)

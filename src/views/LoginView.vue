@@ -50,6 +50,22 @@ const parseRolePerms = (p) => {
 }
 
 // ============================================================
+// ⭐ 新增：判断角色是否启用
+//    兼容数字 1 / 字符串 '1' / 'active' / 'enabled' / 布尔值
+//    status 缺失视为启用（兼容老数据，避免误伤）
+// ============================================================
+const isRoleActive = (status) => {
+  if (status == null) return true
+  if (typeof status === 'number') return status === 1
+  if (typeof status === 'boolean') return status
+  if (typeof status === 'string') {
+    const s = status.toLowerCase().trim()
+    return s === '1' || s === 'active' || s === 'enabled'
+  }
+  return false
+}
+
+// ============================================================
 // 登录
 // ============================================================
 const handleLogin = async () => {
@@ -110,8 +126,7 @@ const handleLogin = async () => {
     }
 
     // ============================================================
-    // 2️⃣ ⭐ 判断是否子账号（owner_account 有值且不等于自己）
-    //    这个字段是最可靠的判据：有它一定不是系统管理员
+    // 2️⃣ ⭐ 判断是否子账号
     // ============================================================
     const ownerAccount = String(userData.owner_account || '').trim()
     const isSubAccount = !!ownerAccount && ownerAccount !== userData.account
@@ -140,14 +155,14 @@ const handleLogin = async () => {
     let isAdmin = false
     let roleData = null
 
-    // ⭐⭐⭐ 子账号一定不是管理员，跳过所有管理员判定
     if (!isSubAccount) {
-      // 第一层：查 roles 表
+      // ---------- 主账号 / 管理员 ----------
       if (roleId > 0) {
         try {
+          // ⭐ 加 status 字段
           const { data } = await supabase
             .from('roles')
-            .select('code, name, permissions')
+            .select('code, name, permissions, status')
             .eq('id', roleId)
             .maybeSingle()
           roleData = data || null
@@ -175,12 +190,13 @@ const handleLogin = async () => {
         isAdmin = true
       }
     } else {
-      // 子账号也需要 roleData 来显示角色名（但不参与管理员判定）
+      // ---------- 子账号：查 roleData 显示角色名（不参与管理员判定） ----------
       if (roleId > 0) {
         try {
+          // ⭐ 加 status 字段
           const { data } = await supabase
             .from('roles')
-            .select('code, name, permissions')
+            .select('code, name, permissions, status')
             .eq('id', roleId)
             .maybeSingle()
           roleData = data || null
@@ -188,6 +204,17 @@ const handleLogin = async () => {
           console.warn('[登录] 查询子账号角色失败:', err)
         }
       }
+    }
+
+    // ============================================================
+    // ⭐⭐⭐ 角色停用校验：客户 / 子账号的角色被停用后拒绝登录
+    //    - 管理员不拦（避免误伤）
+    //    - roleData 为 null 不拦（用户无角色/角色被删，交由权限层兜底）
+    // ============================================================
+    if (!isAdmin && roleData && !isRoleActive(roleData.status)) {
+      console.log('[登录] ⛔ 角色已停用:', roleData.name, '| status =', roleData.status)
+      ElMessage.error('暂无权限')
+      return
     }
 
     // ============================================================
@@ -200,7 +227,7 @@ const handleLogin = async () => {
       new Set([...rolePermissions, ...userPermissions])
     )
 
-    // ⭐⭐ 子账号：剔除 system（系统管理只能管理员/主账号使用）
+    // ⭐⭐ 子账号：剔除 system
     if (isSubAccount) {
       mergedPermissions = mergedPermissions.filter(p => p !== 'system')
     }
@@ -232,19 +259,16 @@ const handleLogin = async () => {
       permissions: {
         client: clientPerms,
       },
-      // ⭐ 子账号信息
       ownerAccount,
       masterAccount,
       masterName,
       masterPhone,
       customerName,
-      // ⭐ 明确标记
       isSubAccount,
     }
 
     // ============================================================
-    // 6️⃣ ⭐ 主账号登录：从 customers 表读权限（管理端配的）
-    //    ⭐ 子账号登录：不读 customers（权限来自自己的 users.permissions）
+    // 6️⃣ ⭐ 主账号：从 customers 表读权限
     // ============================================================
     if (!isAdmin && !isSubAccount && userData.phone) {
       try {
@@ -259,10 +283,8 @@ const handleLogin = async () => {
         if (Array.isArray(cList) && cList[0]) {
           const c = cList[0]
 
-          // 挂上真实 uuid
           account.customerId = c.id
 
-          // 解析 customers.permissions
           let cp = []
           if (Array.isArray(c.permissions)) {
             cp = c.permissions
@@ -270,7 +292,6 @@ const handleLogin = async () => {
             cp = Array.isArray(c.permissions.client) ? c.permissions.client : []
           }
 
-          // 覆盖权限
           if (cp.length > 0) {
             account.permissions = { client: cp }
             console.log('[登录] ✅ 主账号权限已从 customers 表加载:', cp)
@@ -290,8 +311,7 @@ const handleLogin = async () => {
     }
 
     // ============================================================
-    // 7️⃣ ⭐ 子账号：从主账号 customers 表拿 customerId（用于查车辆）
-    //    但不覆盖权限（权限是子账号自己的）
+    // 7️⃣ ⭐ 子账号：从主账号 customers 表拿 customerId
     // ============================================================
     if (!isAdmin && isSubAccount && masterUser?.phone) {
       try {
