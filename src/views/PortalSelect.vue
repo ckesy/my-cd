@@ -55,41 +55,63 @@ const onSelectCustomer = (customerId) => {
 }
 
 // ============================================================
-// ⭐ 进入客户端 —— 修复数据隔离
+// ⭐ 进入客户端 —— 保持 account 结构与 LoginView 一致
 // ============================================================
 const enterClient = async () => {
   const customer = selectedCustomer.value
   if (!customer) { ElMessage.warning('请先选择客户'); return }
 
-  // ⭐ 关键修复：查 users 表，拿到与客户直接登录完全一致的 account
-  // 客户直接登录时 currentUser.account = users.account
-  // 管理员进入客户视角时，也必须用同一个 account，否则 owner_account 过滤会失效
+  // ⭐ 1. 查 users 表拿到与客户直接登录一致的 account
   let realAccount = ''
+  let masterEmail = ''
   try {
     const { data: u } = await supabase
       .from('users')
-      .select('account')
+      .select('account, email, name')
       .eq('phone', customer.phone)
       .limit(1)
-    if (Array.isArray(u) && u[0] && u[0].account) {
-      realAccount = u[0].account
+    if (Array.isArray(u) && u[0]) {
+      if (u[0].account) realAccount = u[0].account
+      if (u[0].email) masterEmail = u[0].email
     }
   } catch (e) {
     console.warn('查询 users.account 失败，降级使用 phone:', e)
   }
-
-  // 降级兜底：查不到就用 phone
   if (!realAccount) realAccount = customer.phone || ''
 
+  // ⭐ 2. 统一 permissions 结构（与 LoginView 的解析规则一致）
+  let clientPerms = []
+  if (Array.isArray(customer.permissions)) {
+    clientPerms = customer.permissions
+  } else if (customer.permissions && typeof customer.permissions === 'object') {
+    clientPerms = Array.isArray(customer.permissions.client) ? customer.permissions.client : []
+  }
+
+  // ⭐ 3. 构造 account 对象（字段结构与 LoginView 主账号登录一致）
   const account = {
     id: customer.id,
-    account: realAccount,              // ⭐⭐ 必须补上！原代码这里缺了
+    account: realAccount,
     phone: customer.phone,
     name: customer.name,
-    role: 'customer',                  // 强制降级为 customer，走客户隔离分支
+    email: masterEmail,
+    role: 'customer',                       // 强制降级，走客户隔离分支
+    roleId: 0,
+    roleName: '',
+    orgId: null,                            // 管理员进客户视角 = 主账号身份，无机构
+    org: '',                                // 兼容旧字段
+    orgName: '',                            // 新字段
+    orgLevel: 1,                            // 主账号视为一级
+    isRootOrg: false,                       // 非子账号
     customerId: customer.id,
     platforms: customer.platforms || [],
-    permissions: customer.permissions || {},
+    permissions: { client: clientPerms },   // ⭐ 统一结构
+    // 主账号相关
+    ownerAccount: '',
+    masterAccount: '',
+    masterName: '',
+    masterPhone: '',
+    customerName: customer.name || '',
+    isSubAccount: false,                    // ⭐ 明确标记
   }
 
   // 只覆盖 currentUser，保留 originalUser（管理员身份不丢）

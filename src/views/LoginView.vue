@@ -50,9 +50,7 @@ const parseRolePerms = (p) => {
 }
 
 // ============================================================
-// ⭐ 新增：判断角色是否启用
-//    兼容数字 1 / 字符串 '1' / 'active' / 'enabled' / 布尔值
-//    status 缺失视为启用（兼容老数据，避免误伤）
+// ⭐ 判断角色是否启用（兼容数字 / 字符串 / 布尔）
 // ============================================================
 const isRoleActive = (status) => {
   if (status == null) return true
@@ -66,7 +64,7 @@ const isRoleActive = (status) => {
 }
 
 // ============================================================
-// 登录
+// ⭐ 登录
 // ============================================================
 const handleLogin = async () => {
   if (!phone.value) { ElMessage.warning('请输入登录账号 / 手机号'); return }
@@ -126,12 +124,11 @@ const handleLogin = async () => {
     }
 
     // ============================================================
-    // 2️⃣ ⭐ 判断是否子账号
+    // 2️⃣ 判断是否子账号
     // ============================================================
     const ownerAccount = String(userData.owner_account || '').trim()
     const isSubAccount = !!ownerAccount && ownerAccount !== userData.account
 
-    // 查主账号信息
     let masterUser = null
     if (isSubAccount) {
       try {
@@ -156,10 +153,8 @@ const handleLogin = async () => {
     let roleData = null
 
     if (!isSubAccount) {
-      // ---------- 主账号 / 管理员 ----------
       if (roleId > 0) {
         try {
-          // ⭐ 加 status 字段
           const { data } = await supabase
             .from('roles')
             .select('code, name, permissions, status')
@@ -177,7 +172,6 @@ const handleLogin = async () => {
         }
       }
 
-      // 第二层：看 users.name
       if (!isAdmin) {
         const userName = String(userData.name || '').toLowerCase()
         if (userName.includes('管理员') || userName.includes('admin')) {
@@ -185,15 +179,12 @@ const handleLogin = async () => {
         }
       }
 
-      // 第三层：role_id = 1/2 的旧约定
       if (!isAdmin && [1, 2].includes(roleId)) {
         isAdmin = true
       }
     } else {
-      // ---------- 子账号：查 roleData 显示角色名（不参与管理员判定） ----------
       if (roleId > 0) {
         try {
-          // ⭐ 加 status 字段
           const { data } = await supabase
             .from('roles')
             .select('code, name, permissions, status')
@@ -207,9 +198,7 @@ const handleLogin = async () => {
     }
 
     // ============================================================
-    // ⭐⭐⭐ 角色停用校验：客户 / 子账号的角色被停用后拒绝登录
-    //    - 管理员不拦（避免误伤）
-    //    - roleData 为 null 不拦（用户无角色/角色被删，交由权限层兜底）
+    // ⭐⭐⭐ 角色停用校验
     // ============================================================
     if (!isAdmin && roleData && !isRoleActive(roleData.status)) {
       console.log('[登录] ⛔ 角色已停用:', roleData.name, '| status =', roleData.status)
@@ -227,7 +216,6 @@ const handleLogin = async () => {
       new Set([...rolePermissions, ...userPermissions])
     )
 
-    // ⭐⭐ 子账号：剔除 system
     if (isSubAccount) {
       mergedPermissions = mergedPermissions.filter(p => p !== 'system')
     }
@@ -236,7 +224,47 @@ const handleLogin = async () => {
     const clientPerms = isAdmin ? [] : mergedPermissions
 
     // ============================================================
-    // 5️⃣ 计算最终显示名 / 主账号信息
+    // ⭐⭐⭐ 5️⃣ 子账号：查 organizations 拿真实 name + level
+    // ============================================================
+    let orgLevel = null
+    let orgName = ''
+    let isRootOrg = false
+
+    if (!isAdmin && isSubAccount) {
+      if (userData.org_id) {
+        try {
+          const { data: orgData } = await supabase
+            .from('organizations')
+            .select('name, level')
+            .eq('id', userData.org_id)
+            .maybeSingle()
+
+          if (orgData) {
+            orgName = String(orgData.name || '').trim()
+            const lvl = orgData.level
+            orgLevel = (lvl == null ? 1 : Number(lvl))
+            isRootOrg = orgLevel === 1
+            console.log('[登录] ✅ 子账号机构:', orgName, '| level =', orgLevel, '| isRoot =', isRootOrg)
+          } else {
+            console.warn('[登录] ⚠️ organizations 表查不到 org_id =', userData.org_id)
+            orgLevel = 1
+            isRootOrg = true
+          }
+        } catch (err) {
+          console.warn('[登录] 查询机构信息失败:', err)
+          orgLevel = 1
+          isRootOrg = true
+        }
+      } else {
+        // 兜底：没 org_id 视为一级机构
+        console.warn('[登录] ⚠️ 子账号未设置 org_id，视为一级机构')
+        orgLevel = 1
+        isRootOrg = true
+      }
+    }
+
+    // ============================================================
+    // 6️⃣ 组装 account
     // ============================================================
     const customerName = masterUser?.name || userData.name || ''
     const masterAccount = masterUser?.account || ''
@@ -253,7 +281,10 @@ const handleLogin = async () => {
       roleId: userData.role_id,
       roleName: roleData?.name || '',
       orgId: userData.org_id,
-      org: userData.org || '',
+      org: orgName,           // ⭐ 真实机构名（从 organizations 读）
+      orgName,                // ⭐ 新加
+      orgLevel,               // ⭐ 新加
+      isRootOrg,              // ⭐ 新加
       customerId: isAdmin ? undefined : userData.id,
       platforms: userData.platforms || [],
       permissions: {
@@ -268,7 +299,7 @@ const handleLogin = async () => {
     }
 
     // ============================================================
-    // 6️⃣ ⭐ 主账号：从 customers 表读权限
+    // 7️⃣ 主账号：从 customers 表读权限
     // ============================================================
     if (!isAdmin && !isSubAccount && userData.phone) {
       try {
@@ -311,7 +342,7 @@ const handleLogin = async () => {
     }
 
     // ============================================================
-    // 7️⃣ ⭐ 子账号：从主账号 customers 表拿 customerId
+    // 8️⃣ 子账号：从主账号 customers 表拿 customerId
     // ============================================================
     if (!isAdmin && isSubAccount && masterUser?.phone) {
       try {

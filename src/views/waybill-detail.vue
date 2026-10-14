@@ -230,7 +230,34 @@ const currentUser = (() => {
 })()
 const isAdmin = currentUser.role === 'admin'
 const isCustomer = !isAdmin
+const isSubAccount = !!currentUser.isSubAccount
 const myAccount = currentUser.masterAccount || currentUser.account || ''
+
+// ⭐ 子账号机构信息
+const myOrgName = ref(isSubAccount ? String(currentUser.orgName || '').trim() || null : null)
+const myOrgLevel = ref(isSubAccount ? (Number(currentUser.orgLevel) || 1) : null)
+
+const needOrgFilter = computed(() =>
+  isCustomer && isSubAccount && Number(myOrgLevel.value) >= 2
+)
+
+// 兜底反查
+const loadMyOrgInfo = async () => {
+  if (!isCustomer || !isSubAccount) return
+  if (myOrgName.value && myOrgLevel.value) return
+  if (!currentUser.orgId) return
+  try {
+    const { data } = await supabase
+      .from('organizations')
+      .select('name, level')
+      .eq('id', currentUser.orgId)
+      .maybeSingle()
+    if (data) {
+      if (data.name) myOrgName.value = String(data.name).trim()
+      myOrgLevel.value = Number(data.level) || 1
+    }
+  } catch (e) {}
+}
 
 // ---------- 任务颜色池 ----------
 const taskColors = [
@@ -271,7 +298,7 @@ const loadWaybill = async () => {
   }
 
   try {
-    // ⭐ 加隔离过滤
+        // ⭐ 加隔离过滤
     let q = supabase
       .from('waybills')
       .select('*')
@@ -279,6 +306,11 @@ const loadWaybill = async () => {
 
     if (isCustomer && myAccount) {
       q = q.eq('owner_account', myAccount)
+    }
+
+    // ⭐ 二级机构子账号：按 assigned_orgs 隔离
+    if (needOrgFilter.value && myOrgName.value) {
+      q = q.or(`assigned_orgs.ilike.%${myOrgName.value}%,org.eq.${myOrgName.value}`)
     }
 
     const { data, error } = await q.single()
@@ -398,7 +430,8 @@ const createSameWaybill = () => {
   })
 }
 
-onMounted(() => {
+onMounted(async () => {
+  if (isCustomer && isSubAccount) await loadMyOrgInfo()
   loadWaybill()
 })
 </script>

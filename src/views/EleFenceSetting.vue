@@ -142,16 +142,51 @@ import dayjs from 'dayjs'
 import { supabase } from '@/utils/supabase'
 import AddEleFenceDialog from '@/components/AddEleFenceDialog.vue'
 
-// 👇 HTTP 网关地址
+// HTTP 网关地址
 const API_BASE = 'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com'
-// ⭐ 当前登录用户
+
+// ============================================================
+// 当前登录用户
+// ============================================================
 const currentUser = (() => {
   try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
   catch { return {} }
 })()
 const isAdmin = currentUser.role === 'admin'
 const isCustomer = !isAdmin
+const isSubAccount = !!currentUser.isSubAccount
 const myAccount = currentUser.masterAccount || currentUser.account || ''
+
+// ⭐ 子账号机构信息
+const myOrgName = ref(isSubAccount ? String(currentUser.orgName || '').trim() || null : null)
+const myOrgLevel = ref(isSubAccount ? (Number(currentUser.orgLevel) || 1) : null)
+
+// 一级机构子账号 → 等同主账号
+const isRootOrgSubAccount = computed(() =>
+  isSubAccount && Number(myOrgLevel.value) === 1
+)
+// 二级及以下 → 按 org 隔离
+const needOrgFilter = computed(() =>
+  isCustomer && isSubAccount && Number(myOrgLevel.value) >= 2
+)
+
+// ⭐ 兜底反查
+const loadMyOrgInfo = async () => {
+  if (!isCustomer || !isSubAccount) return
+  if (myOrgName.value && myOrgLevel.value) return
+  if (!currentUser.orgId) return
+  try {
+    const { data } = await supabase
+      .from('organizations')
+      .select('name, level')
+      .eq('id', currentUser.orgId)
+      .maybeSingle()
+    if (data) {
+      if (data.name) myOrgName.value = String(data.name).trim()
+      myOrgLevel.value = Number(data.level) || 1
+    }
+  } catch (e) { }
+}
 
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '--'
@@ -176,7 +211,6 @@ const total = ref(0)
 const pageSize = ref(10)
 const currentPage = ref(1)
 
-// 保存合并后的全量数据（用于本地分页）
 const fullList = ref([])
 
 const searchForm = reactive({ org: '', shape: '', name: '' })
@@ -213,17 +247,11 @@ const resetDeleteAnimation = () => {
 }
 
 // ============================================
-// 👇 关键改动：数据源改为高德 list 接口
-// ============================================
-// ============================================
-// ⭐ 数据源：只查数据库（不再调高德 list 接口）
-// 高德 list 配额只有 100 次/天，列表查询会频繁调用会超额
-// 增/删/改依然同步到高德
+// ⭐ 数据源：从数据库查
 // ============================================
 const fetchData = async () => {
   loading.value = true
   try {
-    // ⭐ 从数据库查（客户视角按 owner_account 隔离）
     let q = supabase
       .from('ele_fences')
       .select('*')
@@ -231,6 +259,10 @@ const fetchData = async () => {
 
     if (isCustomer) {
       q = q.eq('owner_account', myAccount)
+      // ⭐⭐⭐ 二级机构子账号：只看本机构 + 主账号/一级机构创建的（org 为 NULL）
+      if (needOrgFilter.value && myOrgName.value) {
+        q = q.eq('org', myOrgName.value)
+      }
     }
 
     const { data, error } = await q
@@ -281,7 +313,7 @@ const applyLocalFilter = () => {
 
 const handleSearch = async () => {
   currentPage.value = 1
-  await fetchData()        // ⭐ 重新从高德拉 + 补数据库字段
+  await fetchData()
   applyLocalFilter()
 }
 
@@ -321,7 +353,6 @@ const handleDelete = (row) => {
   ).then(async () => {
     startDeleteAnimation(row.name)
     try {
-      // 👇 用 fetch 调用 HTTP 网关
       const response = await fetch(`${API_BASE}/amap-geofence-delete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -332,7 +363,6 @@ const handleDelete = (row) => {
       }
       const data = await response.json()
 
-      // 把 20003 也当作成功（高德"假错误"，实际已删除成功）
       const isSuccess = data.errcode === 0 || data.errcode === 10000 || data.errcode === 20003
       if (!isSuccess) {
         finishDeleteAnimation()
@@ -343,9 +373,14 @@ const handleDelete = (row) => {
         return
       }
 
-      // 清理数据库里的对应记录（如果存在）
+      // ⭐ 删数据库时也加隔离（防越权）
       if (row.id) {
-        const { error: dbError } = await supabase.from('ele_fences').delete().eq('id', row.id)
+        let dq = supabase.from('ele_fences').delete().eq('id', row.id)
+        if (isCustomer && myAccount) dq = dq.eq('owner_account', myAccount)
+        if (needOrgFilter.value && myOrgName.value) {
+          dq = dq.eq('org', myOrgName.value)
+        }
+        const { error: dbError } = await dq
         if (dbError) {
           console.warn('清理数据库记录失败：', dbError)
           ElMessage.warning('信息暂时没有同步成功哈～～')
@@ -378,7 +413,10 @@ const handleCurrentChange = (val) => {
   applyLocalFilter()
 }
 
-onMounted(() => { fetchData() })
+onMounted(async () => {
+  if (isCustomer && isSubAccount) await loadMyOrgInfo()
+  fetchData()
+})
 </script>
 
 <style scoped>

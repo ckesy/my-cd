@@ -1454,6 +1454,21 @@ const doPublish = async () => {
         carry_quantity: 0,
         owner_account: isAdmin ? null : myAccount,
       }
+            // ⭐ 从指派里提取「车队/机构」目标，写入 assigned_orgs
+      const assignedOrgsSet = new Set()
+      taskAssigns.forEach(a => {
+        if (a.assignMethod === 'team') {
+          a.items.forEach(item => {
+            const t = String(item.target || '').trim()
+            if (t) assignedOrgsSet.add(t)
+          })
+        }
+      })
+      // ⭐ 二级机构子账号创建的运单，默认把自己机构也加进去（保证自己能看见）
+      if (isSubAccount && myOrgName.value) {
+        assignedOrgsSet.add(myOrgName.value)
+      }
+      record.assigned_orgs = assignedOrgsSet.size > 0 ? Array.from(assignedOrgsSet).join(',') : null
 
       if (taskAssigns.length === 1 && taskAssigns[0].items.length === 1) {
         const assign = taskAssigns[0]

@@ -1,6 +1,7 @@
 东风车队管理系统 - 开发交接文档
 新对话开场白：把本文件完整粘贴给 AI，并说明「接着做 XXX」即可无缝续接。
-最后更新：2026-10-15
+
+最后更新：2026-10-15（第二版 · 机构层级重构后）
 
 一、项目概况
 项	值
@@ -26,7 +27,8 @@ SDK：@cloudbase/js-sdk（在 src/utils/supabase.js 初始化）
 
 SPA 路由：错误码 404 → 替换为 /index.html
 
-HTTP 网关基础 URL
+HTTP 网关基础 URL：
+
 text
 https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com
 三、🔑 Key / Token 速查
@@ -35,7 +37,7 @@ https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com
 JS API Key	273f5c474604b71906674aac159b8f45	前端地图（JS SDK）
 Web 服务 Key	491d5475803e65c06ba6169bdaf3e1f3	云函数猎鹰 + 逆地理编码 + 行政区划
 猎鹰 SID	1078871	电子围栏实例
-数字签名	必须关闭	
+数字签名	必须关闭	—
 猎鹰 API	必须勾选	否则返回 20003
 驾车路径规划	必须勾选	否则 JS API 规划失败
 IP 白名单	必须留空	云函数无固定 IP
@@ -46,7 +48,7 @@ CloudBase
 名称	值
 环境 ID	wuxian-token-d0guymjkpadcd1f22
 HTTP 网关	https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com
-旧 Supabase（弃用）
+旧 Supabase（已弃用）
 项目 ID：sfwwbcrpouelrjavecfj
 
 四、☁️ 云函数清单
@@ -60,12 +62,14 @@ amap-geofence-list	查询围栏列表	/amap-geofence-list	同上
 dongfeng-lostlocation	东风实时位置中转（8s 超时）	/dongfeng-lostlocation	DONGFENG_TOKEN
 dongfeng-overspeed-check	超速提醒：轨迹 + 4形状围栏 + 超速段 + 逆地理编码	/dongfeng-overspeed-check	DONGFENG_TOKEN, AMAP_WEB_KEY
 dongfeng-stay-check	停留提醒：stopEvent + 围栏 + 时长过滤 + 拉轨迹补充停留点	/dongfeng-stay-check	DONGFENG_TOKEN, AMAP_WEB_KEY
-环境变量值
+环境变量值：
+
 text
 AMAP_WEB_KEY = 491d5475803e65c06ba6169bdaf3e1f3
 AMAP_SID = 1078871
 DONGFENG_TOKEN = c40c7311ff604a598b9fb791a63e9deb
-前端调用（统一 fetch）
+前端调用（统一 fetch）：
+
 js
 const API_BASE = 'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com'
 await fetch(`${API_BASE}/dongfeng-overspeed-check`, {
@@ -75,7 +79,8 @@ await fetch(`${API_BASE}/dongfeng-overspeed-check`, {
 })
 ⚠️ 不要用 app.callFunction → 匿名会报 EXCEED_AUTHORITY。
 
-HTTP 网关配置要点
+HTTP 网关配置要点：
+
 资源类型：云函数
 
 触发路径：以 / 开头
@@ -84,16 +89,18 @@ HTTP 网关配置要点
 
 身份认证：关闭
 
-⚠️ 新建云函数后必须手动配 HTTP 网关 + 环境变量 + 开启公网访问
+⚠️ 新建云函数后必须手动配 HTTP 网关 + 环境变量 + 开启公网访问。
 
-云函数坑
-云函数代码不能粘错：之前 dongfeng-overspeed-check 代码被误粘到 amap-geofence，导致创建围栏报"缺少 vehicles"。
+云函数坑：
 
-每个云函数代码开头都有注释标明文件路径，粘贴前先看第一行。
+云函数代码不能粘错：之前 dongfeng-overspeed-check 代码被误粘到 amap-geofence，导致创建围栏报"缺少 vehicles"
+
+每个云函数代码开头都有注释标明文件路径，粘贴前先看第一行
 
 五、🌐 高德接口
 5.1 猎鹰围栏服务
 基础 URL：https://tsapi.amap.com/v1/track/geofence/
+
 方法：POST（application/x-www-form-urlencoded）
 
 操作	路径	关键参数
@@ -107,7 +114,7 @@ HTTP 网关配置要点
 常见错误码：
 
 errcode	含义	处理
-10000	成功	-
+10000	成功	—
 20001	参数错误	检查必填参数
 20003	未知错误（假错误）	前端也算成功
 10001	Key 无效	检查 Key/SID 匹配
@@ -123,18 +130,14 @@ errcode	含义	处理
 5.2 逆地理编码
 text
 https://restapi.amap.com/v3/geocode/regeo?key=xxx&location=lng,lat&extensions=base&radius=200
-返回 regeocode.formatted_address
-
-配额：个人版 5000 次/天
+返回 regeocode.formatted_address。配额：个人版 5000 次/天。
 
 5.3 行政区划查询
 text
 https://restapi.amap.com/v3/config/district?key=xxx&keywords=140700&extensions=all&subdistrict=0
 返回 districts[0].polyline，格式："lng,lat;lng,lat|...|..."
 
-多段用 | 分隔
-
-每段是闭合多边形
+多段用 | 分隔，每段是闭合多边形
 
 配额：个人版 30000 次/天
 
@@ -147,8 +150,7 @@ const AMap = await AMapLoader.load({
 })
 
 const driving = new AMap.Driving({
-  policy: AMap.DrivingPolicy.LEAST_TIME,   // 最快捷
-  // 不加 map 参数 → 不自动绘制，自己控制样式
+  policy: AMap.DrivingPolicy.LEAST_TIME,
 })
 
 driving.search(originLngLat, destLngLat, { waypoints: [...] }, (status, result) => {
@@ -184,7 +186,7 @@ GET 参数：
 token	c40c7311ff604a598b9fb791a63e9deb
 chassisNo	VIN 后 8 位
 startTime	YYYY-MM-DD HH:mm:ss
-endTime	YYYY-MM-DD HH:mm:ss
+endTime	同上
 循环 3 天（今/昨/前天），命中即返回。
 
 6.2 历史轨迹（dongfeng-overspeed-check / dongfeng-stay-check 中转）⭐
@@ -221,14 +223,14 @@ https://dfcvyl.dfcv.com.cn/api/admin/openapi/api/track/stopEvent
 表	说明	关键字段
 admins	管理员档案（旧）	id, phone, password, name, role, status
 customers	客户档案	id(uuid), name, phone, password, province, city, contact_person, platforms, permissions
-vehicles	车辆	id, plate, vin, customer_id(uuid), org, fuel_type, vehicle_type, device_id, driver
-drivers	司机档案	id, driver_name, phone, org, bound_vehicle, ..., customer_id(uuid)
-waybills	运单	id, waybill_no, status, create_time, owner_account
+vehicles	车辆	id, plate, vin, customer_id(uuid), org_id(integer), org, fuel_type, vehicle_type, device_id, driver
+drivers	司机档案	id, driver_name, phone, org, org_id(integer), bound_vehicle, ..., customer_id(uuid)
+waybills	运单	id, waybill_no, status, create_time, owner_account, org(text), assigned_orgs(text, 未用)
 ele_fences	电子围栏	id, name, org, shape, points, center, radius, bufferradius, adcode, location, gfid, owner_account(text), updated_at
 ele_fence_alerts	围栏告警配置	id, alert_type, enabled, fence_id(JSON), fence_gfid, fence_name, speed_threshold, stay_duration, stay_radius, stay_count, monitor_start, monitor_end, owner_account
 ele_fence_events	围栏事件（旧，弃用）	id, plate, org, start_time, alert_type
-routes	⭐ 路线管理（本次新增）	id, name, org, pickup_point, delivery_point, remark, plans(jsonb), plan_count, creator, status, owner_account, customer_id, created_at, updated_at
-organizations	组织	id, name, parent_id, owner_account, leader, phone
+routes	路线管理	id, name, org, org_id(integer), pickup_point, delivery_point, remark, plans(jsonb), plan_count, creator, status, owner_account, customer_id, created_at, updated_at
+organizations	组织	id, name, parent_id, owner_account, leader, phone, level(integer), is_root(boolean), customer_id(uuid)
 users	系统用户	id, account, name, phone, email, password, org_id, role_id, status, owner_account
 roles	角色	id, name, code(NOT NULL UNIQUE), description, permissions(JSONB), status, owner_account
 fleets	车队	id, name, code, org_id, leader, phone
@@ -239,6 +241,7 @@ CREATE TABLE IF NOT EXISTS routes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   org text,
+  org_id integer,
   pickup_point text,
   delivery_point text,
   remark text,
@@ -254,13 +257,14 @@ CREATE TABLE IF NOT EXISTS routes (
 
 CREATE INDEX IF NOT EXISTS idx_routes_owner ON routes(owner_account);
 CREATE INDEX IF NOT EXISTS idx_routes_status ON routes(status);
+CREATE INDEX IF NOT EXISTS idx_routes_org ON routes(org_id);
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON routes TO anon;
 
 CREATE UNIQUE INDEX IF NOT EXISTS routes_owner_name_unique
 ON routes (COALESCE(owner_account, ''), name);
 
-ALTER TABLE routes ALTER COLUMN gfid DROP NOT NULL;  -- 若非空报错
+ALTER TABLE routes ALTER COLUMN gfid DROP NOT NULL;
 7.3 plans jsonb 结构
 json
 [
@@ -279,7 +283,7 @@ json
 sql
 id              uuid
 name            text
-org             text
+org             text      -- 二级机构子账号新增时写本机构名；其他情况为 NULL
 shape           text      -- 'polygon' / 'circle' / 'polyline' / 'district'
 points          text      -- 多边形：'lng,lat;lng,lat;...'（首尾闭合）
 center          text      -- 圆形：'lng,lat'
@@ -310,6 +314,9 @@ ele_fences.owner_account	text NULL
 ele_fence_alerts.owner_account	text NULL
 waybills.owner_account	text NULL
 routes.owner_account	text NULL
+organizations.customer_id	uuid
+organizations.level	integer
+organizations.is_root	boolean
 7.7 表级权限
 sql
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon;
@@ -320,9 +327,81 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;
 sql
 CREATE UNIQUE INDEX IF NOT EXISTS roles_owner_name_unique
 ON roles (owner_account, name);
-八、📁 前端页面结构
+八、🔴 本轮改造核心：机构层级 + 数据隔离重构
+8.1 背景
+原系统用 users.org_id 是否为 NULL 判断子账号层级，且 organizations 表无 level 概念。导致：
+
+一级机构子账号看不到数据
+
+业务表按 org 名字符串匹配，机构改名就失效
+
+前端虚拟根（客户名）与真实机构混用
+
+8.2 改造目标
+一个客户 = organizations 里一条真实根节点（is_root=true, level=1）
+
+业务数据隔离统一按 users.org_id → organizations.level 判断
+
+一级机构子账号等同主账号，二级及以下只看本机构
+
+8.3 数据层变更 SQL
+sql
+-- organizations 加字段
+ALTER TABLE organizations
+  ADD COLUMN IF NOT EXISTS level integer DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS customer_id uuid,
+  ADD COLUMN IF NOT EXISTS is_root boolean DEFAULT false;
+
+-- 业务表加 org_id
+ALTER TABLE routes   ADD COLUMN IF NOT EXISTS org_id integer;
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS org_id integer;
+ALTER TABLE drivers  ADD COLUMN IF NOT EXISTS org_id integer;
+
+-- 运单加 org（已用）、assigned_orgs（待用）
+ALTER TABLE waybills ADD COLUMN IF NOT EXISTS org text;
+ALTER TABLE waybills ADD COLUMN IF NOT EXISTS assigned_orgs text;
+8.4 全项目统一判断函数（所有业务页复制这段）
+js
+const isSubAccount = !!currentUser.isSubAccount
+const myOrgName = ref(isSubAccount ? String(currentUser.orgName || '').trim() || null : null)
+const myOrgLevel = ref(isSubAccount ? (Number(currentUser.orgLevel) || 1) : null)
+
+const isRootOrgSubAccount = computed(() =>
+  isSubAccount && Number(myOrgLevel.value) === 1
+)
+const needOrgFilter = computed(() =>
+  isCustomer && isSubAccount && Number(myOrgLevel.value) >= 2
+)
+
+// 兜底反查（currentUser 缺字段时）
+const loadMyOrgInfo = async () => {
+  if (!isCustomer || !isSubAccount) return
+  if (myOrgName.value && myOrgLevel.value) return
+  if (!currentUser.orgId) return
+  const { data } = await supabase.from('organizations')
+    .select('name, level').eq('id', currentUser.orgId).maybeSingle()
+  if (data) {
+    if (data.name) myOrgName.value = String(data.name).trim()
+    myOrgLevel.value = Number(data.level) || 1
+  }
+}
+8.5 隔离规则对照表
+角色	customer_id	owner_account	org 过滤	orgLevel
+管理员	❌	❌	❌	—
+主账号	✅	✅	❌	—
+一级机构子账号	✅	✅	❌	=1
+二级+子账号	✅	✅	✅	≥2
+关键区分：
+
+客户级数据（按 owner_account 隔离）：waybills / ele_fences / ele_fence_alerts / roles
+
+客户级 + org 隔离：vehicles / drivers / routes
+
+围栏特殊口径：二级机构子账号严格只看本机构（org = 我的机构名），不含 org IS NULL
+
+九、📁 前端页面结构
 入口 & 框架
-LoginView.vue — 登录页（三层角色判断 + 子账号识别 + customers.permissions 优先）
+LoginView.vue — 登录页（三层角色判断 + 子账号识别 + customers.permissions 优先 + 注入 orgLevel/orgName/isRootOrg）
 
 PortalSelect.vue — 管理员门户（进客户视角需补齐 account 字段）
 
@@ -339,40 +418,40 @@ router/index.js 里加独立路由（指向 Dashboard.vue）
 
 Dashboard.vue 里加 <template v-else-if="route.path === '/xxx'"><Xxx /></template>
 
-Dashboard.vue 里 import Xxx from '@/views/Xxx.vue' + pathLabels 加标题 + routePermissionMap 加权限映射
+Dashboard.vue 里 import Xxx + pathLabels 加标题 + routePermissionMap 加权限映射
 
 管理端
 AdminDashboard.vue — 数据总览
 
-AdminCustomer.vue — 客户管理
+AdminCustomer.vue — 客户管理（同步建 organizations 根节点）
 
-AdminVehicle.vue — 车辆管理
+AdminVehicle.vue — 车辆管理（写入 vehicles.org_id）
 
-AdminAccounts.vue — 管理员账号
+AdminAccounts.vue — 管理员账号（写入 users.role_id）
 
 RoleManage.vue — 角色管理
 
-OrgManage.vue — 组织管理
+OrgManage.vue — 组织管理（自动计算 level/is_root/customer_id）
 
 UserManage.vue — 用户管理
 
 客户端
-ClientHome.vue — 首页（强制按 phone 反查 customerId）
+ClientHome.vue — 首页
 
-FullMap.vue — 全图监控（8s 超时 + 并发 15 + 缓存 key + 组织过滤）
+FullMap.vue — 全图监控
 
-Waybill.vue / WaybillCreate.vue / WaybillDetail.vue / Report.vue
+Waybill.vue / WaybillCreate.vue / waybill-detail.vue / Report.vue（占位）
 
-ClientVehicleArchive.vue — 车辆档案
+VehicleArchive.vue — 车辆档案
 
-ClientDriverArchive.vue — 司机档案
+DriverArchive.vue — 司机档案
 
 电子围栏
 EleFenceSetting.vue — 围栏设置
 
 EleFenceAlertSetting.vue — 提醒设置
 
-EleFenceAlertQuery.vue — 提醒事件查询（超速 + 停留 tab）
+EleFenceAlertQuery.vue — 提醒事件查询
 
 components/AddEleFenceDialog.vue — 新增/编辑围栏
 
@@ -380,7 +459,7 @@ components/OverspeedDetailDialog.vue — 超速详情弹窗
 
 components/StayDetailDialog.vue — 停留详情弹窗
 
-⭐ 路线管理（本次新增）
+路线管理
 views/RouteManage.vue — 路线管理列表页
 
 components/RouteFormDialog.vue — 路线表单（新增/编辑/详情三态）
@@ -390,8 +469,10 @@ SidebarMenu.vue — 侧边栏
 
 PersonalSettings.vue — 个人设置
 
-九、🔐 权限体系
-9.1 三层角色判断（LoginView.vue）
+FunctionPermissionDialog.vue — 权限配置弹窗
+
+十、🔐 权限体系
+10.1 三层角色判断（LoginView.vue）
 js
 const ownerAccount = String(userData.owner_account || '').trim()
 const isSubAccount = !!ownerAccount && ownerAccount !== userData.account
@@ -401,12 +482,15 @@ let isAdmin = false
 
 // ⭐ 子账号一定不是管理员
 if (!isSubAccount) {
+  // 第一层：roles.code === 'admin'
   if (roleCode === 'admin' || roleName.includes('管理员')) isAdmin = true
+  // 第二层：users.name 含"管理员"
   if (!roleId && (userName === '管理员' || userName === 'admin')) isAdmin = true
+  // 第三层：role_id ∈ [1, 2]
   if ([1, 2].includes(roleId)) isAdmin = true
 }
-9.2 权限来源统一
-customers.permissions 是权威来源
+10.2 权限来源统一
+customers.permissions 是权威来源：
 
 js
 if (!isAdmin && !isSubAccount && userData.phone) {
@@ -418,33 +502,29 @@ if (!isAdmin && !isSubAccount && userData.phone) {
 if (isSubAccount) {
   mergedPermissions = mergedPermissions.filter(p => p !== 'system')
 }
-9.3 account 对象
+10.3 account 对象（LoginView 注入）
 js
 {
   id, account, phone, name, email,
   role: 'admin' | 'customer',
-  roleId, roleName, orgId, org,
-  platforms, permissions: { client: [] },
-  isSubAccount, ownerAccount, masterAccount, masterName, masterPhone,
+  roleId, roleName,
+  orgId,          // users.org_id
+  org,            // 兼容旧字段（空）
+  orgName,        // ⭐ organizations.name（真实机构名）
+  orgLevel,       // ⭐ organizations.level（1/2/3...）
+  isRootOrg,      // ⭐ orgLevel === 1
+  platforms,
+  permissions: { client: [] },
+  isSubAccount,
+  ownerAccount, masterAccount, masterName, masterPhone,
   customerName, customerId,
 }
-9.4 数据隔离原则
-场景	判断	查询过滤
-管理员	role === 'admin'	无过滤
-主账号（车辆/司机/路线）	customer && !subAccount	customer_id = myCustomerId
-子账号（车辆/司机）	customer && subAccount	customer_id = myCustomerId AND org = myOrgName
-客户（围栏/提醒/路线）	isCustomer	owner_account = myAccount
-拿不到 customerId	—	返回空（防越权）
-myAccount 变量统一写法：
-
-js
-const myAccount = currentUser.masterAccount || currentUser.account || ''
-9.5 SidebarMenu 权限控制
+10.4 SidebarMenu.vue 权限控制（已修复）
 js
 const clientPerms = computed(() => {
-  if (currentUser?.role !== 'customer') return null  // 管理员全显示
+  if (currentUser?.role !== 'customer') return null
   const list = currentUser?.permissions?.client
-  if (!Array.isArray(list) || list.length === 0) return null  // 空数组也全显示
+  if (!Array.isArray(list) || list.length === 0) return null  // ⭐ 空数组也全显示
   return list
 })
 
@@ -452,8 +532,8 @@ const hasPerm = (key) => {
   if (clientPerms.value === null) return true
   return clientPerms.value.includes(key)
 }
-十、⚡ 超速提醒模块
-10.1 整体流程
+十一、⚡ 超速提醒模块
+11.1 整体流程
 text
 1. 提醒设置：选围栏（多选，不选=全域）+ 阈值 + 每日时段
       ↓
@@ -473,27 +553,27 @@ text
 4. 前端表格：超速段列表 + 报警位置
       ↓
 5. 查看详情 → OverspeedDetailDialog
-10.2 云函数关键参数
+11.2 云函数关键参数
 参数	值
 CONCURRENCY	20
 GEO_CONCURRENCY	3
 SEGMENT_GAP_MS	5 * 60 * 1000
-10.3 围栏形状支持
+11.3 围栏形状支持
 形状	判断算法
 circle	Haversine 距离 < radius
 polygon	射线法（首尾闭合）
 polyline	点到线段最短距离 < bufferradius
 district	高德行政区划 API 拿边界 → 射线法
-10.4 前端缓存策略
+11.4 前端缓存策略
 首次进页面：sessionStorage 标志检查 → 强制拉取
 
 切回页面：读缓存（5 分钟 TTL），命中秒开
 
 点"搜索"/"重置"：强制重拉
 
-缓存 key：overspeed_alerts_cache_${userPart}_${rangePart}
+缓存 key：alert_cache_${alertType}_${userPart}_${rangePart}
 
-十一、🚧 全域提醒
+十二、🚧 全域提醒
 触发：提醒设置不选任何围栏 + 提交时弹确认框
 
 保存：fence_id = '[]'
@@ -502,20 +582,16 @@ district	高德行政区划 API 拿边界 → 射线法
 
 前端：黄色"全域提醒"徽章 + 提示条
 
-十二、⭐ 路线管理模块（本次新增）
-12.1 数据表
+十三、⭐ 路线管理模块
+13.1 数据表
 见 § 7.2 routes 表。
 
-12.2 菜单 & 路由挂载
+13.2 菜单 & 路由挂载
 SidebarMenu.vue 里运输管理分组下加：
 
 vue
 <el-menu-item v-if="hasPerm('route')" index="/route/manage">路线管理</el-menu-item>
-或（暂时不做权限时）：
-
-vue
-<el-menu-item index="/route/manage">路线管理</el-menu-item>
-router/index.js 里加（独立路由，指向 Dashboard.vue）：
+router/index.js 里加：
 
 js
 {
@@ -523,111 +599,33 @@ js
   name: 'RouteManage',
   component: () => import('../views/Dashboard.vue'),
 }
-Dashboard.vue 里加 3 处：
+Dashboard.vue 里加 import + 模板 + pathLabels + routePermissionMap。
+⚠️ 不要挂在 AdminLayout 下。
 
-js
-// 1. import
-import RouteManage from '../views/RouteManage.vue'
-
-// 2. 模板加
-<template v-else-if="route.path === '/route/manage'">
-  <RouteManage />
-</template>
-
-// 3. pathLabels 加
-'/route/manage': '路线管理',
-
-// 4. routePermissionMap 加（可选）
-'/route/manage': 'route',
-⚠️ 不要挂在 AdminLayout 下，否则会显示"管理端"壳子。要挂在 Dashboard 下。
-
-12.3 RouteManage.vue 列表页
-功能	实现
-状态 tab	正常/停用（status = 'active'/'disabled'）
-工具栏	新增/导出/刷新/密度/列设置/全屏
-操作列	详情 / 编辑 / 停用（active）/ 启用+删除（disabled）
-全屏	Teleport to body + is-fullscreen class
-操作按钮	胶囊按钮，各色描边 + hover 实底 + 上浮
-详情	formReadonly = true 传给弹窗
-删除	仅 disabled 状态显示，红色确认框
-12.4 RouteFormDialog.vue 表单弹窗
-三态：新增 / 编辑 / 详情（readonly prop）
-
-布局：地图铺满 + 左上基础信息卡 + 右上方案卡列
-
-核心功能：
-
+13.3 RouteFormDialog.vue 核心功能
 功能	说明
-所属机构	只查当前账号 owner_account；currentUser.customerName 硬塞到最前作为虚拟根
-装货点/卸货点	从 ele_fences 拉，下拉底部可"去新建围栏"（复用 AddEleFenceDialog）
-交换按钮	装/卸货点之间的圆形按钮，type="button" 防 submit，hover 旋转 180°
-方案卡	可增删多方案；每个方案有名称/类型/途径点/里程/时间/过路费
-途径点	手动添加 or 地图选点（反查地址自动填入）
-规划路线	AMap.Driving 插件，优先用围栏真实坐标（center/points），退化为地理编码
-多方案颜色	蓝/紫/粉/青/橙/靛/青绿/紫罗兰（避开红黄绿，不影响看堵车）
-路线同时显示	所有已规划方案的路线同时在地图上显示
-起终点围栏	画对应围栏形状（圆形/多边形/线形）；起点实线+15%填充，终点虚线+8%
-标记	起终点：胶囊 marker 带方案号 + "起/终"；途径点：数字标签 1-1 1-2
-点击方案卡	高亮该方案路线（变粗 100%），其他方案变淡 22%；再点取消
-详情模式	readonly=true：自动规划所有方案（静默，不弹提示），所有路线同时展示；输入框禁用；卡片可折叠
-折叠按钮	详情模式也保留（可收起看地图）
-12.5 规划算法核心
-js
-// 优先用围栏坐标
-const pickupFence = findFenceByName(form.pickup_point)
-let originLngLat = getFenceCoord(pickupFence)  // circle: center, polygon/polyline: points[0]
-if (!originLngLat) {
-  originLngLat = await geocodeLocation(geocoder, form.pickup_point)  // 退化
-}
-12.6 详情模式自动规划
-js
-const handleOpened = async () => {
-  // ...
-  await initMap()
-  if (props.readonly && form.pickup_point && form.delivery_point && form.plans.length > 0) {
-    setTimeout(() => { autoPlanAllRoutes() }, 200)
-  }
-}
-
-const autoPlanAllRoutes = async () => {
-  autoPlanning.value = true
-  for (let i = 0; i < form.plans.length; i++) {
-    await handlePlanRoute(i, true)   // silent=true
-  }
-  activePlanKey.value = null
-  updatePlanHighlight()
-  autoPlanning.value = false
-}
-handlePlanRoute(idx, silent) 用 Promise 包装 driving.search，方便 await。
-
-12.7 交换按钮坑 ⚠️
-vue
-<button type="button" @click.stop.prevent="swapPickupDelivery">
-必须加 type="button" —— 否则默认为 submit，在 el-form 内会触发页面刷新/弹窗关闭
-
-加 .stop.prevent 双重保险
-
-12.8 卡片折叠
-卡片头部 collapse-btn（< / >）：始终显示
-
-卡片收起后的小圆按钮 collapsed-trigger：始终显示（详情模式也显示）
-
-toggleInfoCard / togglePlanPanel：去掉 if (props.readonly) return（详情也能折叠）
-
-十三、🎨 UI 规范
-13.1 品牌色
+所属机构	从真实 organizations 读，二级机构子账号只显示本机构
+装货点/卸货点	从 ele_fences 拉，下拉底部可"去新建围栏"
+交换按钮	<button type="button"> 防 submit
+方案卡	多方案 + 途径点 + 里程/时间/过路费
+规划路线	AMap.Driving 插件，优先用围栏真实坐标
+多方案颜色	蓝/紫/粉/青/橙/靛/青绿/紫罗兰
+详情模式	readonly + 自动规划所有方案
+保存	写 routes.org_id（从 orgList 反查）
+十四、🎨 UI 规范
+14.1 品牌色
 用途	色值
 主色（红）	#c8102e
 主色渐变	linear-gradient(135deg, #c8102e, #a00d24)
 主色深	#7F1D1D
 淡红背景	#FEF2F2
 边框	#E2E8F0
-13.2 停留提醒蓝色
+14.2 停留提醒蓝色
 用途	色值
 主色（蓝）	#3B82F6
 蓝色渐变	linear-gradient(135deg, #3B82F6, #1D4ED8)
 淡蓝背景	#EFF6FF
-13.3 页面固定高度
+14.3 页面固定高度
 css
 .xxx-page {
   height: calc(100vh - 101px);
@@ -638,7 +636,7 @@ css
   flex-direction: column;
 }
 html, body { height: 100%; overflow: hidden; }
-13.4 加载动画（品牌红 + 4 阶段）
+14.4 加载动画（品牌红 + 4 阶段）
 蒙层：rgba(248,250,252,0.75) + backdrop-filter: blur(16px)
 
 车图标浮动 + 光环脉冲
@@ -647,7 +645,7 @@ html, body { height: 100%; overflow: hidden; }
 
 4 阶段：读取配置 → 加载车辆 → 拉取轨迹 → 解析结果
 
-13.5 弹窗背景滚动锁
+14.5 弹窗背景滚动锁
 js
 const lockPageScroll = () => {
   document.body.style.overflow = 'hidden'
@@ -655,7 +653,7 @@ const lockPageScroll = () => {
   const mainContent = document.querySelector('.main-content')
   if (mainContent) mainContent.style.overflow = 'hidden'
 }
-13.6 表格样式（对齐路线的风格）
+14.6 表格样式（对齐路线风格）
 表头：#F8FAFC 背景，#0F172A 色，字重 700，13px
 
 单元格：12.5px，#1E293B
@@ -664,7 +662,7 @@ const lockPageScroll = () => {
 
 分页：红色高亮
 
-十四、✅ 已完成
+十五、✅ 已完成
 基础
 CloudBase 迁移 + 匿名登录 + 静态托管 + Git 自动部署
 
@@ -679,89 +677,93 @@ SPA 404 重定向 + Web 安全域名
 
 管理员判定只看 code
 
-管理端
-客户管理（双表同步 + 批量导入车辆）
+角色停用拦截（isRoleActive）
 
-管理员账号（admins + users 双表同步）
+注入 orgLevel/orgName/isRootOrg
+
+机构层级重构（本轮核心）
+organizations 加 level/is_root/customer_id
+
+每个客户一条真实根节点
+
+业务表加 org_id
+
+全项目统一用 orgLevel 判断隔离
+
+OrgManage.vue 自动计算 level + 级联更新子孙
+
+UserManage.vue 去虚拟根
+
+AdminCustomer.vue 新增/改名/删除客户时同步 organizations 根节点
+
+管理端
+客户管理（双表同步 + 批量导入车辆 + org 根节点同步）
+
+管理员账号（admins + users 双表同步 + role_id 写入 + 手机号查重）
 
 角色管理（客户隔离 + 只 code 判管理员）
 
-组织管理（组织树 + 分配车辆）
+组织管理（组织树 + 分配车辆 + level 自动计算）
 
-用户管理
+用户管理（去虚拟根）
+
+数据总览（燃料统计口径修复）
 
 客户端
-ClientHome（phone 反查 customerId）
+ClientHome（按 orgLevel 隔离）
 
-FullMap（8s 超时 + 并发 15 + 缓存 key + 组织过滤）
+FullMap（8s 超时 + 并发 15 + 缓存 key + 按 orgLevel 隔离）
 
-车辆档案（客户隔离 + 子账号禁止导入）
+车辆档案（按 orgLevel 隔离 + 写 org_id）
 
-司机档案（客户隔离 + 子账号只读）
+司机档案（按 orgLevel 隔离）
 
-运单管理（列表 + 新建 + 详情 + 隔离）
+运单管理（按 orgLevel 过渡隔离）
+
+路线管理（按 orgLevel 隔离 + 写 org_id）
 
 电子围栏
 4 个围栏云函数（增删改查）
 
-AddEleFenceDialog：动态机构 + 根节点 + 4 形状
+AddEleFenceDialog：二级机构子账号强制写本机构 org
 
 云函数支持 4 种形状判断
 
-客户隔离：ele_fences.owner_account
+二级机构严格隔离（eq('org', 我的机构名)）
 
-⚡ 超速提醒
+超速提醒
 云函数 dongfeng-overspeed-check
 
 前端 EleFenceAlertQuery.vue（5 分钟缓存）
 
-组件 OverspeedDetailDialog.vue（曲线 + hover tooltip + 前端地址兜底）
+OverspeedDetailDialog.vue（曲线 + hover tooltip + 前端地址兜底）
 
 全域提醒
 
-客户隔离
+按 orgLevel 隔离（loadVehicles / loadFences 都按 needOrgFilter 分支）
 
-⭐ 停留提醒（前端 + 云函数）
-云函数 dongfeng-stay-check（stopEvent + 围栏 + 时长 + 拉轨迹补充 points + 每点逆地理编码）
+停留提醒
+云函数 dongfeng-stay-check
 
 前端 EleFenceAlertQuery.vue 加"提醒类型" tab
 
-停留表格加"停留点数"列
+StayDetailDialog.vue：地图画停留点 + 编号 + 连线 + 停留半径圆
 
-StayDetailDialog.vue：地图画停留点 + 编号 + 连线 + 停留半径圆（以第一个点为圆心）
+按 orgLevel 隔离
 
-时间线卡片显示地点（云函数返回的 address）
-
-点击卡片 → 地图定位到对应点
-
-⭐ 路线管理（本次新增）
+路线管理
 routes 表 + 索引 + 唯一约束
 
-RouteManage.vue：状态 tab + 工具栏（新增/导出/刷新/密度/列设置/全屏）+ 操作列（详情/编辑/停用/启用/删除）
+RouteManage.vue：状态 tab + 工具栏 + 操作列
 
-RouteFormDialog.vue：
+RouteFormDialog.vue：地图铺满 + 多方案 + 途径点 + AMap.Driving 规划
 
-地图铺满 + 左上基础信息卡 + 右上方案卡列
+详情模式：只读 + 自动规划所有方案
 
-所属机构（当前账号 + 客户名根节点）
+写 routes.org_id
 
-装货点/卸货点（可新建围栏）
-
-一键交换按钮
-
-多方案 + 途径点 + 地图选点
-
-AMap.Driving 规划，优先用围栏坐标
-
-方案配色（8 色避开红黄绿）
-
-起终点围栏形状绘制（实线/虚线）
-
-点击方案卡高亮对应路线
-
-详情模式：只读 + 自动规划所有方案 + 卡片可折叠
-
-页面滚动锁
+个人设置
+修复严重 bug：改密码写错了表（原写 customers/admins，应写 users）
 
 UI
 全系统统一（卡片 + 4 图标 + 品牌红）
@@ -770,7 +772,122 @@ UI
 
 页面固定高度 + 弹窗背景滚动锁
 
-十五、⏳ 待办
+十六、⏳ 待办清单
+【待办 1】运单按"指派机构可见"改造 🔴 高优先级
+文件：Waybill.vue / WaybillCreate.vue / waybill-detail.vue
+
+需求（用户原话）：
+
+"运单有指派车队，指派车队相当于就是指派机构，指派到子账号所在的机构下就能看到，不然看不到"
+
+改造点：
+
+waybills 表加 assigned_orgs 字段（text，多个机构名逗号分隔）
+
+WaybillCreate.vue 发布时：
+
+js
+const assignedOrgs = new Set()
+assignments.forEach(a => {
+  if (a.method === 'team') {
+    a.items.forEach(item => {
+      if (item.target) assignedOrgs.add(item.target)
+    })
+  }
+})
+record.assigned_orgs = Array.from(assignedOrgs).join(',')
+Waybill.vue / waybill-detail.vue 查询时：
+
+一级机构子账号 / 主账号 → 按 owner_account（当前逻辑）
+
+二级机构子账号 → owner_account = 主账号 AND (assigned_orgs LIKE '%我的机构名%' OR owner_account = 我自己的 account)
+
+主账号创建、未指派任何车队 → 二级机构子账号看不到
+
+handleDelete 同样加隔离
+
+前置 SQL（已给过）：
+
+sql
+ALTER TABLE waybills ADD COLUMN IF NOT EXISTS assigned_orgs text;
+【待办 2】编辑车辆清空 org 导致子账号看不到 🟡 中优先级
+文件：VehicleArchive.vue
+
+问题：主账号编辑车辆时"所属机构组织"可清空 → vehicles.org = null → 二级机构子账号看不到。
+
+方案：
+
+A（推荐）：编辑时若当前车辆有 org，不允许清空（UI 限制）
+
+B：清空时默认归属到客户根节点
+
+C：保持原行为
+
+【待办 3】提醒配置的机构隔离 🟡 中优先级
+文件：EleFenceAlertSetting.vue / EleFenceAlertQuery.vue
+
+问题：ele_fence_alerts 按 owner_account 隔离，主账号和所有子账号共享一套。二级机构子账号改设置会覆盖主账号配置。
+
+方案：
+
+A：提醒配置客户级统一，子账号只能看不能改（加前端权限判断）
+
+B：每个机构独立配置 → ele_fence_alerts 加 org 字段
+
+【待办 4】围栏改名联动 🟢 低优先级
+问题：ele_fence_alerts.fence_name 存的是围栏名字快照。围栏改名后，历史提醒配置里名字过期。
+
+可选：
+
+编辑围栏时，同步 UPDATE ele_fence_alerts SET fence_name = REPLACE(...)
+
+或查询时实时 join ele_fences 表
+
+【待办 5】users.role_id 为 null 的管理员历史数据 🟠 中优先级
+问题：AdminAccounts.vue 修复了新建管理员写 role_id，但历史数据可能已有 role_id = null 的管理员。
+
+检查 SQL：
+
+sql
+SELECT id, account, name, role_id, owner_account
+FROM users
+WHERE owner_account IS NULL AND role_id IS NULL;
+如果有数据，补 role_id：
+
+sql
+UPDATE users SET role_id = (SELECT id FROM roles WHERE code = 'admin' LIMIT 1)
+WHERE owner_account IS NULL AND role_id IS NULL
+AND (name LIKE '%管理员%' OR name LIKE '%admin%');
+【待办 6】AdminLayout 的 goLogout 未清 originalUser 🟢 低优先级
+文件：AdminLayout.vue
+
+问题：goLogout 没清 originalUser，管理员从 PortalSelect 进客户视角后退出登录会残留。
+
+改法：加一行 localStorage.removeItem('originalUser')。
+
+【待办 7】燃料类型选项数据迁移 🟡 中优先级
+问题：AdminVehicle.vue 原来查的是 '燃油' / '新能源'，但 VehicleArchive.vue 存的是 '燃油车' / '燃气车' / '纯电动' / '氢燃料'。
+
+检查 SQL：
+
+sql
+SELECT DISTINCT fuel_type, COUNT(*) FROM vehicles GROUP BY fuel_type;
+如果有旧值：
+
+sql
+UPDATE vehicles SET fuel_type = '燃油车' WHERE fuel_type = '燃油';
+UPDATE vehicles SET fuel_type = '纯电动' WHERE fuel_type = '新能源';
+UPDATE vehicles SET fuel_type = '燃气车' WHERE fuel_type = '混合动力';
+【待办 8】FunctionPermissionDialog 兼容 adminOnly 🟢 低优先级
+文件：FunctionPermissionDialog.vue
+
+优化：把硬编码的 DISABLED_MODULE_KEYS = ['system'] 改成读 PERMISSION_MODULES 的 adminOnly 字段。
+
+js
+disabled: m.disabled === true
+       || m.adminOnly === true        // ⭐ 加这行
+       || DISABLED_MODULE_KEYS.includes(m.key)
+原始待办（仍未做）
 ☐ RLS 策略收紧
 
 ☐ 云函数预置并发
@@ -787,68 +904,107 @@ UI
 
 ☐ 微信小程序（如需）
 
-☐ 路线管理：装货/卸货点做地址 → 坐标映射（当前依赖围栏坐标，非围栏来源时退化）
+☐ 路线管理：装货/卸货点做地址 → 坐标映射
 
 ☐ 路线管理：方案对比地图视图
 
-十六、🔧 常见问题
-Failed to fetch — 云函数没配 HTTP 网关 / 没开公网访问
+十七、🎯 关键约定（不能违反）
+云函数必须走 HTTP 网关，不能用 app.callFunction（匿名会 EXCEED_AUTHORITY）
 
-myAccount is not defined — 报错文件里加：const myAccount = currentUser.masterAccount || currentUser.account || ''
+currentUser 依赖 LoginView 注入，任何改动都要退出重登才生效
 
-Missing semicolon / Unexpected token — 代码被改乱，全选覆盖完整文件
+子账号永远不是管理员（LoginView 强制判定）
 
-白屏 — F12 Console 看红色报错
+子账号权限必须剔除 system（LoginView 里 filter）
 
-缺少 vehicles（创建围栏时） — 云函数代码粘错了，恢复 amap-geofence 原始代码
+CloudBase HTTP 网关基础 URL：
 
-多边形 INVALID_PARAMS — 首尾没闭合 / 面积超限
+text
+https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com
+登录校验的是 users.password，改密码一定写 users 表，别写 customers / admins
 
-云函数报 EXCEED_AUTHORITY — 不能用 app.callFunction，改 HTTP 网关
+数据隔离三件套：customer_id + owner_account + org（按 role/level 组合）
 
-高德 20003 UNKNOWN_ERROR — 假错误，前端也算成功
+全项目隔离统一判断：isRootOrgSubAccount 和 needOrgFilter 两个 computed
 
-高德 INVALID_USER_KEY — 检查 Key/SID 匹配、猎鹰 API 勾选、数字签名关闭、IP 白名单留空
+十八、🔧 快速验证清单
+主账号 15035660010 登录：
 
-登录"账号或密码不正确" — 拆分 .eq() 不用 .or()；.limit(1) 去重
+js
+const u = JSON.parse(localStorage.currentUser)
+// 期望：role='customer', orgId=null, orgLevel=null, isRootOrg=false, isSubAccount=false
+→ 首页应显示该客户全部 12 辆车
 
-客户登录 0 辆车 — customerId 传整数但字段是 uuid，ClientHome 强制按 phone 反查
+子账号 15035660020 登录：
 
-客户权限为空 — 客户权限配在 customers.permissions
+js
+// 期望：orgId=4, orgName='管理员名下车辆', orgLevel=2, isRootOrg=false, isSubAccount=true
+→ 首页应显示 12 辆车（跟主账号一样，因为都挂在"管理员名下车辆"）
 
-电子围栏客户不隔离 — ele_fences 加 owner_account，所有查询加 .eq
+Console 检查：各业务页应有类似日志
 
-提醒设置/查询客户不隔离 — ele_fence_alerts 加 owner_account
+text
+[ClientHome] 子账号挂 level=2 机构 → 隔离 org = 管理员名下车辆
+[route] 子账号挂 level=2 机构 → 隔离 org = 管理员名下车辆
+[VehicleArchive] 子账号挂 level=2 机构 → 隔离 org = 管理员名下车辆
+[DriverArchive] 子账号挂 level=2 机构 → 隔离 org = 管理员名下车辆
+[FullMap] 子账号挂 level=2 机构 → 隔离 org = 管理员名下车辆
+管理员登录 → 进 PortalSelect → 选客户 → 进客户视角：
 
-超速提醒 0 段 — 检查监控时段 / 围栏覆盖 / 阈值；调试时阈值改成 10
+Console 应看到 role='customer' + 完整机构字段
 
-district 围栏查不到 — 前端 loadFences 必须 select adcode；云函数环境变量 AMAP_WEB_KEY；IP 白名单留空
+业务页应正常显示该客户数据
 
-详情弹窗地址部分显示经纬度 — 云函数逆地理编码限流，GEO_CONCURRENCY = 3；前端有 AMap.Geocoder 兜底
-
-页面能上下拖动 — height: calc(100vh - 101px) + overflow: hidden + html, body { overflow: hidden }
-
-弹窗打开背景还能滚动 — 弹窗组件的 watch(modelValue) 里锁 .main-content 和 document.body
-
-云函数日志看不到 — 云函数代码可能粘错了（去了别的云函数）
-
-⭐ 路线管理菜单不显示 — 客户权限没配 route，或 hasPerm 逻辑要放宽（空数组视为不过滤）
-
-⭐ 路线管理跑到管理端 — 路由挂在了 AdminLayout 下，要挂在 Dashboard 下
-
-⭐ 路线交换按钮点击退出来 — <button> 默认 type=submit，加 type="button"
-
-⭐ 路线起点跟围栏位置对不上 — 云函数没用围栏真实坐标，getFenceCoord 优先读 ele_fences.center / points
-
-⭐ 路线详情模式卡片没有隐藏按钮 — 上一轮误加 v-if="!readonly"，要删掉
-
-⭐ 路线详情模式还要点"查看路线" — 要加 autoPlanAllRoutes 自动规划
-
-⭐ 规划路线 INVALID_USER_SCODE — 高德 Key 没开通"驾车路径规划"权限
-
-⭐ 方案卡片点击不触发高亮 — 事件冒泡被输入框/按钮吃掉，用 e.target.closest() 过滤
-
-十七、🚀 部署流程
+十九、📋 数据库现状（截至 2026-10-15）
+organizations
+id	name	level	parent_id	is_root	customer_id
+5	山西卡友新能源运输有限公司	1	NULL	true	678b9759-...
+4	管理员名下车辆	2	5	false	678b9759-...
+users
+id	account	name	org_id	owner_account	role_id
+9	15035660010	山西卡友新能源运输有限公司	NULL	NULL	NULL（客户主账号）
+11	15035660020	lyn	4	15035660010	19（二级机构子账号）
+customers
+id	name	phone
+678b9759-...	山西卡友新能源运输有限公司	15035660010
+routes
+org	org_id	owner_account
+山西卡友新能源运输有限公司	5	15035660010
+二十、🔧 常见问题
+现象	原因	修法
+Failed to fetch	云函数没配 HTTP 网关 / 没开公网访问	配 HTTP 网关 + 公网访问
+myAccount is not defined	报错文件里没定义	加 const myAccount = currentUser.masterAccount || currentUser.account || ''
+Missing semicolon / Unexpected token	代码被改乱	全选覆盖完整文件
+白屏	语法错误	F12 Console 看红色报错
+缺少 vehicles（创建围栏时）	云函数代码粘错了	恢复 amap-geofence 原始代码
+多边形 INVALID_PARAMS	首尾没闭合 / 面积超限	闭合首尾点
+云函数报 EXCEED_AUTHORITY	用了 app.callFunction	改用 HTTP 网关
+高德 20003 UNKNOWN_ERROR	假错误	前端也算成功
+高德 INVALID_USER_KEY	Key/SID 不匹配	检查猎鹰 API 勾选、数字签名关闭、IP 白名单留空
+登录"账号或密码不正确"	.or() 语法问题	拆分 .eq()；.limit(1) 去重
+客户登录 0 辆车	customerId 类型不匹配	ClientHome 强制按 phone 反查
+客户权限为空	权限配错位置	客户权限配在 customers.permissions
+电子围栏客户不隔离	没加 owner_account	ele_fences 加 owner_account，查询加 .eq
+超速提醒 0 段	时段/围栏/阈值问题	调试时阈值改成 10
+详情弹窗地址部分显示经纬度	云函数逆地理编码限流	GEO_CONCURRENCY = 3；前端有 AMap.Geocoder 兜底
+页面能上下拖动	高度没锁	height: calc(100vh - 101px) + overflow: hidden
+弹窗打开背景还能滚动	没锁 body	watch(modelValue) 里锁 .main-content 和 document.body
+云函数日志看不到	代码粘错位置	检查文件首行注释
+路线管理菜单不显示	权限没配 route	客户权限配 route，或 hasPerm 逻辑放宽
+路线管理跑到管理端	路由挂在 AdminLayout 下	挂到 Dashboard 下
+路线交换按钮点击退出来	<button> 默认 type=submit	加 type="button"
+路线起点跟围栏位置对不上	没用围栏真实坐标	getFenceCoord 优先读 ele_fences.center / points
+路线详情模式卡片没有隐藏按钮	误加 v-if="!readonly"	删掉
+规划路线 INVALID_USER_SCODE	高德 Key 没开通"驾车路径规划"	开通权限
+方案卡片点击不触发高亮	事件被输入框吃掉	e.target.closest() 过滤
+子账号看不到数据	currentUser.orgLevel 缺失	退出重登 / 检查 LoginView
+一级机构子账号被误隔离	用了 currentUser.orgId 判断	改用 isRootOrgSubAccount + needOrgFilter
+管理员登录进不了管理端	users.role_id 为 null 且 name 不含"管理员"	补 role_id / 改 name
+改完密码没生效	写到了 customers/admins 表	改回写 users 表
+客户新增后子账号无法绑定机构	organizations 无根节点	检查 AdminCustomer.vue 的 syncCreateOrgRoot
+客户改名后界面不一致	organizations 根节点 name 未同步	同上
+车辆筛选"燃油车" 0 条	旧数据存的是"燃油"	数据迁移 SQL
+二十一、🚀 部署流程
 bash
 cd /Users/lyn/my-cd
 npm run dev    # 本地
@@ -859,7 +1015,7 @@ git push origin main
 ⚠️ 改完登录相关文件后必须退出重登
 ⚠️ 新建云函数后必须配 HTTP 网关 + 环境变量 + 公网访问
 
-十八、📌 关键常量
+二十二、📌 关键常量
 名称	值
 CloudBase 环境 ID	wuxian-token-d0guymjkpadcd1f22
 HTTP 网关	https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com
@@ -874,58 +1030,163 @@ FullMap 并发	15
 前端 fetch 超时	8000ms
 超速段合并间隔	5 分钟
 路线方案配色池	#2563EB / #8B5CF6 / #EC4899 / #06B6D4 / #F97316 / #6366F1 / #14B8A6 / #A855F7
-十九、📁 关键文件
+二十三、📁 关键文件
 文件	说明
 src/utils/supabase.js	CloudBase 初始化
 src/router/index.js	路由表
 src/views/Dashboard.vue	⭐ 客户端所有页面的壳
-src/views/LoginView.vue	登录页
+src/views/LoginView.vue	登录页（三层角色 + 机构注入）
 src/views/PortalSelect.vue	管理员门户
 src/views/ClientHome.vue	客户端首页
 src/views/FullMap.vue	全图监控
 src/views/UserManage.vue	用户管理
-src/views/admin/RoleManage.vue	角色管理
-src/views/admin/OrgManage.vue	组织管理
-src/views/admin/AdminCustomer.vue	客户管理
+src/views/RoleManage.vue	角色管理
+src/views/OrgManage.vue	组织管理
+src/views/admin/AdminLayout.vue	管理端壳
+src/views/admin/AdminDashboard.vue	数据总览
+src/views/admin/AdminCustomer.vue	客户管理（含 org 同步）
+src/views/admin/AdminVehicle.vue	车辆管理
 src/views/admin/AdminAccounts.vue	管理员账号
 src/views/Waybill.vue	运单管理
 src/views/WaybillCreate.vue	新建运单
-src/views/WaybillDetail.vue	运单详情
-src/views/ClientVehicleArchive.vue	车辆档案
-src/views/ClientDriverArchive.vue	司机档案
+src/views/waybill-detail.vue	运单详情
+src/views/VehicleArchive.vue	车辆档案
+src/views/DriverArchive.vue	司机档案
 src/views/EleFenceSetting.vue	围栏设置
 src/views/EleFenceAlertSetting.vue	提醒设置
 src/views/EleFenceAlertQuery.vue	提醒事件查询
-⭐ src/views/RouteManage.vue	路线管理
-⭐ src/components/RouteFormDialog.vue	路线表单弹窗
+src/views/RouteManage.vue	路线管理
+src/components/RouteFormDialog.vue	路线表单弹窗
 src/components/AddEleFenceDialog.vue	新增/编辑围栏
 src/components/OverspeedDetailDialog.vue	超速详情弹窗
 src/components/StayDetailDialog.vue	停留详情弹窗
 src/components/SidebarMenu.vue	侧边栏菜单
-二十、🎯 下次推荐方向
-路线管理完善：
+src/components/PersonalSettings.vue	个人设置
+src/components/FunctionPermissionDialog.vue	权限配置弹窗
+src/views/Report.vue	⚠️ 占位文件，未开发
+二十四、🎯 下次推荐方向
+优先级排序：
 
-装货/卸货点 → 地址 → 坐标映射（不依赖围栏）
+【待办 1】 运单按"指派机构可见"改造（用户明确需求，影响范围可控）
 
-方案对比（多条路线同时高亮对比）
+【待办 5】 检查 users.role_id 为 null 的管理员历史数据
 
-路线规划结果缓存（避免每次打开都重算）
+【待办 7】 燃料类型数据迁移（一次性）
+
+【待办 2】 编辑车辆清空 org 的 UI 限制
+
+【待办 3】 提醒配置的机构隔离（待产品决策）
 
 RLS 策略收紧（上线前必做）
 
-云函数预置并发（避免冷启动）
+云函数预置并发
 
-逆地理编码降级策略（超速段 > 200）
+逆地理编码降级策略
 
 全图监控「实时跟踪」「轨迹回放」按钮落地
 
-用户管理权限配置弹窗对接
+路线管理完善（地址→坐标映射、方案对比）
 
-最后更新：2026-10-15
+最后更新：2026-10-15（第二版 · 机构层级重构后）
+
 状态：
-✅ 客户/子账号数据隔离完整闭环
-✅ 登录权限来源 customers.permissions
-✅ 车辆/司机/围栏/提醒/路线 客户隔离
-✅ 超速提醒全流程
-✅ 停留提醒全流程
-✅ 路线管理完整（含自动规划、多方案颜色、围栏绘制、详情只读）
+
+✅ 数据层改造完成
+
+✅ 所有业务页机构隔离完成（22 个文件）
+
+✅ 管理端 5 个文件修复完成
+
+✅ 个人设置写表 bug 修复
+
+✅ 管理员 role_id 写入修复
+
+✅ 客户新增时 organizations 根节点自动同步
+
+⏳ 剩余 8 个待办 + 10 项原始待办
+
+🎯 下次推荐：先跑回归测试，再做【待办 1】运单指派机构可见
+
+【待办 9】AdminAccounts 列表校验脏数据 🟢 低优先级
+文件：src/views/admin/AdminAccounts.vue
+
+问题：fetchData 只查 admins 表，不校验对应的 users 是否存在。导致：
+
+admins 有记录但 users 已删 → 列表显示但登录不了
+
+之前清理数据时遗留了 15035660006 / 15035661112 两条（已手工 DELETE，但未来可能再出现）
+
+改造点：fetchData 查到 admins 后，批量反查 users，对不存在的记录：
+
+标记 _noUser: true
+
+表格里显示"⚠️ 无登录账号"红色徽章
+
+操作列去掉"编辑/重置密码"，只保留"删除"
+
+实现思路：
+
+js
+// fetchData 里拿到 admins 数据后
+const phones = (data || []).map(r => r.phone).filter(Boolean)
+let existingPhones = new Set()
+if (phones.length) {
+  const { data: uList } = await supabase
+    .from('users')
+    .select('phone')
+    .in('phone', phones)
+    .is('owner_account', null)   // 只看主账号
+  ;(uList || []).forEach(u => existingPhones.add(u.phone))
+}
+
+tableData.value = (data || []).map(row => ({
+  ...,
+  _noUser: !existingPhones.has(row.phone),   // ⭐ 标记
+}))
+模板里判断：
+
+vue
+<el-tag v-if="row._noUser" type="danger" size="small">⚠️ 无登录账号</el-tag>
+🎯 本次新增到待办清单
+已手工完成：
+
+✅ 删除 admins 表遗留的 15035660006 / 15035661112 两条脏数据
+
+✅ 新增管理员账号 15035660677（users.id=14 + admins 双表同步）
+
+新增待办：
+
+【待办 9】AdminAccounts 列表校验脏数据（上面详述）
+
+🚦 当前待办总览（更新后）
+#	待办	优先级
+1	运单按"指派机构可见"改造	🔴 高
+2	编辑车辆清空 org 导致子账号看不到	🟡 中
+3	提醒配置的机构隔离	🟡 中
+4	围栏改名联动	🟢 低
+5	users.role_id 为 null 的管理员历史数据	🟠 中
+6	AdminLayout 的 goLogout 未清 originalUser	🟢 低
+7	燃料类型选项数据迁移	🟡 中
+8	FunctionPermissionDialog 兼容 adminOnly	🟢 低
+9	AdminAccounts 列表校验脏数据	🟢 低
+原始待办（仍未做）：
+
+RLS 策略收紧
+
+云函数预置并发
+
+逆地理编码降级策略
+
+用户管理权限配置弹窗真实对接
+
+老旧 admins 表清理
+
+全图监控「实时跟踪」「轨迹回放」按钮
+
+删除本地备份视频
+
+微信小程序（如需）
+
+路线管理：地址→坐标映射
+
+路线管理：方案对比地图视图

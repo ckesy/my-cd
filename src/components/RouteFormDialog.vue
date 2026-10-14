@@ -484,7 +484,17 @@ const isSubAccount = !!currentUser.isSubAccount
 const myAccount = currentUser.masterAccount || currentUser.account || ''
 const myPhone = currentUser.masterPhone || currentUser.phone || ''
 const myCustomerId = ref(currentUser.customerId || null)
-const myOrgName = ref(null)
+
+// ⭐ 子账号机构信息
+const myOrgName = ref(isSubAccount ? String(currentUser.orgName || '').trim() || null : null)
+const myOrgLevel = ref(isSubAccount ? (Number(currentUser.orgLevel) || 1) : null)
+
+const isRootOrgSubAccount = computed(() =>
+  isSubAccount && Number(myOrgLevel.value) === 1
+)
+const needOrgFilter = computed(() =>
+  isCustomer && isSubAccount && Number(myOrgLevel.value) >= 2
+)
 
 const loadMyCustomerId = async () => {
   if (!isCustomer || myCustomerId.value || !myPhone) return
@@ -496,11 +506,22 @@ const loadMyCustomerId = async () => {
     }
   } catch (e) { }
 }
-const loadMyOrgName = async () => {
-  if (!isCustomer || !isSubAccount || !currentUser.orgId) return
+
+// ⭐ 兜底反查
+const loadMyOrgInfo = async () => {
+  if (!isCustomer || !isSubAccount) return
+  if (myOrgName.value && myOrgLevel.value) return
+  if (!currentUser.orgId) return
   try {
-    const { data } = await supabase.from('organizations').select('name').eq('id', currentUser.orgId).maybeSingle()
-    if (data) myOrgName.value = data.name
+    const { data } = await supabase
+      .from('organizations')
+      .select('name, level')
+      .eq('id', currentUser.orgId)
+      .maybeSingle()
+    if (data) {
+      if (data.name) myOrgName.value = String(data.name).trim()
+      myOrgLevel.value = Number(data.level) || 1
+    }
   } catch (e) { }
 }
 
@@ -511,40 +532,29 @@ const isEdit = computed(() => !!props.editData?.id)
 const saving = ref(false)
 const infoCardCollapsed = ref(false)
 const planPanelCollapsed = ref(false)
-const autoPlanning = ref(false)  // ⭐ 自动规划中
+const autoPlanning = ref(false)
 
 const fenceList = ref([])
 const orgList = ref([])
 
-// 所属机构：客户公司名在最前
+// ⭐ 所属机构下拉：从 organizations 读真实数据，按 level 排序
+//    二级机构子账号只显示本机构（其他情况显示全部）
 const sortedOrgList = computed(() => {
   const list = [...orgList.value]
-  const roots = list.filter(o => !o.parent_id)
-  const children = list.filter(o => o.parent_id)
-  const sorted = [...roots, ...children]
+  const roots = list.filter(o => o.is_root === true || Number(o.level) === 1)
+  const nonRoots = list.filter(o => !(o.is_root === true || Number(o.level) === 1))
+  nonRoots.sort((a, b) => {
+    const la = Number(a.level) || 2
+    const lb = Number(b.level) || 2
+    if (la !== lb) return la - lb
+    return (a.id || 0) - (b.id || 0)
+  })
+  return [...roots, ...nonRoots]
+})
 
-  const customerName =
-    currentUser.customerName ||
-    currentUser.masterName ||
-    currentUser.name ||
-    ''
-
-  if (customerName) {
-    const existedIdx = sorted.findIndex(o => o.name === customerName)
-    if (existedIdx >= 0) {
-      const [existed] = sorted.splice(existedIdx, 1)
-      sorted.unshift(existed)
-    } else {
-      sorted.unshift({
-        id: '__customer_root__',
-        name: customerName,
-        parent_id: null,
-        _virtual: true,
-      })
-    }
-  }
-
-  return sorted
+// ⭐ 客户真实根节点（用于新增时的默认值）
+const customerRootOrg = computed(() => {
+  return orgList.value.find(o => o.is_root === true || Number(o.level) === 1) || null
 })
 
 const showFenceDialog = ref(false)
@@ -995,12 +1005,8 @@ const unlockPageScroll = () => {
 // ============================================================
 // 折叠控制
 // ============================================================
-const toggleInfoCard = () => {
-  infoCardCollapsed.value = !infoCardCollapsed.value
-}
-const togglePlanPanel = () => {
-  planPanelCollapsed.value = !planPanelCollapsed.value
-}
+const toggleInfoCard = () => { infoCardCollapsed.value = !infoCardCollapsed.value }
+const togglePlanPanel = () => { planPanelCollapsed.value = !planPanelCollapsed.value }
 
 // ============================================================
 // ⭐ 自动规划所有方案（详情模式用）
@@ -1013,11 +1019,9 @@ const autoPlanAllRoutes = async () => {
 
   autoPlanning.value = true
   try {
-    // 串行规划，避免并发冲突
     for (let i = 0; i < form.plans.length; i++) {
       await handlePlanRoute(i, true)
     }
-    // 全部规划完，取消高亮（所有路线同时展示）
     activePlanKey.value = null
     updatePlanHighlight()
   } finally {
@@ -1031,6 +1035,12 @@ const autoPlanAllRoutes = async () => {
 const handleOpened = async () => {
   try { lockPageScroll() } catch (e) { /* noop */ }
   await nextTick()
+
+  // ⭐ 先加载机构信息（含兜底反查）
+  if (isCustomer && isSubAccount) {
+    await loadMyOrgInfo()
+  }
+  await loadMyCustomerId()
 
   try {
     await Promise.all([loadOrgs(), loadFences()])
@@ -1067,9 +1077,16 @@ const handleOpened = async () => {
   } else {
     form.id = null
     form.name = ''
-    form.org = isSubAccount && myOrgName.value
-      ? myOrgName.value
-      : (currentUser.customerName || currentUser.masterName || currentUser.name || '')
+    // ⭐ 新增时默认所属机构：
+    //   二级机构子账号 → 本机构名
+    //   一级机构子账号 / 主账号 → 客户真实根节点名
+    if (needOrgFilter.value && myOrgName.value) {
+      form.org = myOrgName.value
+    } else if (customerRootOrg.value) {
+      form.org = customerRootOrg.value.name
+    } else {
+      form.org = currentUser.customerName || currentUser.masterName || currentUser.name || ''
+    }
     form.pickup_point = ''
     form.delivery_point = ''
     form.remark = ''
@@ -1080,15 +1097,10 @@ const handleOpened = async () => {
   planPanelCollapsed.value = false
   activePlanKey.value = null
 
-  // ⭐ await 地图初始化
   try {
     await initMap()
-    // ⭐ 详情模式：自动规划所有方案
     if (props.readonly && form.pickup_point && form.delivery_point && form.plans.length > 0) {
-      // 延迟一点，确保地图渲染完成
-      setTimeout(() => {
-        autoPlanAllRoutes()
-      }, 200)
+      setTimeout(() => { autoPlanAllRoutes() }, 200)
     }
   } catch (e) {
     console.error('[route-form] 地图初始化失败', e)
@@ -1107,37 +1119,51 @@ const handleClosed = () => {
 }
 
 // ============================================================
-// 加载组织
+// ⭐ 加载组织（按 orgLevel 隔离）
 // ============================================================
 const loadOrgs = async () => {
   try {
     let q = supabase
       .from('organizations')
-      .select('id, name, parent_id')
-      .order('id')
+      .select('id, name, parent_id, level, is_root, customer_id, owner_account')
+      .order('level', { ascending: true })
+      .order('id', { ascending: true })
 
     if (isCustomer && myAccount) {
       q = q.eq('owner_account', myAccount)
+      // ⭐⭐⭐ 二级机构子账号 → 只显示本机构
+      if (needOrgFilter.value && myOrgName.value) {
+        q = q.eq('name', myOrgName.value)
+      }
     }
 
     const { data, error } = await q
     if (error) throw error
     orgList.value = data || []
+    console.log('[route-form] 加载机构:', orgList.value.length, '条')
   } catch (e) {
     console.warn('[route-form] 加载组织失败', e)
   }
 }
 
 // ============================================================
-// 加载围栏
+// ⭐ 加载围栏（按 orgLevel 隔离）
 // ============================================================
 const loadFences = async () => {
   try {
     let q = supabase
       .from('ele_fences')
-      .select('id, name, shape, center, points, radius, bufferradius')
+      .select('id, name, shape, center, points, radius, bufferradius, org')
       .order('updated_at', { ascending: false })
-    if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
+
+    if (isCustomer && myAccount) {
+      q = q.eq('owner_account', myAccount)
+      // ⭐⭐⭐ 二级机构子账号 → 只看本机构围栏
+      if (needOrgFilter.value && myOrgName.value) {
+        q = q.eq('org', myOrgName.value)
+      }
+    }
+
     const { data, error } = await q
     if (error) throw error
     fenceList.value = data || []
@@ -1166,10 +1192,13 @@ const handleFenceSuccess = async (newFence) => {
     if (!targetFence) {
       let q = supabase
         .from('ele_fences')
-        .select('id, name, shape, center, points, radius, bufferradius')
+        .select('id, name, shape, center, points, radius, bufferradius, org')
         .order('updated_at', { ascending: false })
         .limit(1)
-      if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
+      if (isCustomer && myAccount) {
+        q = q.eq('owner_account', myAccount)
+        if (needOrgFilter.value && myOrgName.value) q = q.eq('org', myOrgName.value)
+      }
       const { data } = await q
       targetFence = data?.[0]
     }
@@ -1235,7 +1264,7 @@ const autoGenerateName = () => {
 }
 
 // ============================================================
-// 路线规划（⭐ 支持 silent 静默模式 + Promise 化）
+// 路线规划
 // ============================================================
 const planningIndex = ref(-1)
 
@@ -1310,7 +1339,6 @@ const handlePlanRoute = async (idx, silent = false) => {
       policy: AMapLib.DrivingPolicy.LEAST_TIME,
     })
 
-    // ⭐ 用 Promise 包装 search，方便 await
     await new Promise((resolve) => {
       driving.search(
         originLngLat,
@@ -1367,7 +1395,7 @@ const handlePlanRoute = async (idx, silent = false) => {
 }
 
 // ============================================================
-// 提交保存
+// ⭐ 提交保存（写 org_id）
 // ============================================================
 const handleSubmit = async () => {
   if (props.readonly) return
@@ -1378,9 +1406,21 @@ const handleSubmit = async () => {
 
   saving.value = true
   try {
+    // ⭐ 确定最终 org（二级机构子账号新增时强制本机构）
+    let finalOrg = form.org
+    if (!isEdit.value && needOrgFilter.value && myOrgName.value) {
+      finalOrg = myOrgName.value
+      console.log('[route-form] 二级机构子账号新增 → 强制 org =', finalOrg)
+    }
+
+    // ⭐ 根据 org 名反查 id（用于写 routes.org_id）
+    const matchedOrg = orgList.value.find(o => o.name === finalOrg)
+    const finalOrgId = matchedOrg?.id || null
+
     const payload = {
       name: form.name.trim(),
-      org: form.org,
+      org: finalOrg,
+      org_id: finalOrgId,      // ⭐ 新加
       pickup_point: form.pickup_point,
       delivery_point: form.delivery_point,
       remark: form.remark || null,
@@ -1431,7 +1471,7 @@ const handleSubmit = async () => {
 }
 
 // ============================================================
-// 地图初始化（⭐ 抛出异常让上层处理）
+// 地图初始化
 // ============================================================
 const mapRef = ref(null)
 const rangingSvgRef = ref(null)
@@ -1843,7 +1883,7 @@ onBeforeUnmount(() => {
 
 if (isCustomer) {
   loadMyCustomerId()
-  loadMyOrgName()
+  loadMyOrgInfo()
 }
 </script>
 

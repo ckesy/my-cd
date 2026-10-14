@@ -17,11 +17,10 @@ const currentUser = (() => {
   catch { return {} }
 })()
 const isAdmin = currentUser.role === 'admin'
-const isCustomer = !isAdmin 
-const myAccount = currentUser.account || ''
-const myPhone = currentUser.phone || ''
-const ROOT_KEY = '__root__'
-const rootNodeName = isCustomer ? (currentUser.name || '我的组织') : '全部组织'
+const isCustomer = !isAdmin
+// ⭐ 子账号也用主账号的 owner_account
+const myAccount = currentUser.masterAccount || currentUser.account || ''
+const myPhone = currentUser.masterPhone || currentUser.phone || ''
 
 const myCustomerId = ref(null)
 const loadMyCustomerId = async () => {
@@ -58,6 +57,12 @@ const orgVehicleCount = computed(() => {
 const getOrgVehicleCount = (orgName) => orgVehicleCount.value[orgName] || 0
 const getTotalVehicleCount = () => allVehicles.value.filter(v => v.org).length
 
+// ⭐ 判断是否是根节点
+const isRootOrg = (o) => {
+  if (!o) return false
+  return o.is_root === true || Number(o.level) === 1 || !o.parent_id
+}
+
 // ============================================================
 // 读取数据
 // ============================================================
@@ -65,7 +70,11 @@ const fetchData = async () => {
   loading.value = true
   treeLoading.value = true
   try {
-    let orgQuery = supabase.from('organizations').select('*').order('id', { ascending: true })
+    let orgQuery = supabase
+      .from('organizations')
+      .select('*')
+      .order('level', { ascending: true })
+      .order('id', { ascending: true })
     if (isCustomer) orgQuery = orgQuery.eq('owner_account', myAccount)
 
     let vehicleQuery = supabase.from('vehicles').select('id, org, customer_id')
@@ -80,33 +89,38 @@ const fetchData = async () => {
     allTableData.value = orgRes.data || []
     allVehicles.value = vehicleRes.data || []
 
-    const rootNode = {
-      id: ROOT_KEY,
-      name: rootNodeName,
-      isRoot: true,
-      parent_id: null,
-      children: [],
-    }
-
+    // ⭐ 构建树：真实根节点直接作为顶层
     const map = {}
-    allTableData.value.forEach(item => { map[item.id] = { ...item, children: [] } })
+    allTableData.value.forEach(item => {
+      const node = { ...item, children: [] }
+      // 给 template 用的 isRoot 标记
+      if (isRootOrg(item)) node.isRoot = true
+      map[item.id] = node
+    })
+
+    const roots = []
     allTableData.value.forEach(item => {
       if (item.parent_id && map[item.parent_id]) {
         map[item.parent_id].children.push(map[item.id])
       } else {
-        rootNode.children.push(map[item.id])
+        roots.push(map[item.id])
       }
     })
-    orgTreeData.value = [rootNode]
 
-    if (selectedOrg.value && selectedOrg.value.id !== ROOT_KEY) {
+    orgTreeData.value = roots
+
+    // 恢复选中
+    if (selectedOrg.value?.id) {
       const found = allTableData.value.find(o => o.id === selectedOrg.value.id)
-      selectedOrg.value = found || rootNode
+      selectedOrg.value = found || roots[0] || null
     } else {
-      selectedOrg.value = rootNode
+      selectedOrg.value = roots[0] || null
     }
+
     nextTick(() => {
-      orgTreeRef.value?.setCurrentKey(selectedOrg.value?.id ?? ROOT_KEY)
+      if (selectedOrg.value?.id) {
+        orgTreeRef.value?.setCurrentKey(selectedOrg.value.id)
+      }
     })
   } catch (e) {
     console.error('加载组织失败:', e)
@@ -132,7 +146,10 @@ const handleTreeClick = (data) => { selectedOrg.value = data }
 // 右侧列表
 // ============================================================
 const displayedData = computed(() => {
-  if (!selectedOrg.value || selectedOrg.value.isRoot) return allTableData.value
+  if (!selectedOrg.value) return allTableData.value
+  // 根节点 → 显示全部
+  if (isRootOrg(selectedOrg.value)) return allTableData.value
+
   const ids = new Set()
   const collect = (id) => {
     ids.add(id)
@@ -150,7 +167,7 @@ const filteredData = computed(() => {
 })
 
 const currentTitle = computed(() => {
-  if (!selectedOrg.value || selectedOrg.value.isRoot) return `${rootNodeName} - 组织列表`
+  if (!selectedOrg.value) return '组织列表'
   return `${selectedOrg.value.name} - 组织列表`
 })
 
@@ -161,15 +178,19 @@ const orgMap = computed(() => {
 })
 
 const getParentName = (parentId) => {
-  if (!parentId) return rootNodeName
-  return orgMap.value[parentId]?.name || '--'
+  if (!parentId) return '—'
+  return orgMap.value[parentId]?.name || '—'
 }
 
 const handleSearch = () => {}
 const handleReset = () => {
   searchForm.name = ''
   selectedOrg.value = orgTreeData.value[0] || null
-  nextTick(() => orgTreeRef.value?.setCurrentKey(ROOT_KEY))
+  nextTick(() => {
+    if (selectedOrg.value?.id) {
+      orgTreeRef.value?.setCurrentKey(selectedOrg.value.id)
+    }
+  })
 }
 
 // ============================================================
@@ -242,7 +263,7 @@ const formRef = ref(null)
 
 const form = reactive({
   id: null,
-  parent_id: ROOT_KEY,
+  parent_id: null,
   name: '',
   code: '',
   description: '',
@@ -257,14 +278,15 @@ const rules = {
   description: [{ max: 200, message: '备注不能超过200个字符', trigger: 'blur' }],
 }
 
-// ⭐ 上级组织下拉选项：排除自己
+// ⭐ 上级组织下拉：排除自己
 const parentOptions = computed(() => {
   return allTableData.value.filter(o => o.id !== form.id)
 })
 
 const resetForm = () => {
   form.id = null
-  form.parent_id = selectedOrg.value?.id ?? ROOT_KEY
+  // ⭐ 默认父节点 = 当前选中节点，或第一个根节点
+  form.parent_id = selectedOrg.value?.id || orgTreeData.value[0]?.id || null
   form.name = ''
   form.code = ''
   form.description = ''
@@ -282,7 +304,7 @@ const handleEdit = (row) => {
   resetForm()
   Object.assign(form, {
     id: row.id,
-    parent_id: row.parent_id === null || row.parent_id === undefined ? ROOT_KEY : row.parent_id,
+    parent_id: row.parent_id || null,
     name: row.name,
     code: row.code || '',
     description: row.description || '',
@@ -290,40 +312,99 @@ const handleEdit = (row) => {
   dialogVisible.value = true
 }
 
-// ⭐ 保存：用 id 精确同步车辆归属
+// ⭐ 递归更新所有子孙节点的 level
+const cascadeUpdateLevels = async (parentId, parentLevel) => {
+  try {
+    const children = allTableData.value.filter(o => o.parent_id === parentId)
+    for (const child of children) {
+      const childLevel = parentLevel + 1
+      await supabase.from('organizations').update({ level: childLevel }).eq('id', child.id)
+      await cascadeUpdateLevels(child.id, childLevel)
+    }
+  } catch (e) {
+    console.warn('[org] 级联更新 level 失败:', e)
+  }
+}
+
+// ⭐ 保存：计算 level / is_root / customer_id，同步车辆
 const saveOrg = async () => {
   if (!formRef.value) return
   try {
     await formRef.value.validate()
     saving.value = true
 
-    // 提前查出该组织当前的车辆 id 列表 + 旧名字
+    // 1. 计算父节点 / level / is_root
+    let realParentId = form.parent_id || null
+    let newLevel = 1
+    let newIsRoot = true
+
+    if (realParentId) {
+      const parent = allTableData.value.find(o => o.id === realParentId)
+      if (parent) {
+        newLevel = (Number(parent.level) || 1) + 1
+        newIsRoot = false
+      } else {
+        // 父节点找不到 → 视为根
+        realParentId = null
+        newLevel = 1
+        newIsRoot = true
+      }
+    }
+
+    // 2. ⭐ 客户/子账号不能建根节点
+    if (isCustomer && newLevel === 1) {
+      ElMessage.warning('您不能在根层级创建组织')
+      saving.value = false
+      return
+    }
+
+    // 3. 计算 customer_id
+    let newCustomerId = null
+    if (realParentId) {
+      const parent = allTableData.value.find(o => o.id === realParentId)
+      newCustomerId = parent?.customer_id || null
+    }
+    if (!newCustomerId && isCustomer && myCustomerId.value) {
+      newCustomerId = myCustomerId.value
+    }
+
+    // 4. 提前查车辆（编辑时用）
     let oldName = ''
     let vehicleIdsToSync = []
     if (isEdit.value) {
       const oldRow = allTableData.value.find(r => r.id === form.id)
       oldName = oldRow?.name || ''
-      // 用内存里的 allVehicles 按名字精确匹配
       vehicleIdsToSync = allVehicles.value
         .filter(v => v.org === oldName)
         .map(v => v.id)
     }
 
-    const realParentId = form.parent_id === ROOT_KEY ? null : form.parent_id
+    // 5. 构造 payload
     const payload = {
       name: form.name,
       code: form.code || null,
       description: form.description || null,
       parent_id: realParentId,
+      level: newLevel,
+      is_root: newIsRoot,
+      customer_id: newCustomerId,
       updated_at: new Date().toISOString(),
     }
 
     if (isEdit.value) {
-      // ① 更新组织
+      // 更新
       const { error } = await supabase.from('organizations').update(payload).eq('id', form.id)
       if (error) throw error
 
-      // ② 名字变了 → 用 id 精确同步车辆归属
+      // ⭐ 如果 level 或 parent 变了 → 级联更新子节点 level
+      const oldRow = allTableData.value.find(r => r.id === form.id)
+      const oldLevel = Number(oldRow?.level) || 1
+      const oldParentId = oldRow?.parent_id || null
+      if (oldLevel !== newLevel || oldParentId !== realParentId) {
+        await cascadeUpdateLevels(form.id, newLevel)
+      }
+
+      // 名字变了 → 同步车辆
       if (oldName && oldName !== form.name && vehicleIdsToSync.length > 0) {
         const { error: syncErr } = await supabase
           .from('vehicles')
@@ -342,7 +423,8 @@ const saveOrg = async () => {
     } else {
       payload.created_at = new Date().toISOString()
       payload.status = 1
-      if (isCustomer) payload.owner_account = myAccount
+      payload.owner_account = isAdmin ? null : myAccount
+
       const { error } = await supabase.from('organizations').insert(payload)
       if (error) throw error
       ElMessage.success('组织新增成功')
@@ -427,7 +509,6 @@ const openAssignDialog = async (row) => {
   await loadVehiclesForAssign(row)
 }
 
-// ⭐ 每次打开都从数据库拉最新数据
 const loadVehiclesForAssign = async (orgRow) => {
   assignLoading.value = true
   try {
@@ -447,7 +528,6 @@ const loadVehiclesForAssign = async (orgRow) => {
     vehiclePool.value = list
     selectedVehicleIds.value = list.filter(v => v.org === orgRow.name).map(v => v.id)
 
-    // 打开弹窗时也刷新一次组织信息，保证名字是最新的
     const latestOrg = allTableData.value.find(o => o.id === orgRow.id)
     if (latestOrg && latestOrg.name !== orgRow.name) {
       assignTargetOrg.value = latestOrg
@@ -498,7 +578,6 @@ const toggleAllVehicles = () => {
   }
 }
 
-// ⭐ 车辆归属标签：用最新的组织名比对
 const getVehicleOrgLabel = (v) => {
   if (!v.org) return null
   const latestTarget = allTableData.value.find(o => o.id === assignTargetOrg.value?.id)
@@ -832,7 +911,6 @@ onBeforeUnmount(() => {
             clearable
             style="width: 100%"
           >
-            <el-option :label="rootNodeName" :value="ROOT_KEY" />
             <el-option
               v-for="o in parentOptions"
               :key="o.id"

@@ -328,36 +328,12 @@ const myAccount = currentUser.masterAccount || currentUser.account || ''
 const myPhone = currentUser.masterPhone || currentUser.phone || ''
 const myCustomerId = ref(currentUser.customerId || null)
 
-// ⭐ 子账号机构名（二级机构才有值）
-const myOrgName = ref(null)
-
 const loadMyCustomerId = async () => {
   if (!isCustomer || myCustomerId.value || !myPhone) return
   try {
     const { data } = await supabase.from('customers').select('id').eq('phone', myPhone).maybeSingle()
     if (data) myCustomerId.value = data.id
   } catch (e) { }
-}
-
-// ⭐ 只有二级机构子账号才需要反查 org 名
-const loadMyOrgName = async () => {
-  if (!isCustomer || !isSubAccount) return
-  if (!currentUser.orgId) return    // 一级机构没有 orgId，跳过
-  try {
-    const { data } = await supabase
-      .from('organizations')
-      .select('name')
-      .eq('id', currentUser.orgId)
-      .maybeSingle()
-    if (data?.name) {
-      myOrgName.value = String(data.name).trim()
-      console.log('[route] ✅ 子账号挂二级机构:', myOrgName.value)
-    } else {
-      console.warn('[route] ⚠️ organizations 表查不到 orgId =', currentUser.orgId)
-    }
-  } catch (e) {
-    console.error('[route] 反查机构失败', e)
-  }
 }
 
 // ============================================================
@@ -432,31 +408,34 @@ const onDrop = (index) => {
 const formatDateTime = (d) => d ? dayjs(d).format('YYYY-MM-DD HH:mm:ss') : '--'
 
 // ============================================================
-// ⭐⭐ 数据隔离
-//    管理员                  → 无过滤
-//    子账号（orgId 为空）    → 一级机构 → 等同主账号（owner_account）
-//    子账号（orgId 有值）    → 二级机构 → 只看本机构（org）
-//    主账号 / 客户           → owner_account = 我的主账号
+// ⭐⭐ 数据隔离（按 orgLevel 判断）
+//    管理员                    → 无过滤
+//    子账号（orgLevel=1）      → 等同主账号（owner_account）
+//    子账号（orgLevel>=2）     → 只看本机构（org）
+//    主账号 / 客户             → owner_account
 // ============================================================
 const applyIsolation = (q) => {
   if (isAdmin) return q
 
   if (isSubAccount) {
+    const level = Number(currentUser.orgLevel) || 1
+    const orgName = String(currentUser.orgName || '').trim()
+
     // ① 一级机构子账号 → 等同主账号
-    if (!currentUser.orgId) {
+    if (level === 1) {
       console.log('[route] 子账号挂一级机构 → 等同主账号，owner =', myAccount)
       if (myAccount) return q.eq('owner_account', myAccount)
       return q.eq('owner_account', '__NO_PERMISSION__')
     }
 
-    // ② 二级机构子账号 → 只看本机构
-    if (myOrgName.value) {
-      console.log('[route] 子账号挂二级机构 → 隔离 org =', myOrgName.value)
-      return q.eq('org', myOrgName.value)
+    // ② 二级及以下 → 按 org 名隔离
+    if (orgName) {
+      console.log('[route] 子账号挂 level=' + level + ' 机构 → 隔离 org =', orgName)
+      return q.eq('org', orgName)
     }
 
-    // ③ 机构名反查失败 → 返回空集
-    console.warn('[route] ⚠️ 二级机构子账号 org 名反查失败，返回空集')
+    // ③ 兜底：orgName 缺失 → 返回空集
+    console.warn('[route] ⚠️ 子账号 level=' + level + ' 但 orgName 缺失，返回空集')
     return q.eq('id', '00000000-0000-0000-0000-000000000000')
   }
 
@@ -516,7 +495,7 @@ const updateTabCounts = async () => {
 
 const loadOrgOptions = async () => {
   try {
-    let q = supabase.from('organizations').select('name').order('id')
+    let q = supabase.from('organizations').select('name').order('level', { ascending: true }).order('id', { ascending: true })
     if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
     const { data } = await q
     orgOptions.value = (data || []).map(o => o.name)
@@ -664,7 +643,6 @@ onMounted(async () => {
   document.addEventListener('keydown', onEscKeydown)
   if (isCustomer) {
     await loadMyCustomerId()
-    await loadMyOrgName()     // ⭐ 只有二级机构才反查
   }
   await loadOrgOptions()
   await fetchData()

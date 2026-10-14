@@ -571,7 +571,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -579,8 +579,9 @@ import {
   MapLocation, Clock, Timer, Aim, Search, Close, ArrowDown, Select, InfoFilled
 } from '@element-plus/icons-vue'
 import { supabase } from '@/utils/supabase'
+
 // ============================================================
-// ⭐ 当前登录用户 & 隔离
+// 当前登录用户 & 隔离
 // ============================================================
 const currentUser = (() => {
   try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
@@ -588,7 +589,39 @@ const currentUser = (() => {
 })()
 const isAdmin = currentUser.role === 'admin'
 const isCustomer = !isAdmin
+const isSubAccount = !!currentUser.isSubAccount
 const myAccount = currentUser.masterAccount || currentUser.account || ''
+
+// ⭐ 子账号机构信息
+const myOrgName = ref(isSubAccount ? String(currentUser.orgName || '').trim() || null : null)
+const myOrgLevel = ref(isSubAccount ? (Number(currentUser.orgLevel) || 1) : null)
+
+// 一级机构子账号 → 等同主账号
+const isRootOrgSubAccount = computed(() =>
+  isSubAccount && Number(myOrgLevel.value) === 1
+)
+// 二级及以下 → 按 org 隔离
+const needOrgFilter = computed(() =>
+  isCustomer && isSubAccount && Number(myOrgLevel.value) >= 2
+)
+
+// 兜底反查
+const loadMyOrgInfo = async () => {
+  if (!isCustomer || !isSubAccount) return
+  if (myOrgName.value && myOrgLevel.value) return
+  if (!currentUser.orgId) return
+  try {
+    const { data } = await supabase
+      .from('organizations')
+      .select('name, level')
+      .eq('id', currentUser.orgId)
+      .maybeSingle()
+    if (data) {
+      if (data.name) myOrgName.value = String(data.name).trim()
+      myOrgLevel.value = Number(data.level) || 1
+    }
+  } catch (e) { }
+}
 
 const router = useRouter()
 
@@ -730,12 +763,24 @@ const removeFence = (type, id) => {
 }
 
 // ============================================
-// 加载围栏列表
+// ⭐ 加载围栏列表（按 orgLevel 隔离）
 // ============================================
 const loadFenceList = async () => {
   try {
-    let q = supabase.from('ele_fences').select('id, name, gfid').order('updated_at', { ascending: false })
-    if (isCustomer) q = q.eq('owner_account', myAccount)
+    let q = supabase
+      .from('ele_fences')
+      .select('id, name, gfid, org')
+      .order('updated_at', { ascending: false })
+
+    if (isCustomer) {
+      q = q.eq('owner_account', myAccount)
+      // ⭐⭐⭐ 二级机构子账号：只看本机构的围栏
+      if (needOrgFilter.value && myOrgName.value) {
+        q = q.eq('org', myOrgName.value)
+        console.log('[AlertSetting] 子账号挂 level=' + myOrgLevel.value + ' 机构 → 隔离围栏 org =', myOrgName.value)
+      }
+    }
+
     const { data, error } = await q
     if (error) throw error
     fenceList.value = data || []
@@ -747,6 +792,9 @@ const loadFenceList = async () => {
 
 // ============================================
 // 加载已保存的提醒设置
+// ⚠️ 提醒配置是"客户级"共享的（一个客户一套），不按机构隔离
+//    ele_fence_alerts 表没有 org 字段，主账号和一级机构子账号等价
+//    二级机构子账号目前会读到主账号的配置（保持旧行为）
 // ============================================
 const loadAlertSettings = async () => {
   try {
@@ -814,6 +862,7 @@ const goToFenceSetting = () => {
 
 // ============================================
 // ⭐ 保存（支持全域提醒：不选围栏弹确认）
+// ⚠️ 提醒配置是"客户级"共享的，不按机构隔离（保持旧行为）
 // ============================================
 const handleSave = async () => {
   // ⭐ 超速：未选围栏 → 弹确认框
@@ -927,6 +976,7 @@ const handleReset = () => {
 }
 
 onMounted(async () => {
+  if (isCustomer && isSubAccount) await loadMyOrgInfo()
   await loadFenceList()
   await loadAlertSettings()
 })

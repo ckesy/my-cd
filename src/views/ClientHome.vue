@@ -69,32 +69,25 @@ const loadData = async () => {
       query = query.eq('customer_id', customerId)
 
       // ============================================================
-      // ⭐⭐ 子账号隔离
-      //   org_id 为空 → 一级机构 → 等同主账号，不加 org 过滤
-      //   org_id 有值 → 二级机构 → 按 org 过滤
+      // ⭐⭐ 子账号隔离（按 orgLevel 判断）
+      //   orgLevel === 1  → 一级机构 → 等同主账号（不加 org 过滤）
+      //   orgLevel >= 2   → 二级/多级机构 → 按 org 名隔离
       // ============================================================
       if (currentUser.isSubAccount) {
-        const subOrgId = currentUser.orgId
+        const level = Number(currentUser.orgLevel) || 1
+        const orgName = String(currentUser.orgName || '').trim()
 
-        if (subOrgId) {
-          // 二级机构：反查 org 名，按 org 过滤
-          const { data: orgData } = await supabase
-            .from('organizations')
-            .select('name')
-            .eq('id', subOrgId)
-            .maybeSingle()
-
-          if (orgData?.name) {
-            console.log('[ClientHome] 子账号挂二级机构 → 隔离 org =', orgData.name)
-            query = query.eq('org', orgData.name)
-          } else {
-            console.warn('[ClientHome] 子账号组织不存在:', subOrgId)
+        if (level === 1) {
+          console.log('[ClientHome] 子账号挂一级机构 → 等同主账号')
+          // 不加 org 过滤
+        } else {
+          if (!orgName) {
+            console.warn('[ClientHome] 子账号 level=' + level + ' 但 orgName 为空，返回空')
             setEmpty()
             return
           }
-        } else {
-          // ⭐ 一级机构：等同主账号，不加 org 过滤
-          console.log('[ClientHome] 子账号挂一级机构 → 等同主账号')
+          console.log('[ClientHome] 子账号挂 level=' + level + ' 机构 → 隔离 org =', orgName)
+          query = query.eq('org', orgName)
         }
       }
     }

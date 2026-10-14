@@ -310,29 +310,45 @@ const currentUser = (() => {
 const isAdmin = currentUser.role === 'admin'
 const isCustomer = !isAdmin
 const isSubAccount = !!currentUser.isSubAccount
+// ⭐ 子账号统一用主账号的 owner_account 过滤
 const myAccount = currentUser.masterAccount || currentUser.account || ''
 const myPhone = currentUser.masterPhone || currentUser.phone || ''
 const myCustomerId = ref(currentUser.customerId || null)
+
+// ⭐ 子账号机构名（二级机构才有值）
 const myOrgName = ref(null)
+
+// ⭐ 当前客户根节点
+const customerRootOrg = ref(null)
 
 const loadMyCustomerId = async () => {
   if (!isCustomer || myCustomerId.value || !myPhone) return
   try {
     const { data } = await supabase.from('customers').select('id, name').eq('phone', myPhone).maybeSingle()
-    if (data) {
-      myCustomerId.value = data.id
-      // ⭐ 缓存客户名，用于机构下拉的虚拟根节点
-      if (data.name && !currentUser.customerName) {
-        currentUser.customerName = data.name
-      }
-    }
+    if (data) myCustomerId.value = data.id
   } catch (e) { }
 }
+
+// ⭐ 一级机构子账号不需要反查；二级才反查
 const loadMyOrgName = async () => {
-  if (!isCustomer || !isSubAccount || !currentUser.orgId) return
+  if (!isCustomer || !isSubAccount) return
+  // 一级机构（orgLevel=1）：等同主账号，不需要 org 名
+  if (Number(currentUser.orgLevel) === 1) {
+    console.log('[role] 子账号挂一级机构 → 等同主账号')
+    return
+  }
+  // 二级机构：反查机构名
+  if (!currentUser.orgId) return
   try {
-    const { data } = await supabase.from('organizations').select('name').eq('id', currentUser.orgId).maybeSingle()
-    if (data) myOrgName.value = data.name
+    const { data } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', currentUser.orgId)
+      .maybeSingle()
+    if (data?.name) {
+      myOrgName.value = String(data.name).trim()
+      console.log('[role] ✅ 子账号挂二级机构:', myOrgName.value)
+    }
   } catch (e) { }
 }
 
@@ -351,36 +367,18 @@ const searchForm = reactive({ name: '' })
 // 原始组织列表
 const orgList = ref([])
 
-// ⭐ 排序后的机构列表：客户公司名 → 根 → 子
+// ⭐ 排序后的机构列表（根节点优先，然后按 level 排）
 const sortedOrgList = computed(() => {
   const list = [...orgList.value]
-  const roots = list.filter(o => !o.parent_id)
-  const children = list.filter(o => o.parent_id)
-  const sorted = [...roots, ...children]
-
-  // 客户公司名（虚拟根），排第一
-  const customerName =
-    currentUser.customerName ||
-    currentUser.masterName ||
-    currentUser.name ||
-    ''
-
-  if (customerName) {
-    const existedIdx = sorted.findIndex(o => o.name === customerName)
-    if (existedIdx >= 0) {
-      const [existed] = sorted.splice(existedIdx, 1)
-      sorted.unshift(existed)
-    } else {
-      sorted.unshift({
-        id: '__customer_root__',
-        name: customerName,
-        parent_id: null,
-        _virtual: true,
-      })
-    }
-  }
-
-  return sorted
+  const roots = list.filter(o => o.is_root === true || Number(o.level) === 1)
+  const nonRoots = list.filter(o => !(o.is_root === true || Number(o.level) === 1))
+  nonRoots.sort((a, b) => {
+    const la = Number(a.level) || 2
+    const lb = Number(b.level) || 2
+    if (la !== lb) return la - lb
+    return (a.id || 0) - (b.id || 0)
+  })
+  return [...roots, ...nonRoots]
 })
 
 // 表格设置
@@ -462,11 +460,28 @@ const isAdminRole = (row) => {
 }
 
 // ============================================================
-// 数据隔离
+// ⭐⭐ 数据隔离
+//    管理员                  → 无过滤
+//    一级机构子账号          → 等同主账号
+//    二级及以下机构子账号    → 只看本机构
+//    主账号 / 客户           → owner_account
 // ============================================================
 const applyIsolation = (q) => {
   if (isAdmin) return q
-  if (isSubAccount && myOrgName.value) return q.eq('org', myOrgName.value)
+
+  if (isSubAccount) {
+    // 一级机构子账号 → 等同主账号
+    if (Number(currentUser.orgLevel) === 1) {
+      if (myAccount) return q.eq('owner_account', myAccount)
+      return q.eq('owner_account', '__NO_PERMISSION__')
+    }
+    // 二级机构子账号 → 按 org 名隔离
+    if (myOrgName.value) return q.eq('org', myOrgName.value)
+    console.warn('[role] ⚠️ 二级机构子账号 org 名未就绪，返回空集')
+    return q.eq('id', -1)
+  }
+
+  // 主账号 / 客户
   if (myAccount) return q.eq('owner_account', myAccount)
   return q.eq('owner_account', '__NO_PERMISSION__')
 }
@@ -504,11 +519,19 @@ const fetchRoles = async () => {
 // ============================================================
 const loadOrgOptions = async () => {
   try {
-    let q = supabase.from('organizations').select('id, name, parent_id').order('id')
+    let q = supabase
+      .from('organizations')
+      .select('id, name, parent_id, level, is_root, owner_account')
+      .order('level', { ascending: true })
+      .order('id', { ascending: true })
     if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
     const { data, error } = await q
     if (error) throw error
     orgList.value = data || []
+
+    // ⭐ 缓存客户根节点
+    customerRootOrg.value = orgList.value.find(o => o.is_root === true || Number(o.level) === 1) || null
+    console.log('[role] 客户根节点:', customerRootOrg.value?.name)
   } catch (e) {
     console.warn('[role] 加载组织失败', e)
   }
@@ -540,8 +563,8 @@ const handleAdd = () => {
   isEdit.value = false
   form.id = null
   form.name = ''
-  // ⭐ 默认填充客户公司名（虚拟根）
-  form.org = currentUser.customerName || currentUser.masterName || currentUser.name || ''
+  // ⭐ 默认选客户根节点名（真实 root）
+  form.org = customerRootOrg.value?.name || ''
   form.description = ''
   form.status = 1
   formVisible.value = true

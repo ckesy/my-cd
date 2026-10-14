@@ -208,8 +208,6 @@ const routePermissionMap = {
 
 const isPermitted = computed(() => {
   if (clientPerms.value === null) return true
-  // ⭐ 空权限数组也视为"不过滤"（兼容旧账号还没配权限）
-  if (Array.isArray(clientPerms.value) && clientPerms.value.length === 0) return true
   if (route.path === '/dashboard' && !route.params.page) return true
   const permKey = routePermissionMap[route.path]
   if (!permKey) return true

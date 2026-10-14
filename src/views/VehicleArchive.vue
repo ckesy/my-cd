@@ -14,22 +14,27 @@ import dayjs from 'dayjs'
 const formatDateTime = (d) => d ? dayjs(d).format('YYYY-MM-DD HH:mm:ss') : '--'
 
 // ============================================================
-// ⭐ 当前登录用户 & 权限判断
+// 当前登录用户
 // ============================================================
 const currentUser = (() => {
   try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
   catch { return {} }
 })()
 const isAdmin = currentUser.role === 'admin'
-const isCustomer = !isAdmin                    // ⭐ 非管理员一律按客户处理
+const isCustomer = !isAdmin
 const isSubAccount = !!currentUser.isSubAccount
+// ⭐ 子账号也用主账号的 owner_account
 const myAccount = currentUser.masterAccount || currentUser.account || ''
 const myPhone = currentUser.masterPhone || currentUser.phone || ''
 
-// ⭐ 客户 ID（优先用 LoginView 已查好的）
 const myCustomerId = ref(currentUser.customerId || null)
-// ⭐ 子账号所属组织名
-const myOrgName = ref(null)
+
+// ⭐⭐⭐ 子账号机构名 / 层级（直接来自 currentUser，不再查库）
+//   orgLevel = 1  → 一级机构 → 等同主账号
+//   orgLevel >= 2 → 二级机构 → 只看本机构
+// ============================================================
+const myOrgName = ref(isSubAccount ? String(currentUser.orgName || '').trim() || null : null)
+const myOrgLevel = ref(isSubAccount ? (Number(currentUser.orgLevel) || 1) : null)
 
 const loadMyCustomerId = async () => {
   if (!isCustomer) return
@@ -42,17 +47,35 @@ const loadMyCustomerId = async () => {
   } catch (e) { }
 }
 
-const loadMyOrgName = async () => {
+// ⭐ 兜底：currentUser 里没有 orgName/orgLevel 时，去 organizations 反查
+const loadMyOrgInfo = async () => {
   if (!isCustomer || !isSubAccount) return
+  if (myOrgName.value && myOrgLevel.value) return
   if (!currentUser.orgId) return
   try {
     const { data } = await supabase
-      .from('organizations').select('name').eq('id', currentUser.orgId).maybeSingle()
-    if (data) myOrgName.value = data.name
+      .from('organizations')
+      .select('name, level')
+      .eq('id', currentUser.orgId)
+      .maybeSingle()
+    if (data) {
+      if (data.name) myOrgName.value = String(data.name).trim()
+      myOrgLevel.value = Number(data.level) || 1
+    }
   } catch (e) {
-    console.warn('[VehicleArchive] 查询所属组织失败:', e)
+    console.warn('[VehicleArchive] 反查机构失败:', e)
   }
 }
+
+// ⭐ 判断子账号是否属于一级机构
+const isRootOrgSubAccount = computed(() => {
+  return isSubAccount && Number(myOrgLevel.value) === 1
+})
+
+// ⭐ 判断子账号是否需要按 org 隔离
+const needOrgFilter = computed(() => {
+  return isCustomer && isSubAccount && Number(myOrgLevel.value) >= 2
+})
 
 // ============================================================
 // 缓存
@@ -85,20 +108,18 @@ const restoreState = () => {
 const saveState = () => {
   sessionStorage.setItem(STATE_KEY, JSON.stringify({ ...searchForm, currentPage: currentPage.value, pageSize: pageSize.value }))
 }
-const restoreData = () => {
-  try {
-    const d = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null')
-    if (d) { tableData.value = d.tableData || []; total.value = d.total || 0; return true }
-  } catch (e) { }
-  return false
-}
 const saveData = () => {
   sessionStorage.setItem(CACHE_KEY, JSON.stringify({ tableData: tableData.value, total: total.value }))
 }
 
+// ⭐ 加载机构下拉（按 level 排序）
 const loadOrgOptions = async () => {
   try {
-    let query = supabase.from('organizations').select('name').order('id')
+    let query = supabase
+      .from('organizations')
+      .select('name')
+      .order('level', { ascending: true })
+      .order('id', { ascending: true })
     if (isCustomer) query = query.eq('owner_account', myAccount)
     const { data } = await query
     orgOptions.value = (data || []).map(o => o.name)
@@ -106,7 +127,7 @@ const loadOrgOptions = async () => {
 }
 
 // ============================================================
-// 密度（持久化）/ 列设置 / 全屏
+// 密度 / 列设置 / 全屏
 // ============================================================
 const tableSize = ref(localStorage.getItem(DENSITY_KEY) || 'default')
 
@@ -279,7 +300,8 @@ const syncFromVehiclesToDrivers = async () => {
     let vq = supabase.from('vehicles').select('plate, driver')
     if (isCustomer && myCustomerId.value) {
       vq = vq.eq('customer_id', myCustomerId.value)
-      if (isSubAccount && myOrgName.value) vq = vq.eq('org', myOrgName.value)
+      // ⭐ 只有二级机构才按 org 过滤
+      if (needOrgFilter.value && myOrgName.value) vq = vq.eq('org', myOrgName.value)
     }
     const { data: vehicles } = await vq
     const plateToDrivers = {}
@@ -334,12 +356,11 @@ const exportData = async () => {
   try {
     let q = supabase.from('vehicles').select('*').order('updated_at', { ascending: false })
 
-    // ⭐⭐⭐ 客户隔离：按 customer_id 过滤
     if (isCustomer) {
       if (!myCustomerId.value) { ElMessage.warning('未关联客户，无法导出'); return }
       q = q.eq('customer_id', myCustomerId.value)
-      // ⭐ 子账号：按所属组织过滤
-      if (isSubAccount) {
+      // ⭐ 只有二级机构才按 org 过滤
+      if (needOrgFilter.value) {
         if (!myOrgName.value) { ElMessage.warning('未关联组织，无法导出'); return }
         q = q.eq('org', myOrgName.value)
       }
@@ -384,14 +405,14 @@ const exportData = async () => {
 // 获取数据
 // ============================================================
 const fetchVehicles = async () => {
-  // ⭐⭐⭐ 客户视角必须有 customerId，否则返回空（防止越权）
+  // ⭐ 客户视角必须有 customerId
   if (isCustomer && !myCustomerId.value) {
     console.warn('[VehicleArchive] 客户账号未关联 customers，返回空')
     tableData.value = []; total.value = 0; saveData(); return
   }
-  // ⭐ 子账号必须有组织名，否则返回空
-  if (isCustomer && isSubAccount && !myOrgName.value) {
-    console.warn('[VehicleArchive] 子账号组织未查到，返回空')
+  // ⭐ 二级机构子账号必须有 orgName
+  if (needOrgFilter.value && !myOrgName.value) {
+    console.warn('[VehicleArchive] 二级机构子账号 orgName 缺失，返回空')
     tableData.value = []; total.value = 0; saveData(); return
   }
 
@@ -399,11 +420,13 @@ const fetchVehicles = async () => {
   try {
     let q = supabase.from('vehicles').select('*', { count: 'exact' }).order('updated_at', { ascending: false })
 
-    // ⭐⭐⭐ 客户隔离
     if (isCustomer) {
       q = q.eq('customer_id', myCustomerId.value)
-      // ⭐ 子账号：只看所属组织下的车辆
-      if (isSubAccount) {
+      // ⭐⭐⭐ 子账号隔离：level=1 等同主账号；level>=2 按 org
+      if (isRootOrgSubAccount.value) {
+        console.log('[VehicleArchive] 子账号挂一级机构 → 等同主账号')
+      } else if (needOrgFilter.value) {
+        console.log('[VehicleArchive] 子账号挂 level=' + myOrgLevel.value + ' 机构 → 隔离 org =', myOrgName.value)
         q = q.eq('org', myOrgName.value)
       }
     }
@@ -468,12 +491,11 @@ const handleFileRemove = () => { uploadFile.value = null; uploadFileName.value =
 const confirmImport = async () => {
   if (!uploadFile.value) { ElMessage.warning('请先选择文件'); return }
 
-  // ⭐⭐⭐ 客户/子账号导入前必须有 customerId
   if (isCustomer && !myCustomerId.value) {
     ElMessage.error('未关联客户，无法导入')
     return
   }
-  if (isCustomer && isSubAccount && !myOrgName.value) {
+  if (needOrgFilter.value && !myOrgName.value) {
     ElMessage.error('未关联组织，无法导入')
     return
   }
@@ -511,11 +533,10 @@ const confirmImport = async () => {
         purchase_date: purchaseDate || null, insurance_date: insuranceDate || null,
         created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
       }
-      // ⭐⭐⭐ 客户导入：自动写入 customer_id
       if (isCustomer) {
         obj.customer_id = myCustomerId.value
-        // ⭐ 子账号导入：自动写入 org
-        if (isSubAccount) {
+        // ⭐ 只有二级机构导入时才写 org
+        if (needOrgFilter.value && myOrgName.value) {
           obj.org = myOrgName.value
         }
       }
@@ -525,12 +546,11 @@ const confirmImport = async () => {
     if (errors.length) { importErrors.value = errors.slice(0, 20); ElMessage.error(`存在 ${errors.length} 条错误`); return }
     if (!validData.length) { ElMessage.warning('没有有效数据'); return }
 
-    // ⭐⭐⭐ 查重也要按客户隔离
     const existing = new Set()
     let eq = supabase.from('vehicles').select('plate').in('plate', validData.map(v => v.plate))
     if (isCustomer) {
       eq = eq.eq('customer_id', myCustomerId.value)
-      if (isSubAccount) {
+      if (needOrgFilter.value && myOrgName.value) {
         eq = eq.eq('org', myOrgName.value)
       }
     }
@@ -540,12 +560,11 @@ const confirmImport = async () => {
     const upd = [], ins = []
     validData.forEach(item => existing.has(item.plate) ? upd.push(item) : ins.push(item))
 
-    // ⭐ 更新时也加隔离条件（防止跨客户更新）
     for (const item of upd) {
       let uq = supabase.from('vehicles').update(item).eq('plate', item.plate)
       if (isCustomer) {
         uq = uq.eq('customer_id', myCustomerId.value)
-        if (isSubAccount) uq = uq.eq('org', myOrgName.value)
+        if (needOrgFilter.value && myOrgName.value) uq = uq.eq('org', myOrgName.value)
       }
       const { error } = await uq
       if (error) throw error
@@ -572,18 +591,16 @@ onMounted(async () => {
   document.addEventListener('keydown', onEscKeydown)
   if (isCustomer) {
     await loadMyCustomerId()
-    await loadMyOrgName()
+    await loadMyOrgInfo()
   }
   await loadOrgOptions()
   restoreState()
-  // ⭐ 每次进入页面都主动拉取最新数据（不走缓存短路）
   await fetchVehicles()
 })
 
-// ⭐ 兼容 keep-alive 场景（若以后加了 keep-alive，切回 tab 也刷新）
 onActivated(async () => {
   if (isCustomer && !myCustomerId.value) await loadMyCustomerId()
-  if (isCustomer && isSubAccount && !myOrgName.value) await loadMyOrgName()
+  if (isCustomer && isSubAccount && (!myOrgName.value || !myOrgLevel.value)) await loadMyOrgInfo()
   await fetchVehicles()
 })
 

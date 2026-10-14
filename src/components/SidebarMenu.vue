@@ -99,9 +99,12 @@ const currentUser = (() => {
 })()
 
 // 客户端权限列表：null 表示不过滤（管理员或未登录 → 全部显示）
+// ⭐ 空数组也视为"不过滤"（保持向后兼容）
 const clientPerms = computed(() => {
   if (currentUser?.role !== 'customer') return null
-  return currentUser?.permissions?.client || []
+  const list = currentUser?.permissions?.client
+  if (!Array.isArray(list) || list.length === 0) return null  // ⭐ 空数组 / 非数组都全显示
+  return list
 })
 
 const hasPerm = (key) => {

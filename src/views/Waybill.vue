@@ -349,7 +349,7 @@ import { supabase } from '@/utils/supabase'
 const router = useRouter()
 
 // ============================================================
-// ⭐ 数据隔离
+// 数据隔离
 // ============================================================
 const currentUser = (() => {
   try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
@@ -357,7 +357,38 @@ const currentUser = (() => {
 })()
 const isAdmin = currentUser.role === 'admin'
 const isCustomer = !isAdmin
+const isSubAccount = !!currentUser.isSubAccount
 const myAccount = currentUser.masterAccount || currentUser.account || ''
+const myPhone = currentUser.masterPhone || currentUser.phone || ''
+
+// ⭐ 子账号机构信息
+const myOrgName = ref(isSubAccount ? String(currentUser.orgName || '').trim() || null : null)
+const myOrgLevel = ref(isSubAccount ? (Number(currentUser.orgLevel) || 1) : null)
+
+const isRootOrgSubAccount = computed(() =>
+  isSubAccount && Number(myOrgLevel.value) === 1
+)
+const needOrgFilter = computed(() =>
+  isCustomer && isSubAccount && Number(myOrgLevel.value) >= 2
+)
+
+// 兜底反查
+const loadMyOrgInfo = async () => {
+  if (!isCustomer || !isSubAccount) return
+  if (myOrgName.value && myOrgLevel.value) return
+  if (!currentUser.orgId) return
+  try {
+    const { data } = await supabase
+      .from('organizations')
+      .select('name, level')
+      .eq('id', currentUser.orgId)
+      .maybeSingle()
+    if (data) {
+      if (data.name) myOrgName.value = String(data.name).trim()
+      myOrgLevel.value = Number(data.level) || 1
+    }
+  } catch (e) {}
+}
 
 // ============================================================
 // 统计标签
@@ -400,13 +431,10 @@ const pageSize = ref(10)
 const currentPage = ref(1)
 
 // ============================================================
-// ⭐ 密度（内存变量，切页保持 / 刷新回默认）
+// 密度
 // ============================================================
 const tableSize = ref('default')
-
-const handleDensityChange = (cmd) => {
-  tableSize.value = cmd
-}
+const handleDensityChange = (cmd) => { tableSize.value = cmd }
 
 // ============================================================
 // 列设置
@@ -522,29 +550,28 @@ const getTotalCarryQuantity = (assignments) => {
   return total
 }
 
-// ============================================================
-// 展开控制
-// ============================================================
 const getRowClassName = ({ row }) => {
   if (getTotalItems(row.assignments) > 1) return 'has-multiple-assign'
   return ''
 }
 
-const handleExpandChange = (row, expandedRows) => {
-  // 保留
-}
+const handleExpandChange = (row, expandedRows) => { /* 保留 */ }
 
 // ============================================================
-// ⭐ 数据隔离（核心）
+// ⭐⭐ 数据隔离（含 org）
 // ============================================================
 const applyIsolation = (query) => {
   if (isAdmin) return query
   if (myAccount) {
     query = query.eq('owner_account', myAccount)
   }
+  // ⭐ 二级机构子账号：只看「指派到本机构」的运单（assigned_orgs 含本机构名）
+  //   兼容旧数据兜底：org 等于本机构名
+  if (needOrgFilter.value && myOrgName.value) {
+    query = query.or(`assigned_orgs.ilike.%${myOrgName.value}%,org.eq.${myOrgName.value}`)
+  }
   return query
 }
-
 // ============================================================
 // 数据获取
 // ============================================================
@@ -558,21 +585,11 @@ const fetchData = async () => {
 
     query = applyIsolation(query)
 
-    if (searchForm.waybillNo) {
-      query = query.ilike('waybill_no', '%' + searchForm.waybillNo + '%')
-    }
-    if (searchForm.receiveNo) {
-      query = query.ilike('receive_no', '%' + searchForm.receiveNo + '%')
-    }
-    if (searchForm.plate) {
-      query = query.ilike('vehicle', '%' + searchForm.plate + '%')
-    }
-    if (searchForm.driver) {
-      query = query.ilike('driver', '%' + searchForm.driver + '%')
-    }
-    if (searchForm.source) {
-      query = query.eq('source', searchForm.source)
-    }
+    if (searchForm.waybillNo) query = query.ilike('waybill_no', '%' + searchForm.waybillNo + '%')
+    if (searchForm.receiveNo) query = query.ilike('receive_no', '%' + searchForm.receiveNo + '%')
+    if (searchForm.plate) query = query.ilike('vehicle', '%' + searchForm.plate + '%')
+    if (searchForm.driver) query = query.ilike('driver', '%' + searchForm.driver + '%')
+    if (searchForm.source) query = query.eq('source', searchForm.source)
     if (dateRange.value && dateRange.value.length === 2) {
       const start = dateRange.value[0]
       const end = dateRange.value[1]
@@ -596,15 +613,18 @@ const fetchData = async () => {
 }
 
 // ============================================================
-// ⭐ 更新统计（含隔离）
+// 更新统计（含隔离）
 // ============================================================
 const updateStats = async () => {
   try {
     const buildBase = () => {
-      let q = supabase.from('waybills').select('*', { count: 'exact', head: true })
-      if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
-      return q
-    }
+  let q = supabase.from('waybills').select('*', { count: 'exact', head: true })
+  if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
+  if (needOrgFilter.value && myOrgName.value) {
+    q = q.or(`assigned_orgs.ilike.%${myOrgName.value}%,org.eq.${myOrgName.value}`)
+  }
+  return q
+}
 
     const { count: all } = await buildBase()
 
@@ -633,13 +653,8 @@ const updateStats = async () => {
 // ============================================================
 const statusTagType = (status) => {
   const map = {
-    '待接单': 'info',
-    '待装车': 'warning',
-    '装车中': 'primary',
-    '装车完成': 'success',
-    '已发车': 'success',
-    '已完成': 'success',
-    '已取消': 'danger',
+    '待接单': 'info', '待装车': 'warning', '装车中': 'primary',
+    '装车完成': 'success', '已发车': 'success', '已完成': 'success', '已取消': 'danger',
   }
   return map[status] || 'info'
 }
@@ -647,23 +662,13 @@ const statusTagType = (status) => {
 // ============================================================
 // 搜索 / 重置 / 刷新
 // ============================================================
-const handleSearch = () => {
-  currentPage.value = 1
-  fetchData()
-}
-
+const handleSearch = () => { currentPage.value = 1; fetchData() }
 const handleReset = () => {
-  searchForm.org = ''
-  searchForm.source = ''
-  searchForm.waybillNo = ''
-  searchForm.receiveNo = ''
-  searchForm.plate = ''
-  searchForm.driver = ''
+  Object.assign(searchForm, { org: '', source: '', waybillNo: '', receiveNo: '', plate: '', driver: '' })
   dateRange.value = []
   currentPage.value = 1
   fetchData()
 }
-
 const handleRefresh = async () => {
   await fetchData()
   ElMessage.success({ message: '已刷新', duration: 1200 })
@@ -673,29 +678,16 @@ const handleRefresh = async () => {
 // 导出
 // ============================================================
 const handleExport = () => {
-  if (!tableData.value.length) {
-    ElMessage.warning('没有数据可导出')
-    return
-  }
+  if (!tableData.value.length) { ElMessage.warning('没有数据可导出'); return }
   const rows = tableData.value.map(r => ({
-    '运单编号': r.waybill_no,
-    '任务名称': r.task_name || '',
-    '物流状态': r.status,
-    '装货地': r.pickup,
-    '卸货地': r.delivery,
-    '计划装货时间': r.pickup_time || '',
-    '计划送达时间': r.plan_time || '',
-    '货物名称': r.cargo,
-    '货物数量': r.quantity,
-    '运费': r.freight,
-    '承运车辆': r.vehicle || '',
-    '承运司机': r.driver || '',
-    '承运数量': r.carry_quantity || 0,
-    '接单编号': r.receive_no || '',
-    '运单来源': r.source || '',
-    '创建时间': r.create_time || '',
+    '运单编号': r.waybill_no, '任务名称': r.task_name || '', '物流状态': r.status,
+    '装货地': r.pickup, '卸货地': r.delivery,
+    '计划装货时间': r.pickup_time || '', '计划送达时间': r.plan_time || '',
+    '货物名称': r.cargo, '货物数量': r.quantity, '运费': r.freight,
+    '承运车辆': r.vehicle || '', '承运司机': r.driver || '',
+    '承运数量': r.carry_quantity || 0, '接单编号': r.receive_no || '',
+    '运单来源': r.source || '', '创建时间': r.create_time || '',
   }))
-
   const headers = Object.keys(rows[0])
   const csv = [
     headers.join(','),
@@ -704,7 +696,6 @@ const handleExport = () => {
       return v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v
     }).join(','))
   ].join('\n')
-
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -718,47 +709,39 @@ const handleExport = () => {
 // ============================================================
 // 分页
 // ============================================================
-const handleSizeChange = (val) => {
-  pageSize.value = val
-  currentPage.value = 1
-  fetchData()
-}
-const handleCurrentChange = (val) => {
-  currentPage.value = val
-  fetchData()
-}
+const handleSizeChange = (val) => { pageSize.value = val; currentPage.value = 1; fetchData() }
+const handleCurrentChange = (val) => { currentPage.value = val; fetchData() }
 
 // ============================================================
 // 查看 / 删除
 // ============================================================
 const handleView = (row) => {
-  router.push({
-    path: '/waybill/detail',
-    query: { waybill_no: row.waybill_no }
-  })
+  router.push({ path: '/waybill/detail', query: { waybill_no: row.waybill_no } })
 }
 
 const handleDelete = async (row) => {
   try {
     await ElMessageBox.confirm('确定删除运单 ' + row.waybill_no + ' 吗？', '提示', { type: 'warning' })
     let q = supabase.from('waybills').delete().eq('id', row.id)
-    if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
+if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
+if (needOrgFilter.value && myOrgName.value) {
+  q = q.or(`assigned_orgs.ilike.%${myOrgName.value}%,org.eq.${myOrgName.value}`)
+}
     const { error } = await q
     if (error) throw error
     ElMessage.success('删除成功')
     fetchData()
   } catch (err) {
-    if (err !== 'cancel') {
-      ElMessage.error('删除失败：' + err.message)
-    }
+    if (err !== 'cancel') ElMessage.error('删除失败：' + err.message)
   }
 }
 
 // ============================================================
 // 生命周期
 // ============================================================
-onMounted(() => {
+onMounted(async () => {
   document.addEventListener('keydown', onEscKeydown)
+  if (isCustomer && isSubAccount) await loadMyOrgInfo()
   fetchData()
 })
 

@@ -23,16 +23,22 @@ const loadStats = async () => {
   loading.value = true
   try {
     const [
-      { count: customerCount },
-      { count: vehicleCount },
-      { count: fuelCount },
-      { count: newEnergyCount },
-    ] = await Promise.all([
-      supabase.from('customers').select('*', { count: 'exact', head: true }),
-      supabase.from('vehicles').select('*', { count: 'exact', head: true }),
-      supabase.from('vehicles').select('*', { count: 'exact', head: true }).eq('fuel_type', '燃油'),
-      supabase.from('vehicles').select('*', { count: 'exact', head: true }).eq('fuel_type', '新能源'),
-    ])
+  { count: customerCount },
+  { count: vehicleCount },
+  { count: fuelCount },
+  { count: newEnergyCount },
+] = await Promise.all([
+  supabase.from('customers').select('*', { count: 'exact', head: true }),
+  supabase.from('vehicles').select('*', { count: 'exact', head: true }),
+  // ⭐ 燃油 = 燃油车 + 燃气车
+  supabase.from('vehicles')
+    .select('*', { count: 'exact', head: true })
+    .in('fuel_type', ['燃油车', '燃气车']),
+  // ⭐ 新能源 = 纯电动 + 氢燃料
+  supabase.from('vehicles')
+    .select('*', { count: 'exact', head: true })
+    .in('fuel_type', ['纯电动', '氢燃料']),
+])
 
     const { data: vehicles } = await supabase.from('vehicles').select('org, plate')
     const groupMap = new Map()

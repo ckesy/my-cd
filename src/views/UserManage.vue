@@ -619,17 +619,17 @@ const router = useRouter()
 const formatDateTime = (d) => d ? dayjs(d).format('YYYY-MM-DD HH:mm:ss') : '--'
 
 // ============================================================
-// 当前登录用户 & 权限判断
+// 当前登录用户
 // ============================================================
 const currentUser = (() => {
   try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
   catch { return {} }
 })()
 const isAdmin = currentUser.role === 'admin'
-const isCustomer = !isAdmin                 // ⭐ 非管理员一律按客户处理
-const myAccount = currentUser.account || ''
-
-const ROOT_NODE_KEY = '__root__'
+const isCustomer = !isAdmin
+// ⭐ 子账号也用主账号的 owner_account 查数据
+const myAccount = currentUser.masterAccount || currentUser.account || ''
+const myCustomerId = currentUser.customerId || null
 
 // ============================================================
 // 视图切换
@@ -645,30 +645,28 @@ const orgList = ref([])
 const loadRoles = async () => {
   try {
     let query = supabase.from('roles').select('*').order('id')
-    // ⭐ 客户视角：只查自己创建的角色
-    if (isCustomer) {
-      query = query.eq('owner_account', myAccount)
-    }
+    if (isCustomer) query = query.eq('owner_account', myAccount)
     const { data, error } = await query
     if (error) throw error
 
     let list = data || []
-
-    // ⭐ 客户视角：只过滤"管理员 code"，不再过滤名字
     if (isCustomer) {
       list = list.filter(r => {
         const code = String(r.code || '').toLowerCase().trim()
         return code !== 'admin' && code !== 'super_admin'
       })
     }
-
     roleOptions.value = list
   } catch (e) { console.error('加载角色失败:', e) }
 }
 
 const loadOrgs = async () => {
   try {
-    let query = supabase.from('organizations').select('*').order('id')
+    let query = supabase
+      .from('organizations')
+      .select('id, name, parent_id, level, is_root, customer_id, owner_account, status, leader, phone')
+      .order('level', { ascending: true })
+      .order('id', { ascending: true })
     if (isCustomer) query = query.eq('owner_account', myAccount)
     const { data, error } = await query
     if (error) throw error
@@ -677,33 +675,39 @@ const loadOrgs = async () => {
 }
 
 // ============================================================
-// 组织树（用于新增/编辑时的 tree-select）
+// ⭐⭐⭐ 组织树（用于新增/编辑时的 tree-select）
+//    直接用 organizations 表里的真实根节点（is_root=true）
+//    不再拼虚拟根
 // ============================================================
 const orgTreeForSelect = computed(() => {
-  const rootLabel = isCustomer
-    ? (currentUser.name || currentUser.account || '我的组织')
-    : '全部组织'
+  const list = orgList.value
+  if (!list.length) return []
 
-  const root = {
-    id: ROOT_NODE_KEY,
-    name: rootLabel,
-    isRoot: true,
-    children: [],
-  }
+  // 找出所有根节点（is_root=true 或 level=1）
+  const rootOrgs = list.filter(o => o.is_root === true || Number(o.level) === 1)
 
+  // 建 map
   const map = {}
-  orgList.value.forEach(o => {
+  list.forEach(o => {
     map[o.id] = { ...o, children: [] }
   })
-  orgList.value.forEach(o => {
+
+  // 挂载子节点
+  list.forEach(o => {
     if (o.parent_id && map[o.parent_id]) {
       map[o.parent_id].children.push(map[o.id])
-    } else {
-      root.children.push(map[o.id])
     }
   })
 
-  return [root]
+  // 返回根节点数组（每个根节点已经有完整子树）
+  return rootOrgs.map(r => map[r.id]).filter(Boolean)
+})
+
+// ============================================================
+// ⭐ 客户根节点（默认选中用）
+// ============================================================
+const customerRootOrg = computed(() => {
+  return orgList.value.find(o => o.is_root === true || Number(o.level) === 1) || null
 })
 
 // ============================================================
@@ -723,7 +727,6 @@ const loadUsers = async () => {
   try {
     let users = []
     if (isAdmin) {
-      // 管理员：看全部
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -731,21 +734,18 @@ const loadUsers = async () => {
       if (error) throw error
       users = data || []
     } else {
-  // ⭐ 客户视角：只查自己创建的子账号
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('owner_account', myAccount)
-    .order('id', { ascending: false })
-  if (error) throw error
-  // ⭐ 双保险：即使数据库有脏数据，也强制把"主账号本人"过滤掉
-  users = (data || []).filter(u => {
-    // 主账号特征：account 或 phone 等于当前登录账号
-    if (u.account === myAccount) return false
-    if (u.phone && u.phone === currentUser.phone) return false
-    return true
-  })
-}
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('owner_account', myAccount)
+        .order('id', { ascending: false })
+      if (error) throw error
+      users = (data || []).filter(u => {
+        if (u.account === myAccount) return false
+        if (u.phone && u.phone === currentUser.phone) return false
+        return true
+      })
+    }
     tableData.value = users
   } catch (e) {
     console.error('加载用户失败:', e)
@@ -777,7 +777,7 @@ const filteredData = computed(() => {
       return {
         ...row,
         roleName: role ? role.name : '--',
-        orgName: org ? org.name : (isCustomer ? (currentUser.name || '--') : '--'),
+        orgName: org ? org.name : '--',   // ⭐ 不再有虚拟根兜底
       }
     })
 })
@@ -857,7 +857,7 @@ const onEscKeydown = (e) => {
 }
 
 // ============================================================
-// ⭐ 去创建角色
+// 去创建角色
 // ============================================================
 const goCreateRole = () => {
   dialogVisible.value = false
@@ -872,18 +872,23 @@ const isEdit = ref(false)
 const saving = ref(false)
 const form = reactive({
   id: null, account: '', name: '', phone: '', email: '',
-  org_id: ROOT_NODE_KEY, role_id: null, password: '', remark: '',
+  org_id: null, role_id: null, password: '', remark: '',
 })
 
 const resetForm = () => {
   Object.assign(form, {
     id: null, account: '', name: '', phone: '', email: '',
-    org_id: ROOT_NODE_KEY,
+    // ⭐ 默认选客户根节点（真实 root）
+    org_id: customerRootOrg.value?.id || null,
     role_id: null, password: '', remark: '',
   })
 }
 
-const handleAdd = () => { isEdit.value = false; resetForm(); dialogVisible.value = true }
+const handleAdd = () => {
+  isEdit.value = false
+  resetForm()
+  dialogVisible.value = true
+}
 
 const handleEdit = (row) => {
   isEdit.value = true
@@ -894,9 +899,8 @@ const handleEdit = (row) => {
     name: row.name,
     phone: row.phone,
     email: row.email,
-    org_id: (row.org_id === null || row.org_id === undefined || row.org_id === '')
-      ? ROOT_NODE_KEY
-      : row.org_id,
+    // ⭐ 直接用 row.org_id（可能是根节点 id 或二级机构 id）
+    org_id: row.org_id || customerRootOrg.value?.id || null,
     role_id: row.role_id,
     remark: row.remark || '',
     password: '',
@@ -913,14 +917,13 @@ const saveUser = async () => {
 
   saving.value = true
   try {
-    const realOrgId = form.org_id === ROOT_NODE_KEY ? null : form.org_id
-
+    // ⭐ 直接存真实 org_id（不需要再做虚拟根转换）
     const payload = {
       account: form.account,
       name: form.name,
       phone: form.phone,
       email: form.email,
-      org_id: realOrgId,
+      org_id: form.org_id,
       role_id: form.role_id,
       remark: form.remark,
       updated_at: new Date().toISOString(),
@@ -989,7 +992,6 @@ const handleCommand = (cmd, row) => {
   else if (cmd === 'delete') handleDeleteUser(row)
 }
 
-// ⭐ 删除用户
 const handleDeleteUser = (row) => {
   const displayName = row.name || row.account
   ElMessageBox.confirm(
@@ -1026,21 +1028,24 @@ const treeProps = { children: 'children', label: 'label' }
 const loadOrgTree = async () => {
   orgLoading.value = true
   try {
-    let orgQuery = supabase.from('organizations').select('*').order('id')
+    let orgQuery = supabase
+      .from('organizations')
+      .select('id, name, parent_id, level, is_root, customer_id, owner_account, status')
+      .order('level', { ascending: true })
+      .order('id', { ascending: true })
     if (isCustomer) orgQuery = orgQuery.eq('owner_account', myAccount)
     const { data: orgs } = await orgQuery
 
     const { data: fleets } = await supabase.from('fleets').select('*').order('id')
 
     let userQuery = supabase.from('users').select('*').order('id')
-if (isCustomer) userQuery = userQuery.eq('owner_account', myAccount)
-const { data: usersRaw } = await userQuery
-// ⭐ 双保险：组织树里也不显示主账号本人
-const users = (usersRaw || []).filter(u => {
-  if (isCustomer && u.account === myAccount) return false
-  if (isCustomer && u.phone && u.phone === currentUser.phone) return false
-  return true
-})
+    if (isCustomer) userQuery = userQuery.eq('owner_account', myAccount)
+    const { data: usersRaw } = await userQuery
+    const users = (usersRaw || []).filter(u => {
+      if (isCustomer && u.account === myAccount) return false
+      if (isCustomer && u.phone && u.phone === currentUser.phone) return false
+      return true
+    })
 
     const orgsList = orgs || []
     const fleetsList = fleets || []
@@ -1061,8 +1066,10 @@ const users = (usersRaw || []).filter(u => {
       }
     }
 
-    const buildOrgSubtree = () => {
-      return orgsList.map(org => {
+    // ⭐ 递归构建子树
+    const buildOrgChildren = (parentId) => {
+      const children = orgsList.filter(o => o.parent_id === parentId)
+      return children.map(org => {
         const orgFleets = fleetsList
           .filter(f => f.org_id === org.id)
           .map(fleet => {
@@ -1085,30 +1092,43 @@ const users = (usersRaw || []).filter(u => {
           key: 'org-' + org.id,
           type: 'org',
           label: org.name,
-          children: [...orgFleets, ...orgUsers],
+          level: org.level,
+          isRoot: org.is_root,
+          children: [...buildOrgChildren(org.id), ...orgFleets, ...orgUsers],
         }
       })
     }
 
+    // ⭐ 根节点：is_root=true 或 level=1
+    const rootOrgs = orgsList.filter(o => o.is_root === true || Number(o.level) === 1)
+
+    // 直接挂 root 下的用户
     const rootDirectUsers = usersList
-      .filter(u => u.org_id === null || u.org_id === undefined)
+      .filter(u => {
+        if (u.org_id == null) return true
+        const o = orgsList.find(x => x.id === u.org_id)
+        return o && (o.is_root === true || Number(o.level) === 1)
+      })
       .map(u => buildUserNode(u))
 
     let tree = []
+
     if (isCustomer) {
-      tree = [{
-        key: 'root-customer',
+      // 客户/子账号：显示自己的客户根节点
+      tree = rootOrgs.map(root => ({
+        key: 'root-' + root.id,
         type: 'root',
-        label: currentUser.name || currentUser.account || '我的组织',
-        children: [...buildOrgSubtree(), ...rootDirectUsers],
-      }]
+        label: root.name,
+        children: [...buildOrgChildren(root.id), ...rootDirectUsers],
+      }))
     } else {
-      tree = [{
-        key: 'root-all',
+      // 管理员：显示全部根节点
+      tree = rootOrgs.map(root => ({
+        key: 'root-' + root.id,
         type: 'root',
-        label: '全部组织',
-        children: [...buildOrgSubtree(), ...rootDirectUsers],
-      }]
+        label: root.name,
+        children: [...buildOrgChildren(root.id), ...rootDirectUsers],
+      }))
     }
 
     orgTreeData.value = tree

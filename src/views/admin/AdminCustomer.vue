@@ -25,7 +25,7 @@ const withTimeout = (promise, timeoutMs = 10000, errorMessage = '请求超时，
 // ============================================================
 // 视图切换
 // ============================================================
-const viewMode = ref('list') // 'list' | 'tree'
+const viewMode = ref('list')
 
 // ============================================================
 // 省市区数据
@@ -80,6 +80,7 @@ const clientPermissions = [
   { label: '电子围栏管理',            value: 'ele_fence' },
   { label: '运营管理',                value: 'operation' },
   { label: '运输管理 / 运单管理',     value: 'waybill' },
+  { label: '运输管理 / 路线管理',     value: 'route' },
   { label: '车队运营报告',            value: 'report' },
   { label: '基础数据管理 / 车辆档案', value: 'vehicle_archive' },
   { label: '基础数据管理 / 司机档案', value: 'driver_archive' },
@@ -159,6 +160,7 @@ const fetchData = async () => {
       status: row.status,
       platforms: row.platforms || [],
       permissions: row.permissions || {},
+      password: row.password || '',
       vehicleCount: 0,
       createdAt: row.created_at
         ? new Date(row.created_at).toLocaleString('zh-CN', { hour12: false })
@@ -202,10 +204,10 @@ const handleReset = () => {
 }
 
 // ============================================================
-// 停用/启用 —— 自定义确认弹窗
+// 停用/启用
 // ============================================================
 const confirmVisible = ref(false)
-const confirmType = ref('disable')   // 'disable' | 'enable'
+const confirmType = ref('disable')
 const confirmRow = ref(null)
 
 const confirmTitle = computed(() => {
@@ -245,14 +247,12 @@ const confirmAction = async () => {
   try {
     const now = new Date().toISOString()
 
-    // ① 更新 customers
     const { error: cErr } = await supabase
       .from('customers')
       .update({ status: newStatus, updated_at: now })
       .eq('id', row.id)
     if (cErr) throw cErr
 
-    // ② 同步 users（登录真正用的表）—— ⭐ 关键
     if (row.phone) {
       const { error: uErr } = await supabase
         .from('users')
@@ -393,16 +393,14 @@ const buildPayload = () => {
     permissions,
   }
 }
+
 // ============================================================
 // ⭐ 同步客户主账号到 users 表
-// 作用：让客户能用手机号登录系统，走"客户"分支逻辑
-// 客户本人账号：owner_account = NULL（不是别人的子账号）
 // ============================================================
 const syncCreateUserMaster = async ({ phone, name, password }) => {
   if (!phone) return { ok: false, msg: '手机号缺失' }
 
   try {
-    // ① 查是否已存在（按 account 或 phone 匹配）
     const { data: exist, error: queryErr } = await supabase
       .from('users')
       .select('id, account, phone')
@@ -410,10 +408,9 @@ const syncCreateUserMaster = async ({ phone, name, password }) => {
       .limit(1)
     if (queryErr) throw queryErr
 
-    // ② 已存在 → 更新基础信息（密码不为空才更新密码）
     if (exist && exist.length > 0) {
       const updatePayload = {
-        account: phone,              // 同步登录账号（手机号可能变过）
+        account: phone,
         name,
         phone,
         status: 1,
@@ -430,16 +427,15 @@ const syncCreateUserMaster = async ({ phone, name, password }) => {
       return { ok: true, msg: '主账号已同步' }
     }
 
-    // ③ 不存在 → 新建客户主账号
     const insertPayload = {
-      account: phone,              // 用手机号作为登录账号
+      account: phone,
       name,
       phone,
-      password: password || '123456',  // 兜底密码，正常流程会传
-      role_id: null,               // ⭐ 客户角色：NULL，登录时走"客户"分支
-      org_id: null,                // 客户主账号不属于任何组织
+      password: password || '123456',
+      role_id: null,
+      org_id: null,
       status: 1,
-      owner_account: null,         // ⭐ 客户本人 owner_account = NULL
+      owner_account: null,
       remark: '客户主账号（系统自动创建）',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -453,12 +449,92 @@ const syncCreateUserMaster = async ({ phone, name, password }) => {
     return { ok: true, msg: '主账号创建成功' }
   } catch (e) {
     console.error('同步客户主账号失败:', e)
-    // 不抛异常，避免阻塞客户创建流程（客户已插入 customers 表就让它成功）
     ElMessage.warning('客户已创建，但主账号同步失败：' + (e?.message || e))
     return { ok: false, msg: e?.message || '同步失败' }
   }
 }
 
+// ============================================================
+// ⭐ 同步客户机构根节点到 organizations 表
+//    每个客户应有且仅有一条 is_root=true, level=1 的记录
+// ============================================================
+const syncCreateOrgRoot = async ({ customerId, name, ownerAccount }) => {
+  if (!customerId || !name) return { ok: false, msg: '参数缺失' }
+
+  try {
+    const { data: exist, error: queryErr } = await supabase
+      .from('organizations')
+      .select('id')
+      .eq('customer_id', customerId)
+      .eq('is_root', true)
+      .limit(1)
+    if (queryErr) throw queryErr
+
+    const now = new Date().toISOString()
+
+    if (exist && exist.length > 0) {
+      const { error: updateErr } = await supabase
+        .from('organizations')
+        .update({
+          name,
+          owner_account: ownerAccount,
+          updated_at: now,
+        })
+        .eq('id', exist[0].id)
+      if (updateErr) throw updateErr
+      return { ok: true, id: exist[0].id, msg: '根节点已更新' }
+    }
+
+    const { data, error: insertErr } = await supabase
+      .from('organizations')
+      .insert({
+        name,
+        level: 1,
+        is_root: true,
+        customer_id: customerId,
+        owner_account: ownerAccount,
+        parent_id: null,
+        status: 1,
+        created_at: now,
+        updated_at: now,
+      })
+      .select('id')
+      .single()
+    if (insertErr) throw insertErr
+    return { ok: true, id: data.id, msg: '根节点已创建' }
+  } catch (e) {
+    console.error('同步机构根节点失败:', e)
+    ElMessage.warning('客户已保存，但机构根节点同步失败：' + (e?.message || e))
+    return { ok: false, msg: e?.message || '同步失败' }
+  }
+}
+
+// ============================================================
+// ⭐ 反查客户根节点 id（用于批量导入时写 org_id）
+// ============================================================
+const fetchCustomerRootOrgId = async (customerId) => {
+  if (!customerId) return null
+  try {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('id')
+      .eq('customer_id', customerId)
+      .eq('is_root', true)
+      .maybeSingle()
+    if (error) {
+      console.warn('反查根节点失败:', error)
+      return null
+    }
+    return data?.id || null
+  } catch (e) {
+    console.warn('反查根节点异常:', e)
+    return null
+  }
+}
+
+// ============================================================
+// 提交
+// ============================================================
 const handleSubmit = async () => {
   if (!formRef.value) return
   try {
@@ -476,7 +552,6 @@ const handleSubmit = async () => {
     const payload = buildPayload()
 
     if (dialogMode.value === 'add') {
-      // 检查手机号是否已存在
       const { data: existed } = await supabase
         .from('customers').select('id').eq('phone', form.phone).limit(1)
       if (existed && existed.length > 0) {
@@ -485,10 +560,22 @@ const handleSubmit = async () => {
       }
 
       payload.password = form.password
-      const { error } = await supabase.from('customers').insert(payload)
+      // ⭐ 用 select().single() 拿到新客户的 id
+      const { data: newCustomer, error } = await supabase
+        .from('customers')
+        .insert(payload)
+        .select()
+        .single()
       if (error) throw error
 
-      // ⭐ 同步创建 users 表主账号
+      // ⭐ 同步创建 organizations 根节点
+      await syncCreateOrgRoot({
+        customerId: newCustomer.id,
+        name: newCustomer.name,
+        ownerAccount: newCustomer.phone,
+      })
+
+      // ⭐ 同步创建 users 主账号
       await syncCreateUserMaster({
         phone: form.phone,
         name: form.name,
@@ -497,7 +584,6 @@ const handleSubmit = async () => {
 
       ElMessage.success('客户创建成功')
     } else {
-      // 编辑：检查手机号是否被别的客户用
       const { data: existed } = await supabase
         .from('customers').select('id').eq('phone', form.phone).limit(1)
       if (existed && existed.length > 0 && existed[0].id !== form.id) {
@@ -505,7 +591,6 @@ const handleSubmit = async () => {
         return
       }
 
-      // 取旧客户名（用于同步 users）
       const oldRow = tableData.value.find(r => r.id === form.id)
 
       payload.updated_at = new Date().toISOString()
@@ -513,15 +598,21 @@ const handleSubmit = async () => {
       const { error } = await supabase.from('customers').update(payload).eq('id', form.id)
       if (error) throw error
 
-      // ⭐ 同步 users 表（用旧 phone 找到记录再更新）
+      // ⭐⭐⭐ 同步 organizations 根节点（客户改名场景）
+      await syncCreateOrgRoot({
+        customerId: form.id,
+        name: form.name,
+        ownerAccount: form.phone,
+      })
+
+      // ⭐ 同步 users
       const syncPhone = oldRow?.phone || form.phone
       await syncCreateUserMaster({
         phone: syncPhone,
         name: form.name,
-        password: form.password || oldRow?.password,  // 没改密码就传旧密码
+        password: form.password || oldRow?.password,
       })
 
-      // 如果手机号变了，还要把 users 表的 account 也改了
       if (oldRow?.phone && oldRow.phone !== form.phone) {
         await supabase
           .from('users')
@@ -538,6 +629,9 @@ const handleSubmit = async () => {
   }
 }
 
+// ============================================================
+// 新增并导入车辆
+// ============================================================
 const handleCreateAndAddVehicle = async () => {
   if (!formRef.value) return
   if (dialogMode.value === 'edit') return
@@ -571,6 +665,13 @@ const handleCreateAndAddVehicle = async () => {
 
     if (error) throw error
 
+    // ⭐ 同步 organizations 根节点（拿 id 用于车辆 org_id）
+    const orgResult = await syncCreateOrgRoot({
+      customerId: data.id,
+      name: data.name,
+      ownerAccount: data.phone,
+    })
+
     // ⭐ 同步创建 users 表主账号
     await syncCreateUserMaster({
       phone: form.phone,
@@ -583,12 +684,16 @@ const handleCreateAndAddVehicle = async () => {
 
     await fetchData()
 
-    openImportDialog(data.id, data.name)
+    // ⭐ 传入根节点 id
+    openImportDialog(data.id, data.name, orgResult.id || null)
   } catch (e) {
     if (e?.message) ElMessage.error('创建失败：' + e.message)
   }
 }
 
+// ============================================================
+// 编辑并导入车辆
+// ============================================================
 const handleEditAndAddVehicle = async () => {
   if (!formRef.value) return
   if (dialogMode.value !== 'edit') return
@@ -620,6 +725,13 @@ const handleEditAndAddVehicle = async () => {
     const { error } = await supabase.from('customers').update(payload).eq('id', form.id)
     if (error) throw error
 
+    // ⭐ 同步 organizations 根节点
+    await syncCreateOrgRoot({
+      customerId: form.id,
+      name: form.name,
+      ownerAccount: form.phone,
+    })
+
     // ⭐ 同步 users
     const syncPhone = oldRow?.phone || form.phone
     await syncCreateUserMaster({
@@ -640,7 +752,9 @@ const handleEditAndAddVehicle = async () => {
 
     await fetchData()
 
-    openImportDialog(form.id, form.name)
+    // ⭐ 反查根节点 id
+    const rootOrgId = await fetchCustomerRootOrgId(form.id)
+    openImportDialog(form.id, form.name, rootOrgId)
   } catch (e) {
     if (e?.message) ElMessage.error('操作失败：' + e.message)
   }
@@ -650,7 +764,7 @@ const handleEditAndAddVehicle = async () => {
 // 批量导入车辆
 // ============================================================
 const importDialogVisible = ref(false)
-const importCustomer = ref({ id: '', name: '' })
+const importCustomer = ref({ id: '', name: '', rootOrgId: null })
 const uploadRef = ref(null)
 const uploadFile = ref(null)
 const uploadFileName = ref('')
@@ -663,8 +777,8 @@ const templateHeaders = [
   '车辆购买日', '保险购买日',
 ]
 
-const openImportDialog = (customerId, customerName) => {
-  importCustomer.value = { id: customerId, name: customerName }
+const openImportDialog = (customerId, customerName, rootOrgId = null) => {
+  importCustomer.value = { id: customerId, name: customerName, rootOrgId }
   uploadFile.value = null
   uploadFileName.value = ''
   importErrors.value = []
@@ -690,7 +804,7 @@ const downloadTemplate = async () => {
 
   const sampleData = [
     '粤A12345', 'LGAX3AG59N9009177', '我的车',
-    '新能源', '牵引车', '快递快运', '否', '无',
+    '纯电动', '牵引车', '快递快运', '否', '无',
     '2026-01-01', '2026-01-01',
   ]
   const dataRow = worksheet.addRow(sampleData)
@@ -795,6 +909,7 @@ const confirmImport = async () => {
         vin,
         nickname: nickname || null,
         org: importCustomer.value.name,
+        org_id: importCustomer.value.rootOrgId || null,
         customer_id: importCustomer.value.id,
         driver: null,
         fuel_type: fuelType || null,
@@ -926,10 +1041,30 @@ const handleDelete = async (row) => {
         .update({
           customer_id: null,
           org: null,
+          org_id: null,
           updated_at: new Date().toISOString(),
         })
         .eq('customer_id', row.id)
       if (releaseError) throw releaseError
+    }
+
+    // ⭐⭐⭐ 先删除该客户的 organizations（分两步：按 customer_id + 按 owner_account）
+    try {
+      const { error: orgDelErr1 } = await supabase
+        .from('organizations')
+        .delete()
+        .eq('customer_id', row.id)
+      if (orgDelErr1) console.warn('删除客户机构（按 customer_id）失败:', orgDelErr1)
+
+      if (row.phone) {
+        const { error: orgDelErr2 } = await supabase
+          .from('organizations')
+          .delete()
+          .eq('owner_account', row.phone)
+        if (orgDelErr2) console.warn('删除客户机构（按 owner_account）失败:', orgDelErr2)
+      }
+    } catch (e) {
+      console.warn('删除客户机构异常:', e)
     }
 
     const { error: deleteError } = await supabase
@@ -937,14 +1072,15 @@ const handleDelete = async (row) => {
       .delete()
       .eq('id', row.id)
     if (deleteError) throw deleteError
+
     if (row.phone) {
-  const { error: deleteUserErr } = await supabase
-    .from('users')
-    .delete()
-    .eq('phone', row.phone)
-    .is('owner_account', null)     // 只删客户主账号，别误删子账号
-  if (deleteUserErr) console.warn('删除 users 主账号失败:', deleteUserErr)
-}
+      const { error: deleteUserErr } = await supabase
+        .from('users')
+        .delete()
+        .eq('phone', row.phone)
+        .is('owner_account', null)
+      if (deleteUserErr) console.warn('删除 users 主账号失败:', deleteUserErr)
+    }
 
     if (vehicleCount > 0) {
       ElMessage.success(`已删除客户，并释放 ${vehicleCount} 台车辆`)
@@ -974,7 +1110,7 @@ const passwordRules = {
 }
 
 const openResetPassword = (row) => {
-  Object.assign(passwordForm, { id: row.id, name: row.name, phone: row.phone,newPassword: '' })
+  Object.assign(passwordForm, { id: row.id, name: row.name, phone: row.phone, newPassword: '' })
   passwordDialogVisible.value = true
   passwordFormRef.value?.clearValidate?.()
 }
@@ -985,9 +1121,8 @@ const submitResetPassword = async () => {
     await passwordFormRef.value.validate()
     const newPwd = passwordForm.newPassword
     const now = new Date().toISOString()
-    const phone = passwordForm.phone || ''      // ⭐ 依赖下面补的 phone 字段
+    const phone = passwordForm.phone || ''
 
-    // ① 更新 customers（如果这条记录存在）
     let customerUpdated = 0
     if (passwordForm.id) {
       const { data: cData, error: cErr } = await supabase
@@ -999,7 +1134,6 @@ const submitResetPassword = async () => {
       customerUpdated = cData?.length || 0
     }
 
-    // ② 更新 users（登录真正用的表）—— ⭐ 关键
     let userUpdated = 0
     if (phone) {
       const { data: uData, error: uErr } = await supabase
@@ -1011,7 +1145,6 @@ const submitResetPassword = async () => {
       userUpdated = uData?.length || 0
     }
 
-    // ③ 反馈
     if (customerUpdated === 0 && userUpdated === 0) {
       ElMessage.warning('没有匹配到账号，请检查手机号是否正确')
       return
@@ -1042,7 +1175,6 @@ const treeProps = { children: 'children', label: 'label' }
 const loadOrgTree = async () => {
   orgLoading.value = true
   try {
-    // 并行拉取所有基础数据
     const [
       { data: orgs },
       { data: fleets },
@@ -1063,7 +1195,6 @@ const loadOrgTree = async () => {
     const roleMap = {}
     rolesList.forEach(r => { roleMap[r.id] = r.name })
 
-    // 构造用户节点
     const buildUserNode = (u) => {
       const owner = usersList.find(x => x.account === u.owner_account)
       return {
@@ -1078,14 +1209,18 @@ const loadOrgTree = async () => {
       }
     }
 
-    // 构造某个客户下的组织子树（通过 owner_account === 客户登录手机号 匹配）
-    const buildCustomerOrgs = (customerAccount) => {
-      const customerOrgs = orgsList.filter(o => o.owner_account === customerAccount)
+    const buildCustomerOrgs = (customerAccount, customerId) => {
+      // ⭐ 优先按 customer_id 匹配（新数据），退化按 owner_account 匹配（老数据）
+      let customerOrgs = orgsList.filter(o => o.customer_id === customerId)
+      if (customerOrgs.length === 0) {
+        customerOrgs = orgsList.filter(o => o.owner_account === customerAccount)
+      }
+      // ⭐ 不展示根节点（客户本身就是根），只展示其下级机构
+      customerOrgs = customerOrgs.filter(o => o.is_root !== true)
 
       return customerOrgs.map(org => {
         const hasFleets = fleetsList.some(f => f.org_id === org.id)
 
-        // 车队层
         const orgFleets = fleetsList
           .filter(f => f.org_id === org.id)
           .map(fleet => {
@@ -1100,7 +1235,6 @@ const loadOrgTree = async () => {
             }
           })
 
-        // 组织下没有车队时，用户直接挂在组织下
         const orgUsers = hasFleets
           ? []
           : usersList
@@ -1116,7 +1250,6 @@ const loadOrgTree = async () => {
       })
     }
 
-    // 构造客户节点
     const customerNodes = tableData.value.map(c => ({
       key: 'customer-' + c.id,
       type: 'customer',
@@ -1124,10 +1257,9 @@ const loadOrgTree = async () => {
       account: c.phone,
       status: c.status,
       vehicleCount: c.vehicleCount,
-      children: buildCustomerOrgs(c.phone),
+      children: buildCustomerOrgs(c.phone, c.id),
     }))
 
-    // 根节点
     orgTreeData.value = [{
       key: 'root-all',
       type: 'root',
@@ -1167,7 +1299,6 @@ onMounted(async () => {
   await fetchData()
 })
 
-// 切换视图时按需加载
 watch(viewMode, async (val) => {
   if (val === 'tree') {
     if (tableData.value.length === 0) {

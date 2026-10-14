@@ -426,7 +426,7 @@ const dateShortcuts = [
 ]
 
 // ============================================================
-// 当前用户
+// ⭐ 当前用户
 // ============================================================
 const currentUser = (() => {
   try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
@@ -438,23 +438,46 @@ const isSubAccount = !!currentUser.isSubAccount
 const myPhone = currentUser.masterPhone || currentUser.phone || ''
 const myAccount = currentUser.masterAccount || currentUser.account || ''
 const myCustomerId = ref(currentUser.customerId || null)
-const myOrgName = ref(null)
+
+// ⭐ 子账号机构信息
+const myOrgName = ref(isSubAccount ? String(currentUser.orgName || '').trim() || null : null)
+const myOrgLevel = ref(isSubAccount ? (Number(currentUser.orgLevel) || 1) : null)
+
+const isRootOrgSubAccount = computed(() =>
+  isSubAccount && Number(myOrgLevel.value) === 1
+)
+const needOrgFilter = computed(() =>
+  isCustomer && isSubAccount && Number(myOrgLevel.value) >= 2
+)
 
 const loadMyCustomerId = async () => {
   if (!isCustomer || myCustomerId.value || !myPhone) return
   const { data } = await supabase.from('customers').select('id').eq('phone', myPhone).maybeSingle()
   if (data) myCustomerId.value = data.id
 }
-const loadMyOrgName = async () => {
-  if (!isCustomer || !isSubAccount || !currentUser.orgId) return
-  const { data } = await supabase.from('organizations').select('name').eq('id', currentUser.orgId).maybeSingle()
-  if (data) myOrgName.value = data.name
+
+// ⭐ 兜底反查机构信息
+const loadMyOrgInfo = async () => {
+  if (!isCustomer || !isSubAccount) return
+  if (myOrgName.value && myOrgLevel.value) return
+  if (!currentUser.orgId) return
+  try {
+    const { data } = await supabase
+      .from('organizations')
+      .select('name, level')
+      .eq('id', currentUser.orgId)
+      .maybeSingle()
+    if (data) {
+      if (data.name) myOrgName.value = String(data.name).trim()
+      myOrgLevel.value = Number(data.level) || 1
+    }
+  } catch (e) { }
 }
 
 // ============================================================
 // 状态
 // ============================================================
-const alertType = ref('speeding')   // 'speeding' | 'staying'
+const alertType = ref('speeding')
 
 const tableData = ref([])
 const allSegments = ref([])
@@ -471,14 +494,14 @@ const searchForm = reactive({
   dateTimeRange: [],
   plate: '',
   vin: '',
-  pointCount: '',   // ⭐ 新增：停留点数筛选
+  pointCount: '',
 })
 
 const stats = reactive({
   total: 0,
   vehicles: 0,
-  maxSpeed: 0,      // 超速用
-  maxDuration: 0,   // 停留用
+  maxSpeed: 0,
+  maxDuration: 0,
   totalDuration: 0,
 })
 
@@ -542,7 +565,7 @@ const failProgress = () => {
 }
 
 // ============================================================
-// 读配置（按类型）
+// 读配置
 // ============================================================
 const loadAlertConfig = async (type) => {
   let q = supabase
@@ -561,14 +584,18 @@ const loadAlertConfig = async (type) => {
 }
 
 // ============================================================
-// 拉车辆
+// ⭐ 拉车辆（按 orgLevel 隔离）
 // ============================================================
 const loadVehicles = async () => {
   let q = supabase.from('vehicles').select('vin, plate, org')
   if (isCustomer) {
     if (!myCustomerId.value) return []
     q = q.eq('customer_id', myCustomerId.value)
-    if (isSubAccount && myOrgName.value) q = q.eq('org', myOrgName.value)
+    // ⭐⭐⭐ 二级机构子账号 → 只看本机构车辆
+    if (needOrgFilter.value && myOrgName.value) {
+      console.log('[alert] 子账号挂 level=' + myOrgLevel.value + ' 机构 → 隔离车辆 org =', myOrgName.value)
+      q = q.eq('org', myOrgName.value)
+    }
   }
   const { data, error } = await q
   if (error) { console.warn('[alert] 查车辆失败:', error); return [] }
@@ -582,7 +609,7 @@ const loadVehicles = async () => {
 }
 
 // ============================================================
-// 拉围栏
+// ⭐ 拉围栏（按 orgLevel 隔离）
 // ============================================================
 const loadFences = async (config) => {
   const parseArr = (str) => {
@@ -600,10 +627,16 @@ const loadFences = async (config) => {
   }
 
   let q = supabase.from('ele_fences')
-    .select('id, gfid, name, shape, points, center, radius, bufferradius, adcode')
+    .select('id, gfid, name, shape, points, center, radius, bufferradius, adcode, org')
     .in('id', ids)
 
-  if (isCustomer) q = q.eq('owner_account', myAccount)
+  if (isCustomer) {
+    q = q.eq('owner_account', myAccount)
+    // ⭐⭐⭐ 二级机构子账号 → 只看本机构围栏
+    if (needOrgFilter.value && myOrgName.value) {
+      q = q.eq('org', myOrgName.value)
+    }
+  }
 
   const { data, error } = await q
   if (error) { console.warn('[alert] 查围栏失败:', error); return [] }
@@ -766,7 +799,6 @@ const applyFilterAndPage = () => {
     if (searchForm.plate && !String(s.plate || '').toLowerCase().includes(searchForm.plate.toLowerCase())) return false
     if (searchForm.vin && !String(s.vin || '').toLowerCase().includes(searchForm.vin.toLowerCase())) return false
 
-    // ⭐ 停留点数筛选
     if (alertType.value === 'staying' && searchForm.pointCount) {
       const n = (s.points || []).length
       const r = searchForm.pointCount
@@ -778,14 +810,12 @@ const applyFilterAndPage = () => {
   })
 
   if (alertType.value === 'staying') {
-    // ⭐ 停留统计
     stats.total = list.length
     stats.vehicles = new Set(list.map(s => s.vin)).size
     stats.maxDuration = list.length ? Math.max(...list.map(s => s.durationMin || 0)) : 0
     stats.totalDuration = list.reduce((sum, s) => sum + (s.durationMin || 0) * 60, 0)
     stats.maxSpeed = 0
   } else {
-    // ⭐ 超速统计
     stats.total = list.length
     stats.vehicles = new Set(list.map(s => s.vin)).size
     stats.maxSpeed = list.length ? Math.max(...list.map(s => s.maxSpeed || 0)) : 0
@@ -822,7 +852,7 @@ const switchType = (type) => {
   alertType.value = type
   activeStat.value = 'all'
   currentPage.value = 1
-  searchForm.pointCount = ''   // ⭐ 切 tab 时清掉点数筛选
+  searchForm.pointCount = ''
   allSegments.value = []
   tableData.value = []
   refreshData(true)
@@ -839,7 +869,7 @@ const handleReset = () => {
   searchForm.dateTimeRange = [`${todayStr} 00:00:00`, `${todayStr} 23:59:59`]
   searchForm.plate = ''
   searchForm.vin = ''
-  searchForm.pointCount = ''   // ⭐ 清空停留点数
+  searchForm.pointCount = ''
   activeStat.value = 'all'
   currentPage.value = 1
   refreshData(true)
@@ -880,7 +910,7 @@ const handleExport = () => {
       停留开始: s.startTime,
       停留结束: s.endTime,
       停留时长: `${s.durationMin} 分钟`,
-      停留点数: (s.points || []).length + ' 个',   // ⭐ 新增
+      停留点数: (s.points || []).length + ' 个',
       停留位置: s.address || `${s.lng.toFixed(5)}, ${s.lat.toFixed(5)}`,
     }))
     filename = `停留提醒_${dayjs().format('YYYYMMDD_HHmmss')}.xlsx`
@@ -921,7 +951,7 @@ onMounted(async () => {
 
   if (isCustomer) {
     await loadMyCustomerId()
-    await loadMyOrgName()
+    await loadMyOrgInfo()
   }
 
   const LOADED_FLAG = 'alert_page_loaded_' + (isAdmin ? 'admin' : (isSubAccount ? 'sub_' + currentUser.account : 'cust_' + currentUser.account))

@@ -212,7 +212,7 @@ const CONCURRENCY = 15
 const CACHE_TTL = 3 * 60 * 1000
 
 // ============================================================
-// ⭐ 当前登录用户 & 权限判断（必须先定义）
+// 当前登录用户
 // ============================================================
 const currentUser = (() => {
   try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
@@ -221,15 +221,14 @@ const currentUser = (() => {
 
 const isAdmin = currentUser.role === 'admin'
 const isCustomer = currentUser.role === 'customer'
+const isSubAccount = !!currentUser.isSubAccount
 
-// ⭐ 缓存 key（用函数动态生成，避免时机问题）
 const getCacheKey = () => {
   if (isAdmin) return 'fullmap_vehicle_locations_cache_admin'
-  if (currentUser.isSubAccount) return 'fullmap_vehicle_locations_cache_sub_' + (currentUser.account || 'unknown')
+  if (isSubAccount) return 'fullmap_vehicle_locations_cache_sub_' + (currentUser.account || 'unknown')
   return 'fullmap_vehicle_locations_cache_cust_' + (currentUser.account || 'guest')
 }
 
-// ⭐ 主账号信息
 const masterAccount = currentUser.masterAccount || ''
 const masterPhone = currentUser.masterPhone || ''
 const masterName = currentUser.masterName || ''
@@ -412,14 +411,14 @@ const fetchDongfengLocation = async (vin) => {
 }
 
 // ============================================================
-// ⭐ 客户 ID & 子账号所属组织名
+// ⭐⭐ 客户 ID & 子账号机构信息
 // ============================================================
 const myCustomerId = ref(currentUser.customerId || null)
-const myOrgName = ref(null)
+const myOrgName = ref(isSubAccount ? String(currentUser.orgName || '').trim() || null : null)
+const myOrgLevel = ref(isSubAccount ? (Number(currentUser.orgLevel) || 1) : null)
 
 const loadMyCustomerId = async () => {
   if (!isCustomer) return
-  // 优先用 currentUser.customerId
   if (myCustomerId.value) return
   if (!myPhone) return
   try {
@@ -434,21 +433,35 @@ const loadMyCustomerId = async () => {
   }
 }
 
-const loadMyOrgName = async () => {
-  if (!isCustomer) return
-  if (!currentUser.isSubAccount) return
+// ⭐ 兜底：currentUser 缺字段时反查
+const loadMyOrgInfo = async () => {
+  if (!isCustomer || !isSubAccount) return
+  if (myOrgName.value && myOrgLevel.value) return
   if (!currentUser.orgId) return
   try {
     const { data } = await supabase
       .from('organizations')
-      .select('name')
+      .select('name, level')
       .eq('id', currentUser.orgId)
       .maybeSingle()
-    if (data) myOrgName.value = data.name
+    if (data) {
+      if (data.name) myOrgName.value = String(data.name).trim()
+      myOrgLevel.value = Number(data.level) || 1
+    }
   } catch (e) {
-    console.warn('查询所属组织失败:', e)
+    console.warn('[FullMap] 反查机构失败:', e)
   }
 }
+
+// ⭐ 一级机构子账号 → 等同主账号
+const isRootOrgSubAccount = computed(() => {
+  return isSubAccount && Number(myOrgLevel.value) === 1
+})
+
+// ⭐ 二级及以下子账号 → 需要按 org 隔离
+const needOrgFilter = computed(() => {
+  return isCustomer && isSubAccount && Number(myOrgLevel.value) >= 2
+})
 
 // ============================================================
 // 加载车辆
@@ -472,9 +485,16 @@ const loadVehicles = async (forceRefresh = false) => {
   locationTotal.value = 0
   locatedCount.value = 0
   try {
-    // ⭐⭐⭐ 客户视角必须有 myCustomerId，否则返回空（防止查全量）
+    // ⭐ 客户必须有 customerId
     if (isCustomer && !myCustomerId.value) {
-      console.warn('[FullMap] 客户账号未关联 customers，返回空防止越权')
+      console.warn('[FullMap] 客户账号未关联 customers，返回空')
+      vehicles.value = []
+      orgOptions.value = []
+      return
+    }
+    // ⭐ 二级机构子账号必须有 orgName
+    if (needOrgFilter.value && !myOrgName.value) {
+      console.warn('[FullMap] 二级机构子账号 orgName 缺失，返回空')
       vehicles.value = []
       orgOptions.value = []
       return
@@ -485,16 +505,13 @@ const loadVehicles = async (forceRefresh = false) => {
     if (isCustomer) {
       query = query.eq('customer_id', myCustomerId.value)
 
-      // ⭐⭐⭐ 子账号：只显示所属组织下的车辆
-      if (currentUser.isSubAccount && myOrgName.value) {
+      // ⭐⭐⭐ 子账号隔离
+      if (isRootOrgSubAccount.value) {
+        console.log('[FullMap] 子账号挂一级机构 → 等同主账号')
+        // 不加 org 过滤
+      } else if (needOrgFilter.value) {
+        console.log('[FullMap] 子账号挂 level=' + myOrgLevel.value + ' 机构 → 隔离 org =', myOrgName.value)
         query = query.eq('org', myOrgName.value)
-      }
-      // 子账号但没查到组织名 → 返回空（防越权）
-      if (currentUser.isSubAccount && !myOrgName.value) {
-        console.warn('[FullMap] 子账号组织未查到，返回空')
-        vehicles.value = []
-        orgOptions.value = []
-        return
       }
     }
 
@@ -568,7 +585,12 @@ const syncVehicleOrgFields = async () => {
     if (!plates.length) return
 
     let q = supabase.from('vehicles').select('plate, org, customer_id, driver, nickname').in('plate', plates)
-    if (isCustomer && myCustomerId.value) q = q.eq('customer_id', myCustomerId.value)
+    if (isCustomer && myCustomerId.value) {
+      q = q.eq('customer_id', myCustomerId.value)
+      if (needOrgFilter.value && myOrgName.value) {
+        q = q.eq('org', myOrgName.value)
+      }
+    }
     const { data, error } = await q
     if (error || !data) return
 
@@ -600,10 +622,14 @@ const syncVehicleOrgFields = async () => {
   }
 }
 
-// ⭐ 加载组织：用主账号的 account
+// ⭐ 加载组织（按 level 排序）
 const loadOrganizations = async () => {
   try {
-    let q = supabase.from('organizations').select('*').order('id')
+    let q = supabase
+      .from('organizations')
+      .select('*')
+      .order('level', { ascending: true })
+      .order('id', { ascending: true })
     if (isCustomer) q = q.eq('owner_account', myAccount)
     const { data, error } = await q
     if (error) throw error
@@ -1438,9 +1464,8 @@ onMounted(async () => {
   await nextTick()
   if (isCustomer) {
     await loadMyCustomerId()
-    await loadMyOrgName()
+    await loadMyOrgInfo()
   }
-  // ⭐ 每次进入 FullMap 都强制重新拉（跳过缓存）
   await loadVehicles(true)
   await initMap()
   document.body.style.overflow = 'hidden'
@@ -1449,17 +1474,11 @@ onMounted(async () => {
 
 onActivated(async () => {
   if (isCustomer && !myCustomerId.value) await loadMyCustomerId()
-
-  // ⭐ 每次都重新加载组织名（组织名可能被主账号改过）
-  if (isCustomer && currentUser.isSubAccount) {
-    await loadMyOrgName()
+  if (isCustomer && isSubAccount && (!myOrgName.value || !myOrgLevel.value)) {
+    await loadMyOrgInfo()
   }
-
-  // ⭐⭐⭐ 每次切回来都重新拉车辆（跳过缓存，确保看到最新组织分配）
   await loadVehicles(true)
-
   await loadOrganizations()
-
   if (isMapReady.value) {
     addMarkers()
     updateMarkersVisibility()

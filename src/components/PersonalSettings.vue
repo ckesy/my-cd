@@ -86,11 +86,9 @@ const resetForms = () => {
 const savingProfile = ref(false)
 const savingPassword = ref(false)
 
-// ---------- 角色（用于决定写哪张表）----------
-const isCustomer = computed(() => currentUser.value?.role === 'customer')
-const tableName = computed(() => (isCustomer.value ? 'customers' : 'admins'))
-
 // ---------- 保存基本信息 ----------
+// ⭐ 所有角色（管理员/主账号/子账号）都改 users 表
+//    理由：登录读 users.name、校验 users.password，一切以 users 为准
 const saveProfile = async () => {
   if (!profileForm.name.trim()) {
     ElMessage.warning('请输入昵称')
@@ -104,7 +102,7 @@ const saveProfile = async () => {
   savingProfile.value = true
   try {
     const { error } = await supabase
-      .from(tableName.value)
+      .from('users')
       .update({
         name: profileForm.name.trim(),
         updated_at: new Date().toISOString(),
@@ -126,6 +124,7 @@ const saveProfile = async () => {
 }
 
 // ---------- 修改密码 ----------
+// ⭐ 同上，改 users.password
 const savePassword = async () => {
   if (!passwordFormRef.value) return
   if (!currentUser.value?.id) {
@@ -142,7 +141,7 @@ const savePassword = async () => {
   savingPassword.value = true
   try {
     const { data: userData, error: queryError } = await supabase
-      .from(tableName.value)
+      .from('users')
       .select('password')
       .eq('id', currentUser.value.id)
       .maybeSingle()
@@ -156,7 +155,7 @@ const savePassword = async () => {
     }
 
     const { error: updateError } = await supabase
-      .from(tableName.value)
+      .from('users')
       .update({
         password: passwordForm.newPassword,
         updated_at: new Date().toISOString(),

@@ -1,6 +1,9 @@
 <template>
-  <div>
+  <div style="padding: 40px; text-align: center; color: #64748B;">
     <h2>车队运营报告</h2>
-    <p>这里是运营报告页面，待开发</p>
+    <p>功能开发中……</p>
   </div>
 </template>
+
+<script setup>
+</script>

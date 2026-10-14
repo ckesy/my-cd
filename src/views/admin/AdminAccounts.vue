@@ -11,6 +11,42 @@ const currentUser = (() => {
   } catch { return null }
 })()
 
+// ============================================================
+// ⭐ 管理员角色 id（首次加载时反查）
+//   写入 users.role_id 后，LoginView 第一层判定就能识别
+// ============================================================
+const adminRoleId = ref(null)
+
+const loadAdminRoleId = async () => {
+  try {
+    // 优先查 code='admin'
+    let { data, error } = await supabase
+      .from('roles')
+      .select('id, code, name')
+      .eq('code', 'admin')
+      .maybeSingle()
+
+    if (error || !data) {
+      // 退化查 name='管理员'
+      const { data: data2 } = await supabase
+        .from('roles')
+        .select('id, name')
+        .eq('name', '管理员')
+        .maybeSingle()
+      data = data2
+    }
+
+    if (data?.id) {
+      adminRoleId.value = data.id
+      console.log('[admin-accounts] 管理员角色 id =', data.id)
+    } else {
+      console.warn('[admin-accounts] ⚠️ 未找到管理员角色，将依赖 name 兜底')
+    }
+  } catch (e) {
+    console.warn('[admin-accounts] 加载管理员角色失败:', e)
+  }
+}
+
 // ---------- 筛选 ----------
 const filters = ref({ name: '', phone: '' })
 
@@ -61,6 +97,34 @@ const handleReset = () => {
   fetchData()
 }
 
+// ============================================================
+// ⭐ 手机号占用检查（防止覆盖客户主账号）
+// ============================================================
+const checkPhoneOccupied = async (phone, excludePhone = null) => {
+  try {
+    let q = supabase
+      .from('users')
+      .select('id, name, phone, account')
+      .or(`account.eq.${phone},phone.eq.${phone}`)
+      .is('owner_account', null)   // 只看主账号（非子账号）
+
+    // 编辑时排除自己（按旧 phone）
+    if (excludePhone && excludePhone !== phone) {
+      q = q.neq('phone', excludePhone)
+    }
+
+    const { data, error } = await q.limit(1)
+    if (error) {
+      console.warn('手机号查重失败:', error)
+      return null
+    }
+    return data && data.length > 0 ? data[0] : null
+  } catch (e) {
+    console.warn('手机号查重异常:', e)
+    return null
+  }
+}
+
 // ---------- 弹窗 ----------
 const dialogVisible = ref(false)
 const dialogMode = ref('add')
@@ -102,10 +166,28 @@ const handleSubmit = async () => {
   try {
     await formRef.value.validate()
 
+    // ============================================================
+    // ⭐⭐⭐ 手机号查重：防止覆盖客户/其他管理员的主账号
+    // ============================================================
+    const oldRow = dialogMode.value === 'edit'
+      ? tableData.value.find(r => r.id === form.id)
+      : null
+    const excludePhone = oldRow?.phone || null
+
+    const occupied = await checkPhoneOccupied(form.phone, excludePhone)
+    if (occupied) {
+      ElMessage.error(`手机号 ${form.phone} 已被账号「${occupied.name || occupied.account}」占用，请更换`)
+      return
+    }
+
+    // ⭐ 保证 name 一定包含"管理员"三个字（兜底机制之一）
+    //   即使 role_id 写入失败，LoginView 第二层判定也能识别
+    const adminName = form.name.includes('管理员') ? form.name : `${form.name}（管理员）`
+
     if (dialogMode.value === 'add') {
-      // ① 写 admins 表（管理员档案）
+      // ① 写 admins 表
       const { error: adminsErr } = await supabase.from('admins').insert({
-        name: form.name,
+        name: adminName,
         phone: form.phone,
         password: form.password,
         role: 'admin',
@@ -114,8 +196,21 @@ const handleSubmit = async () => {
       })
       if (adminsErr) throw adminsErr
 
-      // ② 同步写 users 表（登录账号）—— ⭐ 关键
-      // 先查 users 表有没有同 phone/account 的记录
+      // ② 写 users 表 —— ⭐ 关键修复：写入 role_id
+      const userPayload = {
+        account: form.phone,
+        name: adminName,
+        phone: form.phone,
+        password: form.password,
+        role_id: adminRoleId.value,   // ⭐⭐⭐ 关键
+        org_id: null,
+        status: form.status,
+        owner_account: null,          // 管理员不是子账号
+        remark: '管理员账号',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+
       const { data: exist } = await supabase
         .from('users')
         .select('id')
@@ -128,11 +223,12 @@ const handleSubmit = async () => {
           .from('users')
           .update({
             account: form.phone,
-            name: form.name,
+            name: adminName,
             phone: form.phone,
             password: form.password,
+            role_id: adminRoleId.value,   // ⭐ 关键
             status: form.status,
-            owner_account: null,   // ⭐ 管理员不是子账号
+            owner_account: null,
             updated_at: new Date().toISOString(),
           })
           .eq('id', exist[0].id)
@@ -141,27 +237,17 @@ const handleSubmit = async () => {
         // 不存在 → 新建
         const { error: usersErr } = await supabase
           .from('users')
-          .insert({
-            account: form.phone,
-            name: form.name,
-            phone: form.phone,
-            password: form.password,
-            role_id: null,         // ⭐ 管理员角色：靠 name 兜底识别
-            org_id: null,
-            status: form.status,
-            owner_account: null,   // ⭐ 管理员不是子账号
-            remark: '管理员账号',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
+          .insert(userPayload)
         if (usersErr) throw usersErr
       }
 
       ElMessage.success('管理员创建成功')
     } else {
+      // ============================================================
       // 编辑管理员
+      // ============================================================
       const updateData = {
-        name: form.name,
+        name: adminName,
         phone: form.phone,
         status: form.status,
         remark: form.remark || null,
@@ -174,7 +260,6 @@ const handleSubmit = async () => {
       if (adminsErr) throw adminsErr
 
       // ② 同步 users（用旧 phone 找，再改）
-      const oldRow = tableData.value.find(r => r.id === form.id)
       const oldPhone = oldRow?.phone || form.phone
 
       const { data: uList } = await supabase
@@ -186,8 +271,9 @@ const handleSubmit = async () => {
       if (uList && uList[0]) {
         const usersUpdate = {
           account: form.phone,
-          name: form.name,
+          name: adminName,
           phone: form.phone,
+          role_id: adminRoleId.value,   // ⭐ 关键：编辑时也补上 role_id
           status: form.status,
           updated_at: new Date().toISOString(),
         }
@@ -223,7 +309,7 @@ const handleDelete = (row) => {
     const { error: adminsErr } = await supabase.from('admins').delete().eq('id', row.id)
     if (adminsErr) { ElMessage.error('删除失败：' + adminsErr.message); return }
 
-    // ② 同步删 users 表里的登录账号 —— ⭐ 关键
+    // ② 同步删 users 表里的登录账号
     if (row.phone) {
       const { error: usersErr } = await supabase
         .from('users')
@@ -269,7 +355,7 @@ const submitResetPassword = async () => {
       .eq('id', passwordForm.id)
     if (adminsErr) throw adminsErr
 
-    // ② 同步 users —— ⭐ 关键
+    // ② 同步 users
     const target = tableData.value.find(r => r.id === passwordForm.id)
     if (target?.phone) {
       const { error: usersErr } = await supabase
@@ -287,7 +373,10 @@ const submitResetPassword = async () => {
   }
 }
 
-onMounted(fetchData)
+onMounted(async () => {
+  await loadAdminRoleId()
+  fetchData()
+})
 </script>
 
 <template>

@@ -34,11 +34,39 @@ const loadCustomers = async () => {
   if (!error) customers.value = data || []
 }
 
-const fuelOptions = ['燃油', '新能源', '混合动力']
+// ⭐ 燃料类型选项：与 VehicleArchive.vue 保持一致
+const fuelOptions = ['燃油车', '燃气车', '纯电动', '氢燃料']
 const boundOptions = [
   { label: '已绑定', value: '1' },
   { label: '未绑定', value: '0' },
 ]
+
+// ============================================================
+// ⭐ 反查客户根节点 id（用于写 vehicles.org_id）
+// ============================================================
+const customerRootOrgMap = ref({})
+
+const loadCustomerRootOrgs = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('id, customer_id')
+      .eq('is_root', true)
+    if (error) throw error
+    const map = {}
+    ;(data || []).forEach(o => {
+      if (o.customer_id) map[o.customer_id] = o.id
+    })
+    customerRootOrgMap.value = map
+  } catch (e) {
+    console.warn('[admin-vehicle] 加载客户根节点失败:', e)
+  }
+}
+
+const getRootOrgId = (customerId) => {
+  if (!customerId) return null
+  return customerRootOrgMap.value[customerId] || null
+}
 
 // ---------- 表格数据 ----------
 const tableData = ref([])
@@ -74,6 +102,7 @@ const fetchData = async () => {
       vin: row.vin,
       nickname: row.nickname,
       org: row.org,
+      orgId: row.org_id,
       customerId: row.customer_id,
       driver: row.driver,
       vehicleType: row.vehicle_type,
@@ -155,11 +184,15 @@ const handleSubmit = async () => {
   try {
     await formRef.value.validate()
     const customerName = customers.value.find(c => c.id === form.customerId)?.name || null
+    // ⭐ 拿到客户的根节点 id
+    const rootOrgId = getRootOrgId(form.customerId)
+
     const payload = {
       plate: form.plate,
       vin: form.vin || null,
       nickname: form.nickname || null,
       org: customerName,
+      org_id: rootOrgId,                     // ⭐ 新加：客户根节点 id
       customer_id: form.customerId || null,
       driver: form.driver || null,
       vehicle_type: form.vehicleType || null,
@@ -257,10 +290,18 @@ const handleBatchAssign = async () => {
   }
 
   const ids = selectedRows.value.map(r => r.id)
+  // ⭐ 拿到目标客户的根节点 id
+  const rootOrgId = getRootOrgId(customer.id)
+
   try {
     const { error } = await supabase
       .from('vehicles')
-      .update({ customer_id: customer.id, org: customer.name, updated_at: new Date().toISOString() })
+      .update({
+        customer_id: customer.id,
+        org: customer.name,
+        org_id: rootOrgId,                    // ⭐ 新加
+        updated_at: new Date().toISOString(),
+      })
       .in('id', ids)
     if (error) throw error
     ElMessage.success(`已将 ${ids.length} 台车辆分配给「${customer.name}」`)
@@ -316,7 +357,7 @@ const downloadTemplate = async () => {
 
   const sampleData = [
     '粤A12345', 'LGAX3AG59N9009177', '我的车',
-    '新能源', '牵引车', '快递快运', '否', '无',
+    '纯电动', '牵引车', '快递快运', '否', '无',
     '2026-01-01', '2026-01-01',
   ]
   const dataRow = worksheet.addRow(sampleData)
@@ -391,6 +432,8 @@ const confirmImport = async () => {
     const customer = importCustomerId.value
       ? customers.value.find(c => c.id === importCustomerId.value)
       : null
+    // ⭐ 目标客户的根节点 id
+    const rootOrgId = customer ? getRootOrgId(customer.id) : null
 
     const validData = []
     const errors = []
@@ -426,6 +469,7 @@ const confirmImport = async () => {
         vin,
         nickname: nickname || null,
         org: customer?.name || null,
+        org_id: rootOrgId,                       // ⭐ 新加
         customer_id: customer?.id || null,
         driver: null,
         fuel_type: fuelType || null,
@@ -508,6 +552,7 @@ const handleExport = () => ElMessage.info('导出功能开发中')
 
 onMounted(async () => {
   await loadCustomers()
+  await loadCustomerRootOrgs()
   fetchData()
 })
 </script>

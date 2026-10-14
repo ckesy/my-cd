@@ -212,11 +212,10 @@ const searchKeyword = ref('')
 const located = ref(false)
 const showSuccess = ref(false)
 
-// HTTP 网关地址
 const API_BASE = 'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com'
 
 // ============================================================
-// 当前登录用户
+// 当前登录用户 & 机构信息
 // ============================================================
 const currentUser = (() => {
   try { return JSON.parse(localStorage.getItem('currentUser') || '{}') }
@@ -224,25 +223,67 @@ const currentUser = (() => {
 })()
 const isAdmin = currentUser.role === 'admin'
 const isCustomer = !isAdmin
+const isSubAccount = !!currentUser.isSubAccount
 const myAccount = currentUser.masterAccount || currentUser.account || ''
+
+// ⭐ 子账号机构信息
+const myOrgName = ref(isSubAccount ? String(currentUser.orgName || '').trim() || null : null)
+const myOrgLevel = ref(isSubAccount ? (Number(currentUser.orgLevel) || 1) : null)
+
+const isRootOrgSubAccount = computed(() =>
+  isSubAccount && Number(myOrgLevel.value) === 1
+)
+const needOrgFilter = computed(() =>
+  isCustomer && isSubAccount && Number(myOrgLevel.value) >= 2
+)
+
+// 兜底反查
+const loadMyOrgInfo = async () => {
+  if (!isCustomer || !isSubAccount) return
+  if (myOrgName.value && myOrgLevel.value) return
+  if (!currentUser.orgId) return
+  try {
+    const { data } = await supabase
+      .from('organizations')
+      .select('name, level')
+      .eq('id', currentUser.orgId)
+      .maybeSingle()
+    if (data) {
+      if (data.name) myOrgName.value = String(data.name).trim()
+      myOrgLevel.value = Number(data.level) || 1
+    }
+  } catch (e) { }
+}
 
 // ============================================================
 // 所属机构下拉选项
+//   二级机构子账号：只显示自己机构
+//   一级机构子账号 / 主账号 / 管理员：显示全部（按 level 排序）
 // ============================================================
 const orgOptions = ref([])
 
 const loadOrgOptions = async () => {
   try {
-    let q = supabase.from('organizations').select('id, name').order('id')
+    let q = supabase
+      .from('organizations')
+      .select('id, name, level, parent_id, is_root, customer_id')
+      .order('level', { ascending: true })
+      .order('id', { ascending: true })
     if (isCustomer) q = q.eq('owner_account', myAccount)
     const { data, error } = await q
     if (error) throw error
 
-    const list = [...(data || [])]
-    if (isCustomer) {
-      const rootLabel = currentUser.name || currentUser.account || '我的组织'
-      list.unshift({ id: '__root__', name: rootLabel, isRoot: true })
+    let list = data || []
+
+    // ⭐ 二级机构子账号：只显示自己机构
+    if (needOrgFilter.value && myOrgName.value) {
+      list = list.filter(o => o.name === myOrgName.value)
+      // 兜底：如果 organizations 表里没有，构造一条虚拟项（但值为真名）
+      if (list.length === 0) {
+        list = [{ id: '__self__', name: myOrgName.value, level: myOrgLevel.value, isSelf: true }]
+      }
     }
+
     orgOptions.value = list
   } catch (e) {
     console.error('加载组织失败：', e)
@@ -439,10 +480,18 @@ const resetProgressAnimation = () => {
 watch(() => props.modelValue, async (val) => {
   visible.value = val
   if (val) {
+    if (isCustomer && isSubAccount) await loadMyOrgInfo()
     await loadOrgOptions()
     await nextTick()
     await initMap()
-    if (props.editData) loadEditData()
+    if (props.editData) {
+      loadEditData()
+    } else {
+      // ⭐ 新增时：二级机构子账号默认选中自己机构
+      if (needOrgFilter.value && myOrgName.value) {
+        form.org = myOrgName.value
+      }
+    }
   } else {
     destroyMap()
   }
@@ -501,7 +550,6 @@ const initMap = async () => {
       })
     }
 
-    // ⭐ 根据当前形状激活绘制工具
     if (!isEdit.value) {
       if (form.shape === 'circle') {
         map.on('click', onMapClickCircle)
@@ -589,9 +637,6 @@ const loadEditData = () => {
   })
 }
 
-// ============================================================
-// 从已有 points 恢复多边形
-// ============================================================
 const drawPolygonFromPoints = (pointsStr) => {
   const path = pointsStr.split(';').filter(Boolean).map(p => {
     const [lng, lat] = p.split(',').map(Number)
@@ -651,7 +696,7 @@ const loadDistrictBoundary = (adcode) => {
 }
 
 // ============================================================
-// ⭐ 切换形状：恢复正确的绘制工具激活逻辑
+// 切换形状
 // ============================================================
 const handleShapeChange = () => {
   if (isEdit.value) return
@@ -662,13 +707,9 @@ const handleShapeChange = () => {
     return
   }
 
-  // 先关闭之前的绘制工具（清掉未完成的绘制）
   try { mouseTool.close(false) } catch (e) { /* ignore */ }
-
-  // 移除地图点击监听
   try { map.off('click', onMapClickCircle) } catch (e) { /* ignore */ }
 
-  // 等 Vue 更新完再激活新工具
   nextTick(() => {
     if (form.shape === 'circle') {
       map.on('click', onMapClickCircle)
@@ -677,7 +718,6 @@ const handleShapeChange = () => {
     } else if (form.shape === 'polyline') {
       startPolylineDraw()
     }
-    // district 不需要地图交互
   })
 }
 
@@ -686,9 +726,6 @@ const onMapClickCircle = (e) => {
   drawCircle(e.lnglat.getLng(), e.lnglat.getLat())
 }
 
-// ============================================================
-// ⭐ 多边形绘制：加防御 + 只绑定一次
-// ============================================================
 const startPolygonDraw = () => {
   if (!mouseTool) return
   try { mouseTool.off && mouseTool.off('draw') } catch (e) { /* ignore */ }
@@ -710,7 +747,6 @@ const startPolygonDraw = () => {
     polygonEditor.on('adjust', updatePolygonData)
     polygonEditor.on('move', updatePolygonData)
 
-    // 绘制完后关闭 mouseTool，避免继续绘制
     try { mouseTool.close(false) } catch (e) { /* ignore */ }
   })
 }
@@ -731,9 +767,6 @@ const updatePolygonData = () => {
   geocodeAddress(centerLng, centerLat)
 }
 
-// ============================================================
-// ⭐ 线形绘制：加防御 + 只绑定一次
-// ============================================================
 const startPolylineDraw = () => {
   if (!mouseTool) return
   try { mouseTool.off && mouseTool.off('draw') } catch (e) { /* ignore */ }
@@ -1041,13 +1074,8 @@ const handleClose = () => {
 }
 
 // ============================================================
-// 提交表单（新增 / 编辑）
+// 提交表单
 // ============================================================
-// ============================================
-// 提交表单（新增 or 编辑）
-// ⭐ 新增：数据库先写 → 高德建 → 高德失败回滚
-// ⭐ 编辑：高德先改 → 数据库后改
-// ============================================
 const submitForm = (isContinue) => {
   formRef.value.validate(async (valid) => {
     if (!valid) return
@@ -1081,7 +1109,6 @@ const submitForm = (isContinue) => {
         amapPayload.center = form.center
         amapPayload.radius = form.radius
       } else if (form.shape === 'polygon') {
-        // ⭐ 多边形首尾点闭合（高德要求）
         let list = String(form.points || '')
           .split(';')
           .map(s => s.trim())
@@ -1106,13 +1133,23 @@ const submitForm = (isContinue) => {
 
       // ============================================================
       // 2️⃣ 构造数据库 payload
+      // ⭐⭐⭐ 关键：确定 org 字段的值
+      //   新增 + 二级机构子账号 → 强制本机构名
+      //   其他 → 用户从下拉选的值
       // ============================================================
+      let finalOrg = form.org
+      if (!isEdit.value && needOrgFilter.value && myOrgName.value) {
+        // 二级机构子账号新增时强制本机构
+        finalOrg = myOrgName.value
+        console.log('[Fence] 二级机构子账号新增 → 强制 org =', finalOrg)
+      }
+
       const now = new Date().toISOString()
       const dbPayload = {
         name: form.name,
         desc: form.attr,
         shape: form.shape,
-        org: form.org,
+        org: finalOrg,
         attr: form.attr,
         location: form.location,
         owner_account: myAccount,
@@ -1133,10 +1170,9 @@ const submitForm = (isContinue) => {
       // ============================================================
       // 3️⃣ 分支：新增 vs 编辑
       // ============================================================
-      let dbRecordId = null   // 用于新增时回滚
+      let dbRecordId = null
 
       if (!isEdit.value) {
-        // ⭐⭐⭐ 新增：先写数据库（gfid=null）
         const { data: dbData, error: dbErr } = await supabase
           .from('ele_fences')
           .insert({
@@ -1178,7 +1214,6 @@ const submitForm = (isContinue) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         amapData = await response.json()
 
-        // 20003 也算成功（高德"假错误"）
         amapSuccess = amapData.errcode === 0 || amapData.errcode === 10000 || amapData.errcode === 20003
         if (!amapSuccess) {
           amapErrorMsg = String(amapData.errmsg || '未知错误')
@@ -1188,12 +1223,11 @@ const submitForm = (isContinue) => {
       }
 
       // ============================================================
-      // 5️⃣ 高德失败 → 回滚数据库（仅新增模式）
+      // 5️⃣ 高德失败 → 回滚数据库
       // ============================================================
       if (!amapSuccess) {
         console.error('【高德返回】', amapData || amapErrorMsg)
 
-        // ⭐ 新增模式：删掉刚才插入的数据库记录
         if (!isEdit.value && dbRecordId) {
           try {
             const { error: rollbackErr } = await supabase
@@ -1238,7 +1272,6 @@ const submitForm = (isContinue) => {
       console.log('【高德返回】', amapData)
 
       if (!isEdit.value && dbRecordId) {
-        // ⭐ 新增：回填 gfid
         const newGfid = (amapData && amapData.data && amapData.data.gfid) || (amapData && amapData.gfid) || null
         if (newGfid) {
           const { error: updateErr } = await supabase
@@ -1255,7 +1288,6 @@ const submitForm = (isContinue) => {
           console.warn('[新增围栏] 高德返回没有 gfid')
         }
       } else if (isEdit.value) {
-        // ⭐ 编辑：更新数据库
         const { error: dbErr } = await supabase
           .from('ele_fences')
           .update(dbPayload)
@@ -1284,8 +1316,10 @@ const submitForm = (isContinue) => {
             const savedTime = form.lastActionTime
             const savedText = form.lastActionText
             formRef.value.resetFields()
+            // ⭐ 重置时保留 org（二级机构子账号继续用本机构）
+            const preservedOrg = (needOrgFilter.value && myOrgName.value) ? myOrgName.value : ''
             Object.assign(form, {
-              shape: 'circle', name: '', org: '', attr: '',
+              shape: 'circle', name: '', org: preservedOrg, attr: '',
               radius: 1000, bufferradius: 50, center: '',
               points: '', pointsDisplay: '', province: '', city: '', adcode: '',
               location: '', lastActionTime: savedTime, lastActionText: savedText,
