@@ -1,5 +1,11 @@
 <template>
   <div class="alert-setting-page">
+    <!-- ⭐ 只读提示横幅 -->
+    <div v-if="isReadonly" class="readonly-banner">
+      <el-icon><Lock /></el-icon>
+      <span>提醒配置由主账号统一管理，您当前为<strong>只读模式</strong>（仅可查看，无法修改）</span>
+    </div>
+
     <!-- 顶部标题条 -->
     <div class="page-header fade-up">
       <div class="header-left">
@@ -13,10 +19,10 @@
         </div>
       </div>
       <div class="header-actions">
-        <el-button class="btn-outline" @click="handleReset">
+        <el-button class="btn-outline" @click="handleReset" :disabled="isReadonly">
           <el-icon><Refresh /></el-icon> 重置
         </el-button>
-        <el-button type="primary" class="btn-primary" @click="handleSave" :loading="saving">
+        <el-button type="primary" class="btn-primary" @click="handleSave" :loading="saving" :disabled="isReadonly">
           <el-icon><Check /></el-icon> 提交保存
         </el-button>
       </div>
@@ -26,9 +32,9 @@
     <div class="switch-cards-grid">
       <div
         class="switch-card speeding-card fade-up"
-        :class="{ active: speeding.enabled }"
+        :class="{ active: speeding.enabled, readonly: isReadonly }"
         style="animation-delay: 0.1s"
-        @click="speeding.enabled = !speeding.enabled; handleSwitchChange('speeding', speeding.enabled)"
+        @click="!isReadonly && (speeding.enabled = !speeding.enabled, handleSwitchChange('speeding', speeding.enabled))"
       >
         <div class="switch-card-bg-ring"></div>
         <div class="switch-card-content">
@@ -49,9 +55,9 @@
 
       <div
         class="switch-card staying-card fade-up"
-        :class="{ active: staying.enabled }"
+        :class="{ active: staying.enabled, readonly: isReadonly }"
         style="animation-delay: 0.2s"
-        @click="staying.enabled = !staying.enabled; handleSwitchChange('staying', staying.enabled)"
+        @click="!isReadonly && (staying.enabled = !staying.enabled, handleSwitchChange('staying', staying.enabled))"
       >
         <div class="switch-card-bg-ring staying-ring"></div>
         <div class="switch-card-content">
@@ -120,8 +126,8 @@
                 <template #reference>
                   <div
                     class="fence-select-trigger"
-                    :class="{ active: speeding.fence_ids.length > 0 }"
-                    @click="openPicker('speeding')"
+                    :class="{ active: speeding.fence_ids.length > 0, readonly: isReadonly }"
+                    @click="!isReadonly && openPicker('speeding')"
                   >
                     <el-icon class="trigger-icon"><MapLocation /></el-icon>
                     <span v-if="speeding.fence_ids.length === 0" class="trigger-text">
@@ -205,7 +211,7 @@
                   class="selected-tag speeding-tag"
                 >
                   {{ speeding.fence_names[idx] }}
-                  <el-icon class="tag-close" @click.stop="removeFence('speeding', id)">
+                  <el-icon v-if="!isReadonly" class="tag-close" @click.stop="removeFence('speeding', id)">
                     <Close />
                   </el-icon>
                 </span>
@@ -238,6 +244,7 @@
                 v-model="speeding.speed_threshold"
                 :min="30" :max="120" :step="5"
                 :show-tooltip="false"
+                :disabled="isReadonly"
                 class="block-slider"
               />
               <div class="slider-labels"><span>30</span><span>120</span></div>
@@ -258,6 +265,7 @@
                 format="HH:mm:ss"
                 value-format="HH:mm:ss"
                 size="small"
+                :disabled="isReadonly"
                 style="width: 100%;"
               />
             </div>
@@ -277,6 +285,7 @@
                 format="HH:mm:ss"
                 value-format="HH:mm:ss"
                 size="small"
+                :disabled="isReadonly"
                 style="width: 100%;"
               />
             </div>
@@ -334,8 +343,8 @@
                 <template #reference>
                   <div
                     class="fence-select-trigger staying-trigger"
-                    :class="{ active: staying.fence_ids.length > 0 }"
-                    @click="openPicker('staying')"
+                    :class="{ active: staying.fence_ids.length > 0, readonly: isReadonly }"
+                    @click="!isReadonly && openPicker('staying')"
                   >
                     <el-icon class="trigger-icon"><MapLocation /></el-icon>
                     <span v-if="staying.fence_ids.length === 0" class="trigger-text">
@@ -419,7 +428,7 @@
                   class="selected-tag staying-tag"
                 >
                   {{ staying.fence_names[idx] }}
-                  <el-icon class="tag-close" @click.stop="removeFence('staying', id)">
+                  <el-icon v-if="!isReadonly" class="tag-close" @click.stop="removeFence('staying', id)">
                     <Close />
                   </el-icon>
                 </span>
@@ -448,6 +457,7 @@
                 v-model="staying.stay_count"
                 :min="1" :max="20" :step="1"
                 :show-tooltip="false"
+                :disabled="isReadonly"
                 class="block-slider staying-slider"
               />
               <div class="slider-labels"><span>1</span><span>20</span></div>
@@ -470,6 +480,7 @@
                 v-model="staying.stay_duration"
                 :min="1" :max="120" :step="1"
                 :show-tooltip="false"
+                :disabled="isReadonly"
                 class="block-slider staying-slider"
               />
               <div class="slider-labels"><span>1</span><span>120</span></div>
@@ -492,6 +503,7 @@
                 v-model="staying.stay_radius"
                 :min="5" :max="500" :step="5"
                 :show-tooltip="false"
+                :disabled="isReadonly"
                 class="block-slider staying-slider"
               />
               <div class="slider-labels"><span>5</span><span>500</span></div>
@@ -512,6 +524,7 @@
                 format="HH:mm:ss"
                 value-format="HH:mm:ss"
                 size="small"
+                :disabled="isReadonly"
                 style="width: 100%;"
               />
             </div>
@@ -531,6 +544,7 @@
                 format="HH:mm:ss"
                 value-format="HH:mm:ss"
                 size="small"
+                :disabled="isReadonly"
                 style="width: 100%;"
               />
             </div>
@@ -576,7 +590,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Bell, Refresh, Check, Odometer, Location,
-  MapLocation, Clock, Timer, Aim, Search, Close, ArrowDown, Select, InfoFilled
+  MapLocation, Clock, Timer, Aim, Search, Close, ArrowDown, Select, InfoFilled, Lock
 } from '@element-plus/icons-vue'
 import { supabase } from '@/utils/supabase'
 
@@ -604,6 +618,9 @@ const isRootOrgSubAccount = computed(() =>
 const needOrgFilter = computed(() =>
   isCustomer && isSubAccount && Number(myOrgLevel.value) >= 2
 )
+
+// ⭐ 二级机构子账号：只读（不能修改配置）
+const isReadonly = computed(() => needOrgFilter.value)
 
 // 兜底反查
 const loadMyOrgInfo = async () => {
@@ -865,6 +882,12 @@ const goToFenceSetting = () => {
 // ⚠️ 提醒配置是"客户级"共享的，不按机构隔离（保持旧行为）
 // ============================================
 const handleSave = async () => {
+  // ⭐ 只读模式拦截
+  if (isReadonly.value) {
+    ElMessage.warning('提醒配置由主账号统一管理，您当前为只读模式')
+    return
+  }
+
   // ⭐ 超速：未选围栏 → 弹确认框
   if (speeding.enabled && speeding.fence_ids.length === 0) {
     try {
@@ -956,6 +979,12 @@ const handleSave = async () => {
 }
 
 const handleReset = () => {
+  // ⭐ 只读模式拦截
+  if (isReadonly.value) {
+    ElMessage.warning('提醒配置由主账号统一管理，您当前为只读模式')
+    return
+  }
+
   speeding.enabled = false
   speeding.fence_ids = []
   speeding.fence_names = []
@@ -994,6 +1023,37 @@ onMounted(async () => {
   color: #1E293B;
 }
 
+/* ========== 只读提示横幅 ========== */
+.readonly-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+  border: 1px solid #FCD34D;
+  border-left: 4px solid #F59E0B;
+  border-radius: 12px;
+  color: #92400E;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.15);
+  animation: bannerFadeIn 0.5s ease-out;
+}
+.readonly-banner .el-icon {
+  font-size: 18px;
+  color: #D97706;
+  flex-shrink: 0;
+}
+.readonly-banner strong {
+  color: #B45309;
+  font-weight: 800;
+  margin: 0 2px;
+}
+@keyframes bannerFadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ========== 页面头部 ⭐ 滚动时固定 ========== */
 .page-header {
   background: #ffffff;
@@ -1003,7 +1063,6 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-  /* ⭐ 新增：滚动时固定在顶部 */
   position: sticky;
   top: 0;
   z-index: 100;
@@ -1126,6 +1185,19 @@ onMounted(async () => {
 .staying-card.active {
   border-color: #93C5FD;
   box-shadow: 0 8px 24px rgba(37, 99, 235, 0.15);
+}
+
+/* ⭐ 只读态开关卡片 */
+.switch-card.readonly {
+  cursor: not-allowed;
+}
+.switch-card.readonly:hover {
+  transform: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+.switch-card.readonly .switch-card-bg-ring,
+.switch-card.readonly .switch-card-icon {
+  animation: none;
 }
 
 .switch-card-bg-ring {
@@ -1599,6 +1671,18 @@ onMounted(async () => {
 .fence-select-trigger.active.staying-trigger {
   background: #EFF6FF;
   border-color: #93C5FD;
+}
+
+/* ⭐ 只读态围栏触发器 */
+.fence-select-trigger.readonly {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+.fence-select-trigger.readonly:hover {
+  background: #F1F5F9;
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
 }
 
 .trigger-icon {

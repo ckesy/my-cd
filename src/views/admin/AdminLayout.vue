@@ -40,6 +40,7 @@ const goLogout = () => {
   showGoodbye.value = true
   setTimeout(() => {
     localStorage.removeItem('originalUser') 
+    localStorage.removeItem('currentUser')
     router.push('/')
     setTimeout(() => { showGoodbye.value = false }, 200)
   }, 1250)

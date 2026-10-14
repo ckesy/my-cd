@@ -475,6 +475,62 @@ const resetProgressAnimation = () => {
 }
 
 // ============================================================
+// ⭐ 围栏改名 → 同步 ele_fence_alerts.fence_name
+//    提醒配置里存的是围栏名字快照（JSON 数组），改名后要同步
+// ============================================================
+const syncFenceNameToAlerts = async () => {
+  const oldName = String(props.editData?.name || '').trim()
+  const newName = String(form.name || '').trim()
+  const fenceId = props.editData?.id
+  if (!oldName || !newName || oldName === newName || !fenceId) return
+
+  try {
+    // 查所有含这个围栏 ID 的提醒配置
+    let q = supabase
+      .from('ele_fence_alerts')
+      .select('id, fence_id, fence_name')
+      .like('fence_id', `%${fenceId}%`)
+    if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
+
+    const { data, error } = await q
+    if (error) throw error
+    if (!data || !data.length) return
+
+    const updates = []
+    for (const row of data) {
+      try {
+        const ids = JSON.parse(row.fence_id || '[]')
+        const names = JSON.parse(row.fence_name || '[]')
+        if (!Array.isArray(ids) || !Array.isArray(names)) continue
+
+        const idx = ids.indexOf(fenceId)
+        if (idx === -1) continue
+        // 位置对齐，替换为新名字
+        if (names[idx] === oldName || names[idx] === undefined) {
+          names[idx] = newName
+        }
+
+        updates.push(
+          supabase
+            .from('ele_fence_alerts')
+            .update({ fence_name: JSON.stringify(names) })
+            .eq('id', row.id)
+        )
+      } catch (e) {
+        console.warn('[Fence] 解析 fence_id/fence_name 失败', row.id, e)
+      }
+    }
+
+    if (updates.length) {
+      await Promise.all(updates)
+      console.log(`[Fence] 围栏改名同步完成，影响 ${updates.length} 条提醒配置`)
+    }
+  } catch (e) {
+    console.warn('[Fence] 围栏改名同步失败（不影响主流程）:', e)
+  }
+}
+
+// ============================================================
 // 监听弹窗显隐
 // ============================================================
 watch(() => props.modelValue, async (val) => {
@@ -1295,6 +1351,9 @@ const submitForm = (isContinue) => {
         if (dbErr) {
           console.error('数据库更新失败：', dbErr)
           ElMessage.warning('信息暂时没有同步成功哈～～')
+        } else {
+          // ⭐ 围栏改名 → 同步 ele_fence_alerts.fence_name
+          await syncFenceNameToAlerts()
         }
       }
 

@@ -61,7 +61,7 @@ const fetchData = async () => {
   loading.value = true
   try {
     let query = supabase.from('admins').select('*', { count: 'exact' })
-    if (filters.value.name)  query = query.ilike('name', `%${filters.value.name}%`)
+    if (filters.value.name) query = query.ilike('name', `%${filters.value.name}%`)
     if (filters.value.phone) query = query.ilike('phone', `%${filters.value.phone}%`)
 
     const from = (currentPage.value - 1) * pageSize.value
@@ -71,7 +71,30 @@ const fetchData = async () => {
     const { data, error, count } = await query
     if (error) throw error
 
-    tableData.value = (data || []).map(row => ({
+    const rows = data || []
+
+    // ⭐ 批量反查 users，判断登录账号是否存在
+    const phones = rows.map(r => r.phone).filter(Boolean)
+    const existingPhones = new Set()
+    if (phones.length) {
+      // 查 phone 匹配（主账号）
+      const { data: u1 } = await supabase
+        .from('users')
+        .select('phone')
+        .in('phone', phones)
+        .is('owner_account', null)
+        ; (u1 || []).forEach(u => u.phone && existingPhones.add(u.phone))
+
+      // 查 account 匹配（主账号）
+      const { data: u2 } = await supabase
+        .from('users')
+        .select('account')
+        .in('account', phones)
+        .is('owner_account', null)
+        ; (u2 || []).forEach(u => u.account && existingPhones.add(u.account))
+    }
+
+    tableData.value = rows.map(row => ({
       id: row.id,
       name: row.name,
       phone: row.phone,
@@ -80,6 +103,7 @@ const fetchData = async () => {
       createdAt: row.created_at
         ? new Date(row.created_at).toLocaleString('zh-CN', { hour12: false })
         : '--',
+      _noUser: !existingPhones.has(row.phone),   // ⭐ 脏数据标记
     }))
     total.value = count || 0
   } catch (e) {
@@ -133,7 +157,7 @@ const form = reactive({
   id: '', name: '', phone: '', password: '', status: 1, remark: '',
 })
 const formRules = {
-  name:  [{ required: true, message: '请输入管理员名称', trigger: 'blur' }],
+  name: [{ required: true, message: '请输入管理员名称', trigger: 'blur' }],
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' },
@@ -321,7 +345,7 @@ const handleDelete = (row) => {
 
     ElMessage.success('删除成功')
     fetchData()
-  }).catch(() => {})
+  }).catch(() => { })
 }
 
 // ---------- 重置密码 ----------
@@ -390,10 +414,14 @@ onMounted(async () => {
 
       <div class="filter-actions">
         <button class="action-btn primary" @click="handleSearch">
-          <el-icon><Search /></el-icon> 搜索
+          <el-icon>
+            <Search />
+          </el-icon> 搜索
         </button>
         <button class="action-btn" @click="openAdd">
-          <el-icon><Plus /></el-icon> 新增管理员
+          <el-icon>
+            <Plus />
+          </el-icon> 新增管理员
         </button>
         <button class="action-btn ghost" @click="handleReset">重置</button>
       </div>
@@ -407,14 +435,15 @@ onMounted(async () => {
         <span class="count">共 {{ total }} 条</span>
       </div>
 
-      <el-table
-        :data="tableData"
-        v-loading="loading"
-        class="light-table"
-        empty-text="暂无管理员"
-        stripe
-      >
-        <el-table-column prop="name" label="管理员名称" min-width="180" />
+      <el-table :data="tableData" v-loading="loading" class="light-table" empty-text="暂无管理员" stripe>
+        <el-table-column prop="name" label="管理员名称" min-width="240">
+          <template #default="{ row }">
+            <span>{{ row.name }}</span>
+            <el-tag v-if="row._noUser" type="danger" size="small" effect="light" style="margin-left: 8px">
+              ⚠️ 无登录账号
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="phone" label="登录手机号" min-width="160" />
         <el-table-column label="状态" width="120" align="center">
           <template #default="{ row }">
@@ -426,41 +455,38 @@ onMounted(async () => {
         <el-table-column prop="createdAt" label="创建时间" min-width="200" />
         <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
-            <button class="row-btn" @click="openEdit(row)">
-              <el-icon><Edit /></el-icon> 编辑
-            </button>
-            <button class="row-btn" @click="openResetPassword(row)">
-              <el-icon><Key /></el-icon> 重置密码
-            </button>
+            <!-- ⭐ 无 users 记录的脏数据，不能编辑/改密码 -->
+            <template v-if="!row._noUser">
+              <button class="row-btn" @click="openEdit(row)">
+                <el-icon>
+                  <Edit />
+                </el-icon> 编辑
+              </button>
+              <button class="row-btn" @click="openResetPassword(row)">
+                <el-icon>
+                  <Key />
+                </el-icon> 重置密码
+              </button>
+            </template>
             <button class="row-btn danger" @click="handleDelete(row)">
-              <el-icon><Delete /></el-icon> 删除
+              <el-icon>
+                <Delete />
+              </el-icon> 删除
             </button>
           </template>
         </el-table-column>
       </el-table>
 
       <div class="pagination-wrap">
-        <el-pagination
-          background
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          @size-change="fetchData"
-          @current-change="fetchData"
-        />
+        <el-pagination background layout="total, sizes, prev, pager, next, jumper" :total="total"
+          v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]"
+          @size-change="fetchData" @current-change="fetchData" />
       </div>
     </section>
 
     <!-- 新增/编辑弹窗 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogMode === 'add' ? '新增管理员' : '编辑管理员'"
-      width="520px"
-      class="light-dialog"
-      :close-on-click-modal="false"
-    >
+    <el-dialog v-model="dialogVisible" :title="dialogMode === 'add' ? '新增管理员' : '编辑管理员'" width="520px"
+      class="light-dialog" :close-on-click-modal="false">
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px" class="light-form">
         <el-form-item label="管理员名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入管理员名称" />
@@ -469,21 +495,11 @@ onMounted(async () => {
           <el-input v-model="form.phone" placeholder="请输入登录手机号" maxlength="11" />
         </el-form-item>
         <el-form-item label="登录密码" prop="password">
-          <el-input
-            v-model="form.password"
-            type="password"
-            show-password
-            :placeholder="dialogMode === 'add' ? '请输入登录密码' : '不修改请留空'"
-          />
+          <el-input v-model="form.password" type="password" show-password
+            :placeholder="dialogMode === 'add' ? '请输入登录密码' : '不修改请留空'" />
         </el-form-item>
         <el-form-item label="状态">
-          <el-switch
-            v-model="form.status"
-            :active-value="1"
-            :inactive-value="0"
-            active-text="启用"
-            inactive-text="停用"
-          />
+          <el-switch v-model="form.status" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="停用" />
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="选填" />
@@ -497,13 +513,8 @@ onMounted(async () => {
     </el-dialog>
 
     <!-- 重置密码弹窗 -->
-    <el-dialog
-      v-model="passwordDialogVisible"
-      title="重置密码"
-      width="440px"
-      class="light-dialog"
-      :close-on-click-modal="false"
-    >
+    <el-dialog v-model="passwordDialogVisible" title="重置密码" width="440px" class="light-dialog"
+      :close-on-click-modal="false">
       <div class="reset-tip">
         <span class="tip-icon-red">!</span>
         正在为管理员「<b>{{ passwordForm.name }}</b>」重置登录密码
@@ -511,12 +522,7 @@ onMounted(async () => {
 
       <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="90px" class="light-form">
         <el-form-item label="新密码" prop="newPassword">
-          <el-input
-            v-model="passwordForm.newPassword"
-            type="password"
-            show-password
-            placeholder="请输入 6~32 位新密码"
-          />
+          <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="请输入 6~32 位新密码" />
         </el-form-item>
       </el-form>
 
@@ -535,11 +541,22 @@ onMounted(async () => {
   gap: 16px;
   animation: pageIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.table-panel { display: flex; flex-direction: column; }
+
+.table-panel {
+  display: flex;
+  flex-direction: column;
+}
 
 @keyframes pageIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* 状态标签 */
@@ -552,8 +569,16 @@ onMounted(async () => {
   font-weight: 600;
   letter-spacing: 0.5px;
 }
-.status-tag.on  { color: #059669; background: #D1FAE5; }
-.status-tag.off { color: #64748B; background: #F1F5F9; }
+
+.status-tag.on {
+  color: #059669;
+  background: #D1FAE5;
+}
+
+.status-tag.off {
+  color: #64748B;
+  background: #F1F5F9;
+}
 
 /* 重置密码提示 */
 .reset-tip {
@@ -568,13 +593,22 @@ onMounted(async () => {
   color: #475569;
   margin-bottom: 18px;
 }
-.reset-tip b { color: #c8102e; }
+
+.reset-tip b {
+  color: #c8102e;
+}
+
 .tip-icon-red {
-  width: 20px; height: 20px;
-  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
-  background: #c8102e; color: #fff;
-  font-weight: 700; font-size: 12px;
+  background: #c8102e;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
   flex-shrink: 0;
 }
 </style>

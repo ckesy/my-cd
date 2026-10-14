@@ -232,11 +232,13 @@ const handleView = (row) => { currentDetailRow.value = row; detailDialogVisible.
 const editDialogVisible = ref(false)
 const editFormData = ref(null)
 const editSaving = ref(false)
+const originalOrgWhenEdit = ref(null)   // ⭐ 记录编辑时的原始 org
 
 const handleEdit = (row) => {
   const data = JSON.parse(JSON.stringify(row))
   const names = data.driver ? data.driver.split(',').map(s => s.trim()).filter(Boolean) : []
   data.driverDisplay = !names.length ? '' : names.length <= 2 ? names.join('；') : `已选 ${names.length} 名司机`
+  originalOrgWhenEdit.value = String(row.org || '').trim() || null   // ⭐ 记录
   editFormData.value = data
   editDialogVisible.value = true
 }
@@ -334,6 +336,14 @@ const syncFromVehiclesToDrivers = async () => {
 
 const saveEdit = async () => {
   if (!editFormData.value) return
+
+  // ⭐ 校验：原值有机构，不允许清空
+  const newOrg = String(editFormData.value.org || '').trim() || null
+  if (originalOrgWhenEdit.value && !newOrg) {
+    ElMessage.warning(`该车辆已归属机构「${originalOrgWhenEdit.value}」，不允许清空所属机构`)
+    return
+  }
+
   editSaving.value = true
   try {
     const { id, created_at, updated_at, driverDisplay, ...fields } = editFormData.value
@@ -768,7 +778,7 @@ onBeforeUnmount(() => {
                   :min-width="Math.round(col.minWidth * densityMultiplier)" :align="col.align"
                   :fixed="col.fixed || false" show-overflow-tooltip>
                   <template #default="{ row }"><span class="time-text">{{ formatDateTime(row[col.prop])
-                      }}</span></template>
+                  }}</span></template>
                 </el-table-column>
 
                 <el-table-column v-else-if="col.prop === 'vin'" :label="col.label"
@@ -782,7 +792,7 @@ onBeforeUnmount(() => {
                   :fixed="col.fixed || false" show-overflow-tooltip>
                   <template #default="{ row }">
                     <span :class="col.prop === 'plate' ? 'plate-text' : 'text-content'">{{ row[col.prop] || '--'
-                      }}</span>
+                    }}</span>
                   </template>
                 </el-table-column>
               </template>
@@ -874,29 +884,29 @@ onBeforeUnmount(() => {
       </template>
       <div v-if="currentDetailRow" class="detail-grid">
         <div class="detail-item"><span class="label">车牌号</span><span class="value strong">{{ currentDetailRow.plate ||
-            '--'
-            }}</span></div>
+          '--'
+        }}</span></div>
         <div class="detail-item"><span class="label">VIN码</span><span class="value mono">{{ currentDetailRow.vin || '--'
-            }}</span></div>
+        }}</span></div>
         <div class="detail-item"><span class="label">车辆昵称</span><span class="value">{{ currentDetailRow.nickname || '--'
-            }}</span></div>
+        }}</span></div>
         <div class="detail-item"><span class="label">所属机构组织</span><span class="value">{{ currentDetailRow.org || '--'
-            }}</span></div>
+        }}</span></div>
         <div class="detail-item"><span class="label">绑定司机</span><span class="value">{{ currentDetailRow.driver || '--'
-            }}</span></div>
+        }}</span></div>
         <div class="detail-item"><span class="label">燃料类型</span><span class="value">{{ currentDetailRow.fuel_type ||
-            '--'
-            }}</span></div>
+          '--'
+        }}</span></div>
         <div class="detail-item"><span class="label">车辆类型</span><span class="value">{{ currentDetailRow.vehicle_type ||
-            '--'
-            }}</span></div>
+          '--'
+        }}</span></div>
         <div class="detail-item"><span class="label">车辆用途</span><span class="value">{{ currentDetailRow.usage || '--'
-            }}</span></div>
+        }}</span></div>
         <div class="detail-item"><span class="label">子母车</span><span class="value">{{ currentDetailRow.sub_vehicle ||
-            '--'
-            }}</span></div>
+          '--'
+        }}</span></div>
         <div class="detail-item"><span class="label">关联挂车</span><span class="value">{{ currentDetailRow.trailer || '--'
-            }}</span></div>
+        }}</span></div>
         <div class="detail-item"><span class="label">车辆购买日</span><span class="value time-text">{{
           currentDetailRow.purchase_date || '--' }}</span></div>
         <div class="detail-item"><span class="label">保险购买日</span><span class="value time-text">{{
@@ -936,7 +946,8 @@ onBeforeUnmount(() => {
                     v-model="editFormData.nickname" /></el-form-item></el-col>
               <el-col :span="12">
                 <el-form-item label="所属机构组织">
-                  <el-select v-model="editFormData.org" placeholder="请选择" clearable style="width: 100%">
+                  <el-select v-model="editFormData.org" placeholder="请选择" :clearable="!originalOrgWhenEdit"
+                    style="width: 100%">
                     <el-option v-for="o in orgOptions" :key="o" :label="o" :value="o" />
                   </el-select>
                 </el-form-item>
@@ -1005,11 +1016,11 @@ onBeforeUnmount(() => {
             <el-row :gutter="16">
               <el-col :span="12">
                 <el-form-item label="创建时间"><span class="time-text">{{ formatDateTime(editFormData.created_at)
-                    }}</span></el-form-item>
+                }}</span></el-form-item>
               </el-col>
               <el-col :span="12">
                 <el-form-item label="修改时间"><span class="time-text">{{ formatDateTime(editFormData.updated_at)
-                    }}</span></el-form-item>
+                }}</span></el-form-item>
               </el-col>
             </el-row>
           </div>
