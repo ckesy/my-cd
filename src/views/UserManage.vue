@@ -3,13 +3,19 @@
     <!-- ============ 视图切换 ============ -->
     <div class="view-switch">
       <button class="view-btn" :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'">
-        <el-icon><List /></el-icon> 列表视图
+        <el-icon>
+          <List />
+        </el-icon> 列表视图
       </button>
       <button class="view-btn" :class="{ active: viewMode === 'tree' }" @click="viewMode = 'tree'">
-        <el-icon><Share /></el-icon> 组织机构
+        <el-icon>
+          <Share />
+        </el-icon> 组织机构
       </button>
       <span v-if="!isAdmin" class="scope-tip">
-        <el-icon><InfoFilled /></el-icon>
+        <el-icon>
+          <InfoFilled />
+        </el-icon>
         当前仅显示您创建的子账号
       </span>
     </div>
@@ -47,14 +53,20 @@
           </div>
           <div class="search-actions">
             <el-button type="primary" class="btn-primary" size="default" @click="handleSearch">
-              <el-icon><Search /></el-icon> 查询
+              <el-icon>
+                <Search />
+              </el-icon> 查询
             </el-button>
             <el-button class="btn-outline" size="default" @click="handleReset">
-              <el-icon><Refresh /></el-icon> 重置
+              <el-icon>
+                <Refresh />
+              </el-icon> 重置
             </el-button>
             <span class="expand-toggle" @click="searchExpanded = !searchExpanded">
               {{ searchExpanded ? '收起' : '展开' }}
-              <el-icon class="toggle-icon" :class="{ rotated: searchExpanded }"><ArrowUp /></el-icon>
+              <el-icon class="toggle-icon" :class="{ rotated: searchExpanded }">
+                <ArrowUp />
+              </el-icon>
             </span>
           </div>
         </div>
@@ -71,84 +83,90 @@
               </div>
               <div class="toolbar-right">
                 <el-button type="primary" class="btn-primary" size="default" @click="handleAdd">
-                  <el-icon><CirclePlus /></el-icon> 新增用户
+                  <el-icon>
+                    <CirclePlus />
+                  </el-icon> 新增用户
                 </el-button>
 
                 <button class="icon-btn" @click="handleRefresh" title="刷新">
-                  <el-icon><Refresh /></el-icon>
+                  <el-icon>
+                    <Refresh />
+                  </el-icon>
                 </button>
 
                 <el-dropdown trigger="click" popper-class="density-dropdown-red" @command="handleDensityChange">
                   <button class="icon-btn" title="密度">
-                    <el-icon><Operation /></el-icon>
+                    <el-icon>
+                      <Operation />
+                    </el-icon>
                   </button>
                   <template #dropdown>
                     <el-dropdown-menu>
-                      <el-dropdown-item command="large"><span class="density-item" :class="{ active: tableSize === 'large' }">宽松</span></el-dropdown-item>
-                      <el-dropdown-item command="default"><span class="density-item" :class="{ active: tableSize === 'default' }">默认</span></el-dropdown-item>
-                      <el-dropdown-item command="small"><span class="density-item" :class="{ active: tableSize === 'small' }">紧凑</span></el-dropdown-item>
+                      <el-dropdown-item command="large"><span class="density-item"
+                          :class="{ active: tableSize === 'large' }">宽松</span></el-dropdown-item>
+                      <el-dropdown-item command="default"><span class="density-item"
+                          :class="{ active: tableSize === 'default' }">默认</span></el-dropdown-item>
+                      <el-dropdown-item command="small"><span class="density-item"
+                          :class="{ active: tableSize === 'small' }">紧凑</span></el-dropdown-item>
                     </el-dropdown-menu>
                   </template>
                 </el-dropdown>
 
-                <el-popover v-model:visible="columnPopoverVisible" placement="bottom-end" :width="280" trigger="click" popper-class="column-setting-popper">
+                <el-popover v-model:visible="columnPopoverVisible" placement="bottom-end" :width="280" trigger="click"
+                  popper-class="column-setting-popper">
                   <template #reference>
                     <button class="icon-btn" :class="{ active: columnPopoverVisible }" title="列设置">
-                      <el-icon><Setting /></el-icon>
+                      <el-icon>
+                        <Setting />
+                      </el-icon>
                     </button>
                   </template>
                   <div class="column-setting">
                     <div class="column-setting-header">
-                      <span class="col-title"><el-icon><Grid /></el-icon> 列展示</span>
+                      <span class="col-title"><el-icon>
+                          <Grid />
+                        </el-icon> 列展示</span>
                       <span class="col-reset" @click="resetColumns">重置</span>
                     </div>
                     <div class="column-setting-body">
-                      <div
-                        v-for="(col, index) in columnConfig"
-                        :key="col.prop"
-                        class="column-item"
-                        :class="{ dragging: dragIndex === index, dragOver: dragOverIndex === index }"
-                        draggable="true"
-                        @dragstart="onDragStart(index)"
-                        @dragover.prevent="onDragOver(index)"
-                        @drop="onDrop(index)"
-                        @dragend="onDragEnd"
-                      >
-                        <span class="drag-handle"><el-icon><Rank /></el-icon></span>
+                      <div v-for="(col, index) in columnConfig" :key="col.prop" class="column-item"
+                        :class="{ dragging: dragIndex === index, dragOver: dragOverIndex === index }" draggable="true"
+                        @dragstart="onDragStart(index)" @dragover.prevent="onDragOver(index)" @drop="onDrop(index)"
+                        @dragend="onDragEnd">
+                        <span class="drag-handle"><el-icon>
+                            <Rank />
+                          </el-icon></span>
                         <el-checkbox v-model="col.visible" class="col-checkbox">{{ col.label }}</el-checkbox>
                         <div class="fix-actions">
-                          <button class="fix-btn" :class="{ active: col.fixed === 'left' }" @click="toggleFix(col, 'left')" title="左固定"><el-icon><DArrowLeft /></el-icon></button>
-                          <button class="fix-btn" :class="{ active: col.fixed === 'right' }" @click="toggleFix(col, 'right')" title="右固定"><el-icon><DArrowRight /></el-icon></button>
+                          <button class="fix-btn" :class="{ active: col.fixed === 'left' }"
+                            @click="toggleFix(col, 'left')" title="左固定"><el-icon>
+                              <DArrowLeft />
+                            </el-icon></button>
+                          <button class="fix-btn" :class="{ active: col.fixed === 'right' }"
+                            @click="toggleFix(col, 'right')" title="右固定"><el-icon>
+                              <DArrowRight />
+                            </el-icon></button>
                         </div>
                       </div>
                     </div>
                   </div>
                 </el-popover>
 
-                <button class="icon-btn" :class="{ active: isTableFullscreen }" @click="toggleTableFullscreen" :title="isTableFullscreen ? '退出全屏' : '表格全屏'">
-                  <el-icon><component :is="isTableFullscreen ? Close : FullScreen" /></el-icon>
+                <button class="icon-btn" :class="{ active: isTableFullscreen }" @click="toggleTableFullscreen"
+                  :title="isTableFullscreen ? '退出全屏' : '表格全屏'">
+                  <el-icon>
+                    <component :is="isTableFullscreen ? Close : FullScreen" />
+                  </el-icon>
                 </button>
               </div>
             </div>
 
-            <el-table
-              ref="tableRef"
-              :data="pagedData"
-              v-loading="loading"
-              border
-              stripe
-              :size="tableSize"
-              class="custom-table"
-              :header-cell-style="{ background:'#F8FAFC', color:'#0F172A', fontWeight:'700' }"
-            >
+            <el-table ref="tableRef" :data="pagedData" v-loading="loading" border stripe :size="tableSize"
+              class="custom-table" :header-cell-style="{ background: '#F8FAFC', color: '#0F172A', fontWeight: '700' }">
               <template v-for="col in visibleColumns" :key="col.prop">
-                <el-table-column
-                  v-if="col.prop === 'status'"
-                  :label="col.label"
-                  :min-width="Math.round(col.minWidth * densityMultiplier)"
-                  :align="col.align"
-                  :fixed="col.fixed || false"
-                >
+                <el-table-column v-if="col.prop === 'status'" :label="col.label"
+                  :min-width="Math.round(col.minWidth * densityMultiplier)" :align="col.align"
+                  :fixed="col.fixed || false">
                   <template #default="{ row }">
                     <span class="status-tag" :class="row.status === 1 ? 'on' : 'off'">
                       {{ row.status === 1 ? '启用' : '禁用' }}
@@ -156,33 +174,23 @@
                   </template>
                 </el-table-column>
 
-                <!-- 所属组织：淡蓝底标签 -->
-                <el-table-column
-                  v-else-if="col.prop === 'orgName'"
-                  :label="col.label"
-                  :min-width="Math.round(col.minWidth * densityMultiplier)"
-                  :align="col.align"
-                  :fixed="col.fixed || false"
-                  show-overflow-tooltip
-                >
+                <el-table-column v-else-if="col.prop === 'orgName'" :label="col.label"
+                  :min-width="Math.round(col.minWidth * densityMultiplier)" :align="col.align"
+                  :fixed="col.fixed || false" show-overflow-tooltip>
                   <template #default="{ row }">
                     <span v-if="row.orgName && row.orgName !== '--'" class="org-tag">
-                      <el-icon><OfficeBuilding /></el-icon>
+                      <el-icon>
+                        <OfficeBuilding />
+                      </el-icon>
                       {{ row.orgName }}
                     </span>
                     <span v-else class="text-muted">--</span>
                   </template>
                 </el-table-column>
 
-                <!-- ⭐ 角色：淡紫底标签 -->
-                <el-table-column
-                  v-else-if="col.prop === 'roleName'"
-                  :label="col.label"
-                  :min-width="Math.round(col.minWidth * densityMultiplier)"
-                  :align="col.align"
-                  :fixed="col.fixed || false"
-                  show-overflow-tooltip
-                >
+                <el-table-column v-else-if="col.prop === 'roleName'" :label="col.label"
+                  :min-width="Math.round(col.minWidth * densityMultiplier)" :align="col.align"
+                  :fixed="col.fixed || false" show-overflow-tooltip>
                   <template #default="{ row }">
                     <span v-if="row.roleName && row.roleName !== '--'" class="role-tag">
                       {{ row.roleName }}
@@ -191,46 +199,50 @@
                   </template>
                 </el-table-column>
 
-                <el-table-column
-                  v-else-if="col.prop === 'created_at' || col.prop === 'updated_at'"
-                  :label="col.label"
-                  :min-width="Math.round(col.minWidth * densityMultiplier)"
-                  :align="col.align"
-                  :fixed="col.fixed || false"
-                >
+                <el-table-column v-else-if="col.prop === 'created_at' || col.prop === 'updated_at'" :label="col.label"
+                  :min-width="Math.round(col.minWidth * densityMultiplier)" :align="col.align"
+                  :fixed="col.fixed || false">
                   <template #default="{ row }">
                     <span class="time-text">{{ formatDateTime(row[col.prop]) }}</span>
                   </template>
                 </el-table-column>
 
-                <!-- ⭐ 操作列：排版统一 -->
-                <el-table-column
-                  v-else-if="col.prop === 'action'"
-                  :label="col.label"
-                  :width="col.width ? Math.round(col.width * densityMultiplier) : 240"
-                  :align="col.align"
-                  :fixed="col.fixed || false"
-                >
+                <el-table-column v-else-if="col.prop === 'action'" :label="col.label"
+                  :width="col.width ? Math.round(col.width * densityMultiplier) : 240" :align="col.align"
+                  :fixed="col.fixed || false">
                   <template #default="{ row }">
                     <div class="action-cell">
                       <button class="action-btn action-edit" @click="handleEdit(row)">
-                        <el-icon><EditPen /></el-icon>
+                        <el-icon>
+                          <EditPen />
+                        </el-icon>
                         <span>编辑</span>
                       </button>
                       <button class="action-btn action-toggle" @click="handleToggleStatus(row)">
-                        <el-icon><Lock /></el-icon>
+                        <el-icon>
+                          <Lock />
+                        </el-icon>
                         <span>{{ row.status === 1 ? '禁用' : '启用' }}</span>
                       </button>
-                      <el-dropdown trigger="click" popper-class="more-dropdown-red" @command="(cmd) => handleCommand(cmd, row)">
+                      <el-dropdown trigger="click" popper-class="more-dropdown-red"
+                        @command="(cmd) => handleCommand(cmd, row)">
                         <button class="action-btn action-more">
                           <span>更多</span>
-                          <el-icon class="more-icon"><ArrowDown /></el-icon>
+                          <el-icon class="more-icon">
+                            <ArrowDown />
+                          </el-icon>
                         </button>
                         <template #dropdown>
                           <el-dropdown-menu>
-                            <el-dropdown-item command="permission"><el-icon><Key /></el-icon> 权限配置</el-dropdown-item>
-                            <el-dropdown-item command="resetPwd"><el-icon><RefreshLeft /></el-icon> 重置密码</el-dropdown-item>
-                            <el-dropdown-item command="delete" divided><el-icon><Delete /></el-icon> 删除</el-dropdown-item>
+                            <el-dropdown-item command="permission"><el-icon>
+                                <Key />
+                              </el-icon> 权限配置</el-dropdown-item>
+                            <el-dropdown-item command="resetPwd"><el-icon>
+                                <RefreshLeft />
+                              </el-icon> 重置密码</el-dropdown-item>
+                            <el-dropdown-item command="delete" divided><el-icon>
+                                <Delete />
+                              </el-icon> 删除</el-dropdown-item>
                           </el-dropdown-menu>
                         </template>
                       </el-dropdown>
@@ -238,15 +250,9 @@
                   </template>
                 </el-table-column>
 
-                <el-table-column
-                  v-else
-                  :prop="col.prop"
-                  :label="col.label"
-                  :min-width="Math.round(col.minWidth * densityMultiplier)"
-                  :align="col.align"
-                  :fixed="col.fixed || false"
-                  show-overflow-tooltip
-                >
+                <el-table-column v-else :prop="col.prop" :label="col.label"
+                  :min-width="Math.round(col.minWidth * densityMultiplier)" :align="col.align"
+                  :fixed="col.fixed || false" show-overflow-tooltip>
                   <template #default="{ row }">
                     {{ row[col.prop] || '--' }}
                   </template>
@@ -255,7 +261,9 @@
 
               <template #empty>
                 <div class="empty-state">
-                  <el-icon class="empty-icon"><User /></el-icon>
+                  <el-icon class="empty-icon">
+                    <User />
+                  </el-icon>
                   <p>暂无用户数据</p>
                   <span class="empty-tip">{{ isAdmin ? '点击右上角「新增用户」开始创建' : '点击右上角「新增用户」为您的车队创建子账号' }}</span>
                 </div>
@@ -264,23 +272,17 @@
 
             <div class="pagination-wrapper">
               <span class="total-text">共 {{ filteredData.length }} 条</span>
-              <el-pagination
-                background
-                :small="tableSize === 'small'"
-                layout="sizes, prev, pager, next, jumper"
-                :total="filteredData.length"
-                :page-size="pageSize"
-                :page-sizes="[10, 20, 50, 100]"
-                v-model:current-page="currentPage"
-                @size-change="handleSizeChange"
-                class="custom-pagination"
-              />
+              <el-pagination background :small="tableSize === 'small'" layout="sizes, prev, pager, next, jumper"
+                :total="filteredData.length" :page-size="pageSize" :page-sizes="[10, 20, 50, 100]"
+                v-model:current-page="currentPage" @size-change="handleSizeChange" class="custom-pagination" />
             </div>
           </div>
 
           <transition name="fs-fade">
             <button v-if="isTableFullscreen" class="fs-exit-btn" @click="toggleTableFullscreen">
-              <el-icon><Close /></el-icon> 退出全屏
+              <el-icon>
+                <Close />
+              </el-icon> 退出全屏
             </button>
           </transition>
         </div>
@@ -292,62 +294,90 @@
       <div class="org-view-card">
         <div class="org-view-header">
           <div class="org-view-title">
-            <el-icon><Share /></el-icon>
+            <el-icon>
+              <Share />
+            </el-icon>
             组织机构
             <span class="org-view-sub">{{ isAdmin ? '（全局视图）' : '（仅显示您创建的子账号）' }}</span>
           </div>
           <div class="org-view-actions">
-            <el-input v-model="orgSearchKeyword" placeholder="搜索组织/车队/用户" clearable size="default" class="org-search-input">
-              <template #prefix><el-icon><Search /></el-icon></template>
+            <el-input v-model="orgSearchKeyword" placeholder="搜索组织/车队/用户" clearable size="default"
+              class="org-search-input">
+              <template #prefix><el-icon>
+                  <Search />
+                </el-icon></template>
             </el-input>
-            <button class="icon-btn" :class="{ active: orgExpandAll }" @click="toggleOrgExpandAll" :title="orgExpandAll ? '全部收起' : '全部展开'">
-              <el-icon><component :is="orgExpandAll ? Fold : Expand" /></el-icon>
+            <button class="icon-btn" :class="{ active: orgExpandAll }" @click="toggleOrgExpandAll"
+              :title="orgExpandAll ? '全部收起' : '全部展开'">
+              <el-icon>
+                <component :is="orgExpandAll ? Fold : Expand" />
+              </el-icon>
             </button>
             <button class="icon-btn" @click="loadOrgTree" title="刷新">
-              <el-icon><Refresh /></el-icon>
+              <el-icon>
+                <Refresh />
+              </el-icon>
             </button>
           </div>
         </div>
 
         <div class="org-view-body" v-loading="orgLoading">
-          <el-tree
-            v-if="orgTreeData.length > 0"
-            ref="orgTreeRef"
-            :data="orgTreeData"
-            node-key="key"
-            :props="treeProps"
-            :default-expand-all="orgExpandAll"
-            :filter-node-method="filterOrgNode"
-            :expand-on-click-node="false"
-            class="org-tree"
-          >
+          <el-tree v-if="orgTreeData.length > 0" ref="orgTreeRef" :data="orgTreeData" node-key="key" :props="treeProps"
+            :default-expand-all="orgExpandAll" :filter-node-method="filterOrgNode" :expand-on-click-node="false"
+            class="org-tree">
             <template #default="{ node, data }">
               <div class="tree-node" :class="'type-' + data.type">
                 <template v-if="data.type === 'root'">
-                  <span class="node-icon root-icon"><el-icon><OfficeBuilding /></el-icon></span>
+                  <span class="node-icon root-icon"><el-icon>
+                      <OfficeBuilding />
+                    </el-icon></span>
                   <span class="node-label">{{ data.label }}</span>
                   <span class="node-count">{{ data.children?.length || 0 }} 个组织</span>
+                  <span class="node-vehicles" :class="{ empty: !data.vehicleCount }">
+                    <el-icon v-if="data.vehicleCount > 0">
+                      <Van />
+                    </el-icon>
+                    {{ data.vehicleCount > 0 ? `${data.vehicleCount} 辆` : '暂无车辆' }}
+                  </span>
                 </template>
 
                 <template v-else-if="data.type === 'org'">
-                  <span class="node-icon org-icon"><el-icon><OfficeBuilding /></el-icon></span>
+                  <span class="node-icon org-icon"><el-icon>
+                      <OfficeBuilding />
+                    </el-icon></span>
                   <span class="node-label">{{ data.label }}</span>
                   <span class="node-count">{{ data.children?.length || 0 }} 项</span>
+                  <span class="node-vehicles" :class="{ empty: !data.vehicleCount }">
+                    <el-icon v-if="data.vehicleCount > 0">
+                      <Van />
+                    </el-icon>
+                    {{ data.vehicleCount > 0 ? `${data.vehicleCount} 辆` : '暂无车辆' }}
+                  </span>
                 </template>
 
                 <template v-else-if="data.type === 'fleet'">
-                  <span class="node-icon fleet-icon"><el-icon><Van /></el-icon></span>
+                  <span class="node-icon fleet-icon"><el-icon>
+                      <Van />
+                    </el-icon></span>
                   <span class="node-label">{{ data.label }}</span>
                   <span class="node-count">{{ data.children?.length || 0 }} 个用户</span>
                 </template>
 
                 <template v-else-if="data.type === 'user'">
                   <span class="node-icon user-icon" :class="{ admin: data.isAdmin }">
-                    <el-icon><component :is="data.isAdmin ? UserFilled : User" /></el-icon>
+                    <el-icon>
+                      <component :is="data.isAdmin ? UserFilled : User" />
+                    </el-icon>
                   </span>
                   <span class="node-label">{{ data.label }}</span>
                   <span class="node-account">{{ data.account }}</span>
                   <span class="node-role" :class="{ admin: data.isAdmin }">{{ data.roleName }}</span>
+                  <span class="node-vehicles" :class="{ empty: !data.vehicleCount }">
+                    <el-icon v-if="data.vehicleCount > 0">
+                      <Van />
+                    </el-icon>
+                    {{ data.vehicleCount > 0 ? `${data.vehicleCount} 辆` : '暂无车辆' }}
+                  </span>
                   <span class="status-tag mini" :class="data.status === 1 ? 'on' : 'off'">
                     {{ data.status === 1 ? '启用' : '禁用' }}
                   </span>
@@ -358,7 +388,9 @@
           </el-tree>
 
           <div v-else class="org-empty">
-            <el-icon class="empty-icon"><Share /></el-icon>
+            <el-icon class="empty-icon">
+              <Share />
+            </el-icon>
             <p>暂无组织机构数据</p>
             <span class="empty-tip">{{ isAdmin ? '请先在「组织管理」中创建组织' : '您还未创建子账号' }}</span>
           </div>
@@ -367,14 +399,8 @@
     </template>
 
     <!-- 新增/编辑用户弹窗 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="isEdit ? '编辑用户' : '新增用户'"
-      width="560px"
-      destroy-on-close
-      :close-on-click-modal="false"
-      class="manage-dialog"
-    >
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑用户' : '新增用户'" width="560px" destroy-on-close
+      :close-on-click-modal="false" class="manage-dialog">
       <el-form :model="form" label-width="90px" class="manage-form" size="default">
         <el-form-item label="登录账号" required>
           <el-input v-model="form.account" placeholder="请输入登录账号" maxlength="32" clearable />
@@ -389,19 +415,10 @@
           <el-input v-model="form.email" placeholder="请输入邮箱" maxlength="64" clearable />
         </el-form-item>
         <el-form-item label="所属组织" required>
-          <el-tree-select
-            v-model="form.org_id"
-            :data="orgTreeForSelect"
-            node-key="id"
-            :props="{ children: 'children', label: 'name' }"
-            placeholder="请选择所属组织"
-            check-strictly
-            :render-after-expand="false"
-            default-expand-all
-            clearable
-            style="width:100%;"
-            popper-class="org-tree-select-popper"
-          />
+          <el-tree-select v-model="form.org_id" :data="orgTreeForSelect" node-key="id"
+            :props="{ children: 'children', label: 'name' }" placeholder="请选择所属组织" check-strictly
+            :render-after-expand="false" default-expand-all clearable style="width:100%;"
+            popper-class="org-tree-select-popper" />
         </el-form-item>
         <el-form-item label="角色" required>
           <div class="role-select-wrap">
@@ -426,7 +443,8 @@
           <el-input v-model="form.password" :placeholder="isEdit ? '不修改请留空' : '请输入密码'" show-password maxlength="32" />
         </el-form-item>
         <el-form-item label="备注">
-          <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" maxlength="200" show-word-limit />
+          <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" maxlength="200"
+            show-word-limit />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -436,17 +454,11 @@
     </el-dialog>
 
     <!-- 权限配置弹窗 -->
-    <el-dialog
-      v-model="permDialogVisible"
-      :title="`权限配置 - ${permTargetUser?.name || ''}`"
-      width="1000px"
-      top="6vh"
-      destroy-on-close
-      :close-on-click-modal="false"
-      class="permission-dialog"
-    >
+    <el-dialog v-model="permDialogVisible" :title="`权限配置 - ${permTargetUser?.name || ''}`" width="1000px" top="6vh"
+      destroy-on-close :close-on-click-modal="false" class="permission-dialog">
       <div class="perm-tabs">
-        <div v-for="tab in permTabs" :key="tab.key" class="perm-tab" :class="{ active: permActiveTab === tab.key }" @click="permActiveTab = tab.key">
+        <div v-for="tab in permTabs" :key="tab.key" class="perm-tab" :class="{ active: permActiveTab === tab.key }"
+          @click="permActiveTab = tab.key">
           {{ tab.label }}
           <span class="perm-tab-bar"></span>
         </div>
@@ -454,60 +466,80 @@
 
       <div class="perm-content">
         <div class="perm-search-row">
-          <el-input v-model="permSearchKeyword" placeholder="请输入数据名称" clearable class="perm-search-input" size="default">
-            <template #prefix><el-icon><Search /></el-icon></template>
+          <el-input v-model="permSearchKeyword" placeholder="请输入数据名称" clearable class="perm-search-input"
+            size="default">
+            <template #prefix><el-icon>
+                <Search />
+              </el-icon></template>
           </el-input>
           <el-button type="primary" class="btn-primary" size="default" @click="handlePermSearch">
-            <el-icon><Search /></el-icon> 查询
+            <el-icon>
+              <Search />
+            </el-icon> 查询
           </el-button>
           <div class="perm-right-actions">
             <el-button type="primary" class="btn-enable" size="default" @click="handlePermBatchEnable">
               <el-icon><Select /></el-icon> 启用
             </el-button>
             <el-button type="danger" plain class="btn-disable" size="default" @click="handlePermBatchDisable">
-              <el-icon><CircleClose /></el-icon> 禁用
+              <el-icon>
+                <CircleClose />
+              </el-icon> 禁用
             </el-button>
             <button class="icon-btn small" @click="handlePermRefresh" title="刷新">
-              <el-icon><Refresh /></el-icon>
+              <el-icon>
+                <Refresh />
+              </el-icon>
             </button>
             <el-dropdown trigger="click" popper-class="density-dropdown-red" @command="handlePermDensityChange">
-              <button class="icon-btn small" title="密度"><el-icon><Operation /></el-icon></button>
+              <button class="icon-btn small" title="密度"><el-icon>
+                  <Operation />
+                </el-icon></button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="large"><span class="density-item" :class="{ active: permTableSize === 'large' }">宽松</span></el-dropdown-item>
-                  <el-dropdown-item command="default"><span class="density-item" :class="{ active: permTableSize === 'default' }">默认</span></el-dropdown-item>
-                  <el-dropdown-item command="small"><span class="density-item" :class="{ active: permTableSize === 'small' }">紧凑</span></el-dropdown-item>
+                  <el-dropdown-item command="large"><span class="density-item"
+                      :class="{ active: permTableSize === 'large' }">宽松</span></el-dropdown-item>
+                  <el-dropdown-item command="default"><span class="density-item"
+                      :class="{ active: permTableSize === 'default' }">默认</span></el-dropdown-item>
+                  <el-dropdown-item command="small"><span class="density-item"
+                      :class="{ active: permTableSize === 'small' }">紧凑</span></el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
-            <el-popover v-model:visible="permColumnPopoverVisible" placement="bottom-end" :width="280" trigger="click" popper-class="column-setting-popper">
+            <el-popover v-model:visible="permColumnPopoverVisible" placement="bottom-end" :width="280" trigger="click"
+              popper-class="column-setting-popper">
               <template #reference>
                 <button class="icon-btn small" :class="{ active: permColumnPopoverVisible }" title="列设置">
-                  <el-icon><Setting /></el-icon>
+                  <el-icon>
+                    <Setting />
+                  </el-icon>
                 </button>
               </template>
               <div class="column-setting">
                 <div class="column-setting-header">
-                  <span class="col-title"><el-icon><Grid /></el-icon> 列展示</span>
+                  <span class="col-title"><el-icon>
+                      <Grid />
+                    </el-icon> 列展示</span>
                   <span class="col-reset" @click="resetPermColumns">重置</span>
                 </div>
                 <div class="column-setting-body">
-                  <div
-                    v-for="(col, index) in permColumnConfig"
-                    :key="col.prop"
-                    class="column-item"
+                  <div v-for="(col, index) in permColumnConfig" :key="col.prop" class="column-item"
                     :class="{ dragging: permDragIndex === index, dragOver: permDragOverIndex === index }"
-                    draggable="true"
-                    @dragstart="onPermDragStart(index)"
-                    @dragover.prevent="onPermDragOver(index)"
-                    @drop="onPermDrop(index)"
-                    @dragend="onPermDragEnd"
-                  >
-                    <span class="drag-handle"><el-icon><Rank /></el-icon></span>
+                    draggable="true" @dragstart="onPermDragStart(index)" @dragover.prevent="onPermDragOver(index)"
+                    @drop="onPermDrop(index)" @dragend="onPermDragEnd">
+                    <span class="drag-handle"><el-icon>
+                        <Rank />
+                      </el-icon></span>
                     <el-checkbox v-model="col.visible" class="col-checkbox">{{ col.label }}</el-checkbox>
                     <div class="fix-actions">
-                      <button class="fix-btn" :class="{ active: col.fixed === 'left' }" @click="togglePermFix(col, 'left')" title="左固定"><el-icon><DArrowLeft /></el-icon></button>
-                      <button class="fix-btn" :class="{ active: col.fixed === 'right' }" @click="togglePermFix(col, 'right')" title="右固定"><el-icon><DArrowRight /></el-icon></button>
+                      <button class="fix-btn" :class="{ active: col.fixed === 'left' }"
+                        @click="togglePermFix(col, 'left')" title="左固定"><el-icon>
+                          <DArrowLeft />
+                        </el-icon></button>
+                      <button class="fix-btn" :class="{ active: col.fixed === 'right' }"
+                        @click="togglePermFix(col, 'right')" title="右固定"><el-icon>
+                          <DArrowRight />
+                        </el-icon></button>
                     </div>
                   </div>
                 </div>
@@ -516,24 +548,14 @@
           </div>
         </div>
 
-        <el-table
-          :data="permTableData"
-          border
-          stripe
-          :size="permTableSize"
-          class="perm-table"
-          :header-cell-style="{ background:'#F8FAFC', color:'#0F172A', fontWeight:'700', fontSize:'12px' }"
-          @selection-change="handlePermSelectionChange"
-        >
+        <el-table :data="permTableData" border stripe :size="permTableSize" class="perm-table"
+          :header-cell-style="{ background: '#F8FAFC', color: '#0F172A', fontWeight: '700', fontSize: '12px' }"
+          @selection-change="handlePermSelectionChange">
           <el-table-column type="selection" width="44" align="center" />
           <template v-for="col in permVisibleColumns" :key="col.prop">
-            <el-table-column
-              v-if="col.prop === 'status'"
-              :label="col.label"
-              :min-width="Math.round(col.minWidth * permDensityMultiplier)"
-              :align="col.align"
-              :fixed="col.fixed || false"
-            >
+            <el-table-column v-if="col.prop === 'status'" :label="col.label"
+              :min-width="Math.round(col.minWidth * permDensityMultiplier)" :align="col.align"
+              :fixed="col.fixed || false">
               <template #default="{ row }">
                 <span class="status-tag" :class="row.status === 1 ? 'off' : 'on'">
                   {{ row.status === 1 ? '禁用' : '启用' }}
@@ -541,60 +563,42 @@
               </template>
             </el-table-column>
 
-            <el-table-column
-              v-else-if="col.prop === 'action'"
-              :label="col.label"
-              :width="col.width ? Math.round(col.width * permDensityMultiplier) : 90"
-              :align="col.align"
-              :fixed="col.fixed || false"
-            >
+            <el-table-column v-else-if="col.prop === 'action'" :label="col.label"
+              :width="col.width ? Math.round(col.width * permDensityMultiplier) : 90" :align="col.align"
+              :fixed="col.fixed || false">
               <template #default="{ row }">
-                <el-button type="text" class="action-btn" :class="row.status === 1 ? 'action-enable' : 'action-disable'" @click="handlePermToggleStatus(row)">
+                <el-button type="text" class="action-btn" :class="row.status === 1 ? 'action-enable' : 'action-disable'"
+                  @click="handlePermToggleStatus(row)">
                   {{ row.status === 1 ? '启用' : '禁用' }}
                 </el-button>
               </template>
             </el-table-column>
 
-            <el-table-column
-              v-else-if="col.prop === 'created_at' || col.prop === 'updated_at'"
-              :label="col.label"
-              :min-width="Math.round(col.minWidth * permDensityMultiplier)"
-              :align="col.align"
-              :fixed="col.fixed || false"
-            >
+            <el-table-column v-else-if="col.prop === 'created_at' || col.prop === 'updated_at'" :label="col.label"
+              :min-width="Math.round(col.minWidth * permDensityMultiplier)" :align="col.align"
+              :fixed="col.fixed || false">
               <template #default="{ row }">{{ formatDateTime(row[col.prop]) }}</template>
             </el-table-column>
 
-            <el-table-column
-              v-else
-              :prop="col.prop"
-              :label="col.label"
-              :min-width="Math.round(col.minWidth * permDensityMultiplier)"
-              :align="col.align"
-              :fixed="col.fixed || false"
-              show-overflow-tooltip
-            />
+            <el-table-column v-else :prop="col.prop" :label="col.label"
+              :min-width="Math.round(col.minWidth * permDensityMultiplier)" :align="col.align"
+              :fixed="col.fixed || false" show-overflow-tooltip />
           </template>
 
           <template #empty>
             <div class="empty-state small">
-              <el-icon class="empty-icon"><Document /></el-icon>
+              <el-icon class="empty-icon">
+                <Document />
+              </el-icon>
               <p>暂无数据</p>
             </div>
           </template>
         </el-table>
 
         <div class="perm-pagination">
-          <el-pagination
-            background
-            size="small"
-            layout="total, sizes, prev, pager, next, jumper"
-            :total="permTableData.length"
-            :page-size="permPageSize"
-            :page-sizes="[10, 20, 50, 100]"
-            v-model:current-page="permCurrentPage"
-            class="custom-pagination"
-          />
+          <el-pagination background size="small" layout="total, sizes, prev, pager, next, jumper"
+            :total="permTableData.length" :page-size="permPageSize" :page-sizes="[10, 20, 50, 100]"
+            v-model:current-page="permCurrentPage" class="custom-pagination" />
         </div>
       </div>
     </el-dialog>
@@ -627,7 +631,6 @@ const currentUser = (() => {
 })()
 const isAdmin = currentUser.role === 'admin'
 const isCustomer = !isAdmin
-// ⭐ 子账号也用主账号的 owner_account 查数据
 const myAccount = currentUser.masterAccount || currentUser.account || ''
 const myCustomerId = currentUser.customerId || null
 
@@ -675,37 +678,28 @@ const loadOrgs = async () => {
 }
 
 // ============================================================
-// ⭐⭐⭐ 组织树（用于新增/编辑时的 tree-select）
-//    直接用 organizations 表里的真实根节点（is_root=true）
-//    不再拼虚拟根
+// 组织树（用于新增/编辑时的 tree-select）
 // ============================================================
 const orgTreeForSelect = computed(() => {
   const list = orgList.value
   if (!list.length) return []
 
-  // 找出所有根节点（is_root=true 或 level=1）
   const rootOrgs = list.filter(o => o.is_root === true || Number(o.level) === 1)
 
-  // 建 map
   const map = {}
   list.forEach(o => {
     map[o.id] = { ...o, children: [] }
   })
 
-  // 挂载子节点
   list.forEach(o => {
     if (o.parent_id && map[o.parent_id]) {
       map[o.parent_id].children.push(map[o.id])
     }
   })
 
-  // 返回根节点数组（每个根节点已经有完整子树）
   return rootOrgs.map(r => map[r.id]).filter(Boolean)
 })
 
-// ============================================================
-// ⭐ 客户根节点（默认选中用）
-// ============================================================
 const customerRootOrg = computed(() => {
   return orgList.value.find(o => o.is_root === true || Number(o.level) === 1) || null
 })
@@ -777,7 +771,7 @@ const filteredData = computed(() => {
       return {
         ...row,
         roleName: role ? role.name : '--',
-        orgName: org ? org.name : '--',   // ⭐ 不再有虚拟根兜底
+        orgName: org ? org.name : '--',
       }
     })
 })
@@ -813,15 +807,15 @@ const handleDensityChange = (cmd) => { tableSize.value = cmd }
 // ============================================================
 const columnPopoverVisible = ref(false)
 const DEFAULT_COLUMNS = [
-  { prop: 'account',    label: '登录账号', visible: true, fixed: false, minWidth: 130, align: 'center' },
-  { prop: 'name',       label: '用户姓名', visible: true, fixed: false, minWidth: 110, align: 'center' },
-  { prop: 'phone',      label: '手机号',   visible: true, fixed: false, minWidth: 130, align: 'center' },
-  { prop: 'email',      label: '邮箱',     visible: true, fixed: false, minWidth: 170, align: 'center' },
-  { prop: 'orgName',    label: '所属组织', visible: true, fixed: false, minWidth: 150, align: 'center' },
-  { prop: 'roleName',   label: '角色',     visible: true, fixed: false, minWidth: 110, align: 'center' },
-  { prop: 'status',     label: '状态',     visible: true, fixed: false, minWidth: 90,  align: 'center' },
+  { prop: 'account', label: '登录账号', visible: true, fixed: false, minWidth: 130, align: 'center' },
+  { prop: 'name', label: '用户姓名', visible: true, fixed: false, minWidth: 110, align: 'center' },
+  { prop: 'phone', label: '手机号', visible: true, fixed: false, minWidth: 130, align: 'center' },
+  { prop: 'email', label: '邮箱', visible: true, fixed: false, minWidth: 170, align: 'center' },
+  { prop: 'orgName', label: '所属组织', visible: true, fixed: false, minWidth: 150, align: 'center' },
+  { prop: 'roleName', label: '角色', visible: true, fixed: false, minWidth: 110, align: 'center' },
+  { prop: 'status', label: '状态', visible: true, fixed: false, minWidth: 90, align: 'center' },
   { prop: 'created_at', label: '创建时间', visible: true, fixed: false, minWidth: 160, align: 'center' },
-  { prop: 'action',     label: '操作',     visible: true, fixed: 'right', width: 220, align: 'center' },
+  { prop: 'action', label: '操作', visible: true, fixed: 'right', width: 220, align: 'center' },
 ]
 const columnConfig = ref(JSON.parse(JSON.stringify(DEFAULT_COLUMNS)))
 const visibleColumns = computed(() => columnConfig.value.filter(c => c.visible))
@@ -878,7 +872,6 @@ const form = reactive({
 const resetForm = () => {
   Object.assign(form, {
     id: null, account: '', name: '', phone: '', email: '',
-    // ⭐ 默认选客户根节点（真实 root）
     org_id: customerRootOrg.value?.id || null,
     role_id: null, password: '', remark: '',
   })
@@ -899,7 +892,6 @@ const handleEdit = (row) => {
     name: row.name,
     phone: row.phone,
     email: row.email,
-    // ⭐ 直接用 row.org_id（可能是根节点 id 或二级机构 id）
     org_id: row.org_id || customerRootOrg.value?.id || null,
     role_id: row.role_id,
     remark: row.remark || '',
@@ -917,7 +909,6 @@ const saveUser = async () => {
 
   saving.value = true
   try {
-    // ⭐ 直接存真实 org_id（不需要再做虚拟根转换）
     const payload = {
       account: form.account,
       name: form.name,
@@ -968,7 +959,7 @@ const handleToggleStatus = (row) => {
     } catch (e) {
       ElMessage.error('操作失败：' + e.message)
     }
-  }).catch(() => {})
+  }).catch(() => { })
 }
 
 const handleCommand = (cmd, row) => {
@@ -987,7 +978,7 @@ const handleCommand = (cmd, row) => {
       } catch (e) {
         ElMessage.error('重置失败：' + e.message)
       }
-    }).catch(() => {})
+    }).catch(() => { })
   }
   else if (cmd === 'delete') handleDeleteUser(row)
 }
@@ -1012,7 +1003,7 @@ const handleDeleteUser = (row) => {
     } catch (e) {
       ElMessage.error('删除失败：' + (e?.message || e))
     }
-  }).catch(() => {})
+  }).catch(() => { })
 }
 
 // ============================================================
@@ -1047,9 +1038,37 @@ const loadOrgTree = async () => {
       return true
     })
 
+    // ⭐⭐⭐ 查询车辆并聚合到机构（按 org_id 递归）
+    let vehicleQuery = supabase.from('vehicles').select('id, org_id')
+    if (isCustomer && myAccount) vehicleQuery = vehicleQuery.eq('customer_id', myCustomerId || '00000000-0000-0000-0000-000000000000')
+    const { data: vehiclesRaw } = await vehicleQuery
+    const vehiclesList = vehiclesRaw || []
+
     const orgsList = orgs || []
     const fleetsList = fleets || []
     const usersList = users || []
+
+    // ⭐ 全部用 String(key) 统一类型
+    const directVehicleByOrg = {}
+    vehiclesList.forEach(v => {
+      if (v.org_id != null) {
+        const key = String(v.org_id)
+        directVehicleByOrg[key] = (directVehicleByOrg[key] || 0) + 1
+      }
+    })
+
+    const recursiveVehicleByOrg = {}
+    const calcRecursive = (orgId) => {
+      const key = String(orgId)
+      if (recursiveVehicleByOrg[key] != null) return recursiveVehicleByOrg[key]
+      let total = directVehicleByOrg[key] || 0
+      orgsList.filter(o => String(o.parent_id) === key).forEach(c => {
+        total += calcRecursive(c.id)
+      })
+      recursiveVehicleByOrg[key] = total
+      return total
+    }
+    orgsList.forEach(o => calcRecursive(o.id))
 
     const buildUserNode = (u) => {
       const role = roleOptions.value.find(r => r.id === u.role_id)
@@ -1063,10 +1082,11 @@ const loadOrgTree = async () => {
         isAdmin: u.role_id === 1 || u.role_id === 2,
         roleName: role ? role.name : '--',
         ownerName: owner ? owner.name : '',
+        // ⭐ 账号显示所属机构的车辆数
+        vehicleCount: u.org_id ? (recursiveVehicleByOrg[String(u.org_id)] || 0) : 0,
       }
     }
 
-    // ⭐ 递归构建子树
     const buildOrgChildren = (parentId) => {
       const children = orgsList.filter(o => o.parent_id === parentId)
       return children.map(org => {
@@ -1094,15 +1114,15 @@ const loadOrgTree = async () => {
           label: org.name,
           level: org.level,
           isRoot: org.is_root,
+          // ⭐ 机构显示含子孙的车辆数
+          vehicleCount: recursiveVehicleByOrg[String(org.id)] || 0,
           children: [...buildOrgChildren(org.id), ...orgFleets, ...orgUsers],
         }
       })
     }
 
-    // ⭐ 根节点：is_root=true 或 level=1
     const rootOrgs = orgsList.filter(o => o.is_root === true || Number(o.level) === 1)
 
-    // 直接挂 root 下的用户
     const rootDirectUsers = usersList
       .filter(u => {
         if (u.org_id == null) return true
@@ -1114,19 +1134,20 @@ const loadOrgTree = async () => {
     let tree = []
 
     if (isCustomer) {
-      // 客户/子账号：显示自己的客户根节点
       tree = rootOrgs.map(root => ({
         key: 'root-' + root.id,
         type: 'root',
         label: root.name,
+        // ⭐ 根节点车辆数
+        vehicleCount: recursiveVehicleByOrg[String(root.id)] || 0,
         children: [...buildOrgChildren(root.id), ...rootDirectUsers],
       }))
     } else {
-      // 管理员：显示全部根节点
       tree = rootOrgs.map(root => ({
         key: 'root-' + root.id,
         type: 'root',
         label: root.name,
+        vehicleCount: recursiveVehicleByOrg[root.id] || 0,
         children: [...buildOrgChildren(root.id), ...rootDirectUsers],
       }))
     }
@@ -1181,13 +1202,13 @@ const permDensityMultiplier = computed(() => {
   return 1
 })
 const DEFAULT_PERM_COLUMNS = [
-  { prop: 'name',       label: '数据名称', visible: true, fixed: false, minWidth: 200, align: 'left' },
-  { prop: 'creator',    label: '创建人',   visible: true, fixed: false, minWidth: 100, align: 'center' },
+  { prop: 'name', label: '数据名称', visible: true, fixed: false, minWidth: 200, align: 'left' },
+  { prop: 'creator', label: '创建人', visible: true, fixed: false, minWidth: 100, align: 'center' },
   { prop: 'created_at', label: '创建时间', visible: true, fixed: false, minWidth: 160, align: 'center' },
-  { prop: 'updater',    label: '更新人',   visible: true, fixed: false, minWidth: 100, align: 'center' },
+  { prop: 'updater', label: '更新人', visible: true, fixed: false, minWidth: 100, align: 'center' },
   { prop: 'updated_at', label: '更新时间', visible: true, fixed: false, minWidth: 160, align: 'center' },
-  { prop: 'status',     label: '状态',     visible: true, fixed: false, minWidth: 80,  align: 'center' },
-  { prop: 'action',     label: '操作',     visible: true, fixed: 'right', width: 90, align: 'center' },
+  { prop: 'status', label: '状态', visible: true, fixed: false, minWidth: 80, align: 'center' },
+  { prop: 'action', label: '操作', visible: true, fixed: 'right', width: 90, align: 'center' },
 ]
 const permColumnConfig = ref(JSON.parse(JSON.stringify(DEFAULT_PERM_COLUMNS)))
 const permVisibleColumns = computed(() => permColumnConfig.value.filter(c => c.visible))
@@ -1292,6 +1313,7 @@ onBeforeUnmount(() => {
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
+
 .view-btn {
   display: inline-flex;
   align-items: center;
@@ -1307,36 +1329,76 @@ onBeforeUnmount(() => {
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-family: inherit;
 }
+
 .view-btn:hover {
-  border-color: #FCA5A5; color: #c8102e; background: #FEF2F2;
+  border-color: #FCA5A5;
+  color: #c8102e;
+  background: #FEF2F2;
   transform: translateY(-1px);
 }
+
 .view-btn.active {
-  border-color: #c8102e; color: #fff;
+  border-color: #c8102e;
+  color: #fff;
   background: linear-gradient(135deg, #c8102e, #a00d24);
   box-shadow: 0 3px 10px rgba(200, 16, 46, 0.3);
 }
-.view-btn .el-icon { font-size: 14px; }
-.scope-tip {
-  display: inline-flex; align-items: center; gap: 4px;
-  margin-left: auto; font-size: 12.5px;
-  color: #c8102e; font-weight: 600;
-  padding: 4px 12px; background: #FEF2F2;
-  border-radius: 20px; border: 1px solid #FECACA;
+
+.view-btn .el-icon {
+  font-size: 14px;
 }
-.scope-tip .el-icon { font-size: 14px; }
+
+.scope-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 12.5px;
+  color: #c8102e;
+  font-weight: 600;
+  padding: 4px 12px;
+  background: #FEF2F2;
+  border-radius: 20px;
+  border: 1px solid #FECACA;
+}
+
+.scope-tip .el-icon {
+  font-size: 14px;
+}
 
 /* ============ 搜索卡片 ============ */
 .search-card {
-  background: #fff; border-radius: 10px;
+  background: #fff;
+  border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   padding: 12px 16px;
 }
-.search-row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
-.search-item { display: flex; align-items: center; gap: 6px; }
-.search-item label { font-size: 12.5px; color: #334155; font-weight: 600; white-space: nowrap; }
+
+.search-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+}
+
+.search-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.search-item label {
+  font-size: 12.5px;
+  color: #334155;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .search-item :deep(.el-input),
-.search-item :deep(.el-select) { width: 170px; }
+.search-item :deep(.el-select) {
+  width: 170px;
+}
+
 .search-item :deep(.el-input__wrapper),
 .search-item :deep(.el-select__wrapper) {
   border-radius: 6px !important;
@@ -1345,47 +1407,94 @@ onBeforeUnmount(() => {
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   min-height: 30px;
 }
+
 .search-item :deep(.el-input__wrapper:hover),
 .search-item :deep(.el-select__wrapper:hover) {
   background: #FEF2F2 !important;
   box-shadow: 0 0 0 1px #FCA5A5 inset !important;
 }
+
 .search-item :deep(.el-input__wrapper.is-focus),
 .search-item :deep(.el-select__wrapper.is-focused) {
   background: #ffffff !important;
   box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.15), 0 0 0 1px #c8102e inset !important;
   transform: translateY(-1px);
 }
-.search-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+.search-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, #c8102e, #a00d24) !important;
-  border: none !important; color: #fff !important;
-  font-weight: 600; border-radius: 6px !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 600;
+  border-radius: 6px !important;
   box-shadow: 0 3px 10px rgba(200, 16, 46, 0.25);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
 }
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(200, 16, 46, 0.4); }
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(200, 16, 46, 0.4);
+}
+
 .btn-outline {
   border-radius: 6px !important;
-  border-color: #CBD5E1 !important; color: #334155;
+  border-color: #CBD5E1 !important;
+  color: #334155;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
 }
-.btn-outline:hover { border-color: #c8102e !important; color: #c8102e !important; background: #FEF2F2 !important; transform: translateY(-1px); }
+
+.btn-outline:hover {
+  border-color: #c8102e !important;
+  color: #c8102e !important;
+  background: #FEF2F2 !important;
+  transform: translateY(-1px);
+}
+
 .expand-toggle {
-  display: inline-flex; align-items: center; gap: 3px;
-  font-size: 12.5px; color: #c8102e; font-weight: 600;
-  cursor: pointer; padding: 4px 8px; border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12.5px;
+  color: #c8102e;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   user-select: none;
 }
-.expand-toggle:hover { background: #FEF2F2; transform: scale(1.05); }
-.toggle-icon { transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.toggle-icon.rotated { transform: rotate(180deg); }
+
+.expand-toggle:hover {
+  background: #FEF2F2;
+  transform: scale(1.05);
+}
+
+.toggle-icon {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.toggle-icon.rotated {
+  transform: rotate(180deg);
+}
 
 /* ============ 表格卡片 ============ */
-.table-card-wrap { display: flex; flex-direction: column; }
+.table-card-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
 .table-card-wrap.is-fullscreen {
-  position: fixed; inset: 0; z-index: 9999; padding: 24px;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  padding: 24px;
   background:
     radial-gradient(circle at 20% 20%, rgba(200, 16, 46, 0.08) 0%, transparent 60%),
     radial-gradient(circle at 80% 80%, rgba(200, 16, 46, 0.06) 0%, transparent 60%),
@@ -1394,81 +1503,207 @@ onBeforeUnmount(() => {
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   animation: fullscreenFadeIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-@keyframes fullscreenFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes fullscreenFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 .table-card-wrap.is-fullscreen .table-card {
-  flex: 1; border-radius: 14px;
+  flex: 1;
+  border-radius: 14px;
   box-shadow: 0 20px 60px rgba(200, 16, 46, 0.18), 0 0 0 1px rgba(200, 16, 46, 0.08);
   animation: fullscreenCardIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 @keyframes fullscreenCardIn {
-  from { opacity: 0; transform: scale(0.94) translateY(20px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
+
 .fs-exit-btn {
-  position: absolute; top: 36px; right: 36px; z-index: 10001;
-  display: flex; align-items: center; gap: 4px;
-  padding: 8px 16px; border: none;
+  position: absolute;
+  top: 36px;
+  right: 36px;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border: none;
   background: linear-gradient(135deg, #c8102e, #a00d24);
-  color: #fff; font-size: 13px; font-weight: 600;
-  border-radius: 8px; cursor: pointer;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
   box-shadow: 0 6px 20px rgba(200, 16, 46, 0.4);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-family: inherit;
 }
-.fs-exit-btn:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 10px 28px rgba(200, 16, 46, 0.55); }
-.fs-fade-enter-active, .fs-fade-leave-active { transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.fs-fade-enter-from, .fs-fade-leave-to { opacity: 0; transform: translateY(-10px) scale(0.9); }
+
+.fs-exit-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 10px 28px rgba(200, 16, 46, 0.55);
+}
+
+.fs-fade-enter-active,
+.fs-fade-leave-active {
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.fs-fade-enter-from,
+.fs-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.9);
+}
 
 .table-card {
-  background: #fff; border-radius: 10px;
+  background: #fff;
+  border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  padding: 12px 16px; flex: 1;
-  display: flex; flex-direction: column;
+  padding: 12px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   transition: all 0.3s;
 }
-.toolbar { display: flex; align-items: center; margin-bottom: 10px; gap: 6px; }
-.toolbar-left { display: flex; align-items: center; gap: 8px; }
-.total-hint { font-size: 12.5px; color: #64748B; }
-.total-hint b { color: #c8102e; font-family: 'Courier New', monospace; }
-.toolbar-right { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 6px;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.total-hint {
+  font-size: 12.5px;
+  color: #64748B;
+}
+
+.total-hint b {
+  color: #c8102e;
+  font-family: 'Courier New', monospace;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
 
 .icon-btn {
-  width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  border: 1px solid #E2E8F0; background: #fff;
-  border-radius: 6px; color: #64748B; font-size: 14px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #E2E8F0;
+  background: #fff;
+  border-radius: 6px;
+  color: #64748B;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .icon-btn:hover {
-  border-color: #c8102e; color: #c8102e; background: #FEF2F2;
+  border-color: #c8102e;
+  color: #c8102e;
+  background: #FEF2F2;
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(200, 16, 46, 0.15);
 }
+
 .icon-btn.active {
-  border-color: #c8102e; color: #fff;
+  border-color: #c8102e;
+  color: #fff;
   background: linear-gradient(135deg, #c8102e, #a00d24);
   box-shadow: 0 3px 10px rgba(200, 16, 46, 0.35);
 }
-.icon-btn:active { transform: translateY(0) scale(0.95); }
-.icon-btn.small { width: 28px; height: 28px; font-size: 13px; }
+
+.icon-btn:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.icon-btn.small {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+}
 
 /* ============ 表格 ============ */
-.custom-table { flex: 1; border-radius: 8px; overflow: hidden; }
-:deep(.custom-table .el-table__cell) { color: #1E293B; }
-:deep(.custom-table th.el-table__cell) { border-bottom: 1px solid #E2E8F0; }
-:deep(.custom-table .el-table__row:hover td) { background: #FEF2F2 !important; }
-:deep(.custom-table.el-table--large .el-table__cell) { padding: 14px 0; }
-:deep(.custom-table.el-table--default .el-table__cell) { padding: 8px 0; }
-:deep(.custom-table.el-table--small .el-table__cell) { padding: 4px 0; }
+.custom-table {
+  flex: 1;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+:deep(.custom-table .el-table__cell) {
+  color: #1E293B;
+}
+
+:deep(.custom-table th.el-table__cell) {
+  border-bottom: 1px solid #E2E8F0;
+}
+
+:deep(.custom-table .el-table__row:hover td) {
+  background: #FEF2F2 !important;
+}
+
+:deep(.custom-table.el-table--large .el-table__cell) {
+  padding: 14px 0;
+}
+
+:deep(.custom-table.el-table--default .el-table__cell) {
+  padding: 8px 0;
+}
+
+:deep(.custom-table.el-table--small .el-table__cell) {
+  padding: 4px 0;
+}
 
 .status-tag {
-  display: inline-block; padding: 2px 10px; border-radius: 10px;
-  font-size: 12px; font-weight: 600;
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
 }
-.status-tag.on { background: #D1FAE5; color: #065F46; }
-.status-tag.off { background: #FEE2E2; color: #991B1B; }
-.status-tag.mini { padding: 1px 6px; font-size: 11px; }
+
+.status-tag.on {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.status-tag.off {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.status-tag.mini {
+  padding: 1px 6px;
+  font-size: 11px;
+}
 
 .org-tag {
   display: inline-flex;
@@ -1482,7 +1717,10 @@ onBeforeUnmount(() => {
   color: #3730A3;
   white-space: nowrap;
 }
-.org-tag .el-icon { font-size: 12px; }
+
+.org-tag .el-icon {
+  font-size: 12px;
+}
 
 .role-tag {
   display: inline-flex;
@@ -1496,7 +1734,11 @@ onBeforeUnmount(() => {
   color: #5B21B6;
   white-space: nowrap;
 }
-.text-muted { color: #94A3B8; font-size: 12.5px; }
+
+.text-muted {
+  color: #94A3B8;
+  font-size: 12.5px;
+}
 
 .action-cell {
   display: inline-flex;
@@ -1506,6 +1748,7 @@ onBeforeUnmount(() => {
   white-space: nowrap;
   width: 100%;
 }
+
 .action-cell :deep(.el-dropdown) {
   display: inline-flex;
   align-items: center;
@@ -1531,156 +1774,411 @@ onBeforeUnmount(() => {
   font-family: inherit;
   color: inherit;
 }
-.action-btn .el-icon { font-size: 13px; flex-shrink: 0; }
-.action-btn > span { display: inline-block; }
 
-.action-edit { color: #c8102e; }
-.action-edit:hover { color: #7F1D1D; background: #FEF2F2; }
+.action-btn .el-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
 
-.action-toggle { color: #F59E0B; }
-.action-toggle:hover { color: #B45309; background: #FFF7ED; }
+.action-btn>span {
+  display: inline-block;
+}
 
-.action-more { color: #64748B; }
-.action-more:hover { color: #c8102e; background: #FEF2F2; }
+.action-edit {
+  color: #c8102e;
+}
+
+.action-edit:hover {
+  color: #7F1D1D;
+  background: #FEF2F2;
+}
+
+.action-toggle {
+  color: #F59E0B;
+}
+
+.action-toggle:hover {
+  color: #B45309;
+  background: #FFF7ED;
+}
+
+.action-more {
+  color: #64748B;
+}
+
+.action-more:hover {
+  color: #c8102e;
+  background: #FEF2F2;
+}
+
 .action-more .more-icon {
   transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-size: 11px;
   margin-left: 1px;
 }
-.action-more:hover .more-icon { transform: rotate(180deg); }
+
+.action-more:hover .more-icon {
+  transform: rotate(180deg);
+}
 
 .empty-state {
-  padding: 40px; display: flex; flex-direction: column;
-  align-items: center; gap: 6px; color: #94A3B8;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: #94A3B8;
 }
-.empty-state.small { padding: 20px; }
-.empty-icon { font-size: 40px; color: #CBD5E1; }
-.empty-state.small .empty-icon { font-size: 28px; }
-.empty-tip { font-size: 12px; color: #CBD5E1; }
+
+.empty-state.small {
+  padding: 20px;
+}
+
+.empty-icon {
+  font-size: 40px;
+  color: #CBD5E1;
+}
+
+.empty-state.small .empty-icon {
+  font-size: 28px;
+}
+
+.empty-tip {
+  font-size: 12px;
+  color: #CBD5E1;
+}
 
 .pagination-wrapper {
-  display: flex; align-items: center; justify-content: space-between;
-  padding-top: 12px; border-top: 1px solid #E2E8F0; margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid #E2E8F0;
+  margin-top: 12px;
 }
-.total-text { font-size: 12.5px; color: #334155; font-weight: 600; }
+
+.total-text {
+  font-size: 12.5px;
+  color: #334155;
+  font-weight: 600;
+}
+
 :deep(.custom-pagination .el-pager li) {
-  transition: all 0.2s; font-weight: 600; color: #334155;
-  min-width: 26px; height: 26px; line-height: 26px;
+  transition: all 0.2s;
+  font-weight: 600;
+  color: #334155;
+  min-width: 26px;
+  height: 26px;
+  line-height: 26px;
 }
-:deep(.custom-pagination .el-pager li:hover) { color: #c8102e; transform: scale(1.08); }
+
+:deep(.custom-pagination .el-pager li:hover) {
+  color: #c8102e;
+  transform: scale(1.08);
+}
+
 :deep(.custom-pagination .el-pager li.is-active) {
-  background-color: #c8102e !important; color: #fff !important;
+  background-color: #c8102e !important;
+  color: #fff !important;
   box-shadow: 0 2px 6px rgba(200, 16, 46, 0.35);
 }
 
 /* ============ 组织机构视图 ============ */
 .org-view-card {
-  background: #fff; border-radius: 10px;
+  background: #fff;
+  border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  padding: 16px; flex: 1;
-  display: flex; flex-direction: column;
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
+
 .org-view-header {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding-bottom: 12px;
   border-bottom: 1px solid #F1F5F9;
   margin-bottom: 12px;
 }
+
 .org-view-title {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 15px; font-weight: 700; color: #0F172A;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
 }
-.org-view-title .el-icon { color: #c8102e; font-size: 18px; }
-.org-view-sub { font-size: 12.5px; color: #94A3B8; font-weight: 500; }
-.org-view-actions { display: flex; align-items: center; gap: 8px; }
-.org-search-input { width: 220px; }
+
+.org-view-title .el-icon {
+  color: #c8102e;
+  font-size: 18px;
+}
+
+.org-view-sub {
+  font-size: 12.5px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+.org-view-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.org-search-input {
+  width: 220px;
+}
+
 .org-search-input :deep(.el-input__wrapper) {
   border-radius: 6px !important;
   background: #F8FAFC !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   min-height: 30px;
 }
+
 .org-search-input :deep(.el-input__wrapper.is-focus) {
   background: #fff !important;
   box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.15), 0 0 0 1px #c8102e inset !important;
 }
-.org-view-body { flex: 1; overflow: auto; padding: 8px; }
 
-.org-tree { background: transparent; }
+.org-view-body {
+  flex: 1;
+  overflow: auto;
+  padding: 8px;
+}
+
+.org-tree {
+  background: transparent;
+}
+
 .org-tree :deep(.el-tree-node__content) {
-  height: 40px; border-radius: 6px;
+  height: 40px;
+  border-radius: 6px;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   padding: 2px 4px;
 }
-.org-tree :deep(.el-tree-node__content:hover) { background: #FEF2F2; }
-.org-tree :deep(.el-tree-node.is-current > .el-tree-node__content) { background: #FEE2E2; }
+
+.org-tree :deep(.el-tree-node__content:hover) {
+  background: #FEF2F2;
+}
+
+.org-tree :deep(.el-tree-node.is-current > .el-tree-node__content) {
+  background: #FEE2E2;
+}
 
 .tree-node {
-  display: flex; align-items: center; gap: 8px;
-  flex: 1; font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  font-size: 13px;
 }
+
 .node-icon {
-  width: 24px; height: 24px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 6px; flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  flex-shrink: 0;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.node-icon .el-icon { font-size: 14px; color: #fff; }
-.tree-node.type-root .node-icon { background: linear-gradient(135deg, #7C3AED, #5B21B6); box-shadow: 0 2px 10px rgba(124, 58, 237, 0.4); }
-.tree-node.type-org .node-icon { background: linear-gradient(135deg, #c8102e, #a00d24); box-shadow: 0 2px 8px rgba(200, 16, 46, 0.35); }
-.tree-node.type-fleet .node-icon { background: linear-gradient(135deg, #F59E0B, #D97706); box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3); }
-.tree-node.type-user .node-icon { background: linear-gradient(135deg, #60A5FA, #3B82F6); box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); }
-.tree-node.type-user .node-icon.admin { background: linear-gradient(135deg, #c8102e, #a00d24); }
-.tree-node:hover .node-icon { transform: scale(1.1) rotate(-4deg); }
 
-.node-label { font-weight: 600; color: #0F172A; }
-.tree-node.type-root .node-label { font-size: 15px; font-weight: 800; color: #0F172A; letter-spacing: 0.3px; }
-.tree-node.type-org .node-label { font-size: 14px; font-weight: 700; }
-.tree-node.type-fleet .node-label { font-size: 13.5px; }
+.node-icon .el-icon {
+  font-size: 14px;
+  color: #fff;
+}
+
+.tree-node.type-root .node-icon {
+  background: linear-gradient(135deg, #7C3AED, #5B21B6);
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.4);
+}
+
+.tree-node.type-org .node-icon {
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+  box-shadow: 0 2px 8px rgba(200, 16, 46, 0.35);
+}
+
+.tree-node.type-fleet .node-icon {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.tree-node.type-user .node-icon {
+  background: linear-gradient(135deg, #60A5FA, #3B82F6);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.tree-node.type-user .node-icon.admin {
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+}
+
+.tree-node:hover .node-icon {
+  transform: scale(1.1) rotate(-4deg);
+}
+
+.node-label {
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.tree-node.type-root .node-label {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: 0.3px;
+}
+
+.tree-node.type-org .node-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tree-node.type-fleet .node-label {
+  font-size: 13.5px;
+}
+
 .node-count {
-  font-size: 11.5px; color: #94A3B8;
-  padding: 1px 8px; border-radius: 8px;
-  background: #F1F5F9; margin-left: 4px;
+  font-size: 11.5px;
+  color: #94A3B8;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: #F1F5F9;
+  margin-left: 4px;
 }
+
 .node-account {
-  font-size: 12px; color: #94A3B8;
+  font-size: 12px;
+  color: #94A3B8;
   font-family: 'Courier New', monospace;
-  padding: 1px 6px; background: #F8FAFC; border-radius: 4px;
+  padding: 1px 6px;
+  background: #F8FAFC;
+  border-radius: 4px;
 }
+
 .node-role {
-  font-size: 11.5px; color: #5B21B6;
-  padding: 1px 8px; border-radius: 8px;
-  background: #EDE9FE; font-weight: 600;
+  font-size: 11.5px;
+  color: #5B21B6;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: #EDE9FE;
+  font-weight: 600;
 }
-.node-role.admin { background: #FEE2E2; color: #991B1B; }
+
+.node-role.admin {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
 .node-owner {
-  font-size: 11.5px; color: #D97706;
-  padding: 1px 8px; border-radius: 8px;
-  background: #FEF3C7; font-weight: 600;
+  font-size: 11.5px;
+  color: #D97706;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: #FEF3C7;
+  font-weight: 600;
   margin-left: auto;
 }
 
-.org-empty {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 80px 20px; color: #94A3B8;
+/* ⭐ 车辆数徽章 */
+.node-vehicles {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+  color: #0369A1;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: #E0F2FE;
+  white-space: nowrap;
 }
-.org-empty .empty-icon { font-size: 48px; color: #CBD5E1; }
-.org-empty p { font-size: 15px; font-weight: 600; color: #64748B; margin: 0; }
-.org-empty .empty-tip { font-size: 12.5px; color: #CBD5E1; }
+
+.node-vehicles .el-icon {
+  font-size: 12px;
+}
+
+/* ⭐ 0 辆时淡灰 + 无图标 */
+.node-vehicles.empty {
+  background: #F1F5F9;
+  color: #94A3B8;
+  font-weight: 600;
+}
+
+.node-vehicles .el-icon {
+  font-size: 12px;
+}
+
+.org-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 80px 20px;
+  color: #94A3B8;
+}
+
+.org-empty .empty-icon {
+  font-size: 48px;
+  color: #CBD5E1;
+}
+
+.org-empty p {
+  font-size: 15px;
+  font-weight: 600;
+  color: #64748B;
+  margin: 0;
+}
+
+.org-empty .empty-tip {
+  font-size: 12.5px;
+  color: #CBD5E1;
+}
 
 /* ============ 弹窗 ============ */
 :deep(.manage-dialog .el-dialog) {
-  border-radius: 12px; overflow: hidden;
+  border-radius: 12px;
+  overflow: hidden;
   animation: dialogIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 @keyframes dialogIn {
-  from { opacity: 0; transform: scale(0.92) translateY(20px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
-:deep(.manage-dialog .el-dialog__header) { padding: 14px 18px; border-bottom: 1px solid #F1F5F9; }
-:deep(.manage-dialog .el-dialog__title) { font-weight: 700; color: #0F172A; font-size: 15px; }
-.manage-form :deep(.el-form-item) { margin-bottom: 16px; }
-.manage-form :deep(.el-form-item__label) { font-weight: 600; color: #334155; font-size: 13px; }
+
+:deep(.manage-dialog .el-dialog__header) {
+  padding: 14px 18px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+:deep(.manage-dialog .el-dialog__title) {
+  font-weight: 700;
+  color: #0F172A;
+  font-size: 15px;
+}
+
+.manage-form :deep(.el-form-item) {
+  margin-bottom: 16px;
+}
+
+.manage-form :deep(.el-form-item__label) {
+  font-weight: 600;
+  color: #334155;
+  font-size: 13px;
+}
 
 .manage-form :deep(.el-tree-select .el-select__wrapper),
 .manage-form :deep(.el-select__wrapper) {
@@ -1690,29 +2188,34 @@ onBeforeUnmount(() => {
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   min-height: 32px;
 }
+
 .manage-form :deep(.el-tree-select .el-select__wrapper:hover),
 .manage-form :deep(.el-select__wrapper:hover) {
   background: #FFFFFF !important;
   box-shadow: 0 0 0 1px rgba(200, 16, 46, 0.4) inset !important;
 }
+
 .manage-form :deep(.el-tree-select .el-select__wrapper.is-focused),
 .manage-form :deep(.el-select__wrapper.is-focused) {
   background: #FFFFFF !important;
   box-shadow: 0 0 0 1px #c8102e inset, 0 0 0 3px rgba(200, 16, 46, 0.1) !important;
 }
 
-/* ⭐ 角色下拉空状态 */
-.role-select-wrap { width: 100%; }
+.role-select-wrap {
+  width: 100%;
+}
 
 .role-empty {
   padding: 16px 12px;
   text-align: center;
 }
+
 .role-empty p {
   margin: 0 0 10px;
   font-size: 12.5px;
   color: #94A3B8;
 }
+
 .create-role-btn {
   display: inline-flex;
   align-items: center;
@@ -1729,6 +2232,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 4px 12px rgba(200, 16, 46, 0.25);
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .create-role-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(200, 16, 46, 0.4);
@@ -1747,10 +2251,19 @@ onBeforeUnmount(() => {
   gap: 4px;
   animation: roleTipIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 @keyframes roleTipIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 .role-empty-link {
   padding: 0;
   background: none;
@@ -1762,65 +2275,154 @@ onBeforeUnmount(() => {
   font-family: inherit;
   transition: all 0.2s;
 }
+
 .role-empty-link:hover {
   color: #7F1D1D;
   text-decoration: underline;
 }
 
 :deep(.permission-dialog .el-dialog) {
-  border-radius: 12px; overflow: hidden;
+  border-radius: 12px;
+  overflow: hidden;
   animation: dialogIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-:deep(.permission-dialog .el-dialog__header) { padding: 14px 20px; border-bottom: 1px solid #F1F5F9; }
-:deep(.permission-dialog .el-dialog__title) { font-weight: 700; color: #0F172A; font-size: 15px; }
-:deep(.permission-dialog .el-dialog__body) { padding: 14px 20px 20px; }
 
-.perm-tabs { display: flex; gap: 28px; border-bottom: 1px solid #E2E8F0; margin-bottom: 14px; }
-.perm-tab {
-  position: relative; padding: 6px 4px 10px;
-  font-size: 13px; font-weight: 600; color: #64748B;
-  cursor: pointer; transition: color 0.28s; user-select: none;
+:deep(.permission-dialog .el-dialog__header) {
+  padding: 14px 20px;
+  border-bottom: 1px solid #F1F5F9;
 }
-.perm-tab:hover { color: #c8102e; }
-.perm-tab.active { color: #c8102e; }
+
+:deep(.permission-dialog .el-dialog__title) {
+  font-weight: 700;
+  color: #0F172A;
+  font-size: 15px;
+}
+
+:deep(.permission-dialog .el-dialog__body) {
+  padding: 14px 20px 20px;
+}
+
+.perm-tabs {
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid #E2E8F0;
+  margin-bottom: 14px;
+}
+
+.perm-tab {
+  position: relative;
+  padding: 6px 4px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  transition: color 0.28s;
+  user-select: none;
+}
+
+.perm-tab:hover {
+  color: #c8102e;
+}
+
+.perm-tab.active {
+  color: #c8102e;
+}
+
 .perm-tab-bar {
-  position: absolute; bottom: -1px; left: 50%;
-  width: 0; height: 3px;
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  width: 0;
+  height: 3px;
   background: linear-gradient(90deg, #c8102e, #a00d24);
   border-radius: 3px 3px 0 0;
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   transform: translateX(-50%);
 }
-.perm-tab.active .perm-tab-bar { width: 26px; box-shadow: 0 2px 8px rgba(200, 16, 46, 0.4); }
-.perm-search-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-.perm-search-input { width: 220px; }
+
+.perm-tab.active .perm-tab-bar {
+  width: 26px;
+  box-shadow: 0 2px 8px rgba(200, 16, 46, 0.4);
+}
+
+.perm-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.perm-search-input {
+  width: 220px;
+}
+
 .perm-search-input :deep(.el-input__wrapper) {
   border-radius: 6px !important;
   background: #F8FAFC !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   min-height: 30px;
 }
+
 .perm-search-input :deep(.el-input__wrapper.is-focus) {
   background: #fff !important;
   box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.15), 0 0 0 1px #c8102e inset !important;
 }
-.perm-right-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+
+.perm-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
 .btn-enable {
   background: linear-gradient(135deg, #10B981, #059669) !important;
-  border: none !important; color: #fff !important;
-  font-weight: 600; border-radius: 6px !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 600;
+  border-radius: 6px !important;
   box-shadow: 0 3px 10px rgba(16, 185, 129, 0.25);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
 }
-.btn-enable:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(16, 185, 129, 0.4); }
-.btn-disable { border-radius: 6px !important; font-weight: 600; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important; }
-.btn-disable:hover { transform: translateY(-1px); }
 
-.perm-table :deep(.el-table__cell) { font-size: 12px !important; }
-.perm-table :deep(th.el-table__cell) { font-size: 12px !important; }
-.perm-table :deep(.action-btn) { font-size: 12px !important; }
-.perm-table :deep(.status-tag) { font-size: 11.5px; padding: 1px 8px; }
-.perm-pagination { display: flex; justify-content: flex-end; margin-top: 12px; }
+.btn-enable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(16, 185, 129, 0.4);
+}
+
+.btn-disable {
+  border-radius: 6px !important;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.btn-disable:hover {
+  transform: translateY(-1px);
+}
+
+.perm-table :deep(.el-table__cell) {
+  font-size: 12px !important;
+}
+
+.perm-table :deep(th.el-table__cell) {
+  font-size: 12px !important;
+}
+
+.perm-table :deep(.action-btn) {
+  font-size: 12px !important;
+}
+
+.perm-table :deep(.status-tag) {
+  font-size: 11.5px;
+  padding: 1px 8px;
+}
+
+.perm-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
 </style>
 
 <style>
@@ -1830,52 +2432,89 @@ onBeforeUnmount(() => {
 .density-dropdown-red.el-dropdown__popper.el-popper {
   border: 2px solid #FFFFFF !important;
   box-shadow: 0 10px 32px rgba(200, 16, 46, 0.18), 0 0 0 1px rgba(200, 16, 46, 0.15) !important;
-  border-radius: 10px !important; overflow: hidden; background: #FFFFFF !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+  background: #FFFFFF !important;
 }
-.density-dropdown-red .el-dropdown-menu { padding: 4px !important; background: #FFFFFF !important; }
+
+.density-dropdown-red .el-dropdown-menu {
+  padding: 4px !important;
+  background: #FFFFFF !important;
+}
+
 .density-dropdown-red .el-dropdown-menu__item {
-  font-size: 13px !important; color: #c8102e !important;
-  font-weight: 600 !important; border-radius: 6px !important;
+  font-size: 13px !important;
+  color: #c8102e !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
   padding: 6px 16px !important;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
 }
+
 .density-dropdown-red .el-dropdown-menu__item:hover {
   color: #ffffff !important;
   background: linear-gradient(135deg, #c8102e, #a00d24) !important;
   transform: translateX(2px);
 }
+
 .density-dropdown-red .el-dropdown-menu__item .density-item {
-  display: inline-block; padding: 2px 6px; border-radius: 4px;
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
   transition: all 0.25s;
 }
-.density-dropdown-red .el-dropdown-menu__item .density-item.active { color: #c8102e; font-weight: 700; }
-.density-dropdown-red .el-dropdown-menu__item:hover .density-item.active { color: #ffffff; }
+
+.density-dropdown-red .el-dropdown-menu__item .density-item.active {
+  color: #c8102e;
+  font-weight: 700;
+}
+
+.density-dropdown-red .el-dropdown-menu__item:hover .density-item.active {
+  color: #ffffff;
+}
 
 .more-dropdown-red.el-dropdown__popper.el-popper {
   border: 2px solid #FFFFFF !important;
   box-shadow: 0 10px 32px rgba(200, 16, 46, 0.18), 0 0 0 1px rgba(200, 16, 46, 0.15) !important;
-  border-radius: 10px !important; overflow: hidden; background: #FFFFFF !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+  background: #FFFFFF !important;
 }
-.more-dropdown-red .el-dropdown-menu { padding: 4px !important; background: #FFFFFF !important; }
+
+.more-dropdown-red .el-dropdown-menu {
+  padding: 4px !important;
+  background: #FFFFFF !important;
+}
+
 .more-dropdown-red .el-dropdown-menu__item {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 13px !important; color: #c8102e !important;
-  font-weight: 600 !important; border-radius: 6px !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px !important;
+  color: #c8102e !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
   padding: 8px 16px !important;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
 }
+
 .more-dropdown-red .el-dropdown-menu__item .el-icon {
-  color: #c8102e !important; font-size: 14px;
+  color: #c8102e !important;
+  font-size: 14px;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .more-dropdown-red .el-dropdown-menu__item:hover {
   color: #ffffff !important;
   background: linear-gradient(135deg, #c8102e, #a00d24) !important;
   transform: translateX(2px);
 }
+
 .more-dropdown-red .el-dropdown-menu__item:hover .el-icon {
-  color: #ffffff !important; transform: scale(1.15);
+  color: #ffffff !important;
+  transform: scale(1.15);
 }
+
 .more-dropdown-red .el-dropdown-menu__item--divided {
   border-top: 1px solid #F1F5F9;
   margin-top: 4px;
@@ -1886,67 +2525,171 @@ onBeforeUnmount(() => {
   padding: 0 !important;
   border-radius: 12px !important;
   box-shadow: 0 12px 36px rgba(200, 16, 46, 0.18), 0 0 0 1px rgba(200, 16, 46, 0.12) !important;
-  border: 2px solid #FFFFFF !important; overflow: hidden; background: #FFFFFF !important;
+  border: 2px solid #FFFFFF !important;
+  overflow: hidden;
+  background: #FFFFFF !important;
 }
-.column-setting-popper .el-popover__title { display: none; }
-.column-setting { padding: 0; background: #FFFFFF; }
+
+.column-setting-popper .el-popover__title {
+  display: none;
+}
+
+.column-setting {
+  padding: 0;
+  background: #FFFFFF;
+}
+
 .column-setting-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; border-bottom: 1px solid #FEE2E2; background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #FEE2E2;
+  background: #FFFFFF;
 }
+
 .col-title {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 13px; font-weight: 700; color: #c8102e;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #c8102e;
 }
-.col-title .el-icon { color: #c8102e; font-size: 14px; }
+
+.col-title .el-icon {
+  color: #c8102e;
+  font-size: 14px;
+}
+
 .col-reset {
-  font-size: 12.5px; color: #c8102e; cursor: pointer;
-  font-weight: 700; padding: 2px 6px; border-radius: 4px;
+  font-size: 12.5px;
+  color: #c8102e;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.col-reset:hover { background: #FEE2E2; text-decoration: underline; transform: scale(1.05); }
-.column-setting-body { max-height: 400px; overflow-y: auto; padding: 6px; background: #FFFFFF; }
-.column-setting-body::-webkit-scrollbar { width: 4px; }
-.column-setting-body::-webkit-scrollbar-thumb { background: #FCA5A5; border-radius: 2px; }
+
+.col-reset:hover {
+  background: #FEE2E2;
+  text-decoration: underline;
+  transform: scale(1.05);
+}
+
+.column-setting-body {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 6px;
+  background: #FFFFFF;
+}
+
+.column-setting-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.column-setting-body::-webkit-scrollbar-thumb {
+  background: #FCA5A5;
+  border-radius: 2px;
+}
+
 .column-item {
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 8px; border-radius: 6px; cursor: grab;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: grab;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   user-select: none;
 }
-.column-item:hover { background: #FEF2F2; }
-.column-item.dragging { opacity: 0.4; cursor: grabbing; }
-.column-item.dragOver { background: #FEE2E2; transform: scale(1.02); box-shadow: 0 0 0 1px rgba(200, 16, 46, 0.2) inset; }
+
+.column-item:hover {
+  background: #FEF2F2;
+}
+
+.column-item.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.column-item.dragOver {
+  background: #FEE2E2;
+  transform: scale(1.02);
+  box-shadow: 0 0 0 1px rgba(200, 16, 46, 0.2) inset;
+}
+
 .drag-handle {
-  display: flex; align-items: center;
-  color: #FCA5A5; cursor: grab; font-size: 14px; transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  color: #FCA5A5;
+  cursor: grab;
+  font-size: 14px;
+  transition: color 0.2s;
 }
-.column-item:hover .drag-handle { color: #c8102e; }
-.col-checkbox { flex: 1; font-size: 13px; }
+
+.column-item:hover .drag-handle {
+  color: #c8102e;
+}
+
+.col-checkbox {
+  flex: 1;
+  font-size: 13px;
+}
+
 .col-checkbox :deep(.el-checkbox__label) {
-  font-size: 13px; color: #c8102e; font-weight: 600; transition: color 0.2s;
+  font-size: 13px;
+  color: #c8102e;
+  font-weight: 600;
+  transition: color 0.2s;
 }
+
 .col-checkbox :deep(.el-checkbox__inner) {
   border-color: #FCA5A5;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.col-checkbox:hover :deep(.el-checkbox__inner) { border-color: #c8102e; }
+
+.col-checkbox:hover :deep(.el-checkbox__inner) {
+  border-color: #c8102e;
+}
+
 .col-checkbox :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-  background-color: #c8102e; border-color: #c8102e;
+  background-color: #c8102e;
+  border-color: #c8102e;
 }
+
 .col-checkbox :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
-  color: #c8102e; font-weight: 700;
+  color: #c8102e;
+  font-weight: 700;
 }
-.fix-actions { display: flex; gap: 2px; }
+
+.fix-actions {
+  display: flex;
+  gap: 2px;
+}
+
 .fix-btn {
-  width: 22px; height: 22px;
-  display: flex; align-items: center; justify-content: center;
-  border: none; background: transparent;
-  border-radius: 4px; color: #FCA5A5; font-size: 13px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: #FCA5A5;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.fix-btn:hover { color: #c8102e; background: #FEE2E2; transform: scale(1.1); }
+
+.fix-btn:hover {
+  color: #c8102e;
+  background: #FEE2E2;
+  transform: scale(1.1);
+}
+
 .fix-btn.active {
   color: #ffffff;
   background: linear-gradient(135deg, #c8102e, #a00d24);
@@ -1960,30 +2703,36 @@ onBeforeUnmount(() => {
   overflow: hidden;
   padding: 6px !important;
 }
+
 .org-tree-select-popper .el-tree {
   background: transparent;
   --el-tree-node-hover-bg-color: #FEF2F2;
 }
+
 .org-tree-select-popper .el-tree-node__content {
   height: 32px;
   border-radius: 6px;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-size: 13px;
 }
+
 .org-tree-select-popper .el-tree-node__content:hover {
   background: #FEF2F2 !important;
   color: #c8102e;
 }
-.org-tree-select-popper .el-tree-node.is-current > .el-tree-node__content {
+
+.org-tree-select-popper .el-tree-node.is-current>.el-tree-node__content {
   background: linear-gradient(135deg, #FEE2E2, #FECACA) !important;
   color: #c8102e;
   font-weight: 700;
 }
+
 .org-tree-select-popper .el-tree-node__content .el-tree-node__label {
   font-weight: 600;
   color: #0F172A;
 }
-.org-tree-select-popper .el-tree-node.is-current > .el-tree-node__content .el-tree-node__label {
+
+.org-tree-select-popper .el-tree-node.is-current>.el-tree-node__content .el-tree-node__label {
   color: #c8102e;
 }
 </style>

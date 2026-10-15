@@ -1012,7 +1012,7 @@ const togglePlanPanel = () => { planPanelCollapsed.value = !planPanelCollapsed.v
 // ⭐ 自动规划所有方案（详情模式用）
 // ============================================================
 const autoPlanAllRoutes = async () => {
-  if (!props.readonly) return
+
   if (!form.pickup_point || !form.delivery_point) return
   if (!form.plans || form.plans.length === 0) return
   if (!map || !AMapLib) return
@@ -1099,7 +1099,7 @@ const handleOpened = async () => {
 
   try {
     await initMap()
-    if (props.readonly && form.pickup_point && form.delivery_point && form.plans.length > 0) {
+    if (form.pickup_point && form.delivery_point && form.plans.length > 0) {
       setTimeout(() => { autoPlanAllRoutes() }, 200)
     }
   } catch (e) {

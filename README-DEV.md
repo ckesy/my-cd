@@ -1,7 +1,7 @@
 东风车队管理系统 - 开发交接文档
 新对话开场白：把本文件完整粘贴给 AI，并说明「接着做 XXX」即可无缝续接。
 
-最后更新：2026-10-15（第三版 · 全部 9 个专项待办清零）
+最后更新：2026-10-15（第四版 · 组织管理/车辆管理/门户 UI 重构）
 
 一、项目概况
 项	值
@@ -54,8 +54,8 @@ amap-geofence-update	更新围栏	/amap-geofence-update	同上
 amap-geofence-delete	删除围栏	/amap-geofence-delete	同上
 amap-geofence-list	查询围栏列表	/amap-geofence-list	同上
 dongfeng-lostlocation	东风实时位置中转（8s 超时）	/dongfeng-lostlocation	DONGFENG_TOKEN
-dongfeng-overspeed-check	超速提醒：轨迹 + 4形状围栏 + 超速段 + 逆地理编码	/dongfeng-overspeed-check	DONGFENG_TOKEN, AMAP_WEB_KEY
-dongfeng-stay-check	停留提醒：stopEvent + 围栏 + 时长过滤 + 拉轨迹补充停留点	/dongfeng-stay-check	DONGFENG_TOKEN, AMAP_WEB_KEY
+dongfeng-overspeed-check	超速提醒	/dongfeng-overspeed-check	DONGFENG_TOKEN, AMAP_WEB_KEY
+dongfeng-stay-check	停留提醒	/dongfeng-stay-check	DONGFENG_TOKEN, AMAP_WEB_KEY
 环境变量值：
 text
 AMAP_WEB_KEY = 491d5475803e65c06ba6169bdaf3e1f3
@@ -233,12 +233,8 @@ CREATE TABLE IF NOT EXISTS routes (
 CREATE INDEX IF NOT EXISTS idx_routes_owner ON routes(owner_account);
 CREATE INDEX IF NOT EXISTS idx_routes_status ON routes(status);
 CREATE INDEX IF NOT EXISTS idx_routes_org ON routes(org_id);
-
 GRANT SELECT, INSERT, UPDATE, DELETE ON routes TO anon;
-
-CREATE UNIQUE INDEX IF NOT EXISTS routes_owner_name_unique
-ON routes (COALESCE(owner_account, ''), name);
-
+CREATE UNIQUE INDEX IF NOT EXISTS routes_owner_name_unique ON routes (COALESCE(owner_account, ''), name);
 ALTER TABLE routes ALTER COLUMN gfid DROP NOT NULL;
 
 7.3 plans jsonb 结构
@@ -274,8 +270,7 @@ owner_account   text      -- 客户归属
 sql
 alert_type      text      -- 'speeding' / 'staying'
 enabled         boolean
-fence_id        text      -- JSON 数组字符串 '["uuid1","uuid2"]'
-                          -- 空数组 '[]' = 全域提醒
+fence_id        text      -- JSON 数组字符串 '["uuid1","uuid2"]'，空数组 '[]' = 全域提醒
 fence_name      text      -- JSON 数组字符串（与 fence_id 位置对齐）
 speed_threshold integer   -- 超速阈值（默认 80）
 stay_duration   integer   -- 停留时长（默认 30 分钟）
@@ -307,8 +302,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;
 
 7.8 唯一约束
 sql
-CREATE UNIQUE INDEX IF NOT EXISTS roles_owner_name_unique
-ON roles (owner_account, name);
+CREATE UNIQUE INDEX IF NOT EXISTS roles_owner_name_unique ON roles (owner_account, name);
 
 八、🔴 机构层级 + 数据隔离（核心架构）
 8.1 背景
@@ -324,18 +318,15 @@ ON roles (owner_account, name);
 
 8.3 数据层变更 SQL
 sql
--- organizations 加字段
 ALTER TABLE organizations
   ADD COLUMN IF NOT EXISTS level integer DEFAULT 1,
   ADD COLUMN IF NOT EXISTS customer_id uuid,
   ADD COLUMN IF NOT EXISTS is_root boolean DEFAULT false;
 
--- 业务表加 org_id
 ALTER TABLE routes   ADD COLUMN IF NOT EXISTS org_id integer;
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS org_id integer;
 ALTER TABLE drivers  ADD COLUMN IF NOT EXISTS org_id integer;
 
--- 运单加 org（已用）、assigned_orgs（已用）
 ALTER TABLE waybills ADD COLUMN IF NOT EXISTS org text;
 ALTER TABLE waybills ADD COLUMN IF NOT EXISTS assigned_orgs text;
 
@@ -352,7 +343,6 @@ const needOrgFilter = computed(() =>
   isCustomer && isSubAccount && Number(myOrgLevel.value) >= 2
 )
 
-// 兜底反查（currentUser 缺字段时）
 const loadMyOrgInfo = async () => {
   if (!isCustomer || !isSubAccount) return
   if (myOrgName.value && myOrgLevel.value) return
@@ -382,10 +372,16 @@ const loadMyOrgInfo = async () => {
 - 二级子账号自己创建时：兜底把自己机构名加进去（保证自己能看见）
 - 主账号/一级子账号：不受 assigned_orgs 限制（只看 owner_account）
 
+8.7 ⭐ 车辆-机构绑定（org_id 递归）
+- vehicles.org_id 是车辆归属机构的 id
+- 机构树的"车辆数" = 递归求和（本机构 + 所有子孙机构）
+- OrgManage.vue / UserManage.vue / AdminCustomer.vue 都走这个递归
+- 分配车辆弹窗：点 [→] 或 [←] 直接把车辆 org_id 挂到目标机构
+
 九、📁 前端页面结构
 入口 & 框架
 - LoginView.vue — 登录页（三层角色判断 + 子账号识别 + customers.permissions 优先 + 注入 orgLevel/orgName/isRootOrg）
-- PortalSelect.vue — 管理员门户（进客户视角需补齐 account 字段）
+- PortalSelect.vue — 管理员门户（⭐ 最近进入客户分组，localStorage 记录最多 3 条）
 - Dashboard.vue — 客户端主框架（⭐ 所有客户端页面的壳）
 - admin/AdminLayout.vue — 管理端主框架
 
@@ -398,12 +394,12 @@ const loadMyOrgInfo = async () => {
 
 管理端
 - AdminDashboard.vue — 数据总览
-- AdminCustomer.vue — 客户管理（同步建 organizations 根节点）
-- AdminVehicle.vue — 车辆管理（写入 vehicles.org_id）
+- AdminCustomer.vue — 客户管理（同步建 organizations 根节点 + ⭐ 组织机构树显示车辆数）
+- AdminVehicle.vue — 车辆管理（⭐ 卡片式布局 + 4 图标按钮）
 - AdminAccounts.vue — 管理员账号（写入 users.role_id + 反查 users 校验脏数据）
 - RoleManage.vue — 角色管理
-- OrgManage.vue — 组织管理（自动计算 level/is_root/customer_id）
-- UserManage.vue — 用户管理
+- OrgManage.vue — 组织管理（⭐ 双栏看板分配车辆 + 筛选下拉 + 全屏锁定）
+- UserManage.vue — 用户管理（⭐ 组织机构树显示车辆数）
 
 客户端
 - ClientHome.vue — 首页
@@ -438,13 +434,9 @@ const isSubAccount = !!ownerAccount && ownerAccount !== userData.account
 const roleId = Number(userData.role_id) || 0
 let isAdmin = false
 
-// ⭐ 子账号一定不是管理员
 if (!isSubAccount) {
-  // 第一层：roles.code === 'admin'
   if (roleCode === 'admin' || roleName.includes('管理员')) isAdmin = true
-  // 第二层：users.name 含"管理员"
   if (!roleId && (userName === '管理员' || userName === 'admin')) isAdmin = true
-  // 第三层：role_id ∈ [1, 2]
   if ([1, 2].includes(roleId)) isAdmin = true
 }
 
@@ -455,7 +447,6 @@ if (!isAdmin && !isSubAccount && userData.phone) {
   const { data: c } = await supabase.from('customers')
     .select('id, permissions, platforms')
     .eq('phone', userData.phone).limit(1)
-  // 覆盖 account.permissions.client
 }
 if (isSubAccount) {
   mergedPermissions = mergedPermissions.filter(p => p !== 'system')
@@ -484,7 +475,7 @@ js
 const clientPerms = computed(() => {
   if (currentUser?.role !== 'customer') return null
   const list = currentUser?.permissions?.client
-  if (!Array.isArray(list) || list.length === 0) return null  // ⭐ 空数组也全显示
+  if (!Array.isArray(list) || list.length === 0) return null  // 空数组也全显示
   return list
 })
 
@@ -617,6 +608,21 @@ const lockPageScroll = () => {
 - 行 hover：#FEF2F2
 - 分页：红色高亮
 
+14.7 ⭐ 4 个图标按钮（列表页通用）
+- 🔄 刷新：重拉数据
+- ⚙️ 密度：大/中/小三档，影响表格行高和列宽
+- ▦ 列设置：勾选显示哪些列 + 拖拽排序 + 左右固定
+- ⛶ 全屏：表格卡片整个全屏，工具栏跟着进去
+- 全屏状态下：新增/编辑/导入/批量分配按钮全部禁用
+- 提示用 `el-tooltip`（`:disabled="!isTableFullscreen"` 只在全屏时触发）
+- 按钮被 `<span>` 包裹以支持 disabled 状态下的 hover
+
+14.8 ⭐ 门户最近进入客户分组
+- localStorage key：`portal_recent_customers`，值是 `["id1", "id2", "id3"]` 有序数组
+- 进入客户后调用 `saveRecentCustomer(customer.id)`（去重 + unshift + slice(0,3)）
+- el-select 用 `<el-option-group label="最近进入">` + `<el-option-group label="全部客户">`
+- "最近进入"标签：绿色胶囊，带 box-shadow
+
 十五、✅ 已完成
 基础
 - CloudBase 迁移 + 匿名登录 + 静态托管 + Git 自动部署
@@ -641,7 +647,7 @@ const lockPageScroll = () => {
 
 管理端
 - 客户管理（双表同步 + 批量导入车辆 + org 根节点同步）
-- 管理员账号（admins + users 双表同步 + role_id 写入 + 手机号查重 + ⭐ 反查 users 校验脏数据）
+- 管理员账号（admins + users 双表同步 + role_id 写入 + 手机号查重 + 反查 users 校验脏数据）
 - 角色管理（客户隔离 + 只 code 判管理员）
 - 组织管理（组织树 + 分配车辆 + level 自动计算）
 - 用户管理（去虚拟根）
@@ -650,14 +656,14 @@ const lockPageScroll = () => {
 客户端
 - ClientHome（按 orgLevel 隔离）
 - FullMap（8s 超时 + 并发 15 + 缓存 key + 按 orgLevel 隔离）
-- 车辆档案（按 orgLevel 隔离 + 写 org_id + ⭐ 编辑时不允许清空已有 org）
+- 车辆档案（按 orgLevel 隔离 + 写 org_id + 编辑时不允许清空已有 org）
 - 司机档案（按 orgLevel 隔离）
-- 运单管理（⭐ 按 assigned_orgs 指派机构可见）
+- 运单管理（按 assigned_orgs 指派机构可见）
 - 路线管理（按 orgLevel 隔离 + 写 org_id）
 
 电子围栏
 - 4 个围栏云函数（增删改查）
-- AddEleFenceDialog：二级机构子账号强制写本机构 org + ⭐ 改名同步 ele_fence_alerts.fence_name
+- AddEleFenceDialog：二级机构子账号强制写本机构 org + 改名同步 ele_fence_alerts.fence_name
 - 云函数支持 4 种形状判断
 - 二级机构严格隔离（eq('org', 我的机构名)）
 
@@ -674,16 +680,16 @@ const lockPageScroll = () => {
 - StayDetailDialog.vue：地图画停留点 + 编号 + 连线 + 停留半径圆
 - 按 orgLevel 隔离
 
-提醒设置隔离（⭐ 本轮新增）
+提醒设置隔离
 - EleFenceAlertSetting.vue：二级机构子账号只读模式（横幅 + 控件全禁用 + 保存/重置拦截）
 
-运单指派机构可见（⭐ 本轮新增）
+运单指派机构可见
 - waybills.assigned_orgs 字段落地
 - WaybillCreate.vue：从指派车队提取机构名写入，二级子账号兜底加自己机构
 - Waybill.vue / waybill-detail.vue：二级子账号按 assigned_orgs 过滤
 - handleDelete 同样加隔离
 
-围栏改名联动（⭐ 本轮新增）
+围栏改名联动
 - AddEleFenceDialog.vue 编辑保存成功后调用 syncFenceNameToAlerts
 - 遍历 ele_fence_alerts，位置对齐替换 fence_name 数组中的旧名
 
@@ -697,10 +703,42 @@ const lockPageScroll = () => {
 个人设置
 - 修复严重 bug：改密码写错了表（原写 customers/admins，应写 users）
 
-数据治理（⭐ 本轮新增）
+数据治理
 - vehicles.fuel_type：51 条 NULL → 纯电动（山西卡友新能源全部晋K****D 绿牌车）
 - users.role_id：无脏管理员（0 行，客户主账号 role_id=NULL 是正常的）
 - AdminAccounts.vue：fetchData 反查 users 标记 _noUser，脏数据只允许删除
+
+⭐ 组织管理页 UI 重构（OrgManage.vue）
+- 车辆数递归计算：本机构 + 所有子孙机构，一次性预计算 Map（性能优化）
+- 分配车辆弹窗：双栏看板
+  - 左：车辆池（未分配 + 其他机构的车）
+  - 右：已分配给当前机构
+  - 每卡片：[车牌号] + 昵称（如有）+ 转移按钮
+  - 单卡转移：点 [→] 或 [←]
+  - 批量模式：开关 → 卡片出现 checkbox → 底部批量按钮
+  - 筛选下拉：el-select + el-option-group（全部 / 未分配 / 其他机构 + 具体机构名）
+  - 筛选延迟 150ms 应用（`appliedFilter`）避免下拉关闭动画与列表重渲染同帧竞争
+  - 移动的车辆金色高亮 + 最新置顶（保存前一直保持）
+- 全屏锁定：新增按钮禁用 + el-tooltip 提示（方案 A：按钮禁用最稳）
+
+⭐ 车辆管理页 UI 重构（AdminVehicle.vue）
+- 布局对齐车辆档案：卡片式
+- 工具栏：左侧"共 X 条"，右侧所有动作按钮 + 4 图标按钮
+- 4 图标按钮：刷新/密度/列设置/全屏
+- 表格：浅灰表头 + 品牌红 hover
+- 分页：默认 20 条，大小选项 [20, 50, 100]
+- 高度 calc(100vh - 101px) 锁死，页面不上下滚动
+- 保留所有原功能：搜索、添加车辆、批量导入、导出、批量分配客户、删除、重置
+
+⭐ 门户最近进入客户分组（PortalSelect.vue）
+- localStorage 记录最近进入的 3 个客户
+- 下拉分两组：「最近进入」（绿色标签） + 「全部客户」
+- 进入客户时调用 `saveRecentCustomer(id)` 更新记录
+
+⭐ 组织机构树车辆数显示（UserManage.vue + AdminCustomer.vue）
+- 每个机构/账号节点显示车辆数
+- 递归计算（含所有子孙）
+- 无车显示"暂无车辆"（灰色徽章）
 
 UI
 - 全系统统一（卡片 + 4 图标 + 品牌红）
@@ -709,7 +747,7 @@ UI
 
 十六、⏳ 待办清单
 【专项待办 1-9】已全部完成 ✅
-（详见 § 15 已完成章节的"运单指派机构可见"、"提醒设置隔离"、"围栏改名联动"、"数据治理"等条目）
+【本轮 UI 重构】已全部完成 ✅
 
 原始待办（仍未做）
 ☐ 1. RLS 策略收紧（上线前必做）
@@ -729,14 +767,15 @@ UI
 3. 子账号永远不是管理员（LoginView 强制判定）
 4. 子账号权限必须剔除 system（LoginView 里 filter）
 5. CloudBase HTTP 网关基础 URL：
-   text
    https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com
 6. 登录校验的是 users.password，改密码一定写 users 表，别写 customers / admins
 7. 数据隔离三件套：customer_id + owner_account + org（按 role/level 组合）
 8. 全项目隔离统一判断：isRootOrgSubAccount 和 needOrgFilter 两个 computed
-9. ⭐ 运单额外按 assigned_orgs 隔离（二级子账号需满足 owner_account + assigned_orgs 双重条件）
-10. ⭐ 提醒配置是客户级共享的，二级子账号只读（不能改）
-11. ⭐ 围栏改名时要同步 ele_fence_alerts.fence_name（位置对齐替换 JSON 数组）
+9. 运单额外按 assigned_orgs 隔离（二级子账号需满足 owner_account + assigned_orgs 双重条件）
+10. 提醒配置是客户级共享的，二级子账号只读（不能改）
+11. 围栏改名时要同步 ele_fence_alerts.fence_name（位置对齐替换 JSON 数组）
+12. 分配车辆弹窗里筛选切换要延迟 150ms（`appliedFilter`），避免 el-select 关闭动画与列表重渲染竞争
+13. 全屏时新增/编辑/导入按钮用 `:disabled` + `el-tooltip` 方案（不要用 ElMessage，会被 stacking context 遮挡）
 
 十八、🔧 快速验证清单
 主账号 15035660010 登录：
@@ -764,24 +803,43 @@ sql
 SELECT id, fence_id, fence_name FROM ele_fence_alerts 
 WHERE fence_id LIKE '%<围栏UUID>%';
 
-十九、📋 数据库现状（截至 2026-10-15 第三版）
+组织管理页 UI：
+- 左侧树节点显示含子孙车辆数
+- 点"分配车辆" → 双栏看板 → 点 [→] 转移 → 金色高亮置顶
+- 筛选下拉：全部 / 未分配 / 其他机构 / 具体机构名
+- 全屏时"新增组织"按钮禁用 + hover 提示
+
+车辆管理页 UI：
+- 布局对齐车辆档案
+- 4 图标按钮：刷新/密度/列设置/全屏
+- 默认 20 条，页大小选项 [20, 50, 100]
+- 页面不上下滚动
+
+门户最近进入客户：
+- 进入某客户 → 返回门户 → 下拉列表顶部出现"最近进入"分组 + 绿色标签
+
+十九、📋 数据库现状（截至 2026-10-15 第四版）
 organizations
 id	name	level	parent_id	is_root	customer_id
 5	山西卡友新能源运输有限公司	1	NULL	true	678b9759-...
 4	管理员名下车辆	2	5	false	678b9759-...
+8	车队演示账号	1	NULL	true	ff786331-...
+9	湖北分公司	2	8	false	ff786331-...
+10	山西分公司	2	8	false	ff786331-...
+
 users
 id	account	name	org_id	owner_account	role_id
 9	15035660010	山西卡友新能源运输有限公司	NULL	NULL	NULL（客户主账号）
 11	15035660020	lyn	4	15035660010	19（二级机构子账号）
+
 customers
 id	name	phone
 678b9759-...	山西卡友新能源运输有限公司	15035660010
-routes
-org	org_id	owner_account
-山西卡友新能源运输有限公司	5	15035660010
+ff786331-...	车队演示账号	15035661111
+
 vehicles
-- 55 条：51 纯电动 + 4 燃气车（fuel_type 已全部填充）
-- 分布：org_id=5（卡友）+ org_id=4（管理员名下车辆）
+- org_id 分布：4（12 辆） / 5（43 辆） / 8（30 辆）
+- fuel_type：51 纯电动 + 4 燃气车（已填充）
 
 二十、🔧 常见问题
 现象	原因	修法
@@ -817,9 +875,17 @@ Missing semicolon / Unexpected token	代码被改乱	全选覆盖完整文件
 客户新增后子账号无法绑定机构	organizations 无根节点	检查 AdminCustomer.vue 的 syncCreateOrgRoot
 客户改名后界面不一致	organizations 根节点 name 未同步	同上
 车辆筛选"燃油车" 0 条	旧数据存的是"燃油"	数据迁移 SQL（已完成）
-⭐ 二级子账号看不到某条运单	assigned_orgs 未包含其机构名	发布时选"指派车队"选机构 / 或直接改 assigned_orgs
-⭐ 二级子账号改了提醒设置影响主账号	已加只读模式拦截	如仍能改，检查 isReadonly computed 是否生效
-⭐ 围栏改名后提醒配置显示旧名	编辑围栏时同步失败	检查 syncFenceNameToAlerts 是否调用 / fence_id 是否匹配
+二级子账号看不到某条运单	assigned_orgs 未包含其机构名	发布时选"指派车队"选机构 / 或直接改 assigned_orgs
+二级子账号改了提醒设置影响主账号	已加只读模式拦截	如仍能改，检查 isReadonly computed 是否生效
+围栏改名后提醒配置显示旧名	编辑围栏时同步失败	检查 syncFenceNameToAlerts 是否调用 / fence_id 是否匹配
+⭐ 分配车辆弹窗筛选卡顿	el-select 关闭动画和列表重渲染同帧竞争	用 appliedFilter + 150ms 延迟
+⭐ 全屏时新增按钮提示被遮挡	ElMessage z-index 低于全屏层 stacking context	改用 :disabled + el-tooltip 方案
+⭐ 机构树车辆数不对	org_id 和 parent_id 类型不匹配（string vs number）	全部 String() 化比较
+⭐ el-select 显示 org:9 而不是机构名	el-option 未设 :label	加 label / :label
+⭐ 门户下拉没有"最近进入"	未记录 localStorage	调 saveRecentCustomer，key = portal_recent_
+⭐ 门户下拉没有"最近进入"	未记录 localStorage	调 saveRecentCustomer，key = portal_recent_customers
+⭐ 车辆管理页能上下滚动	高度用了 100vh 而不是 calc(100vh - 101px)	改用 calc(100vh - 101px) + overflow: hidden
+⭐ 分页默认 10 条	pageSize 初始值	改成 20，:page-sizes="[20, 50, 100]"
 
 二十一、🚀 部署流程
 bash
@@ -847,6 +913,10 @@ FullMap 并发	15
 前端 fetch 超时	8000ms
 超速段合并间隔	5 分钟
 路线方案配色池	#2563EB / #8B5CF6 / #EC4899 / #06B6D4 / #F97316 / #6366F1 / #14B8A6 / #A855F7
+门户最近进入客户	最多 3 条，key = portal_recent_customers
+分配车辆筛选延迟	150ms（appliedFilter）
+管理端页面高度	calc(100vh - 101px)
+AdminVehicle 分页	默认 20，选项 [20, 50, 100]
 
 二十三、📁 关键文件
 文件	说明
@@ -854,16 +924,16 @@ src/utils/supabase.js	CloudBase 初始化
 src/router/index.js	路由表
 src/views/Dashboard.vue	⭐ 客户端所有页面的壳
 src/views/LoginView.vue	登录页（三层角色 + 机构注入）
-src/views/PortalSelect.vue	管理员门户
+src/views/PortalSelect.vue	管理员门户（⭐ 最近进入分组）
 src/views/ClientHome.vue	客户端首页
 src/views/FullMap.vue	全图监控
-src/views/UserManage.vue	用户管理
+src/views/UserManage.vue	用户管理（⭐ 组织机构树显示车辆数）
 src/views/RoleManage.vue	角色管理
-src/views/OrgManage.vue	组织管理
+src/views/OrgManage.vue	组织管理（⭐ 双栏看板分配车辆）
 src/views/admin/AdminLayout.vue	管理端壳
 src/views/admin/AdminDashboard.vue	数据总览
-src/views/admin/AdminCustomer.vue	客户管理（含 org 同步）
-src/views/admin/AdminVehicle.vue	车辆管理
+src/views/admin/AdminCustomer.vue	客户管理（含 org 同步 + ⭐ 组织机构树显示车辆数）
+src/views/admin/AdminVehicle.vue	车辆管理（⭐ 卡片式布局 + 4 图标按钮）
 src/views/admin/AdminAccounts.vue	管理员账号（含 _noUser 脏数据校验）
 src/views/Waybill.vue	运单管理（含 assigned_orgs 隔离）
 src/views/WaybillCreate.vue	新建运单（写 assigned_orgs）
@@ -884,7 +954,7 @@ src/components/FunctionPermissionDialog.vue	权限配置弹窗
 src/views/Report.vue	⚠️ 占位文件，未开发
 
 二十四、🎯 下次推荐方向
-专项待办 1-9 已全部清零。剩余工作按优先级排序：
+专项待办 1-9 + 本轮 UI 重构 已全部清零。剩余工作按优先级排序：
 
 优先级排序：
 1. 【原始 5】老旧 admins 表清理（SQL 一把梭，快）
@@ -898,7 +968,7 @@ src/views/Report.vue	⚠️ 占位文件，未开发
 9. 【原始 10】方案对比地图视图
 10. 【原始 8】微信小程序（需拍板）
 
-最后更新：2026-10-15（第三版 · 全部 9 个专项待办清零）
+最后更新：2026-10-15（第四版 · 组织管理/车辆管理/门户 UI 重构）
 
 状态：
 ✅ 数据层改造完成
@@ -917,6 +987,11 @@ src/views/Report.vue	⚠️ 占位文件，未开发
    - 待办 7 燃料类型数据迁移（51 条 NULL → 纯电动）
    - 待办 8 FunctionPermissionDialog 兼容 adminOnly
    - 待办 9 AdminAccounts 反查 users 标记 _noUser
+✅ 本轮 UI 重构全部完成：
+   - OrgManage.vue：车辆数递归 + 双栏看板分配 + 筛选下拉 + 全屏锁定 + 性能优化
+   - AdminVehicle.vue：卡片式布局 + 4 图标按钮 + 分页默认 20 + 页面锁高
+   - PortalSelect.vue：最近进入客户分组（最多 3 条）
+   - UserManage.vue + AdminCustomer.vue：组织机构树显示车辆数（递归 + 空态"暂无车辆"）
 ⏳ 剩余 10 项原始待办
 
 🎯 下次推荐：先做【原始 5】老旧 admins 表清理 + 【原始 7】删除本地视频（10 分钟），再做【原始 3】逆地理编码降级

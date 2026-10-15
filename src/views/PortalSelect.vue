@@ -14,6 +14,53 @@ const customers = ref([])
 const loadingCustomers = ref(false)
 const selectedCustomerId = ref('')
 
+// ============================================================
+// ⭐ 最近进入的客户（localStorage 记录，最多 3 条）
+// ============================================================
+const RECENT_KEY = 'portal_recent_customers'
+const recentCustomerIds = ref([])
+
+const loadRecentCustomers = () => {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY)
+    if (raw) {
+      const arr = JSON.parse(raw)
+      if (Array.isArray(arr)) {
+        recentCustomerIds.value = arr.filter(x => typeof x === 'string').slice(0, 3)
+      }
+    }
+  } catch (e) {
+    recentCustomerIds.value = []
+  }
+}
+
+const saveRecentCustomer = (customerId) => {
+  if (!customerId) return
+  let list = recentCustomerIds.value.filter(id => id !== customerId)
+  list.unshift(customerId)
+  list = list.slice(0, 3)
+  recentCustomerIds.value = list
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(list))
+  } catch (e) { /* ignore */ }
+}
+
+// ⭐ 最近进入的客户对象列表（从近到远，最多 3 条，自动过滤已失效客户）
+const recentCustomers = computed(() => {
+  return recentCustomerIds.value
+    .map(id => customers.value.find(c => c.id === id))
+    .filter(Boolean)
+})
+
+// ⭐ 其余客户（排除已在"最近进入"里的）
+const otherCustomers = computed(() => {
+  const recentSet = new Set(recentCustomerIds.value)
+  return customers.value.filter(c => !recentSet.has(c.id))
+})
+
+// ============================================================
+// 客户列表加载
+// ============================================================
 const selectedCustomer = computed(() => {
   if (!selectedCustomerId.value) return null
   return customers.value.find(c => c.id === selectedCustomerId.value) || null
@@ -42,6 +89,7 @@ onMounted(() => {
     showHeader.value = true
     setTimeout(() => { showBody.value = true }, 150)
   })
+  loadRecentCustomers()
   loadCustomers()
 })
 
@@ -79,7 +127,7 @@ const enterClient = async () => {
   }
   if (!realAccount) realAccount = customer.phone || ''
 
-  // ⭐ 2. 统一 permissions 结构（与 LoginView 的解析规则一致）
+  // ⭐ 2. 统一 permissions 结构
   let clientPerms = []
   if (Array.isArray(customer.permissions)) {
     clientPerms = customer.permissions
@@ -87,35 +135,36 @@ const enterClient = async () => {
     clientPerms = Array.isArray(customer.permissions.client) ? customer.permissions.client : []
   }
 
-  // ⭐ 3. 构造 account 对象（字段结构与 LoginView 主账号登录一致）
+  // ⭐ 3. 构造 account 对象
   const account = {
     id: customer.id,
     account: realAccount,
     phone: customer.phone,
     name: customer.name,
     email: masterEmail,
-    role: 'customer',                       // 强制降级，走客户隔离分支
+    role: 'customer',
     roleId: 0,
     roleName: '',
-    orgId: null,                            // 管理员进客户视角 = 主账号身份，无机构
-    org: '',                                // 兼容旧字段
-    orgName: '',                            // 新字段
-    orgLevel: 1,                            // 主账号视为一级
-    isRootOrg: false,                       // 非子账号
+    orgId: null,
+    org: '',
+    orgName: '',
+    orgLevel: 1,
+    isRootOrg: false,
     customerId: customer.id,
     platforms: customer.platforms || [],
-    permissions: { client: clientPerms },   // ⭐ 统一结构
-    // 主账号相关
+    permissions: { client: clientPerms },
     ownerAccount: '',
     masterAccount: '',
     masterName: '',
     masterPhone: '',
     customerName: customer.name || '',
-    isSubAccount: false,                    // ⭐ 明确标记
+    isSubAccount: false,
   }
 
-  // 只覆盖 currentUser，保留 originalUser（管理员身份不丢）
   localStorage.setItem('currentUser', JSON.stringify(account))
+
+  // ⭐ 4. 记录最近进入
+  saveRecentCustomer(customer.id)
 
   ElMessage.success(`正在进入「${customer.name}」的客户端`)
   setTimeout(() => { router.push('/dashboard') }, 300)
@@ -124,7 +173,7 @@ const enterClient = async () => {
 const enterAdmin = () => { router.push('/admin') }
 
 // ============================================================
-// 退出登录 · 模糊至黑屏 + 感谢使用 + 放大转场
+// 退出登录
 // ============================================================
 const goLogout = () => {
   if (showGoodbye.value) return
@@ -206,12 +255,37 @@ const goLogout = () => {
               style="width: 100%;"
               @change="onSelectCustomer"
             >
-              <el-option v-for="c in customers" :key="c.id" :label="c.name" :value="c.id">
-                <div class="option-row">
-                  <span class="option-name">{{ c.name }}</span>
-                  <span class="option-phone">{{ c.phone }}</span>
-                </div>
-              </el-option>
+              <!-- ⭐ 最近进入分组 -->
+              <el-option-group v-if="recentCustomers.length > 0" label="最近进入">
+                <el-option
+                  v-for="c in recentCustomers"
+                  :key="'recent-' + c.id"
+                  :label="c.name"
+                  :value="c.id"
+                >
+                  <div class="option-row">
+                    <span class="option-name">{{ c.name }}</span>
+                    <span class="option-recent-tag">最近进入</span>
+                    <span class="option-phone">{{ c.phone }}</span>
+                  </div>
+                </el-option>
+              </el-option-group>
+
+              <!-- ⭐ 全部客户分组 -->
+              <el-option-group v-if="otherCustomers.length > 0" label="全部客户">
+                <el-option
+                  v-for="c in otherCustomers"
+                  :key="'all-' + c.id"
+                  :label="c.name"
+                  :value="c.id"
+                >
+                  <div class="option-row">
+                    <span class="option-name">{{ c.name }}</span>
+                    <span class="option-phone">{{ c.phone }}</span>
+                  </div>
+                </el-option>
+              </el-option-group>
+
               <template #empty>
                 <div class="select-empty">暂无可用客户</div>
               </template>
@@ -249,7 +323,6 @@ const goLogout = () => {
       </div>
     </main>
 
-    <!-- ========== 退出登录动画 ========== -->
     <div v-if="showGoodbye" class="goodbye-overlay">
       <h1 class="goodbye-text">感谢使用</h1>
     </div>
@@ -655,8 +728,22 @@ const goLogout = () => {
 .select-empty { padding: 16px 0; text-align: center; color: #94A3B8; font-size: 13px; }
 
 .option-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.option-name { font-weight: 600; color: #0F172A; }
-.option-phone { font-size: 11px; color: #94A3B8; font-family: 'Courier New', monospace; }
+.option-name { font-weight: 600; color: #0F172A; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.option-recent-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  margin-left: 6px;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+}
+.option-phone { font-size: 11px; color: #94A3B8; font-family: 'Courier New', monospace; flex-shrink: 0; }
 
 .enter-btn {
   margin-top: 24px;
@@ -706,7 +793,6 @@ const goLogout = () => {
 .btn-slide-enter-from { opacity: 0; transform: translateY(16px) scale(0.92); }
 .btn-slide-leave-to { opacity: 0; transform: translateY(8px) scale(0.95); }
 
-/* 退出登录动画 */
 .goodbye-overlay {
   position: fixed;
   inset: 0;
@@ -799,5 +885,18 @@ const goLogout = () => {
   color: #10B981 !important;
   font-weight: 700;
   background: #ECFDF5 !important;
+}
+
+/* ⭐ 分组标题样式 */
+.portal-select-popper .el-select-group__title {
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  color: #94A3B8 !important;
+  letter-spacing: 1px !important;
+  padding: 8px 12px 4px !important;
+  line-height: 1 !important;
+}
+.portal-select-popper .el-select-group:first-child .el-select-group__title {
+  color: #10B981 !important;
 }
 </style>

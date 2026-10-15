@@ -35,36 +35,36 @@ const provinceOptions = [
   { value: '天津市', label: '天津市', cities: ['天津市'] },
   { value: '上海市', label: '上海市', cities: ['上海市'] },
   { value: '重庆市', label: '重庆市', cities: ['重庆市'] },
-  { value: '河北省', label: '河北省', cities: ['石家庄市','唐山市','秦皇岛市','邯郸市','邢台市','保定市','张家口市','承德市','沧州市','廊坊市','衡水市'] },
-  { value: '山西省', label: '山西省', cities: ['太原市','大同市','阳泉市','长治市','晋城市','朔州市','晋中市','运城市','忻州市','临汾市','吕梁市'] },
-  { value: '内蒙古自治区', label: '内蒙古自治区', cities: ['呼和浩特市','包头市','乌海市','赤峰市','通辽市','鄂尔多斯市','呼伦贝尔市','巴彦淖尔市','乌兰察布市','兴安盟','锡林郭勒盟','阿拉善盟'] },
-  { value: '辽宁省', label: '辽宁省', cities: ['沈阳市','大连市','鞍山市','抚顺市','本溪市','丹东市','锦州市','营口市','阜新市','辽阳市','盘锦市','铁岭市','朝阳市','葫芦岛市'] },
-  { value: '吉林省', label: '吉林省', cities: ['长春市','吉林市','四平市','辽源市','通化市','白山市','松原市','白城市','延边朝鲜族自治州'] },
-  { value: '黑龙江省', label: '黑龙江省', cities: ['哈尔滨市','齐齐哈尔市','鸡西市','鹤岗市','双鸭山市','大庆市','伊春市','佳木斯市','七台河市','牡丹江市','黑河市','绥化市','大兴安岭地区'] },
-  { value: '江苏省', label: '江苏省', cities: ['南京市','无锡市','徐州市','常州市','苏州市','南通市','连云港市','淮安市','盐城市','扬州市','镇江市','泰州市','宿迁市'] },
-  { value: '浙江省', label: '浙江省', cities: ['杭州市','宁波市','温州市','嘉兴市','湖州市','绍兴市','金华市','衢州市','舟山市','台州市','丽水市'] },
-  { value: '安徽省', label: '安徽省', cities: ['合肥市','芜湖市','蚌埠市','淮南市','马鞍山市','淮北市','铜陵市','安庆市','黄山市','滁州市','阜阳市','宿州市','六安市','亳州市','池州市','宣城市'] },
-  { value: '福建省', label: '福建省', cities: ['福州市','厦门市','莆田市','三明市','泉州市','漳州市','南平市','龙岩市','宁德市'] },
-  { value: '江西省', label: '江西省', cities: ['南昌市','景德镇市','萍乡市','九江市','新余市','鹰潭市','赣州市','吉安市','宜春市','抚州市','上饶市'] },
-  { value: '山东省', label: '山东省', cities: ['济南市','青岛市','淄博市','枣庄市','东营市','烟台市','潍坊市','济宁市','泰安市','威海市','日照市','临沂市','德州市','聊城市','滨州市','菏泽市'] },
-  { value: '河南省', label: '河南省', cities: ['郑州市','开封市','洛阳市','平顶山市','安阳市','鹤壁市','新乡市','焦作市','濮阳市','许昌市','漯河市','三门峡市','南阳市','商丘市','信阳市','周口市','驻马店市','济源市'] },
-  { value: '湖北省', label: '湖北省', cities: ['武汉市','黄石市','十堰市','宜昌市','襄阳市','鄂州市','荆门市','孝感市','荆州市','黄冈市','咸宁市','随州市','恩施土家族苗族自治州','仙桃市','潜江市','天门市','神农架林区'] },
-  { value: '湖南省', label: '湖南省', cities: ['长沙市','株洲市','湘潭市','衡阳市','邵阳市','岳阳市','常德市','张家界市','益阳市','郴州市','永州市','怀化市','娄底市','湘西土家族苗族自治州'] },
-  { value: '广东省', label: '广东省', cities: ['广州市','韶关市','深圳市','珠海市','汕头市','佛山市','江门市','湛江市','茂名市','肇庆市','惠州市','梅州市','汕尾市','河源市','阳江市','清远市','东莞市','中山市','潮州市','揭阳市','云浮市'] },
-  { value: '广西壮族自治区', label: '广西壮族自治区', cities: ['南宁市','柳州市','桂林市','梧州市','北海市','防城港市','钦州市','贵港市','玉林市','百色市','贺州市','河池市','来宾市','崇左市'] },
-  { value: '海南省', label: '海南省', cities: ['海口市','三亚市','三沙市','儋州市'] },
-  { value: '四川省', label: '四川省', cities: ['成都市','自贡市','攀枝花市','泸州市','德阳市','绵阳市','广元市','遂宁市','内江市','乐山市','南充市','眉山市','宜宾市','广安市','达州市','雅安市','巴中市','资阳市','阿坝藏族羌族自治州','甘孜藏族自治州','凉山彝族自治州'] },
-  { value: '贵州省', label: '贵州省', cities: ['贵阳市','六盘水市','遵义市','安顺市','毕节市','铜仁市','黔西南布依族苗族自治州','黔东南苗族侗族自治州','黔南布依族苗族自治州'] },
-  { value: '云南省', label: '云南省', cities: ['昆明市','曲靖市','玉溪市','保山市','昭通市','丽江市','普洱市','临沧市','楚雄彝族自治州','红河哈尼族彝族自治州','文山壮族苗族自治州','西双版纳傣族自治州','大理白族自治州','德宏傣族景颇族自治州','怒江傈僳族自治州','迪庆藏族自治州'] },
-  { value: '西藏自治区', label: '西藏自治区', cities: ['拉萨市','日喀则市','昌都市','林芝市','山南市','那曲市','阿里地区'] },
-  { value: '陕西省', label: '陕西省', cities: ['西安市','铜川市','宝鸡市','咸阳市','渭南市','延安市','汉中市','榆林市','安康市','商洛市'] },
-  { value: '甘肃省', label: '甘肃省', cities: ['兰州市','嘉峪关市','金昌市','白银市','天水市','武威市','张掖市','平凉市','酒泉市','庆阳市','定西市','陇南市','临夏回族自治州','甘南藏族自治州'] },
-  { value: '青海省', label: '青海省', cities: ['西宁市','海东市','海北藏族自治州','黄南藏族自治州','海南藏族自治州','果洛藏族自治州','玉树藏族自治州','海西蒙古族藏族自治州'] },
-  { value: '宁夏回族自治区', label: '宁夏回族自治区', cities: ['银川市','石嘴山市','吴忠市','固原市','中卫市'] },
-  { value: '新疆维吾尔自治区', label: '新疆维吾尔自治区', cities: ['乌鲁木齐市','克拉玛依市','吐鲁番市','哈密市','昌吉回族自治州','博尔塔拉蒙古自治州','巴音郭楞蒙古自治州','阿克苏地区','克孜勒苏柯尔克孜自治州','喀什地区','和田地区','伊犁哈萨克自治州','塔城地区','阿勒泰地区','石河子市','阿拉尔市','图木舒克市','五家渠市','北屯市','铁门关市','双河市','可克达拉市','昆玉市','胡杨河市'] },
+  { value: '河北省', label: '河北省', cities: ['石家庄市', '唐山市', '秦皇岛市', '邯郸市', '邢台市', '保定市', '张家口市', '承德市', '沧州市', '廊坊市', '衡水市'] },
+  { value: '山西省', label: '山西省', cities: ['太原市', '大同市', '阳泉市', '长治市', '晋城市', '朔州市', '晋中市', '运城市', '忻州市', '临汾市', '吕梁市'] },
+  { value: '内蒙古自治区', label: '内蒙古自治区', cities: ['呼和浩特市', '包头市', '乌海市', '赤峰市', '通辽市', '鄂尔多斯市', '呼伦贝尔市', '巴彦淖尔市', '乌兰察布市', '兴安盟', '锡林郭勒盟', '阿拉善盟'] },
+  { value: '辽宁省', label: '辽宁省', cities: ['沈阳市', '大连市', '鞍山市', '抚顺市', '本溪市', '丹东市', '锦州市', '营口市', '阜新市', '辽阳市', '盘锦市', '铁岭市', '朝阳市', '葫芦岛市'] },
+  { value: '吉林省', label: '吉林省', cities: ['长春市', '吉林市', '四平市', '辽源市', '通化市', '白山市', '松原市', '白城市', '延边朝鲜族自治州'] },
+  { value: '黑龙江省', label: '黑龙江省', cities: ['哈尔滨市', '齐齐哈尔市', '鸡西市', '鹤岗市', '双鸭山市', '大庆市', '伊春市', '佳木斯市', '七台河市', '牡丹江市', '黑河市', '绥化市', '大兴安岭地区'] },
+  { value: '江苏省', label: '江苏省', cities: ['南京市', '无锡市', '徐州市', '常州市', '苏州市', '南通市', '连云港市', '淮安市', '盐城市', '扬州市', '镇江市', '泰州市', '宿迁市'] },
+  { value: '浙江省', label: '浙江省', cities: ['杭州市', '宁波市', '温州市', '嘉兴市', '湖州市', '绍兴市', '金华市', '衢州市', '舟山市', '台州市', '丽水市'] },
+  { value: '安徽省', label: '安徽省', cities: ['合肥市', '芜湖市', '蚌埠市', '淮南市', '马鞍山市', '淮北市', '铜陵市', '安庆市', '黄山市', '滁州市', '阜阳市', '宿州市', '六安市', '亳州市', '池州市', '宣城市'] },
+  { value: '福建省', label: '福建省', cities: ['福州市', '厦门市', '莆田市', '三明市', '泉州市', '漳州市', '南平市', '龙岩市', '宁德市'] },
+  { value: '江西省', label: '江西省', cities: ['南昌市', '景德镇市', '萍乡市', '九江市', '新余市', '鹰潭市', '赣州市', '吉安市', '宜春市', '抚州市', '上饶市'] },
+  { value: '山东省', label: '山东省', cities: ['济南市', '青岛市', '淄博市', '枣庄市', '东营市', '烟台市', '潍坊市', '济宁市', '泰安市', '威海市', '日照市', '临沂市', '德州市', '聊城市', '滨州市', '菏泽市'] },
+  { value: '河南省', label: '河南省', cities: ['郑州市', '开封市', '洛阳市', '平顶山市', '安阳市', '鹤壁市', '新乡市', '焦作市', '濮阳市', '许昌市', '漯河市', '三门峡市', '南阳市', '商丘市', '信阳市', '周口市', '驻马店市', '济源市'] },
+  { value: '湖北省', label: '湖北省', cities: ['武汉市', '黄石市', '十堰市', '宜昌市', '襄阳市', '鄂州市', '荆门市', '孝感市', '荆州市', '黄冈市', '咸宁市', '随州市', '恩施土家族苗族自治州', '仙桃市', '潜江市', '天门市', '神农架林区'] },
+  { value: '湖南省', label: '湖南省', cities: ['长沙市', '株洲市', '湘潭市', '衡阳市', '邵阳市', '岳阳市', '常德市', '张家界市', '益阳市', '郴州市', '永州市', '怀化市', '娄底市', '湘西土家族苗族自治州'] },
+  { value: '广东省', label: '广东省', cities: ['广州市', '韶关市', '深圳市', '珠海市', '汕头市', '佛山市', '江门市', '湛江市', '茂名市', '肇庆市', '惠州市', '梅州市', '汕尾市', '河源市', '阳江市', '清远市', '东莞市', '中山市', '潮州市', '揭阳市', '云浮市'] },
+  { value: '广西壮族自治区', label: '广西壮族自治区', cities: ['南宁市', '柳州市', '桂林市', '梧州市', '北海市', '防城港市', '钦州市', '贵港市', '玉林市', '百色市', '贺州市', '河池市', '来宾市', '崇左市'] },
+  { value: '海南省', label: '海南省', cities: ['海口市', '三亚市', '三沙市', '儋州市'] },
+  { value: '四川省', label: '四川省', cities: ['成都市', '自贡市', '攀枝花市', '泸州市', '德阳市', '绵阳市', '广元市', '遂宁市', '内江市', '乐山市', '南充市', '眉山市', '宜宾市', '广安市', '达州市', '雅安市', '巴中市', '资阳市', '阿坝藏族羌族自治州', '甘孜藏族自治州', '凉山彝族自治州'] },
+  { value: '贵州省', label: '贵州省', cities: ['贵阳市', '六盘水市', '遵义市', '安顺市', '毕节市', '铜仁市', '黔西南布依族苗族自治州', '黔东南苗族侗族自治州', '黔南布依族苗族自治州'] },
+  { value: '云南省', label: '云南省', cities: ['昆明市', '曲靖市', '玉溪市', '保山市', '昭通市', '丽江市', '普洱市', '临沧市', '楚雄彝族自治州', '红河哈尼族彝族自治州', '文山壮族苗族自治州', '西双版纳傣族自治州', '大理白族自治州', '德宏傣族景颇族自治州', '怒江傈僳族自治州', '迪庆藏族自治州'] },
+  { value: '西藏自治区', label: '西藏自治区', cities: ['拉萨市', '日喀则市', '昌都市', '林芝市', '山南市', '那曲市', '阿里地区'] },
+  { value: '陕西省', label: '陕西省', cities: ['西安市', '铜川市', '宝鸡市', '咸阳市', '渭南市', '延安市', '汉中市', '榆林市', '安康市', '商洛市'] },
+  { value: '甘肃省', label: '甘肃省', cities: ['兰州市', '嘉峪关市', '金昌市', '白银市', '天水市', '武威市', '张掖市', '平凉市', '酒泉市', '庆阳市', '定西市', '陇南市', '临夏回族自治州', '甘南藏族自治州'] },
+  { value: '青海省', label: '青海省', cities: ['西宁市', '海东市', '海北藏族自治州', '黄南藏族自治州', '海南藏族自治州', '果洛藏族自治州', '玉树藏族自治州', '海西蒙古族藏族自治州'] },
+  { value: '宁夏回族自治区', label: '宁夏回族自治区', cities: ['银川市', '石嘴山市', '吴忠市', '固原市', '中卫市'] },
+  { value: '新疆维吾尔自治区', label: '新疆维吾尔自治区', cities: ['乌鲁木齐市', '克拉玛依市', '吐鲁番市', '哈密市', '昌吉回族自治州', '博尔塔拉蒙古自治州', '巴音郭楞蒙古自治州', '阿克苏地区', '克孜勒苏柯尔克孜自治州', '喀什地区', '和田地区', '伊犁哈萨克自治州', '塔城地区', '阿勒泰地区', '石河子市', '阿拉尔市', '图木舒克市', '五家渠市', '北屯市', '铁门关市', '双河市', '可克达拉市', '昆玉市', '胡杨河市'] },
   { value: '香港特别行政区', label: '香港特别行政区', cities: ['香港'] },
   { value: '澳门特别行政区', label: '澳门特别行政区', cities: ['澳门'] },
-  { value: '台湾省', label: '台湾省', cities: ['台北市','高雄市','台中市','台南市','新北市','桃园市','基隆市','新竹市','嘉义市'] },
+  { value: '台湾省', label: '台湾省', cities: ['台北市', '高雄市', '台中市', '台南市', '新北市', '桃园市', '基隆市', '新竹市', '嘉义市'] },
 ]
 
 const cityOptions = ref([])
@@ -73,18 +73,18 @@ const cityOptions = ref([])
 // 客户端权限配置
 // ============================================================
 const clientPermissions = [
-  { label: '首页 / 数据总览',         value: 'home' },
-  { label: '行车管理 / 全图监控',     value: 'driving_fullmap' },
-  { label: '车辆故障管理',            value: 'vehicle_fault' },
-  { label: '外观巡检管理',            value: 'appearance_inspect' },
-  { label: '电子围栏管理',            value: 'ele_fence' },
-  { label: '运营管理',                value: 'operation' },
-  { label: '运输管理 / 运单管理',     value: 'waybill' },
-  { label: '运输管理 / 路线管理',     value: 'route' },
-  { label: '车队运营报告',            value: 'report' },
+  { label: '首页 / 数据总览', value: 'home' },
+  { label: '行车管理 / 全图监控', value: 'driving_fullmap' },
+  { label: '车辆故障管理', value: 'vehicle_fault' },
+  { label: '外观巡检管理', value: 'appearance_inspect' },
+  { label: '电子围栏管理', value: 'ele_fence' },
+  { label: '运营管理', value: 'operation' },
+  { label: '运输管理 / 运单管理', value: 'waybill' },
+  { label: '运输管理 / 路线管理', value: 'route' },
+  { label: '车队运营报告', value: 'report' },
   { label: '基础数据管理 / 车辆档案', value: 'vehicle_archive' },
   { label: '基础数据管理 / 司机档案', value: 'driver_archive' },
-  { label: '系统管理',                value: 'system' },
+  { label: '系统管理', value: 'system' },
 ]
 
 const isAllPermsSelected = computed(() => {
@@ -110,13 +110,13 @@ const filters = ref({
 
 const platformFilterOptions = [
   { label: '全部平台', value: '' },
-  { label: '客户端',   value: 'client' },
-  { label: '未开通',   value: 'none' },
+  { label: '客户端', value: 'client' },
+  { label: '未开通', value: 'none' },
 ]
 const statusFilterOptions = [
   { label: '全部状态', value: '' },
-  { label: '启用',     value: '1' },
-  { label: '停用',     value: '0' },
+  { label: '启用', value: '1' },
+  { label: '停用', value: '0' },
 ]
 
 // ============================================================
@@ -133,10 +133,10 @@ const fetchData = async () => {
   try {
     let query = supabase.from('customers').select('*', { count: 'exact' })
 
-    if (filters.value.name)          query = query.ilike('name', `%${filters.value.name}%`)
-    if (filters.value.phone)         query = query.ilike('phone', `%${filters.value.phone}%`)
+    if (filters.value.name) query = query.ilike('name', `%${filters.value.name}%`)
+    if (filters.value.phone) query = query.ilike('phone', `%${filters.value.phone}%`)
     if (filters.value.contactPerson) query = query.ilike('contact_person', `%${filters.value.contactPerson}%`)
-    if (filters.value.contactPhone)  query = query.ilike('contact_phone', `%${filters.value.contactPhone}%`)
+    if (filters.value.contactPhone) query = query.ilike('contact_phone', `%${filters.value.contactPhone}%`)
     if (filters.value.status !== '') query = query.eq('status', Number(filters.value.status))
     if (filters.value.platform === 'client') {
       query = query.contains('platforms', ['client'])
@@ -456,7 +456,6 @@ const syncCreateUserMaster = async ({ phone, name, password }) => {
 
 // ============================================================
 // ⭐ 同步客户机构根节点到 organizations 表
-//    每个客户应有且仅有一条 is_root=true, level=1 的记录
 // ============================================================
 const syncCreateOrgRoot = async ({ customerId, name, ownerAccount }) => {
   if (!customerId || !name) return { ok: false, msg: '参数缺失' }
@@ -510,7 +509,7 @@ const syncCreateOrgRoot = async ({ customerId, name, ownerAccount }) => {
 }
 
 // ============================================================
-// ⭐ 反查客户根节点 id（用于批量导入时写 org_id）
+// ⭐ 反查客户根节点 id
 // ============================================================
 const fetchCustomerRootOrgId = async (customerId) => {
   if (!customerId) return null
@@ -560,7 +559,6 @@ const handleSubmit = async () => {
       }
 
       payload.password = form.password
-      // ⭐ 用 select().single() 拿到新客户的 id
       const { data: newCustomer, error } = await supabase
         .from('customers')
         .insert(payload)
@@ -568,14 +566,12 @@ const handleSubmit = async () => {
         .single()
       if (error) throw error
 
-      // ⭐ 同步创建 organizations 根节点
       await syncCreateOrgRoot({
         customerId: newCustomer.id,
         name: newCustomer.name,
         ownerAccount: newCustomer.phone,
       })
 
-      // ⭐ 同步创建 users 主账号
       await syncCreateUserMaster({
         phone: form.phone,
         name: form.name,
@@ -598,14 +594,12 @@ const handleSubmit = async () => {
       const { error } = await supabase.from('customers').update(payload).eq('id', form.id)
       if (error) throw error
 
-      // ⭐⭐⭐ 同步 organizations 根节点（客户改名场景）
       await syncCreateOrgRoot({
         customerId: form.id,
         name: form.name,
         ownerAccount: form.phone,
       })
 
-      // ⭐ 同步 users
       const syncPhone = oldRow?.phone || form.phone
       await syncCreateUserMaster({
         phone: syncPhone,
@@ -665,14 +659,12 @@ const handleCreateAndAddVehicle = async () => {
 
     if (error) throw error
 
-    // ⭐ 同步 organizations 根节点（拿 id 用于车辆 org_id）
     const orgResult = await syncCreateOrgRoot({
       customerId: data.id,
       name: data.name,
       ownerAccount: data.phone,
     })
 
-    // ⭐ 同步创建 users 表主账号
     await syncCreateUserMaster({
       phone: form.phone,
       name: form.name,
@@ -684,7 +676,6 @@ const handleCreateAndAddVehicle = async () => {
 
     await fetchData()
 
-    // ⭐ 传入根节点 id
     openImportDialog(data.id, data.name, orgResult.id || null)
   } catch (e) {
     if (e?.message) ElMessage.error('创建失败：' + e.message)
@@ -725,14 +716,12 @@ const handleEditAndAddVehicle = async () => {
     const { error } = await supabase.from('customers').update(payload).eq('id', form.id)
     if (error) throw error
 
-    // ⭐ 同步 organizations 根节点
     await syncCreateOrgRoot({
       customerId: form.id,
       name: form.name,
       ownerAccount: form.phone,
     })
 
-    // ⭐ 同步 users
     const syncPhone = oldRow?.phone || form.phone
     await syncCreateUserMaster({
       phone: syncPhone,
@@ -752,7 +741,6 @@ const handleEditAndAddVehicle = async () => {
 
     await fetchData()
 
-    // ⭐ 反查根节点 id
     const rootOrgId = await fetchCustomerRootOrgId(form.id)
     openImportDialog(form.id, form.name, rootOrgId)
   } catch (e) {
@@ -1048,7 +1036,6 @@ const handleDelete = async (row) => {
       if (releaseError) throw releaseError
     }
 
-    // ⭐⭐⭐ 先删除该客户的 organizations（分两步：按 customer_id + 按 owner_account）
     try {
       const { error: orgDelErr1 } = await supabase
         .from('organizations')
@@ -1180,20 +1167,44 @@ const loadOrgTree = async () => {
       { data: fleets },
       { data: users },
       { data: roles },
+      { data: vehicles },
     ] = await Promise.all([
       supabase.from('organizations').select('*').order('id'),
       supabase.from('fleets').select('*').order('id'),
       supabase.from('users').select('*').order('id'),
       supabase.from('roles').select('*').order('id'),
+      supabase.from('vehicles').select('id, org_id, customer_id'),
     ])
 
     const orgsList = orgs || []
     const fleetsList = fleets || []
     const usersList = users || []
     const rolesList = roles || []
+    const vehiclesList = vehicles || []
 
     const roleMap = {}
     rolesList.forEach(r => { roleMap[r.id] = r.name })
+
+    const directVehicleByOrg = {}
+    vehiclesList.forEach(v => {
+      if (v.org_id != null) {
+        const key = String(v.org_id)
+        directVehicleByOrg[key] = (directVehicleByOrg[key] || 0) + 1
+      }
+    })
+
+    const recursiveVehicleByOrg = {}
+    const calcRecursive = (orgId) => {
+      const key = String(orgId)
+      if (recursiveVehicleByOrg[key] != null) return recursiveVehicleByOrg[key]
+      let total = directVehicleByOrg[key] || 0
+      orgsList.filter(o => String(o.parent_id) === key).forEach(c => {
+        total += calcRecursive(c.id)
+      })
+      recursiveVehicleByOrg[key] = total
+      return total
+    }
+    orgsList.forEach(o => calcRecursive(o.id))
 
     const buildUserNode = (u) => {
       const owner = usersList.find(x => x.account === u.owner_account)
@@ -1206,21 +1217,71 @@ const loadOrgTree = async () => {
         isAdmin: u.role_id === 1 || u.role_id === 2,
         roleName: roleMap[u.role_id] || '--',
         ownerName: owner ? owner.name : '',
+        // ⭐ 账号显示所属机构的车辆数
+        vehicleCount: u.org_id ? (recursiveVehicleByOrg[String(u.org_id)] || 0) : 0,
       }
     }
 
     const buildCustomerOrgs = (customerAccount, customerId) => {
-      // ⭐ 优先按 customer_id 匹配（新数据），退化按 owner_account 匹配（老数据）
       let customerOrgs = orgsList.filter(o => o.customer_id === customerId)
       if (customerOrgs.length === 0) {
         customerOrgs = orgsList.filter(o => o.owner_account === customerAccount)
       }
-      // ⭐ 不展示根节点（客户本身就是根），只展示其下级机构
       customerOrgs = customerOrgs.filter(o => o.is_root !== true)
 
-      return customerOrgs.map(org => {
-        const hasFleets = fleetsList.some(f => f.org_id === org.id)
+      // ⭐ 递归构造树（支持多级机构）
+      const buildSubTree = (parentId) => {
+        const pid = String(parentId)
+        const children = customerOrgs.filter(o => String(o.parent_id) === pid)
+        return children.map(org => {
+          const hasFleets = fleetsList.some(f => f.org_id === org.id)
 
+          const orgFleets = fleetsList
+            .filter(f => f.org_id === org.id)
+            .map(fleet => {
+              const fleetUsers = usersList
+                .filter(u => u.org_id === org.id)
+                .map(u => buildUserNode(u))
+              return {
+                key: 'fleet-' + fleet.id,
+                type: 'fleet',
+                label: fleet.name,
+                children: fleetUsers,
+              }
+            })
+
+          const orgUsers = hasFleets
+            ? []
+            : usersList
+              .filter(u => u.org_id === org.id)
+              .map(u => buildUserNode(u))
+
+          return {
+            key: 'org-' + org.id,
+            type: 'org',
+            label: org.name,
+            level: org.level,
+            isRoot: org.is_root,
+            // ⭐ 机构显示含子孙的车辆数
+            vehicleCount: recursiveVehicleByOrg[String(org.id)] || 0,
+            children: [...buildSubTree(org.id), ...orgFleets, ...orgUsers],
+          }
+        })
+      }
+
+      // ⭐ 找客户下的顶级机构（parent_id 指向 is_root=true 的节点）
+      const rootOrg = customerOrgs.find(o => o.is_root === true)
+      const topLevelOrgs = customerOrgs.filter(o => {
+        if (o.is_root === true) return false
+        if (o.parent_id == null) return true
+        const parent = orgsList.find(x => String(x.id) === String(o.parent_id))
+        return parent && parent.is_root === true
+      })
+
+      const result = []
+      // 先放非根的子机构（顶级机构）
+      topLevelOrgs.forEach(org => {
+        const hasFleets = fleetsList.some(f => f.org_id === org.id)
         const orgFleets = fleetsList
           .filter(f => f.org_id === org.id)
           .map(fleet => {
@@ -1234,20 +1295,20 @@ const loadOrgTree = async () => {
               children: fleetUsers,
             }
           })
-
         const orgUsers = hasFleets
           ? []
-          : usersList
-              .filter(u => u.org_id === org.id)
-              .map(u => buildUserNode(u))
-
-        return {
+          : usersList.filter(u => u.org_id === org.id).map(u => buildUserNode(u))
+        result.push({
           key: 'org-' + org.id,
           type: 'org',
           label: org.name,
-          children: [...orgFleets, ...orgUsers],
-        }
+          level: org.level,
+          isRoot: org.is_root,
+          vehicleCount: recursiveVehicleByOrg[String(org.id)] || 0,
+          children: [...buildSubTree(org.id), ...orgFleets, ...orgUsers],
+        })
       })
+      return result
     }
 
     const customerNodes = tableData.value.map(c => ({
@@ -1264,6 +1325,8 @@ const loadOrgTree = async () => {
       key: 'root-all',
       type: 'root',
       label: '全部客户',
+      // ⭐ root 节点车辆数 = 所有客户车辆总和
+      vehicleCount: vehiclesList.length,
       children: customerNodes,
     }]
   } catch (e) {
@@ -1316,13 +1379,19 @@ watch(viewMode, async (val) => {
     <!-- ============================================================ -->
     <div class="view-switch">
       <button class="view-btn" :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'">
-        <el-icon><List /></el-icon> 列表视图
+        <el-icon>
+          <List />
+        </el-icon> 列表视图
       </button>
       <button class="view-btn" :class="{ active: viewMode === 'tree' }" @click="viewMode = 'tree'">
-        <el-icon><Share /></el-icon> 组织机构
+        <el-icon>
+          <Share />
+        </el-icon> 组织机构
       </button>
       <span class="scope-tip">
-        <el-icon><OfficeBuilding /></el-icon>
+        <el-icon>
+          <OfficeBuilding />
+        </el-icon>
         全部客户组织结构视图
       </span>
     </div>
@@ -1347,10 +1416,14 @@ watch(viewMode, async (val) => {
 
         <div class="filter-actions">
           <button class="action-btn primary" @click="handleSearch">
-            <el-icon><Search /></el-icon> 搜索
+            <el-icon>
+              <Search />
+            </el-icon> 搜索
           </button>
           <button class="action-btn" @click="openAdd">
-            <el-icon><Plus /></el-icon> 新增客户
+            <el-icon>
+              <Plus />
+            </el-icon> 新增客户
           </button>
           <button class="action-btn ghost" @click="handleReset">重置</button>
         </div>
@@ -1363,13 +1436,7 @@ watch(viewMode, async (val) => {
           <span class="count">共 {{ total }} 条</span>
         </div>
 
-        <el-table
-          :data="tableData"
-          v-loading="loading"
-          class="light-table"
-          empty-text="暂无客户"
-          stripe
-        >
+        <el-table :data="tableData" v-loading="loading" class="light-table" empty-text="暂无客户" stripe>
           <el-table-column prop="name" label="客户名称" min-width="160" />
           <el-table-column prop="phone" label="登录手机号" min-width="130" />
           <el-table-column label="地区" min-width="130">
@@ -1400,16 +1467,17 @@ watch(viewMode, async (val) => {
           <el-table-column label="操作" width="320" fixed="right">
             <template #default="{ row }">
               <button class="row-btn" @click="openEdit(row)">
-                <el-icon><Edit /></el-icon> 编辑
+                <el-icon>
+                  <Edit />
+                </el-icon> 编辑
               </button>
               <button class="row-btn" @click="openResetPassword(row)">
-                <el-icon><Key /></el-icon> 重置密码
+                <el-icon>
+                  <Key />
+                </el-icon> 重置密码
               </button>
-              <button
-                class="row-btn"
-                :class="row.status === 1 ? 'warning' : 'success'"
-                @click="handleToggleStatus(row)"
-              >
+              <button class="row-btn" :class="row.status === 1 ? 'warning' : 'success'"
+                @click="handleToggleStatus(row)">
                 <el-icon>
                   <CircleClose v-if="row.status === 1" />
                   <CircleCheck v-else />
@@ -1417,23 +1485,18 @@ watch(viewMode, async (val) => {
                 {{ row.status === 1 ? '停用' : '启用' }}
               </button>
               <button class="row-btn danger" @click="handleDelete(row)">
-                <el-icon><Delete /></el-icon> 删除
+                <el-icon>
+                  <Delete />
+                </el-icon> 删除
               </button>
             </template>
           </el-table-column>
         </el-table>
 
         <div class="pagination-wrap">
-          <el-pagination
-            background
-            layout="total, sizes, prev, pager, next, jumper"
-            :total="total"
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="[10, 20, 50, 100]"
-            @size-change="fetchData"
-            @current-change="fetchData"
-          />
+          <el-pagination background layout="total, sizes, prev, pager, next, jumper" :total="total"
+            v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]"
+            @size-change="fetchData" @current-change="fetchData" />
         </div>
       </section>
     </template>
@@ -1445,62 +1508,66 @@ watch(viewMode, async (val) => {
       <div class="org-view-card">
         <div class="org-view-header">
           <div class="org-view-title">
-            <el-icon><Share /></el-icon>
+            <el-icon>
+              <Share />
+            </el-icon>
             组织机构
             <span class="org-view-sub">（全局视图 · 客户名称即为最大组织）</span>
           </div>
           <div class="org-view-actions">
-            <el-input
-              v-model="orgSearchKeyword"
-              placeholder="搜索客户/组织/车队/用户"
-              clearable
-              size="default"
-              class="org-search-input"
-            >
-              <template #prefix><el-icon><Search /></el-icon></template>
+            <el-input v-model="orgSearchKeyword" placeholder="搜索客户/组织/车队/用户" clearable size="default"
+              class="org-search-input">
+              <template #prefix><el-icon>
+                  <Search />
+                </el-icon></template>
             </el-input>
-            <button
-              class="icon-btn"
-              :class="{ active: orgExpandAll }"
-              @click="toggleOrgExpandAll"
-              :title="orgExpandAll ? '全部收起' : '全部展开'"
-            >
-              <el-icon><component :is="orgExpandAll ? Fold : Expand" /></el-icon>
+            <button class="icon-btn" :class="{ active: orgExpandAll }" @click="toggleOrgExpandAll"
+              :title="orgExpandAll ? '全部收起' : '全部展开'">
+              <el-icon>
+                <component :is="orgExpandAll ? Fold : Expand" />
+              </el-icon>
             </button>
             <button class="icon-btn" @click="loadOrgTree" title="刷新">
-              <el-icon><Refresh /></el-icon>
+              <el-icon>
+                <Refresh />
+              </el-icon>
             </button>
           </div>
         </div>
 
         <div class="org-view-body" v-loading="orgLoading">
-          <el-tree
-            v-if="orgTreeData.length > 0"
-            ref="orgTreeRef"
-            :data="orgTreeData"
-            node-key="key"
-            :props="treeProps"
-            :default-expand-all="orgExpandAll"
-            :filter-node-method="filterOrgNode"
-            :expand-on-click-node="false"
-            class="org-tree"
-          >
+          <el-tree v-if="orgTreeData.length > 0" ref="orgTreeRef" :data="orgTreeData" node-key="key" :props="treeProps"
+            :default-expand-all="orgExpandAll" :filter-node-method="filterOrgNode" :expand-on-click-node="false"
+            class="org-tree">
             <template #default="{ node, data }">
               <div class="tree-node" :class="'type-' + data.type">
                 <!-- 根节点 -->
                 <template v-if="data.type === 'root'">
-                  <span class="node-icon root-icon"><el-icon><OfficeBuilding /></el-icon></span>
+                  <span class="node-icon root-icon"><el-icon>
+                      <OfficeBuilding />
+                    </el-icon></span>
                   <span class="node-label">{{ data.label }}</span>
                   <span class="node-count">{{ data.children?.length || 0 }} 个客户</span>
+                  <span class="node-vehicles" :class="{ empty: !data.vehicleCount }">
+                    <el-icon v-if="data.vehicleCount > 0">
+                      <Van />
+                    </el-icon>
+                    {{ data.vehicleCount > 0 ? `${data.vehicleCount} 辆` : '暂无车辆' }}
+                  </span>
                 </template>
 
                 <!-- 客户节点（最大组织） -->
                 <template v-else-if="data.type === 'customer'">
-                  <span class="node-icon customer-icon"><el-icon><UserFilled /></el-icon></span>
+                  <span class="node-icon customer-icon"><el-icon>
+                      <UserFilled />
+                    </el-icon></span>
                   <span class="node-label">{{ data.label }}</span>
                   <span class="node-account">{{ data.account }}</span>
-                  <span v-if="data.vehicleCount > 0" class="node-vehicles">
-                    <el-icon><Van /></el-icon> {{ data.vehicleCount }} 辆
+                  <span class="node-vehicles" :class="{ empty: !data.vehicleCount }">
+                    <el-icon v-if="data.vehicleCount > 0">
+                      <Van />
+                    </el-icon>
+                    {{ data.vehicleCount > 0 ? `${data.vehicleCount} 辆` : '暂无车辆' }}
                   </span>
                   <span class="status-tag mini" :class="data.status === 1 ? 'on' : 'off'">
                     {{ data.status === 1 ? '启用' : '停用' }}
@@ -1509,14 +1576,24 @@ watch(viewMode, async (val) => {
 
                 <!-- 组织节点 -->
                 <template v-else-if="data.type === 'org'">
-                  <span class="node-icon org-icon"><el-icon><OfficeBuilding /></el-icon></span>
+                  <span class="node-icon org-icon"><el-icon>
+                      <OfficeBuilding />
+                    </el-icon></span>
                   <span class="node-label">{{ data.label }}</span>
                   <span class="node-count">{{ data.children?.length || 0 }} 项</span>
+                  <span class="node-vehicles" :class="{ empty: !data.vehicleCount }">
+                    <el-icon v-if="data.vehicleCount > 0">
+                      <Van />
+                    </el-icon>
+                    {{ data.vehicleCount > 0 ? `${data.vehicleCount} 辆` : '暂无车辆' }}
+                  </span>
                 </template>
 
                 <!-- 车队节点 -->
                 <template v-else-if="data.type === 'fleet'">
-                  <span class="node-icon fleet-icon"><el-icon><Van /></el-icon></span>
+                  <span class="node-icon fleet-icon"><el-icon>
+                      <Van />
+                    </el-icon></span>
                   <span class="node-label">{{ data.label }}</span>
                   <span class="node-count">{{ data.children?.length || 0 }} 个用户</span>
                 </template>
@@ -1524,11 +1601,19 @@ watch(viewMode, async (val) => {
                 <!-- 用户节点 -->
                 <template v-else-if="data.type === 'user'">
                   <span class="node-icon user-icon" :class="{ admin: data.isAdmin }">
-                    <el-icon><component :is="data.isAdmin ? UserFilled : User" /></el-icon>
+                    <el-icon>
+                      <component :is="data.isAdmin ? UserFilled : User" />
+                    </el-icon>
                   </span>
                   <span class="node-label">{{ data.label }}</span>
                   <span class="node-account">{{ data.account }}</span>
                   <span class="node-role" :class="{ admin: data.isAdmin }">{{ data.roleName }}</span>
+                  <span class="node-vehicles" :class="{ empty: !data.vehicleCount }">
+                    <el-icon v-if="data.vehicleCount > 0">
+                      <Van />
+                    </el-icon>
+                    {{ data.vehicleCount > 0 ? `${data.vehicleCount} 辆` : '暂无车辆' }}
+                  </span>
                   <span class="status-tag mini" :class="data.status === 1 ? 'on' : 'off'">
                     {{ data.status === 1 ? '启用' : '禁用' }}
                   </span>
@@ -1539,7 +1624,9 @@ watch(viewMode, async (val) => {
           </el-tree>
 
           <div v-else class="org-empty">
-            <el-icon class="empty-icon"><Share /></el-icon>
+            <el-icon class="empty-icon">
+              <Share />
+            </el-icon>
             <p>暂无组织机构数据</p>
             <span class="empty-tip">请先在「用户管理」中为客户创建组织、车队及用户</span>
           </div>
@@ -1548,22 +1635,10 @@ watch(viewMode, async (val) => {
     </template>
 
     <!-- 新增/编辑客户弹窗（内容不变） -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogMode === 'add' ? '新增客户' : '编辑客户'"
-      width="880px"
-      class="light-dialog customer-dialog"
-      :close-on-click-modal="false"
-      destroy-on-close
-    >
-      <el-form
-        ref="formRef"
-        :model="form"
-        :rules="formRules"
-        label-position="top"
-        class="customer-form"
-        autocomplete="off"
-      >
+    <el-dialog v-model="dialogVisible" :title="dialogMode === 'add' ? '新增客户' : '编辑客户'" width="880px"
+      class="light-dialog customer-dialog" :close-on-click-modal="false" destroy-on-close>
+      <el-form ref="formRef" :model="form" :rules="formRules" label-position="top" class="customer-form"
+        autocomplete="off">
         <div class="form-section">
           <div class="section-header">
             <span class="section-bar"></span>
@@ -1571,23 +1646,13 @@ watch(viewMode, async (val) => {
           </div>
           <div class="section-body grid-2">
             <el-form-item label="登录手机（作为账号）" prop="phone">
-              <el-input
-                v-model="form.phone"
-                placeholder="请输入手机号"
-                maxlength="11"
-                autocomplete="off"
-                name="customer-phone-no-autofill"
-              />
+              <el-input v-model="form.phone" placeholder="请输入手机号" maxlength="11" autocomplete="off"
+                name="customer-phone-no-autofill" />
             </el-form-item>
             <el-form-item label="初始密码" prop="password">
-              <el-input
-                v-model="form.password"
-                type="password"
-                show-password
-                :placeholder="dialogMode === 'add' ? '请输入初始密码' : '不修改请留空'"
-                autocomplete="new-password"
-                name="customer-password-no-autofill"
-              />
+              <el-input v-model="form.password" type="password" show-password
+                :placeholder="dialogMode === 'add' ? '请输入初始密码' : '不修改请留空'" autocomplete="new-password"
+                name="customer-password-no-autofill" />
             </el-form-item>
           </div>
         </div>
@@ -1602,12 +1667,14 @@ watch(viewMode, async (val) => {
               <el-input v-model="form.name" placeholder="请输入客户名称" />
             </el-form-item>
             <el-form-item label="省">
-              <el-select v-model="form.province" placeholder="请选择省份（选填）" style="width:100%;" filterable clearable popper-class="light-select-popper">
+              <el-select v-model="form.province" placeholder="请选择省份（选填）" style="width:100%;" filterable clearable
+                popper-class="light-select-popper">
                 <el-option v-for="p in provinceOptions" :key="p.value" :label="p.label" :value="p.value" />
               </el-select>
             </el-form-item>
             <el-form-item label="市">
-              <el-select v-model="form.city" placeholder="请选择城市（选填）" style="width:100%;" filterable clearable popper-class="light-select-popper" :disabled="!form.province">
+              <el-select v-model="form.city" placeholder="请选择城市（选填）" style="width:100%;" filterable clearable
+                popper-class="light-select-popper" :disabled="!form.province">
                 <el-option v-for="c in cityOptions" :key="c.value" :label="c.label" :value="c.value" />
               </el-select>
             </el-form-item>
@@ -1659,23 +1726,21 @@ watch(viewMode, async (val) => {
         <button class="action-btn ghost" @click="dialogVisible = false">取消</button>
         <button class="action-btn" @click="handleSubmit">确定</button>
         <button v-if="dialogMode === 'add'" class="action-btn primary" @click="handleCreateAndAddVehicle">
-          <el-icon><Van /></el-icon> 创建并加车
+          <el-icon>
+            <Van />
+          </el-icon> 创建并加车
         </button>
         <button v-else class="action-btn primary" @click="handleEditAndAddVehicle">
-          <el-icon><Van /></el-icon> 批量加车
+          <el-icon>
+            <Van />
+          </el-icon> 批量加车
         </button>
       </template>
     </el-dialog>
 
     <!-- 批量导入车辆弹窗 -->
-    <el-dialog
-      v-model="importDialogVisible"
-      title="批量导入车辆"
-      width="600px"
-      class="light-dialog"
-      :close-on-click-modal="false"
-      destroy-on-close
-    >
+    <el-dialog v-model="importDialogVisible" title="批量导入车辆" width="600px" class="light-dialog"
+      :close-on-click-modal="false" destroy-on-close>
       <div class="import-customer-tip">
         <span class="tip-icon">!</span>
         正在为客户「<b>{{ importCustomer.name }}</b>」批量导入车辆档案
@@ -1688,7 +1753,9 @@ watch(viewMode, async (val) => {
         </div>
         <div class="step-body">
           <button class="action-btn" @click="downloadTemplate">
-            <el-icon><Download /></el-icon> 下载模板
+            <el-icon>
+              <Download />
+            </el-icon> 下载模板
           </button>
           <span class="step-tip">支持 .csv / .xlsx / .xls</span>
         </div>
@@ -1700,19 +1767,12 @@ watch(viewMode, async (val) => {
           <span class="step-title">上传文件</span>
         </div>
         <div class="step-body step-body-col">
-          <el-upload
-            ref="uploadRef"
-            action="#"
-            :auto-upload="false"
-            :on-change="handleFileChange"
-            :on-remove="handleFileRemove"
-            :limit="1"
-            accept=".csv,.xlsx,.xls"
-            drag
-            class="import-upload"
-          >
+          <el-upload ref="uploadRef" action="#" :auto-upload="false" :on-change="handleFileChange"
+            :on-remove="handleFileRemove" :limit="1" accept=".csv,.xlsx,.xls" drag class="import-upload">
             <div class="upload-inner">
-              <el-icon class="upload-icon"><Upload /></el-icon>
+              <el-icon class="upload-icon">
+                <Upload />
+              </el-icon>
               <div class="upload-text">点击或拖拽上传文件</div>
             </div>
           </el-upload>
@@ -1738,13 +1798,8 @@ watch(viewMode, async (val) => {
     </el-dialog>
 
     <!-- 重置密码弹窗 -->
-    <el-dialog
-      v-model="passwordDialogVisible"
-      title="重置密码"
-      width="440px"
-      class="light-dialog"
-      :close-on-click-modal="false"
-    >
+    <el-dialog v-model="passwordDialogVisible" title="重置密码" width="440px" class="light-dialog"
+      :close-on-click-modal="false">
       <div class="reset-tip">
         <span class="tip-icon-red">!</span>
         正在为客户「<b>{{ passwordForm.name }}</b>」重置登录密码
@@ -1771,13 +1826,19 @@ watch(viewMode, async (val) => {
               <span class="confirm-ring ring-1"></span>
               <span class="confirm-ring ring-2"></span>
               <div class="confirm-icon">
-                <el-icon v-if="confirmType === 'disable'"><CircleClose /></el-icon>
-                <el-icon v-else><CircleCheck /></el-icon>
+                <el-icon v-if="confirmType === 'disable'">
+                  <CircleClose />
+                </el-icon>
+                <el-icon v-else>
+                  <CircleCheck />
+                </el-icon>
               </div>
             </div>
 
             <h3 class="confirm-title">{{ confirmTitle }}</h3>
-            <p class="confirm-desc" v-html="confirmDesc.replace(`「${confirmRow?.name}」`, `<b>「${confirmRow?.name}」</b>`)"></p>
+            <p class="confirm-desc"
+              v-html="confirmDesc.replace(`「${confirmRow?.name}」`, `<b>「${confirmRow?.name}」</b>`)">
+            </p>
 
             <div class="confirm-actions">
               <button class="confirm-btn cancel" @click="closeConfirm">取消</button>
@@ -1797,11 +1858,22 @@ watch(viewMode, async (val) => {
   gap: 16px;
   animation: pageIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.table-panel { display: flex; flex-direction: column; }
+
+.table-panel {
+  display: flex;
+  flex-direction: column;
+}
 
 @keyframes pageIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ============================================================
@@ -1816,6 +1888,7 @@ watch(viewMode, async (val) => {
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
+
 .view-btn {
   display: inline-flex;
   align-items: center;
@@ -1831,24 +1904,42 @@ watch(viewMode, async (val) => {
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-family: inherit;
 }
+
 .view-btn:hover {
-  border-color: #FCA5A5; color: #c8102e; background: #FEF2F2;
+  border-color: #FCA5A5;
+  color: #c8102e;
+  background: #FEF2F2;
   transform: translateY(-1px);
 }
+
 .view-btn.active {
-  border-color: #c8102e; color: #fff;
+  border-color: #c8102e;
+  color: #fff;
   background: linear-gradient(135deg, #c8102e, #a00d24);
   box-shadow: 0 3px 10px rgba(200, 16, 46, 0.3);
 }
-.view-btn .el-icon { font-size: 14px; }
-.scope-tip {
-  display: inline-flex; align-items: center; gap: 4px;
-  margin-left: auto; font-size: 12.5px;
-  color: #c8102e; font-weight: 600;
-  padding: 4px 12px; background: #FEF2F2;
-  border-radius: 20px; border: 1px solid #FECACA;
+
+.view-btn .el-icon {
+  font-size: 14px;
 }
-.scope-tip .el-icon { font-size: 14px; }
+
+.scope-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 12.5px;
+  color: #c8102e;
+  font-weight: 600;
+  padding: 4px 12px;
+  background: #FEF2F2;
+  border-radius: 20px;
+  border: 1px solid #FECACA;
+}
+
+.scope-tip .el-icon {
+  font-size: 14px;
+}
 
 .platform-tag {
   display: inline-flex;
@@ -1859,6 +1950,7 @@ watch(viewMode, async (val) => {
   font-weight: 700;
   letter-spacing: 0.3px;
 }
+
 .platform-tag.client {
   color: #FFFFFF;
   background: linear-gradient(135deg, #c8102e, #a00d24);
@@ -1874,16 +1966,28 @@ watch(viewMode, async (val) => {
   font-weight: 600;
   letter-spacing: 0.5px;
 }
-.status-tag.on  { color: #059669; background: #D1FAE5; }
-.status-tag.off { color: #64748B; background: #F1F5F9; }
-.status-tag.mini { padding: 1px 8px; font-size: 11px; }
 
-/* 停用/启用按钮 */
+.status-tag.on {
+  color: #059669;
+  background: #D1FAE5;
+}
+
+.status-tag.off {
+  color: #64748B;
+  background: #F1F5F9;
+}
+
+.status-tag.mini {
+  padding: 1px 8px;
+  font-size: 11px;
+}
+
 .row-btn.warning {
   color: #B45309;
   border-color: rgba(217, 119, 6, 0.4);
   background: #FFFFFF;
 }
+
 .row-btn.warning:hover:not(:disabled) {
   color: #FFFFFF;
   background: linear-gradient(135deg, #F59E0B, #D97706);
@@ -1896,6 +2000,7 @@ watch(viewMode, async (val) => {
   border-color: rgba(5, 150, 105, 0.4);
   background: #FFFFFF;
 }
+
 .row-btn.success:hover:not(:disabled) {
   color: #FFFFFF;
   background: linear-gradient(135deg, #10B981, #059669);
@@ -1907,129 +2012,307 @@ watch(viewMode, async (val) => {
    组织机构视图
    ============================================================ */
 .org-view-card {
-  background: #fff; border-radius: 10px;
+  background: #fff;
+  border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  padding: 16px; flex: 1;
-  display: flex; flex-direction: column;
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   min-height: 520px;
 }
+
 .org-view-header {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding-bottom: 12px;
   border-bottom: 1px solid #F1F5F9;
   margin-bottom: 12px;
 }
+
 .org-view-title {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 15px; font-weight: 700; color: #0F172A;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
 }
-.org-view-title .el-icon { color: #c8102e; font-size: 18px; }
-.org-view-sub { font-size: 12.5px; color: #94A3B8; font-weight: 500; }
-.org-view-actions { display: flex; align-items: center; gap: 8px; }
-.org-search-input { width: 240px; }
+
+.org-view-title .el-icon {
+  color: #c8102e;
+  font-size: 18px;
+}
+
+.org-view-sub {
+  font-size: 12.5px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+.org-view-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.org-search-input {
+  width: 240px;
+}
+
 .org-search-input :deep(.el-input__wrapper) {
   border-radius: 6px !important;
   background: #F8FAFC !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   min-height: 30px;
 }
+
 .org-search-input :deep(.el-input__wrapper.is-focus) {
   background: #fff !important;
   box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.15), 0 0 0 1px #c8102e inset !important;
 }
-.org-view-body { flex: 1; overflow: auto; padding: 8px; }
+
+.org-view-body {
+  flex: 1;
+  overflow: auto;
+  padding: 8px;
+}
 
 .icon-btn {
-  width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  border: 1px solid #E2E8F0; background: #fff;
-  border-radius: 6px; color: #64748B; font-size: 14px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #E2E8F0;
+  background: #fff;
+  border-radius: 6px;
+  color: #64748B;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .icon-btn:hover {
-  border-color: #c8102e; color: #c8102e; background: #FEF2F2;
+  border-color: #c8102e;
+  color: #c8102e;
+  background: #FEF2F2;
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(200, 16, 46, 0.15);
 }
+
 .icon-btn.active {
-  border-color: #c8102e; color: #fff;
+  border-color: #c8102e;
+  color: #fff;
   background: linear-gradient(135deg, #c8102e, #a00d24);
   box-shadow: 0 3px 10px rgba(200, 16, 46, 0.35);
 }
-.icon-btn:active { transform: translateY(0) scale(0.95); }
 
-.org-tree { background: transparent; }
+.icon-btn:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.org-tree {
+  background: transparent;
+}
+
 .org-tree :deep(.el-tree-node__content) {
-  height: 40px; border-radius: 6px;
+  height: 40px;
+  border-radius: 6px;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   padding: 2px 4px;
 }
-.org-tree :deep(.el-tree-node__content:hover) { background: #FEF2F2; }
-.org-tree :deep(.el-tree-node.is-current > .el-tree-node__content) { background: #FEE2E2; }
+
+.org-tree :deep(.el-tree-node__content:hover) {
+  background: #FEF2F2;
+}
+
+.org-tree :deep(.el-tree-node.is-current > .el-tree-node__content) {
+  background: #FEE2E2;
+}
 
 .tree-node {
-  display: flex; align-items: center; gap: 8px;
-  flex: 1; font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  font-size: 13px;
 }
+
 .node-icon {
-  width: 24px; height: 24px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 6px; flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  flex-shrink: 0;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.node-icon .el-icon { font-size: 14px; color: #fff; }
-.tree-node.type-root .node-icon { background: linear-gradient(135deg, #7C3AED, #5B21B6); box-shadow: 0 2px 10px rgba(124, 58, 237, 0.4); }
-.tree-node.type-customer .node-icon { background: linear-gradient(135deg, #c8102e, #7F1D1D); box-shadow: 0 2px 10px rgba(200, 16, 46, 0.45); }
-.tree-node.type-org .node-icon { background: linear-gradient(135deg, #c8102e, #a00d24); box-shadow: 0 2px 8px rgba(200, 16, 46, 0.35); }
-.tree-node.type-fleet .node-icon { background: linear-gradient(135deg, #F59E0B, #D97706); box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3); }
-.tree-node.type-user .node-icon { background: linear-gradient(135deg, #60A5FA, #3B82F6); box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); }
-.tree-node.type-user .node-icon.admin { background: linear-gradient(135deg, #c8102e, #a00d24); }
-.tree-node:hover .node-icon { transform: scale(1.1) rotate(-4deg); }
 
-.node-label { font-weight: 600; color: #0F172A; }
-.tree-node.type-root .node-label { font-size: 15px; font-weight: 800; color: #0F172A; letter-spacing: 0.3px; }
-.tree-node.type-customer .node-label { font-size: 14.5px; font-weight: 800; color: #7F1D1D; letter-spacing: 0.3px; }
-.tree-node.type-org .node-label { font-size: 14px; font-weight: 700; }
-.tree-node.type-fleet .node-label { font-size: 13.5px; }
+.node-icon .el-icon {
+  font-size: 14px;
+  color: #fff;
+}
+
+.tree-node.type-root .node-icon {
+  background: linear-gradient(135deg, #7C3AED, #5B21B6);
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.4);
+}
+
+.tree-node.type-customer .node-icon {
+  background: linear-gradient(135deg, #c8102e, #7F1D1D);
+  box-shadow: 0 2px 10px rgba(200, 16, 46, 0.45);
+}
+
+.tree-node.type-org .node-icon {
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+  box-shadow: 0 2px 8px rgba(200, 16, 46, 0.35);
+}
+
+.tree-node.type-fleet .node-icon {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.tree-node.type-user .node-icon {
+  background: linear-gradient(135deg, #60A5FA, #3B82F6);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.tree-node.type-user .node-icon.admin {
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+}
+
+.tree-node:hover .node-icon {
+  transform: scale(1.1) rotate(-4deg);
+}
+
+.node-label {
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.tree-node.type-root .node-label {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: 0.3px;
+}
+
+.tree-node.type-customer .node-label {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #7F1D1D;
+  letter-spacing: 0.3px;
+}
+
+.tree-node.type-org .node-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tree-node.type-fleet .node-label {
+  font-size: 13.5px;
+}
 
 .node-count {
-  font-size: 11.5px; color: #94A3B8;
-  padding: 1px 8px; border-radius: 8px;
-  background: #F1F5F9; margin-left: 4px;
+  font-size: 11.5px;
+  color: #94A3B8;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: #F1F5F9;
+  margin-left: 4px;
 }
+
 .node-account {
-  font-size: 12px; color: #94A3B8;
+  font-size: 12px;
+  color: #94A3B8;
   font-family: 'Courier New', monospace;
-  padding: 1px 6px; background: #F8FAFC; border-radius: 4px;
+  padding: 1px 6px;
+  background: #F8FAFC;
+  border-radius: 4px;
 }
+
 .node-role {
-  font-size: 11.5px; color: #5B21B6;
-  padding: 1px 8px; border-radius: 8px;
-  background: #EDE9FE; font-weight: 600;
+  font-size: 11.5px;
+  color: #5B21B6;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: #EDE9FE;
+  font-weight: 600;
 }
-.node-role.admin { background: #FEE2E2; color: #991B1B; }
+
+.node-role.admin {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
 .node-owner {
-  font-size: 11.5px; color: #D97706;
-  padding: 1px 8px; border-radius: 8px;
-  background: #FEF3C7; font-weight: 600;
+  font-size: 11.5px;
+  color: #D97706;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: #FEF3C7;
+  font-weight: 600;
   margin-left: auto;
 }
+
+/* ⭐ 车辆数徽章 */
 .node-vehicles {
-  display: inline-flex; align-items: center; gap: 3px;
-  font-size: 11.5px; color: #0369A1; font-weight: 700;
-  padding: 1px 8px; border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+  color: #0369A1;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 8px;
   background: #E0F2FE;
+  white-space: nowrap;
 }
-.node-vehicles .el-icon { font-size: 12px; }
+
+.node-vehicles .el-icon {
+  font-size: 12px;
+}
+
+/* ⭐ 0 辆时淡灰 + 无图标 */
+.node-vehicles.empty {
+  background: #F1F5F9;
+  color: #94A3B8;
+  font-weight: 600;
+}
+
+.node-vehicles .el-icon {
+  font-size: 12px;
+}
 
 .org-empty {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 80px 20px; color: #94A3B8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 80px 20px;
+  color: #94A3B8;
 }
-.org-empty .empty-icon { font-size: 48px; color: #CBD5E1; }
-.org-empty p { font-size: 15px; font-weight: 600; color: #64748B; margin: 0; }
-.org-empty .empty-tip { font-size: 12.5px; color: #CBD5E1; }
+
+.org-empty .empty-icon {
+  font-size: 48px;
+  color: #CBD5E1;
+}
+
+.org-empty p {
+  font-size: 15px;
+  font-weight: 600;
+  color: #64748B;
+  margin: 0;
+}
+
+.org-empty .empty-tip {
+  font-size: 12.5px;
+  color: #CBD5E1;
+}
 
 /* ============================================================
    停用/启用 确认弹窗
@@ -2050,6 +2333,7 @@ watch(viewMode, async (val) => {
 .confirm-fade-leave-active {
   transition: opacity 0.28s ease;
 }
+
 .confirm-fade-enter-from,
 .confirm-fade-leave-to {
   opacity: 0;
@@ -2058,13 +2342,16 @@ watch(viewMode, async (val) => {
 .confirm-pop-enter-active {
   transition: all 0.48s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .confirm-pop-leave-active {
   transition: all 0.22s ease;
 }
+
 .confirm-pop-enter-from {
   opacity: 0;
   transform: scale(0.8) translateY(30px);
 }
+
 .confirm-pop-leave-to {
   opacity: 0;
   transform: scale(0.92) translateY(12px);
@@ -2087,23 +2374,33 @@ watch(viewMode, async (val) => {
 .confirm-card::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   height: 4px;
   border-radius: 18px 18px 0 0;
 }
+
 .confirm-card.confirm-disable::before {
   background: linear-gradient(90deg, #F59E0B, #F97316, #F59E0B, #F97316);
   background-size: 200% 100%;
   animation: confirm-bar-flow 2.4s linear infinite;
 }
+
 .confirm-card.confirm-enable::before {
   background: linear-gradient(90deg, #10B981, #059669, #10B981, #059669);
   background-size: 200% 100%;
   animation: confirm-bar-flow 2.4s linear infinite;
 }
+
 @keyframes confirm-bar-flow {
-  0%   { background-position: 0% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: 0% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .confirm-icon-wrap {
@@ -2122,18 +2419,34 @@ watch(viewMode, async (val) => {
   border-radius: 50%;
   pointer-events: none;
 }
-.confirm-disable .confirm-ring { border: 2px solid rgba(245, 158, 11, 0.55); }
-.confirm-enable .confirm-ring { border: 2px solid rgba(16, 185, 129, 0.55); }
+
+.confirm-disable .confirm-ring {
+  border: 2px solid rgba(245, 158, 11, 0.55);
+}
+
+.confirm-enable .confirm-ring {
+  border: 2px solid rgba(16, 185, 129, 0.55);
+}
+
 .confirm-ring.ring-1 {
   animation: confirm-ring-pulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
 .confirm-ring.ring-2 {
   animation: confirm-ring-pulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   animation-delay: 0.8s;
 }
+
 @keyframes confirm-ring-pulse {
-  0%   { transform: scale(0.85); opacity: 0.9; }
-  100% { transform: scale(1.75);  opacity: 0; }
+  0% {
+    transform: scale(0.85);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
 }
 
 .confirm-icon {
@@ -2148,19 +2461,33 @@ watch(viewMode, async (val) => {
   color: #FFFFFF;
   animation: confirm-icon-pop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .confirm-disable .confirm-icon {
   background: linear-gradient(135deg, #F59E0B, #D97706);
   box-shadow: 0 10px 28px rgba(217, 119, 6, 0.45);
 }
+
 .confirm-enable .confirm-icon {
   background: linear-gradient(135deg, #10B981, #059669);
   box-shadow: 0 10px 28px rgba(5, 150, 105, 0.45);
 }
-.confirm-icon .el-icon { font-size: 34px; }
+
+.confirm-icon .el-icon {
+  font-size: 34px;
+}
+
 @keyframes confirm-icon-pop {
-  0%   { transform: scale(0) rotate(-180deg); }
-  55%  { transform: scale(1.2) rotate(10deg); }
-  100% { transform: scale(1) rotate(0deg); }
+  0% {
+    transform: scale(0) rotate(-180deg);
+  }
+
+  55% {
+    transform: scale(1.2) rotate(10deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
 }
 
 .confirm-title {
@@ -2181,14 +2508,22 @@ watch(viewMode, async (val) => {
   animation: confirm-fade-up 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   animation-delay: 0.22s;
 }
+
 .confirm-desc :deep(b) {
   color: #0F172A;
   font-weight: 700;
 }
 
 @keyframes confirm-fade-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .confirm-actions {
@@ -2218,12 +2553,14 @@ watch(viewMode, async (val) => {
   color: #475569;
   border: 1px solid #E2E8F0;
 }
+
 .confirm-btn.cancel:hover {
   background: #E2E8F0;
   color: #1E293B;
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
 }
+
 .confirm-btn.cancel:active {
   transform: translateY(0) scale(0.98);
 }
@@ -2231,32 +2568,44 @@ watch(viewMode, async (val) => {
 .confirm-btn.ok {
   color: #FFFFFF;
 }
+
 .confirm-disable .confirm-btn.ok {
   background: linear-gradient(135deg, #F59E0B, #D97706);
   box-shadow: 0 6px 20px rgba(217, 119, 6, 0.4);
 }
+
 .confirm-enable .confirm-btn.ok {
   background: linear-gradient(135deg, #10B981, #059669);
   box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4);
 }
+
 .confirm-btn.ok::before {
   content: '';
   position: absolute;
-  top: 0; left: -100%;
-  width: 60%; height: 100%;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
   transition: left 0.65s ease;
 }
+
 .confirm-btn.ok:hover {
   transform: translateY(-2px);
 }
+
 .confirm-disable .confirm-btn.ok:hover {
   box-shadow: 0 12px 30px rgba(217, 119, 6, 0.55);
 }
+
 .confirm-enable .confirm-btn.ok:hover {
   box-shadow: 0 12px 30px rgba(5, 150, 105, 0.55);
 }
-.confirm-btn.ok:hover::before { left: 130%; }
+
+.confirm-btn.ok:hover::before {
+  left: 130%;
+}
+
 .confirm-btn.ok:active {
   transform: translateY(0) scale(0.98);
 }
@@ -2269,24 +2618,47 @@ watch(viewMode, async (val) => {
   max-height: 72vh;
   overflow-y: auto;
 }
-.customer-dialog :deep(.el-dialog__body)::-webkit-scrollbar { width: 6px; }
-.customer-dialog :deep(.el-dialog__body)::-webkit-scrollbar-thumb {
-  background: #CBD5E1; border-radius: 3px;
+
+.customer-dialog :deep(.el-dialog__body)::-webkit-scrollbar {
+  width: 6px;
 }
 
-.customer-form { padding: 4px 0; }
+.customer-dialog :deep(.el-dialog__body)::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+
+.customer-form {
+  padding: 4px 0;
+}
 
 .form-section {
   margin-bottom: 24px;
   animation: sectionFadeIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
-.form-section:nth-child(1) { animation-delay: 0.05s; }
-.form-section:nth-child(2) { animation-delay: 0.12s; }
-.form-section:nth-child(3) { animation-delay: 0.19s; }
+
+.form-section:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.form-section:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.form-section:nth-child(3) {
+  animation-delay: 0.19s;
+}
 
 @keyframes sectionFadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .section-header {
@@ -2297,6 +2669,7 @@ watch(viewMode, async (val) => {
   padding-bottom: 8px;
   border-bottom: 1px dashed #E2E8F0;
 }
+
 .section-bar {
   display: block;
   width: 4px;
@@ -2305,6 +2678,7 @@ watch(viewMode, async (val) => {
   background: linear-gradient(180deg, #c8102e, #a00d24);
   box-shadow: 0 0 8px rgba(200, 16, 46, 0.5);
 }
+
 .section-title {
   font-size: 13px;
   font-weight: 700;
@@ -2317,13 +2691,17 @@ watch(viewMode, async (val) => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px 18px;
 }
+
 .section-body.grid-3 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px 18px;
 }
 
-.customer-form :deep(.el-form-item) { margin-bottom: 8px; }
+.customer-form :deep(.el-form-item) {
+  margin-bottom: 8px;
+}
+
 .customer-form :deep(.el-form-item__label) {
   font-size: 12.5px;
   font-weight: 600;
@@ -2331,6 +2709,7 @@ watch(viewMode, async (val) => {
   padding-bottom: 6px;
   line-height: 1.4;
 }
+
 .customer-form :deep(.el-input__wrapper),
 .customer-form :deep(.el-select__wrapper) {
   border-radius: 8px !important;
@@ -2338,12 +2717,14 @@ watch(viewMode, async (val) => {
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .customer-form :deep(.el-input__wrapper:hover),
 .customer-form :deep(.el-select__wrapper:hover) {
   box-shadow: 0 0 0 1px rgba(200, 16, 46, 0.4) inset !important;
   background: #FFFFFF !important;
   transform: translateY(-1px);
 }
+
 .customer-form :deep(.el-input__wrapper.is-focus),
 .customer-form :deep(.el-select__wrapper.is-focused) {
   background: #FFFFFF !important;
@@ -2366,19 +2747,24 @@ watch(viewMode, async (val) => {
   position: relative;
   overflow: hidden;
 }
+
 .platform-item::before {
   content: '';
   position: absolute;
-  left: 0; top: 0; bottom: 0;
+  left: 0;
+  top: 0;
+  bottom: 0;
   width: 3px;
   background: #CBD5E1;
   transition: background 0.3s;
 }
+
 .platform-item.active {
   background: #FFFFFF;
   border-color: rgba(200, 16, 46, 0.4);
   box-shadow: 0 6px 20px rgba(200, 16, 46, 0.1);
 }
+
 .platform-item.active::before {
   background: linear-gradient(180deg, #c8102e, #a00d24);
   box-shadow: 0 0 8px rgba(200, 16, 46, 0.6);
@@ -2389,7 +2775,11 @@ watch(viewMode, async (val) => {
   align-items: center;
   gap: 12px;
 }
-.platform-check { flex: 1; }
+
+.platform-check {
+  flex: 1;
+}
+
 .platform-check :deep(.el-checkbox__label) {
   font-size: 14px;
   font-weight: 700;
@@ -2397,6 +2787,7 @@ watch(viewMode, async (val) => {
   padding-left: 8px;
   line-height: 18px;
 }
+
 .platform-check :deep(.el-checkbox__inner) {
   width: 18px !important;
   height: 18px !important;
@@ -2405,10 +2796,12 @@ watch(viewMode, async (val) => {
   position: relative;
   display: inline-block;
 }
+
 .platform-check :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
   background: linear-gradient(135deg, #c8102e, #a00d24) !important;
   border-color: #c8102e !important;
 }
+
 .platform-check :deep(.el-checkbox__inner::after) {
   content: '';
   position: absolute;
@@ -2424,6 +2817,7 @@ watch(viewMode, async (val) => {
   transform-origin: center;
   transition: transform 0.15s ease-in 0.05s;
 }
+
 .platform-check :deep(.el-checkbox__input.is-checked .el-checkbox__inner::after) {
   transform: translate(-50%, -60%) rotate(45deg) scaleY(1);
 }
@@ -2444,14 +2838,23 @@ watch(viewMode, async (val) => {
   border-radius: 999px;
   animation: hintPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .platform-hint.off {
   color: #94A3B8;
   background: #F1F5F9;
   animation: none;
 }
+
 @keyframes hintPop {
-  from { transform: scale(0.8); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .platform-config {
@@ -2460,9 +2863,17 @@ watch(viewMode, async (val) => {
   border-top: 1px dashed #E2E8F0;
   animation: configSlide 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 @keyframes configSlide {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .config-label {
@@ -2471,6 +2882,7 @@ watch(viewMode, async (val) => {
   justify-content: space-between;
   margin-bottom: 12px;
 }
+
 .config-text {
   font-size: 12.5px;
   font-weight: 700;
@@ -2491,6 +2903,7 @@ watch(viewMode, async (val) => {
   font-family: inherit;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 .select-all-btn:hover {
   color: #FFFFFF;
   background: linear-gradient(135deg, #c8102e, #a00d24);
@@ -2516,16 +2929,19 @@ watch(viewMode, async (val) => {
   display: flex;
   align-items: center;
 }
+
 .perm-item:hover {
   border-color: rgba(200, 16, 46, 0.4);
   background: #FEF2F2;
   transform: translateY(-1px);
 }
+
 .perm-item:has(.el-checkbox__input.is-checked) {
   background: #FEF2F2;
   border-color: rgba(200, 16, 46, 0.4);
   box-shadow: 0 2px 8px rgba(200, 16, 46, 0.1);
 }
+
 .perm-item :deep(.el-checkbox__label) {
   font-size: 12.5px;
   color: #475569;
@@ -2533,10 +2949,12 @@ watch(viewMode, async (val) => {
   font-weight: 500;
   line-height: 16px;
 }
+
 .perm-item :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
   color: #c8102e;
   font-weight: 700;
 }
+
 .perm-item :deep(.el-checkbox__inner) {
   width: 16px !important;
   height: 16px !important;
@@ -2545,10 +2963,12 @@ watch(viewMode, async (val) => {
   position: relative;
   display: inline-block;
 }
+
 .perm-item :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
   background: linear-gradient(135deg, #c8102e, #a00d24) !important;
   border-color: #c8102e !important;
 }
+
 .perm-item :deep(.el-checkbox__inner::after) {
   content: '';
   position: absolute;
@@ -2564,6 +2984,7 @@ watch(viewMode, async (val) => {
   transform-origin: center;
   transition: transform 0.15s ease-in 0.05s;
 }
+
 .perm-item :deep(.el-checkbox__input.is-checked .el-checkbox__inner::after) {
   transform: translate(-50%, -60%) rotate(45deg) scaleY(1);
 }
@@ -2581,35 +3002,84 @@ watch(viewMode, async (val) => {
   color: #475569;
   margin-bottom: 16px;
 }
-.import-customer-tip b { color: #2563EB; font-weight: 800; }
+
+.import-customer-tip b {
+  color: #2563EB;
+  font-weight: 800;
+}
+
 .import-customer-tip .tip-icon {
-  width: 20px; height: 20px;
-  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
-  background: #2563EB; color: #fff;
-  font-weight: 700; font-size: 12px;
+  background: #2563EB;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
   flex-shrink: 0;
 }
+
 .import-step {
   padding: 12px 0;
   border-bottom: 1px dashed #E2E8F0;
 }
-.import-step:last-of-type { border-bottom: none; }
-.step-header {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+
+.import-step:last-of-type {
+  border-bottom: none;
 }
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
 .step-num {
-  width: 22px; height: 22px;
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 50%; background: linear-gradient(135deg, #c8102e, #a00d24);
-  color: #FFFFFF; font-size: 12px; font-weight: 800;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 800;
   box-shadow: 0 3px 8px rgba(200, 16, 46, 0.3);
 }
-.step-title { font-size: 13px; font-weight: 700; color: #0F172A; }
-.step-body { display: flex; align-items: center; gap: 12px; padding-left: 32px; }
-.step-body.step-body-col { flex-direction: column; align-items: stretch; gap: 8px; }
-.step-tip { font-size: 12px; color: #94A3B8; }
-.import-upload :deep(.el-upload) { width: 100%; }
+
+.step-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.step-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-left: 32px;
+}
+
+.step-body.step-body-col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.step-tip {
+  font-size: 12px;
+  color: #94A3B8;
+}
+
+.import-upload :deep(.el-upload) {
+  width: 100%;
+}
+
 .import-upload :deep(.el-upload-dragger) {
   border-radius: 8px;
   border: 1.5px dashed #CBD5E1;
@@ -2617,55 +3087,120 @@ watch(viewMode, async (val) => {
   padding: 20px 0;
   transition: all 0.28s;
 }
+
 .import-upload :deep(.el-upload-dragger:hover) {
   border-color: #c8102e;
   background: #FEF2F2;
 }
-.upload-inner { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.upload-icon { font-size: 32px; color: #94A3B8; transition: color 0.3s; }
-.import-upload :deep(.el-upload-dragger:hover) .upload-icon { color: #c8102e; }
-.upload-text { font-size: 13px; color: #475569; }
+
+.upload-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.upload-icon {
+  font-size: 32px;
+  color: #94A3B8;
+  transition: color 0.3s;
+}
+
+.import-upload :deep(.el-upload-dragger:hover) .upload-icon {
+  color: #c8102e;
+}
+
+.upload-text {
+  font-size: 13px;
+  color: #475569;
+}
+
 .upload-filename {
-  font-size: 12px; color: #475569; padding-left: 32px;
+  font-size: 12px;
+  color: #475569;
+  padding-left: 32px;
   font-family: 'Courier New', monospace;
 }
+
 .import-errors {
-  margin-top: 12px; padding: 10px 14px;
-  background: #FEF2F2; border: 1px solid #FCA5A5;
-  border-radius: 8px; max-height: 140px; overflow-y: auto;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  border-radius: 8px;
+  max-height: 140px;
+  overflow-y: auto;
 }
-.error-title { font-size: 12px; font-weight: 700; color: #991B1B; margin-bottom: 6px; }
+
+.error-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #991B1B;
+  margin-bottom: 6px;
+}
+
 .error-list {
-  font-size: 12px; color: #B91C1C; line-height: 1.6;
+  font-size: 12px;
+  color: #B91C1C;
+  line-height: 1.6;
   font-family: 'Courier New', monospace;
 }
 
 /* 重置密码 */
 .reset-tip {
-  display: flex; align-items: center; gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 10px 14px;
-  background: #FEF2F2; border: 1px solid rgba(200, 16, 46, 0.18);
-  border-radius: 8px; font-size: 13px; color: #475569;
+  background: #FEF2F2;
+  border: 1px solid rgba(200, 16, 46, 0.18);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #475569;
   margin-bottom: 18px;
 }
-.reset-tip b { color: #c8102e; }
+
+.reset-tip b {
+  color: #c8102e;
+}
+
 .tip-icon-red {
-  width: 20px; height: 20px;
-  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
-  background: #c8102e; color: #fff;
-  font-weight: 700; font-size: 12px;
+  background: #c8102e;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
 @media (max-width: 1200px) {
-  .section-body.grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .perm-group { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .section-body.grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .perm-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
+
 @media (max-width: 768px) {
+
   .section-body.grid-2,
-  .section-body.grid-3 { grid-template-columns: 1fr; }
-  .perm-group { grid-template-columns: 1fr; }
-  .org-search-input { width: 150px; }
+  .section-body.grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .perm-group {
+    grid-template-columns: 1fr;
+  }
+
+  .org-search-input {
+    width: 150px;
+  }
 }
 </style>
