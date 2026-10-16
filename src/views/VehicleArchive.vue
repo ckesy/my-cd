@@ -1071,8 +1071,8 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: 100vh;
-  max-height: 100vh;
+  height: calc(100vh - 101px);
+  max-height: calc(100vh - 101px);
   box-sizing: border-box;
   overflow: hidden;
   background: #F8FAFC;

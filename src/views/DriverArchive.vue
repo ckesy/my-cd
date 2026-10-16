@@ -23,16 +23,11 @@ const currentUser = (() => {
 const isAdmin = currentUser.role === 'admin'
 const isCustomer = !isAdmin
 const isSubAccount = !!currentUser.isSubAccount
-// ⭐ 子账号也用主账号的 owner_account / phone
 const myAccount = currentUser.masterAccount || currentUser.account || ''
 const myPhone = currentUser.masterPhone || currentUser.phone || ''
 
 const myCustomerId = ref(currentUser.customerId || null)
 
-// ⭐⭐⭐ 子账号机构信息（直接来自 currentUser）
-//   orgLevel = 1  → 一级机构 → 等同主账号
-//   orgLevel >= 2 → 二级机构 → 只看本机构
-// ============================================================
 const myOrgName = ref(isSubAccount ? String(currentUser.orgName || '').trim() || null : null)
 const myOrgLevel = ref(isSubAccount ? (Number(currentUser.orgLevel) || 1) : null)
 
@@ -47,7 +42,6 @@ const loadMyCustomerId = async () => {
   } catch (e) {}
 }
 
-// ⭐ 兜底：currentUser 里没有 orgName/orgLevel 时，去 organizations 反查
 const loadMyOrgInfo = async () => {
   if (!isCustomer || !isSubAccount) return
   if (myOrgName.value && myOrgLevel.value) return
@@ -67,12 +61,10 @@ const loadMyOrgInfo = async () => {
   }
 }
 
-// ⭐ 一级机构子账号 → 等同主账号
 const isRootOrgSubAccount = computed(() => {
   return isSubAccount && Number(myOrgLevel.value) === 1
 })
 
-// ⭐ 二级及以下 → 需要按 org 隔离
 const needOrgFilter = computed(() => {
   return isCustomer && isSubAccount && Number(myOrgLevel.value) >= 2
 })
@@ -113,7 +105,6 @@ const saveData = () => {
   sessionStorage.setItem(CACHE_KEY, JSON.stringify({ tableData: tableData.value, total: total.value }))
 }
 
-// ⭐ 加载机构下拉（按 level 排序）
 const loadOrgOptions = async () => {
   try {
     let query = supabase
@@ -208,8 +199,27 @@ const confirmDelete = async () => {
     )
     const li = ElLoading.service({ fullscreen: true, text: '正在删除...', background: 'rgba(0,0,0,0.6)' })
     try {
+      // 取出待删司机手机号，同步删除对应 users 表账号
+      const phonesToRemove = []
+      for (const id of selectedIds.value) {
+        const row = tableData.value.find(r => r.id === id)
+        if (row && row.phone) phonesToRemove.push(row.phone)
+      }
+
       const { error } = await supabase.from('drivers').delete().in('id', selectedIds.value)
       if (error) throw error
+
+      // 同步清理 users 表（只删属于当前客户的）
+      if (phonesToRemove.length) {
+        try {
+          let uq = supabase.from('users').delete().in('account', phonesToRemove)
+          if (isCustomer) uq = uq.eq('owner_account', myAccount)
+          await uq
+        } catch (uErr) {
+          console.warn('[DriverArchive] 同步删除 users 失败:', uErr)
+        }
+      }
+
       ElMessage.success(`成功删除 ${selectedIds.value.length} 条数据`)
       batchDeleteMode.value = false; selectedIds.value = []
       await fetchDrivers()
@@ -221,37 +231,224 @@ const confirmDelete = async () => {
 }
 
 // ============================================================
+// ⭐ 反查 users 表：司机是否已开通小程序账号
+// ============================================================
+const checkUserAccountExists = async (phone) => {
+  if (!phone) return false
+  try {
+    const { data: existing, error } = await supabase
+      .from('users')
+      .select('id, role_id, owner_account')
+      .eq('account', phone)
+      .maybeSingle()
+    if (error) return false
+    if (!existing) return false
+    // 排除管理员
+    if ([1, 2].includes(Number(existing.role_id))) return false
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
+// ============================================================
 // 查看 / 编辑 / 新增
 // ============================================================
 const detailDialogVisible = ref(false)
 const currentDetailRow = ref(null)
-const handleView = (row) => { currentDetailRow.value = row; detailDialogVisible.value = true }
+const detailLoading = ref(false)
+
+const handleView = async (row) => {
+  currentDetailRow.value = { ...row, mp_account_exists: false }
+  detailDialogVisible.value = true
+  detailLoading.value = true
+  try {
+    const exists = await checkUserAccountExists(row.phone)
+    if (currentDetailRow.value && currentDetailRow.value.id === row.id) {
+      currentDetailRow.value.mp_account_exists = exists
+    }
+  } finally {
+    detailLoading.value = false
+  }
+}
 
 const editDialogVisible = ref(false)
 const editFormData = ref(null)
 const editSaving = ref(false)
 
-const handleEdit = (row) => {
+const handleEdit = async (row) => {
   if (isSubAccount) { ElMessage.warning('子账号无权编辑'); return }
   const data = JSON.parse(JSON.stringify(row))
   const plates = data.bound_vehicle ? data.bound_vehicle.split(',').map(s => s.trim()).filter(Boolean) : []
   data.vehicleDisplay = !plates.length ? '' : plates.length <= 2 ? plates.join('；') : `已选 ${plates.length} 辆车`
+
+  // ⭐ 小程序账号字段
+  data.enabled_mp = false
+  data.mp_account_exists = false
+  data.mp_password = ''
+  data.mp_password_confirm = ''
+
+  // 反查是否已开通
+  if (data.phone) {
+    const exists = await checkUserAccountExists(data.phone)
+    data.mp_account_exists = exists
+    data.enabled_mp = exists
+  }
+
   editFormData.value = data
   editDialogVisible.value = true
 }
-const openEditFromView = () => {
+
+const openEditFromView = async () => {
   if (isSubAccount) return
-  if (currentDetailRow.value) { handleEdit(currentDetailRow.value); detailDialogVisible.value = false }
+  if (currentDetailRow.value) {
+    const row = { ...currentDetailRow.value }
+    detailDialogVisible.value = false
+    await handleEdit(row)
+  }
+}
+
+// ============================================================
+// ⭐ 同步司机账号到 users 表（用于小程序登录）
+// ============================================================
+const syncDriverUserAccount = async ({ phone, password, driverName, orgName }) => {
+  const { data: existing, error: queryErr } = await supabase
+    .from('users')
+    .select('id, account, owner_account, role_id')
+    .eq('account', phone)
+    .maybeSingle()
+  if (queryErr) throw queryErr
+
+  if (existing) {
+    if ([1, 2].includes(Number(existing.role_id))) {
+      throw new Error('该手机号已绑定管理员账号，无法作为司机账号')
+    }
+    if (existing.owner_account && existing.owner_account !== myAccount) {
+      throw new Error('该手机号已被其他账号使用')
+    }
+    if (!existing.owner_account && existing.account === myAccount) {
+      throw new Error('该手机号是您的主账号，无法作为司机账号')
+    }
+  }
+
+  let orgId = null
+  if (orgName) {
+    let oq = supabase.from('organizations').select('id').eq('name', orgName)
+    if (isCustomer) oq = oq.eq('owner_account', myAccount)
+    const { data: org } = await oq.maybeSingle()
+    if (org) orgId = org.id
+  }
+
+  if (existing) {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        password,
+        name: driverName,
+        phone,
+        org_id: orgId,
+        owner_account: myAccount,
+      })
+      .eq('id', existing.id)
+    if (error) throw error
+  } else {
+    const { error } = await supabase.from('users').insert([{
+      account: phone,
+      password,
+      name: driverName,
+      phone,
+      org_id: orgId,
+      role_id: null,
+      status: 1,
+      owner_account: myAccount,
+    }])
+    if (error) throw error
+  }
+}
+
+// ⭐ 关闭小程序账号
+const disableDriverUserAccount = async (phone) => {
+  if (!phone) return
+  let dq = supabase.from('users').delete().eq('account', phone)
+  if (isCustomer) dq = dq.eq('owner_account', myAccount)
+  const { error } = await dq
+  if (error) throw error
 }
 
 const saveEdit = async () => {
   if (isSubAccount) { ElMessage.warning('子账号无权编辑'); return }
   if (!editFormData.value) return
+
+  const f = editFormData.value
+
+  // ⭐ 小程序账号校验
+  if (f.enabled_mp) {
+    const needPwd = !f.mp_account_exists  // 首次开通必须填密码
+    if (needPwd) {
+      if (!f.mp_password || f.mp_password.length < 6) {
+        ElMessage.warning('小程序登录密码至少 6 位')
+        return
+      }
+      if (f.mp_password !== f.mp_password_confirm) {
+        ElMessage.warning('两次输入的密码不一致')
+        return
+      }
+    } else if (f.mp_password) {
+      // 已开通，填了密码 → 视为改密码
+      if (f.mp_password.length < 6) {
+        ElMessage.warning('小程序登录密码至少 6 位')
+        return
+      }
+      if (f.mp_password !== f.mp_password_confirm) {
+        ElMessage.warning('两次输入的密码不一致')
+        return
+      }
+    }
+  }
+
   editSaving.value = true
   try {
-    const { id, created_at, updated_at, vehicleDisplay, customer_id, ...fields } = editFormData.value
-    const { error } = await supabase.from('drivers').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', id)
+    const {
+      id, created_at, updated_at, vehicleDisplay, customer_id,
+      enabled_mp, mp_account_exists, mp_password, mp_password_confirm,
+      ...fields
+    } = f
+
+    const { error } = await supabase
+      .from('drivers')
+      .update({ ...fields, updated_at: new Date().toISOString() })
+      .eq('id', id)
     if (error) throw error
+
+    // ⭐ 处理小程序账号
+    const phone = fields.phone
+    if (phone) {
+      try {
+        if (enabled_mp && !mp_account_exists) {
+          // 新开通
+          await syncDriverUserAccount({
+            phone,
+            password: mp_password,
+            driverName: fields.driver_name,
+            orgName: fields.org,
+          })
+        } else if (enabled_mp && mp_account_exists && mp_password) {
+          // 改密码
+          await syncDriverUserAccount({
+            phone,
+            password: mp_password,
+            driverName: fields.driver_name,
+            orgName: fields.org,
+          })
+        } else if (!enabled_mp && mp_account_exists) {
+          // 关闭 → 删除 users 账号
+          await disableDriverUserAccount(phone)
+        }
+      } catch (uErr) {
+        ElMessage.warning('司机档案已更新，但小程序账号同步失败：' + uErr.message)
+      }
+    }
+
     ElMessage.success('更新成功')
     editDialogVisible.value = false
     await fetchDrivers()
@@ -261,10 +458,16 @@ const saveEdit = async () => {
   } finally { editSaving.value = false }
 }
 
+// ============================================================
+// 新增
+// ============================================================
 const addDialogVisible = ref(false)
 const addFormData = reactive({
   driver_name: '', org: '', gender: '', age: null, license_type: '', phone: '',
   bound_vehicle: '', vehicleDisplay: '', operator: '管理员',
+  enabled_mp: false,
+  mp_password: '',
+  mp_password_confirm: '',
 })
 const addSaving = ref(false)
 
@@ -273,6 +476,9 @@ const handleAdd = () => {
   Object.assign(addFormData, {
     driver_name: '', org: '', gender: '', age: null, license_type: '', phone: '',
     bound_vehicle: '', vehicleDisplay: '', operator: currentUser.name || '管理员',
+    enabled_mp: false,
+    mp_password: '',
+    mp_password_confirm: '',
   })
   addDialogVisible.value = true
 }
@@ -283,12 +489,22 @@ const saveAdd = async () => {
     ElMessage.warning('司机姓名和手机号为必填项')
     return
   }
+
+  if (addFormData.enabled_mp) {
+    if (!addFormData.mp_password || addFormData.mp_password.length < 6) {
+      ElMessage.warning('小程序登录密码至少 6 位')
+      return
+    }
+    if (addFormData.mp_password !== addFormData.mp_password_confirm) {
+      ElMessage.warning('两次输入的密码不一致')
+      return
+    }
+  }
+
   addSaving.value = true
   try {
-    // ⭐ 查重也按客户隔离
     let checkQ = supabase.from('drivers').select('phone').eq('phone', addFormData.phone)
     if (isCustomer && myCustomerId.value) checkQ = checkQ.eq('customer_id', myCustomerId.value)
-    // ⭐ 二级机构子账号再加 org 隔离
     if (needOrgFilter.value && myOrgName.value) checkQ = checkQ.eq('org', myOrgName.value)
     const { data: existing, error: checkError } = await checkQ
     if (checkError) throw checkError
@@ -297,6 +513,7 @@ const saveAdd = async () => {
       addSaving.value = false
       return
     }
+
     const insertData = {
       driver_name: addFormData.driver_name,
       org: addFormData.org || null,
@@ -312,12 +529,26 @@ const saveAdd = async () => {
     if (isCustomer && myCustomerId.value) {
       insertData.customer_id = myCustomerId.value
     }
-    // ⭐ 二级机构子账号新增时自动带上 org（当前产品逻辑子账号不能新增，这里做兜底）
     if (needOrgFilter.value && myOrgName.value && !insertData.org) {
       insertData.org = myOrgName.value
     }
+
     const { error } = await supabase.from('drivers').insert([insertData])
     if (error) throw error
+
+    if (addFormData.enabled_mp) {
+      try {
+        await syncDriverUserAccount({
+          phone: addFormData.phone,
+          password: addFormData.mp_password,
+          driverName: addFormData.driver_name,
+          orgName: insertData.org,
+        })
+      } catch (userErr) {
+        ElMessage.warning('司机档案已保存，但小程序账号创建失败：' + userErr.message)
+      }
+    }
+
     ElMessage.success('新增司机成功')
     addDialogVisible.value = false
     await fetchDrivers()
@@ -328,7 +559,7 @@ const saveAdd = async () => {
 }
 
 // ============================================================
-// 车辆选择（司机绑定车辆）
+// 车辆选择
 // ============================================================
 const vehicleSelectDialogVisible = ref(false)
 const vehicleList = ref([])
@@ -349,7 +580,6 @@ const sortVehiclesBySelected = (list) => {
   })
 }
 
-// ⭐ 车辆列表也按客户 + org 隔离
 const loadVehicleList = async () => {
   if (vehicleList.value.length) return
   try {
@@ -453,7 +683,6 @@ const handleBindVehicle = (row) => {
 // ============================================================
 const syncVehicleBoundDriver = async () => {
   try {
-    // ⭐ 查 drivers 按客户 + org 隔离
     let dq = supabase.from('drivers').select('driver_name, bound_vehicle')
     if (isCustomer && myCustomerId.value) {
       dq = dq.eq('customer_id', myCustomerId.value)
@@ -474,7 +703,6 @@ const syncVehicleBoundDriver = async () => {
       }
     })
 
-    // ⭐ 查 vehicles 也按客户 + org 隔离
     let vq = supabase.from('vehicles').select('plate')
     if (isCustomer && myCustomerId.value) {
       vq = vq.eq('customer_id', myCustomerId.value)
@@ -508,7 +736,6 @@ const exportData = async () => {
     if (isCustomer) {
       if (!myCustomerId.value) { ElMessage.warning('未关联客户，无法导出'); return }
       q = q.eq('customer_id', myCustomerId.value)
-      // ⭐ 二级机构子账号 → 按 org 隔离
       if (needOrgFilter.value) {
         if (!myOrgName.value) { ElMessage.warning('未关联组织，无法导出'); return }
         q = q.eq('org', myOrgName.value)
@@ -553,12 +780,10 @@ const exportData = async () => {
 // 获取数据
 // ============================================================
 const fetchDrivers = async () => {
-  // ⭐ 客户必须有 customerId
   if (isCustomer && !myCustomerId.value) {
     console.warn('[DriverArchive] 客户账号未关联 customers，返回空')
     tableData.value = []; total.value = 0; saveData(); return
   }
-  // ⭐ 二级机构子账号必须有 orgName
   if (needOrgFilter.value && !myOrgName.value) {
     console.warn('[DriverArchive] 二级机构子账号 orgName 缺失，返回空')
     tableData.value = []; total.value = 0; saveData(); return
@@ -570,7 +795,6 @@ const fetchDrivers = async () => {
 
     if (isCustomer) {
       q = q.eq('customer_id', myCustomerId.value)
-      // ⭐⭐⭐ 子账号隔离
       if (isRootOrgSubAccount.value) {
         console.log('[DriverArchive] 子账号挂一级机构 → 等同主账号')
       } else if (needOrgFilter.value) {
@@ -608,7 +832,7 @@ const handleGotoPage = (v) => {
 }
 
 // ============================================================
-// 导入（仅主账号/管理员）
+// 导入
 // ============================================================
 const showImportDialog = ref(false)
 const uploadRef = ref(null)
@@ -683,7 +907,6 @@ const confirmImport = async () => {
       if (isCustomer && myCustomerId.value) {
         obj.customer_id = myCustomerId.value
       }
-      // ⭐ 二级机构子账号导入 → 强制本机构（虽然子账号无权导入，这里做兜底）
       if (needOrgFilter.value && myOrgName.value) {
         obj.org = myOrgName.value
       }
@@ -692,7 +915,6 @@ const confirmImport = async () => {
     if (errors.length) { importErrors.value = errors.slice(0, 20); ElMessage.error(`存在 ${errors.length} 条错误`); return }
     if (!validData.length) { ElMessage.warning('没有有效数据'); return }
 
-    // ⭐ 查重按客户 + org 隔离
     const existingPhones = new Set()
     let eq = supabase.from('drivers').select('phone').in('phone', validData.map(v => v.phone))
     if (isCustomer && myCustomerId.value) {
@@ -782,12 +1004,10 @@ onBeforeUnmount(() => {
             <span class="total-hint">共 <b>{{ total }}</b> 条</span>
 
             <div class="toolbar-right">
-              <!-- ⭐ 子账号不显示"新增" -->
               <el-button v-if="!isSubAccount" type="primary" class="btn-primary" @click="handleAdd">
                 <el-icon><User /></el-icon> 新增
               </el-button>
 
-              <!-- ⭐ 子账号不显示"删除" -->
               <template v-if="!isSubAccount">
                 <el-button class="btn-outline" @click="toggleBatchDelete">
                   <el-icon><Delete /></el-icon> {{ batchDeleteMode ? '取消' : '删除' }}
@@ -797,11 +1017,9 @@ onBeforeUnmount(() => {
                 </el-button>
               </template>
 
-              <!-- ⭐ 子账号不显示"导入" -->
               <el-button v-if="!isSubAccount" class="btn-outline" @click="showImportDialog = true">
                 <el-icon><Download /></el-icon> 导入
               </el-button>
-              <!-- ⭐ 导出对子账号开放 -->
               <el-button class="btn-outline" @click="exportData">
                 <el-icon><Upload /></el-icon> 导出
               </el-button>
@@ -885,15 +1103,12 @@ onBeforeUnmount(() => {
                 >
                   <template #default="{ row }">
                     <div class="action-cell">
-                      <!-- ⭐ 子账号不显示"绑定车辆" -->
                       <el-button v-if="!isSubAccount" type="text" class="action-btn action-bind" @click="handleBindVehicle(row)">
                         <el-icon><Van /></el-icon> 绑定车辆
                       </el-button>
-                      <!-- ⭐ 查看：所有人可见 -->
                       <el-button type="text" class="action-btn action-view" @click="handleView(row)">
                         <el-icon><View /></el-icon> 查看
                       </el-button>
-                      <!-- ⭐ 子账号不显示"编辑" -->
                       <el-button v-if="!isSubAccount" type="text" class="action-btn action-edit" @click="handleEdit(row)">
                         <el-icon><Edit /></el-icon> 编辑
                       </el-button>
@@ -1040,18 +1255,25 @@ onBeforeUnmount(() => {
         <div class="detail-item"><span class="label">驾照类型</span><span class="value">{{ currentDetailRow.license_type || '--' }}</span></div>
         <div class="detail-item"><span class="label">手机号</span><span class="value mono">{{ currentDetailRow.phone || '--' }}</span></div>
         <div class="detail-item"><span class="label">绑定车辆</span><span class="value">{{ currentDetailRow.bound_vehicle || '--' }}</span></div>
+        <div class="detail-item">
+          <span class="label">小程序账号</span>
+          <span class="value">
+            <span v-if="detailLoading" class="mp-status-loading">查询中…</span>
+            <span v-else-if="currentDetailRow.mp_account_exists" class="mp-status-on">已开通</span>
+            <span v-else class="mp-status-off">未开通</span>
+          </span>
+        </div>
         <div class="detail-item"><span class="label">操作人</span><span class="value">{{ currentDetailRow.operator || '--' }}</span></div>
         <div class="detail-item"><span class="label">创建时间</span><span class="value time-text">{{ formatDateTime(currentDetailRow.created_at) }}</span></div>
         <div class="detail-item"><span class="label">修改时间</span><span class="value time-text">{{ formatDateTime(currentDetailRow.updated_at) }}</span></div>
       </div>
       <template #footer>
         <button class="action-btn-footer ghost" @click="detailDialogVisible = false">关闭</button>
-        <!-- ⭐ 子账号不显示"编辑"按钮 -->
         <button v-if="!isSubAccount" class="action-btn-footer primary" @click="openEditFromView">编辑</button>
       </template>
     </el-dialog>
 
-    <!-- 编辑（仅主账号可用） -->
+    <!-- 编辑 -->
     <el-dialog v-model="editDialogVisible" width="720px" top="6vh" destroy-on-close :close-on-click-modal="false" class="va-dialog">
       <template #header>
         <div class="detail-header">
@@ -1101,6 +1323,55 @@ onBeforeUnmount(() => {
               <el-col :span="12"><el-form-item label="操作人"><el-input v-model="editFormData.operator" /></el-form-item></el-col>
             </el-row>
           </div>
+
+          <!-- ⭐ 小程序账号 -->
+          <div class="form-section">
+            <div class="section-title">小程序账号</div>
+            <el-row :gutter="16">
+              <el-col :span="24">
+                <el-form-item label="启用小程序">
+                  <el-switch v-model="editFormData.enabled_mp" />
+                  <span class="mp-hint">
+                    <template v-if="editFormData.mp_account_exists">
+                      当前已开通，关闭开关将删除该司机的小程序登录账号
+                    </template>
+                    <template v-else>
+                      开启后司机可用手机号 + 密码登录司机端小程序
+                    </template>
+                  </span>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row v-if="editFormData.enabled_mp" :gutter="16">
+              <el-col :span="12">
+                <el-form-item
+                  :label="editFormData.mp_account_exists ? '新密码' : '登录密码'"
+                  :required="!editFormData.mp_account_exists"
+                >
+                  <el-input
+                    v-model="editFormData.mp_password"
+                    type="password"
+                    :placeholder="editFormData.mp_account_exists ? '留空表示不修改' : '至少 6 位'"
+                    show-password
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item
+                  label="确认密码"
+                  :required="!editFormData.mp_account_exists"
+                >
+                  <el-input
+                    v-model="editFormData.mp_password_confirm"
+                    type="password"
+                    :placeholder="editFormData.mp_account_exists ? '再次输入新密码' : '再次输入密码'"
+                    show-password
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </div>
+
           <div class="form-section">
             <div class="section-title">时间信息</div>
             <el-row :gutter="16">
@@ -1116,7 +1387,7 @@ onBeforeUnmount(() => {
       </template>
     </el-dialog>
 
-    <!-- 新增（仅主账号可用） -->
+    <!-- 新增 -->
     <el-dialog v-model="addDialogVisible" width="720px" top="6vh" destroy-on-close :close-on-click-modal="false" class="va-dialog">
       <template #header>
         <div class="detail-header">
@@ -1165,6 +1436,39 @@ onBeforeUnmount(() => {
               <el-col :span="12"><el-form-item label="操作人"><el-input v-model="addFormData.operator" /></el-form-item></el-col>
             </el-row>
           </div>
+          <div class="form-section">
+            <div class="section-title">小程序账号</div>
+            <el-row :gutter="16">
+              <el-col :span="24">
+                <el-form-item label="启用小程序">
+                  <el-switch v-model="addFormData.enabled_mp" />
+                  <span class="mp-hint">启用后司机可用手机号 + 密码登录司机端小程序</span>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row v-if="addFormData.enabled_mp" :gutter="16">
+              <el-col :span="12">
+                <el-form-item label="登录密码" required>
+                  <el-input
+                    v-model="addFormData.mp_password"
+                    type="password"
+                    placeholder="至少 6 位"
+                    show-password
+                  />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="确认密码" required>
+                  <el-input
+                    v-model="addFormData.mp_password_confirm"
+                    type="password"
+                    placeholder="再次输入密码"
+                    show-password
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </div>
         </el-form>
       </div>
       <template #footer>
@@ -1205,15 +1509,15 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* ============================================================
-   页面布局：固定高度，不上下拖动
+   页面布局
    ============================================================ */
 .driver-archive-page {
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: 100vh;
-  max-height: 100vh;
+  height: calc(100vh - 101px);
+  max-height: calc(100vh - 101px);
   box-sizing: border-box;
   overflow: hidden;
   background: #F8FAFC;
@@ -1554,6 +1858,34 @@ onBeforeUnmount(() => {
 .detail-item .value.strong { font-weight: 600; font-size: 14px; letter-spacing: 0.3px; }
 .detail-item .value.mono { font-family: 'Courier New', Courier, monospace; font-size: 13px; }
 
+/* ⭐ 小程序账号状态样式 */
+.mp-status-on {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: #DCFCE7;
+  color: #15803D;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.mp-status-off {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: #F1F5F9;
+  color: #94A3B8;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+.mp-status-loading {
+  color: #94A3B8;
+  font-size: 13px;
+}
+
 .form-section { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px dashed #F1F5F9; }
 .form-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 .section-title {
@@ -1596,6 +1928,13 @@ onBeforeUnmount(() => {
 }
 .clear-icon { cursor: pointer; color: #94A3B8; transition: color 0.2s; }
 .clear-icon:hover { color: #c8102e; }
+
+.mp-hint {
+  margin-left: 12px;
+  font-size: 12px;
+  color: #94A3B8;
+  font-weight: 400;
+}
 
 .driver-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .driver-search { flex: 1; }

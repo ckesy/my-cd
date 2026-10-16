@@ -712,6 +712,7 @@ const searchForm = reactive({ account: '', name: '', role: '', org: '', status: 
 
 // ============================================================
 // 用户列表
+// ⭐ 只显示有 role_id 的账号（管理员/子账号），排除司机账号
 // ============================================================
 const loading = ref(false)
 const tableData = ref([])
@@ -724,6 +725,7 @@ const loadUsers = async () => {
       const { data, error } = await supabase
         .from('users')
         .select('*')
+        .not('role_id', 'is', null)   // ⭐ 排除司机账号（role_id 为 null）
         .order('id', { ascending: false })
       if (error) throw error
       users = data || []
@@ -732,6 +734,7 @@ const loadUsers = async () => {
         .from('users')
         .select('*')
         .eq('owner_account', myAccount)
+        .not('role_id', 'is', null)   // ⭐ 排除司机账号
         .order('id', { ascending: false })
       if (error) throw error
       users = (data || []).filter(u => {
@@ -1008,6 +1011,7 @@ const handleDeleteUser = (row) => {
 
 // ============================================================
 // 组织机构视图
+// ⭐ 只显示有 role_id 的账号
 // ============================================================
 const orgTreeRef = ref(null)
 const orgTreeData = ref([])
@@ -1029,7 +1033,12 @@ const loadOrgTree = async () => {
 
     const { data: fleets } = await supabase.from('fleets').select('*').order('id')
 
-    let userQuery = supabase.from('users').select('*').order('id')
+    // ⭐ 只拉有 role_id 的用户（排除司机账号）
+    let userQuery = supabase
+      .from('users')
+      .select('*')
+      .not('role_id', 'is', null)
+      .order('id')
     if (isCustomer) userQuery = userQuery.eq('owner_account', myAccount)
     const { data: usersRaw } = await userQuery
     const users = (usersRaw || []).filter(u => {
@@ -1038,7 +1047,7 @@ const loadOrgTree = async () => {
       return true
     })
 
-    // ⭐⭐⭐ 查询车辆并聚合到机构（按 org_id 递归）
+    // 查询车辆并聚合到机构（按 org_id 递归）
     let vehicleQuery = supabase.from('vehicles').select('id, org_id')
     if (isCustomer && myAccount) vehicleQuery = vehicleQuery.eq('customer_id', myCustomerId || '00000000-0000-0000-0000-000000000000')
     const { data: vehiclesRaw } = await vehicleQuery
@@ -1048,7 +1057,6 @@ const loadOrgTree = async () => {
     const fleetsList = fleets || []
     const usersList = users || []
 
-    // ⭐ 全部用 String(key) 统一类型
     const directVehicleByOrg = {}
     vehiclesList.forEach(v => {
       if (v.org_id != null) {
@@ -1082,7 +1090,6 @@ const loadOrgTree = async () => {
         isAdmin: u.role_id === 1 || u.role_id === 2,
         roleName: role ? role.name : '--',
         ownerName: owner ? owner.name : '',
-        // ⭐ 账号显示所属机构的车辆数
         vehicleCount: u.org_id ? (recursiveVehicleByOrg[String(u.org_id)] || 0) : 0,
       }
     }
@@ -1114,7 +1121,6 @@ const loadOrgTree = async () => {
           label: org.name,
           level: org.level,
           isRoot: org.is_root,
-          // ⭐ 机构显示含子孙的车辆数
           vehicleCount: recursiveVehicleByOrg[String(org.id)] || 0,
           children: [...buildOrgChildren(org.id), ...orgFleets, ...orgUsers],
         }
@@ -1138,7 +1144,6 @@ const loadOrgTree = async () => {
         key: 'root-' + root.id,
         type: 'root',
         label: root.name,
-        // ⭐ 根节点车辆数
         vehicleCount: recursiveVehicleByOrg[String(root.id)] || 0,
         children: [...buildOrgChildren(root.id), ...rootDirectUsers],
       }))
@@ -2085,7 +2090,6 @@ onBeforeUnmount(() => {
   margin-left: auto;
 }
 
-/* ⭐ 车辆数徽章 */
 .node-vehicles {
   display: inline-flex;
   align-items: center;
@@ -2103,15 +2107,10 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 
-/* ⭐ 0 辆时淡灰 + 无图标 */
 .node-vehicles.empty {
   background: #F1F5F9;
   color: #94A3B8;
   font-weight: 600;
-}
-
-.node-vehicles .el-icon {
-  font-size: 12px;
 }
 
 .org-empty {
