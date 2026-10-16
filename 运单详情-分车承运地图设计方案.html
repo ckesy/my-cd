@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>运单详情 · 分车承运（一货多车）地图展示设计方案</title>
+<style>
+  :root{
+    --red:#c8102e; --blue:#2563eb; --teal:#0e7490; --green:#16a34a;
+    --ink:#0f172a; --ink2:#475569; --muted:#94a3b8; --line:#e2e8f0;
+    --bg:#f5f6f8; --card:#ffffff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;}
+  .page{max-width:1180px;margin:0 auto;padding:28px 20px 60px;}
+  h1{font-size:22px;margin:0 0 6px;}
+  .lead{color:var(--ink2);font-size:13.5px;line-height:1.8;margin:0 0 22px;}
+  h2{font-size:17px;margin:34px 0 10px;padding-left:10px;border-left:4px solid var(--red);}
+  h3{font-size:14.5px;margin:0 0 8px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:18px;}
+  .sec-note{font-size:13px;color:var(--ink2);line-height:1.85;}
+  .prio{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--red);
+    background:#fef2f4;border:1px solid #fbd5db;border-radius:999px;padding:2px 10px;}
+  .prio.blue{color:var(--blue);background:#eff6ff;border-color:#dbeafe;}
+  .prio.teal{color:var(--teal);background:#ecfeff;border-color:#cffafe;}
+  /* 假地图 */
+  .map{position:relative;height:230px;border-radius:10px;overflow:hidden;
+    background:
+      linear-gradient(0deg,rgba(15,23,42,.045) 1px,transparent 1px) 0 0/100% 26px,
+      linear-gradient(90deg,rgba(15,23,42,.045) 1px,transparent 1px) 0 0/26px 100%,
+      linear-gradient(150deg,#eef3f7,#e6edf3);
+    border:1px solid var(--line);}
+  .map.sm{height:150px;}
+  .map .badge{position:absolute;left:10px;top:10px;font-size:11px;color:#64748b;background:rgba(255,255,255,.9);
+    border:1px solid var(--line);border-radius:6px;padding:2px 8px;}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--ink2);margin-top:8px;}
+  .legend i{display:inline-block;width:14px;height:4px;border-radius:2px;margin-right:5px;vertical-align:middle;}
+  /* 车辆卡 */
+  .cars{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;}
+  .car{flex:1 1 260px;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--red);
+    border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--ink2);}
+  .car.b{border-left-color:var(--blue);}
+  .car.done{border-left-color:var(--green);background:#f6fdf9;}
+  .car-top{display:flex;align-items:center;gap:8px;}
+  .car-name{font-weight:700;color:var(--ink);font-size:13px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--red);}
+  .dot.b{background:var(--blue);}
+  .tag{margin-left:auto;font-size:11px;font-weight:600;border-radius:999px;padding:1px 9px;
+    color:#1d4ed8;background:#dbeafe;}
+  .tag.done{color:#15803d;background:#dcfce7;}
+  .tag.wait{color:#b45309;background:#fef3c7;}
+  .car-meta{margin-top:5px;line-height:1.7;}
+  .bar{height:6px;border-radius:3px;background:#eef2f7;margin-top:7px;overflow:hidden;}
+  .bar > i{display:block;height:100%;border-radius:3px;background:var(--red);}
+  .bar > i.b{background:var(--blue);}
+  .bar > i.done{background:var(--green);}
+  /* 切换 tab */
+  .vtabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .vtab{font-size:12.5px;font-weight:600;color:var(--ink2);background:#f1f5f9;border:1px solid var(--line);
+    border-radius:999px;padding:5px 14px;cursor:default;}
+  .vtab.on{color:#fff;background:var(--red);border-color:var(--red);}
+  .vtab.on.all{background:var(--ink);border-color:var(--ink);}
+  /* 两级布局 */
+  .split{display:flex;gap:14px;flex-wrap:wrap;}
+  .split > .left{flex:1 1 420px;}
+  .split > .right{flex:1 1 320px;}
+  .mini-cars{display:flex;flex-direction:column;gap:12px;}
+  /* 表格 */
+  table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:10px;overflow:hidden;}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;line-height:1.7;}
+  th{background:#f8fafc;color:var(--ink2);font-weight:600;}
+  td.y{color:#15803d;font-weight:600;}
+  td.n{color:#b45309;font-weight:600;}
+  ul{margin:6px 0 0;padding-left:20px;line-height:1.85;font-size:13px;color:var(--ink2);}
+  .kbd{font-family:ui-monospace,Menlo,monospace;background:#f1f5f9;border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;font-size:12px;color:#334155;}
+  .rule{background:#fff;border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:10px;
+    padding:12px 16px;font-size:13px;line-height:1.85;color:var(--ink2);}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>运单详情 ·「一货多车」的地图展示 — 设计方案（3 版）</h1>
+  <p class="lead">
+    场景：一个运单、一种货物派给多个司机 / 多车（每人各拉一部分）。现在「物流状态」页已经能按趟列卡片，
+    但**地图只画得出一辆车**（一辆车一条轨迹：按车牌查东风定位 + 规划路线）。
+    下面给 3 版布局，目标是「**在地图上能同时看到两台车**」，同时不破坏现有单车页面的观感。<br>
+    ⚠️ 本文只是设计方案，线上代码未改动。灰色网格块代表地图，彩色折线代表车辆轨迹。
+  </p>
+
+  <!-- ================= A ================= -->
+  <h2>方案 A ｜ 一图叠多车 + 车辆卡联动（信息密度最高）</h2>
+  <div class="card">
+    <h3><span class="prio">推荐·地图为主</span></h3>
+    <div class="map">
+      <span class="badge">地图（叠加两车轨迹）</span>
+      <svg viewBox="0 0 900 230" width="100%" height="100%" preserveAspectRatio="none">
+        <path d="M70,180 C200,150 260,80 420,70 C560,62 640,110 830,60"
+              fill="none" stroke="#c8102e" stroke-width="4" stroke-linecap="round" opacity=".85"/>
+        <path d="M70,195 C190,185 300,140 430,120 C580,98 700,140 830,120"
+              fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-dasharray="10 7" opacity=".9"/>
+        <circle cx="70" cy="180" r="7" fill="#fff" stroke="#c8102e" stroke-width="3"/>
+        <circle cx="70" cy="195" r="7" fill="#fff" stroke="#2563eb" stroke-width="3"/>
+        <circle cx="830" cy="60" r="7" fill="#c8102e"/>
+        <circle cx="830" cy="120" r="7" fill="#2563eb"/>
+        <circle cx="560" cy="72" r="9" fill="#c8102e" stroke="#fff" stroke-width="3"/>
+        <circle cx="600" cy="104" r="9" fill="#2563eb" stroke="#fff" stroke-width="3"/>
+        <text x="576" y="58" font-size="13" fill="#0f172a" font-weight="700">晋K03115D</text>
+        <text x="616" y="100" font-size="13" fill="#0f172a" font-weight="700">晋K09456D</text>
+        <text x="86" y="176" font-size="12" fill="#64748b">哈密装货点</text>
+        <text x="770" y="52" font-size="12" fill="#64748b">甘肃卸货点</text>
+      </svg>
+    </div>
+    <div class="legend">
+      <span><i style="background:#c8102e"></i>晋K03115D · 李亚楠（已完成）</span>
+      <span><i style="background:#2563eb"></i>晋K09456D · lyn（在途）</span>
+      <span><i style="background:#94a3b8"></i>未出发的车只显示装货点</span>
+    </div>
+
+    <div class="cars">
+      <div class="car done">
+        <div class="car-top"><span class="dot" style="background:#16a34a"></span><span class="car-name">晋K03115D · 李亚楠</span><span class="tag done">已完成</span></div>
+        <div class="car-meta">承运 25 / 50 · 接单 05:52 → 完成 05:52</div>
+        <div class="bar"><i class="done" style="width:100%"></i></div>
+      </div>
+      <div class="car b">
+        <div class="car-top"><span class="dot b"></span><span class="car-name">晋K09456D · lyn</span><span class="tag">在途</span></div>
+        <div class="car-meta">承运 25 / 50 · 接单 05:52 · 剩余 32 km · 预计 06:40 到达</div>
+        <div class="bar"><i class="b" style="width:62%"></i></div>
+      </div>
+    </div>
+    <ul>
+      <li>点某张车辆卡 → 地图**只高亮这辆车**、其余淡化到 25%，并 <span class="kbd">setFitView</span> 到它的轨迹；再点一次「全部」恢复叠加。</li>
+      <li>两车颜色是**固定映射**（按车辆在指派里的顺序取色：红 / 蓝 / 青 / 紫），颜色同时用在轨迹、marker、卡片左侧色条、图例上。</li>
+      <li>每辆车各一条轨迹：现在 <span class="kbd">loadVehicleTrip(车牌…)</span> 调一次，多车就是并行调 N 次（2~3 辆没问题，见文末「性能」）。</li>
+      <li>优点：一屏对比两车相对位置与进度，最贴合「一个任务多车」的直觉。<br>缺点：车多（≥4）时轨迹互相压线，需要靠「聚焦单车」兜底。</li>
+    </ul>
+  </div>
+
+  <!-- ================= B ================= -->
+  <h2>方案 B ｜ 一车一卡（左图右信息，卡片流）</h2>
+  <div class="card">
+    <h3><span class="prio teal">车少时最干净</span></h3>
+    <div class="split">
+      <div class="left">
+        <div class="map sm"><span class="badge">地图 · 只画晋K03115D</span>
+          <svg viewBox="0 0 600 150" width="100%" height="100%" preserveAspectRatio="none">
+            <path d="M50,120 C160,100 210,50 330,44 C430,38 500,72 560,40" fill="none" stroke="#c8102e" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="50" cy="120" r="6" fill="#fff" stroke="#c8102e" stroke-width="3"/>
+            <circle cx="560" cy="40" r="6" fill="#c8102e"/>
+          </svg>
+        </div>
+      </div>
+      <div class="right">
+        <div class="car done">
+          <div class="car-top"><span class="dot" style="background:#16a34a"></span><span class="car-name">晋K03115D · 李亚楠</span><span class="tag done">已完成</span></div>
+          <div class="car-meta">承运 25 / 50 · 接单 05:52 → 完成 05:52<br>节点：装车 ✓ 发车 ✓ 到达 ✓ 完成 ✓</div>
+        </div>
+      </div>
+      <div class="left">
+        <div class="map sm"><span class="badge">地图 · 只画晋K09456D</span>
+          <svg viewBox="0 0 600 150" width="100%" height="100%" preserveAspectRatio="none">
+            <path d="M50,130 C150,124 240,92 340,80 C450,64 520,96 560,84" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-dasharray="10 7"/>
+            <circle cx="50" cy="130" r="6" fill="#fff" stroke="#2563eb" stroke-width="3"/>
+            <circle cx="560" cy="84" r="6" fill="#2563eb"/>
+            <circle cx="400" cy="74" r="8" fill="#2563eb" stroke="#fff" stroke-width="3"/>
+          </svg>
+        </div>
+      </div>
+      <div class="right">
+        <div class="car b">
+          <div class="car-top"><span class="dot b"></span><span class="car-name">晋K09456D · lyn</span><span class="tag">在途</span></div>
+          <div class="car-meta">承运 25 / 50 · 接单 05:52<br>剩余 32 km · 预计 06:40 到达</div>
+          <div class="bar"><i class="b" style="width:62%"></i></div>
+        </div>
+      </div>
+    </div>
+    <ul>
+      <li>每辆车一块「地图 + 信息」，纵向排列；车少时一屏能看全，信息互不遮挡。</li>
+      <li>缺点：地图小、**看不出两车相对位置**；车多时页面很长。<br>适合「每辆车都要单独盯」而不是「对比整体位置」。</li>
+    </ul>
+  </div>
+
+  <!-- ================= C ================= -->
+  <h2>方案 C ｜ 一图 + 车辆 tab（复用现有单车视图，改动最小）</h2>
+  <div class="card">
+    <h3><span class="prio blue">推荐·落地成本最低</span></h3>
+    <div class="vtabs">
+      <span class="vtab on all">全部（2 台车）</span>
+      <span class="vtab">晋K03115D · 李亚楠 · 已完成</span>
+      <span class="vtab">晋K09456D · lyn · 在途</span>
+    </div>
+    <div class="map">
+      <span class="badge">地图 · 当前看「全部」：两台车都在</span>
+      <svg viewBox="0 0 900 230" width="100%" height="100%" preserveAspectRatio="none">
+        <path d="M70,180 C200,150 260,80 420,70 C560,62 640,110 830,60" fill="none" stroke="#c8102e" stroke-width="4" stroke-linecap="round" opacity=".9"/>
+        <path d="M70,195 C190,185 300,140 430,120 C580,98 700,140 830,120" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-dasharray="10 7"/>
+        <circle cx="560" cy="72" r="9" fill="#c8102e" stroke="#fff" stroke-width="3"/>
+        <circle cx="600" cy="104" r="9" fill="#2563eb" stroke="#fff" stroke-width="3"/>
+      </svg>
+    </div>
+    <div class="mini-cars" style="margin-top:12px;">
+      <div class="car done">
+        <div class="car-top"><span class="car-name">晋K03115D · 李亚楠</span><span class="tag done">已完成</span></div>
+        <div class="car-meta">承运 25 / 50 · 05:52 → 05:52（耗时 32 分）</div>
+      </div>
+      <div class="car b">
+        <div class="car-top"><span class="car-name">晋K09456D · lyn</span><span class="tag">在途</span></div>
+        <div class="car-meta">承运 25 / 50 · 接单 05:52 · 剩余 32 km · 预计 06:40 到达</div>
+      </div>
+    </div>
+    <ul>
+      <li>顶部一排车辆 tab（车牌 · 司机 · 状态）。选某辆车后，**地图、进度双条、节点时间轴全部沿用现在单车那一套**（零学习成本、组件直接复用）。</li>
+      <li>「全部」tab = 方案 A 的叠加态（默认停在这里，所以一进来就能看到两台车）。</li>
+      <li>只有一辆车指派时**不显示 tab**，页面和现在完全一样（自然的降级）。</li>
+      <li>优点：改动集中在「多一层 tab 状态 + 地图叠加」；缺点：要看单车细节需要切一下 tab。</li>
+    </ul>
+  </div>
+
+  <!-- ================= 对比 ================= -->
+  <h2>三版对比与推荐</h2>
+  <table>
+    <thead>
+      <tr><th style="width:118px">维度</th><th>方案 A 一图叠多车</th><th>方案 B 一车一卡</th><th>方案 C 一图 + 车辆 tab</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>「看到两台车」</td>
+        <td class="y">最直接，同屏对比</td>
+        <td class="n">不行（分成两张图）</td>
+        <td class="y">默认「全部」就能看到</td>
+      </tr>
+      <tr>
+        <td>单车细节（节点时间轴）</td>
+        <td class="n">要额外点卡片聚焦</td>
+        <td class="y">天然分开，各自完整</td>
+        <td class="y">切 tab 即现有完整视图</td>
+      </tr>
+      <tr>
+        <td>车多时（≥4）</td>
+        <td class="n">轨迹互相压线</td>
+        <td class="y">一直整齐，但页面很长</td>
+        <td class="y">聚焦单车，天然不挤</td>
+      </tr>
+      <tr>
+        <td>改动量</td>
+        <td>中（地图叠加 + 联动高亮 + 卡片）</td>
+        <td>小（把现有地图块复制 N 份）</td>
+        <td class="y">中偏小（多一层 tab + 叠加态）</td>
+      </tr>
+      <tr>
+        <td>与现有页面的一致性</td>
+        <td>新形态（要重新定视觉）</td>
+        <td class="y">最高（就是现在这块乘 N）</td>
+        <td class="y">最高（单车视图原样保留）</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="rule" style="margin-top:16px">
+    <b>建议：方案 C 为骨架，把方案 A 的叠加态作为默认的「全部」页签。</b>
+    理由：一进页面就满足「地图上看到两台车」，要看单车就走既有视图（进度双条 + 节点时间轴不用重做），
+    而且 1 辆车时不出现 tab、与现在完全一致 —— 改动最少、回退最容易。
+    A 里那套「点卡片聚焦高亮某辆车」作为「全部」页签里的增强交互，随 C 一起做。
+  </div>
+
+  <!-- ================= 落地要点 ================= -->
+  <h2>落地要点（无论选哪版都要先定）</h2>
+  <div class="card">
+    <ul>
+      <li><b>数据来源</b>：一辆车一条轨迹 —— 现在是按车牌查「东风定位 + 规划路线」算一条；多车就是并行查 N 次
+        （<span class="kbd">Promise.all</span>，2~3 辆无压力；≥5 辆建议加并发上限 + 缓存，切 tab 不重复查）。</li>
+      <li><b>状态对应</b>：未接单 / 待装车 → 只画装货点（无轨迹）；在途 → 轨迹 + 当前位置 marker；
+        已完成 → 完整轨迹（描边变灰或转绿）。</li>
+      <li><b>颜色规范</b>：按指派顺序固定取色（红 → 蓝 → 青 → 紫），同一辆车在轨迹、marker、卡片、图例里用同一色；
+        红只给第一辆（品牌红），避免与「异常/超速」告警色打架。</li>
+      <li><b>配色与地图合规</b>：沿用现有高德底图与已有标记图标；不新增外部地图源。</li>
+      <li><b>对齐现有信息</b>：卡片上的「承运数量」用该趟的 <span class="kbd">carryQuantity</span>、
+        顶部聚合用「已完成 x/N · 承运合计 a/b」——和列表页、当前按趟卡片同一口径。</li>
+      <li><b>降级</b>：只有 1 趟时全部退回现在的单车视图；某辆车没有定位数据时该卡片显示「暂无定位」而不是空白地图。</li>
+      <li><b>命名</b>：界面上**不要出现「子母车」**这类业务词（不一定就是子母车），统一叫「分车承运 / 共 N 趟」。</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

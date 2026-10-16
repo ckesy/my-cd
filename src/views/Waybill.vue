@@ -158,36 +158,40 @@
               <el-table-column type="expand" width="46">
                 <template #default="{ row }">
                   <div v-if="getTotalItems(row.assignments) > 1" class="expand-content">
-                    <div class="sub-row-wrapper">
-                      <div
-                        v-for="(item, idx) in flattenAssignments(row.assignments)"
-                        :key="idx"
-                        class="sub-row"
-                      >
-                        <span class="sub-cell" style="width: 220px;">--</span>
-                        <span class="sub-cell" style="width: 90px;">--</span>
-                        <span class="sub-cell" style="width: 100px;">--</span>
-                        <span class="sub-cell" style="width: 100px;">--</span>
-                        <span class="sub-cell" style="width: 120px;">--</span>
-                        <span class="sub-cell" style="width: 120px;">--</span>
-                        <span class="sub-cell" style="width: 90px;">--</span>
-                        <span class="sub-cell" style="width: 90px;">--</span>
-                        <span class="sub-cell" style="width: 70px;">--</span>
-                        <span class="sub-cell" style="width: 100px; font-weight: 500;">
-                          <span v-if="item.method === 'vehicle'">{{ item.target }}</span>
-                          <span v-else style="color: #999;">--</span>
+                    <!-- ⭐ 一单多司机/多车（分车承运）：每趟各自的份额与进度。
+                         ⚠️ 明细**自带表头**，不再假装和外层表格的列对齐 ——
+                            外层是 min-width 自适应列宽，用固定像素去凑永远对不齐。 -->
+                    <div class="leg-table">
+                      <div class="leg-table-head">
+                        <span class="leg-table-title">分车承运</span>
+                        <span class="leg-table-sub">
+                          共 {{ legSummary(row).total }} 趟 · 已完成 {{ legSummary(row).done }} 趟<template
+                            v-if="legSummary(row).running"
+                          > · 执行中 {{ legSummary(row).running }} 趟</template><template
+                            v-if="legSummary(row).rejected"
+                          > · 待重新指派 {{ legSummary(row).rejected }} 趟</template>
                         </span>
-                        <span class="sub-cell" style="width: 90px; font-weight: 500;">
-                          <span v-if="item.method === 'driver'">{{ item.target }}</span>
-                          <span v-else style="color: #999;">--</span>
+                      </div>
+                      <div class="leg-row leg-row-head">
+                        <span>车辆 / 司机</span>
+                        <span>角色</span>
+                        <span>承运数量</span>
+                        <span>状态</span>
+                        <span>接单时间</span>
+                        <span>完成时间</span>
+                      </div>
+                      <div v-for="(leg, idx) in legRows(row)" :key="idx" class="leg-row">
+                        <span class="leg-name">{{ leg.vehicle || leg.target }}</span>
+                        <span class="leg-role">{{ leg.methodLabel }}</span>
+                        <span class="leg-qty">{{ leg.carryQuantity }}</span>
+                        <span class="leg-status">
+                          <el-tag size="small" :type="statusTagType(leg.status)" effect="light">{{ leg.status }}</el-tag>
+                          <span v-if="leg.status === '待重新指派' && leg.rejectReason" class="leg-reject">
+                            {{ leg.rejectReason }}
+                          </span>
                         </span>
-                        <span class="sub-cell" style="width: 90px; font-weight: 500;">
-                          {{ item.carryQuantity }}
-                        </span>
-                        <span class="sub-cell" style="width: 110px;">--</span>
-                        <span class="sub-cell" style="width: 90px;">--</span>
-                        <span class="sub-cell" style="width: 140px;">--</span>
-                        <span class="sub-cell" style="width: 80px;">--</span>
+                        <span class="leg-time">{{ leg.acceptTime ? new Date(leg.acceptTime).toLocaleString() : '--' }}</span>
+                        <span class="leg-time">{{ leg.finishTime ? new Date(leg.finishTime).toLocaleString() : '--' }}</span>
                       </div>
                     </div>
                   </div>
@@ -200,7 +204,12 @@
                   :min-width="col.minWidth" :align="col.align" :fixed="col.fixed || false" show-overflow-tooltip>
                   <template #default="{ row }">
                     <div class="waybill-no-cell">
-                      <div class="waybill-no">{{ row.waybill_no }}</div>
+                      <div class="waybill-no">
+                        {{ row.waybill_no }}
+                        <!-- ⭐ 常驻任务：高辨识度徽标，并在整行左侧加色条 -->
+                        <span v-if="row.is_recurring" class="recurring-badge"
+                          :title="recurringTooltip(row)">常驻</span>
+                      </div>
                       <div class="task-name">{{ row.task_name || '未命名任务' }}</div>
                     </div>
                   </template>
@@ -209,7 +218,19 @@
                 <el-table-column v-else-if="col.prop === 'status'" prop="status" :label="col.label"
                   :min-width="col.minWidth" :align="col.align" :fixed="col.fixed || false">
                   <template #default="{ row }">
-                    <el-tag :type="statusTagType(row.status)" size="small" effect="light">{{ row.status }}</el-tag>
+                    <el-tooltip
+                      v-if="hasRejectInfo(row)"
+                      :content="rejectTooltipText(row)"
+                      placement="right"
+                      effect="dark"
+                      :show-after="200"
+                    >
+                      <span class="status-cell">
+                        <el-tag :type="statusTagType(displayStatus(row))" size="small" effect="light">{{ displayStatus(row) }}</el-tag>
+                        <span class="reject-reason">拒单：{{ row.reject_reason }}</span>
+                      </span>
+                    </el-tooltip>
+                    <el-tag v-else :type="statusTagType(displayStatus(row))" size="small" effect="light">{{ displayStatus(row) }}</el-tag>
                   </template>
                 </el-table-column>
 
@@ -242,7 +263,9 @@
                 <el-table-column v-else-if="col.prop === 'vehicle'" :label="col.label"
                   :min-width="col.minWidth" :align="col.align" :fixed="col.fixed || false" show-overflow-tooltip>
                   <template #default="{ row }">
-                    <span v-if="getVehicleList(row.assignments).length === 1">{{ getVehicleList(row.assignments)[0] }}</span>
+                    <!-- ⭐ 子母车：把每一趟的车列出来（≤2 辆显示全名） -->
+                    <span v-if="isMultiLegRow(row)">{{ legVehicleText(row) || '--' }}</span>
+                    <span v-else-if="getVehicleList(row.assignments).length === 1">{{ getVehicleList(row.assignments)[0] }}</span>
                     <span v-else-if="getVehicleList(row.assignments).length > 1" class="count-badge">
                       {{ getVehicleList(row.assignments).length }} 辆
                     </span>
@@ -253,7 +276,9 @@
                 <el-table-column v-else-if="col.prop === 'driver'" :label="col.label"
                   :min-width="col.minWidth" :align="col.align" :fixed="col.fixed || false" show-overflow-tooltip>
                   <template #default="{ row }">
-                    <span v-if="getDriverList(row.assignments).length === 1">{{ getDriverList(row.assignments)[0] }}</span>
+                    <!-- ⭐ 子母车：把每一趟的司机列出来（≤2 人显示全名） -->
+                    <span v-if="isMultiLegRow(row)">{{ legDriverText(row) || '--' }}</span>
+                    <span v-else-if="getDriverList(row.assignments).length === 1">{{ getDriverList(row.assignments)[0] }}</span>
                     <span v-else-if="getDriverList(row.assignments).length > 1" class="count-badge">
                       {{ getDriverList(row.assignments).length }} 人
                     </span>
@@ -280,9 +305,18 @@
                       <el-button type="text" class="action-btn action-view" @click="handleView(row)">
                         <el-icon><View /></el-icon> 查看
                       </el-button>
-                      <el-button type="text" class="action-btn action-delete" @click="handleDelete(row)">
-                        <el-icon><Delete /></el-icon> 删除
-                      </el-button>
+                      <!-- ⭐ 删除闸门：只有 待接单/已完成/已取消/待重新指派 能删，
+                           其余状态（执行中的在途单）禁用并说明原因，避免误删导致在途数据断链 -->
+                      <el-tooltip v-if="canDelete(row)" content="删除运单" placement="top" :show-after="300">
+                        <el-button type="text" class="action-btn action-delete" @click="handleDelete(row)">
+                          <el-icon><Delete /></el-icon> 删除
+                        </el-button>
+                      </el-tooltip>
+                      <el-tooltip v-else :content="deleteBlockReason(row)" placement="top" :show-after="200">
+                        <span class="action-btn action-delete-off">
+                          <el-icon><Delete /></el-icon> 删除
+                        </span>
+                      </el-tooltip>
                     </div>
                   </template>
                 </el-table-column>
@@ -396,10 +430,12 @@ const loadMyOrgInfo = async () => {
 const stats = ref([
   { label: '全部', count: 0, active: true },
   { label: '待接单', count: 0, active: false },
+  { label: '待重新指派', count: 0, active: false },
   { label: '待装车', count: 0, active: false },
   { label: '装车中', count: 0, active: false },
   { label: '装车完成', count: 0, active: false },
   { label: '已发车', count: 0, active: false },
+  { label: '已到达', count: 0, active: false },
   { label: '已完成', count: 0, active: false },
   { label: '已取消', count: 0, active: false },
 ])
@@ -551,8 +587,166 @@ const getTotalCarryQuantity = (assignments) => {
 }
 
 const getRowClassName = ({ row }) => {
+  // ⭐ 常驻任务优先高亮：与普通运单在整行层面拉开区分度
+  if (row && row.is_recurring) return 'is-recurring'
   if (getTotalItems(row.assignments) > 1) return 'has-multiple-assign'
   return ''
+}
+
+/* ⭐ 常驻任务提示文案 */
+const recurringTooltip = (row) => {
+  if (!row || !row.is_recurring) return ''
+  const lines = ['常驻任务：' + (row.recurring_group_no || '--')]
+  if (row.recurring_type === 'count') {
+    lines.push('常驻方式：按接单次数（上限 ' + (Number(row.recurring_max_count) || 0) + ' 次）')
+  } else {
+    lines.push('常驻方式：按常驻时间')
+    lines.push('生效时间：' + (row.recurring_start_time || '--') + ' ~ ' + (row.recurring_end_time || '--'))
+  }
+  lines.push('常驻状态：' + (row.recurring_status || '生效中'))
+  lines.push('任务状态：' + displayStatus(row))
+  return lines.join('\n')
+}
+
+/* ============================================================
+   ⭐ 常驻任务的「任务级」物流状态（用户 2026-10-17 拍板）
+   ------------------------------------------------------------
+   一个常驻任务 = 一个 recurring_group_no = 组下若干趟运输记录。
+   列表里每条常驻行原本显示的是**它自己那一条趟次**的状态，于是组主那条会一直挂着
+   「待接单」—— 其实任务早就被司机接走、在跑了。
+   口径：任务下**任意一趟被接过**（有接单时间 / 已进入执行）→ 任务就是「执行中」；
+        已暂停 / 已结束优先显示。
+   ============================================================ */
+const REC_ACCEPTED_STATUSES = ['待装车', '装车中', '装车完成', '已发车', '已到达', '已完成']
+/* { recurring_group_no: { status, accepted, tripCount } } */
+const recTaskMap = ref({})
+
+const loadRecurringTaskStatus = async (rows) => {
+  const groups = [
+    ...new Set(
+      (rows || [])
+        .filter((r) => r && r.is_recurring && r.recurring_group_no)
+        .map((r) => r.recurring_group_no)
+    ),
+  ]
+  if (!groups.length) {
+    recTaskMap.value = {}
+    return
+  }
+  try {
+    let q = supabase
+      .from('waybills')
+      .select('recurring_group_no,status,accept_time,recurring_status')
+      .in('recurring_group_no', groups)
+    /* ⚠️ 这里只做 owner_account 隔离，**不要**叠 applyIsolation 的「机构指派」二次过滤：
+       判定「这个任务有没有被接过」必须看到组内**全部**趟次，
+       被机构条件筛掉几条会误判成「还没人接」。 */
+    if (!isAdmin && myAccount) q = q.eq('owner_account', myAccount)
+    const { data, error } = await q
+    if (error) throw error
+    const map = {}
+    for (const g of groups) {
+      const trips = (data || []).filter((t) => String(t.recurring_group_no) === String(g))
+      const withStatus = trips.find((t) => String(t.recurring_status || '').trim())
+      map[g] = {
+        status: String((withStatus && withStatus.recurring_status) || '生效中').trim() || '生效中',
+        accepted: trips.some(
+          (t) =>
+            !!t.accept_time ||
+            REC_ACCEPTED_STATUSES.includes(String(t.status || '').trim())
+        ),
+        tripCount: trips.length,
+      }
+    }
+    recTaskMap.value = map
+  } catch (e) {
+    console.warn('常驻任务状态加载失败：', e)
+    recTaskMap.value = {}
+  }
+}
+
+/* ============================================================
+   ⭐ 子母车：一个任务派给多个司机 / 车辆，每人跑自己那一趟
+   ------------------------------------------------------------
+   · 每个人的状态与时间记在他**自己的指派项**上
+     （`leg_status` / `leg_accept_time` / `leg_vehicle` / `leg_finish_time` …）；
+   · 列表**一个任务一行**，状态列显示聚合：待接单 / 执行中 1/2 / 已完成 2/2；
+   · 展开行里能看到每一趟的承运数量、状态、接单与完成时间。
+   ⚠️ 这套判断与小程序三个云函数（waybill-list / waybill-action / waybill-detail）
+      是同一口径，改一处要一起改。
+   ============================================================ */
+const LEG_TODO = '待接单'
+const LEG_RUNNING = ['待装车', '装车中', '装车完成', '已发车', '已到达']
+
+const legItems = (row) =>
+  (row && row.assignments ? row.assignments : []).flatMap((a) =>
+    (a.items || []).map((it) => ({ method: a.method, item: it }))
+  )
+/* 是不是「一单多司机/多车」：非常驻、没有车队指派、driver/vehicle 条目 ≥2 */
+const isMultiLegRow = (row) => {
+  if (!row || row.is_recurring) return false
+  const items = legItems(row)
+  if (items.length < 2) return false
+  return items.every((x) => x.method === 'driver' || x.method === 'vehicle')
+}
+const legRows = (row) =>
+  legItems(row).map(({ method, item }) => ({
+    method,
+    methodLabel: method === 'vehicle' ? '车辆' : method === 'driver' ? '司机' : '车队',
+    target: String(item.target || '').trim() || '未指定',
+    carryQuantity: Number(item.carryQuantity || 0),
+    carryFreight: Number(item.carryFreight || 0),
+    status: String(item.leg_status || '').trim() || LEG_TODO,
+    vehicle:
+      String(item.leg_vehicle || '').trim() ||
+      (method === 'vehicle' ? String(item.target || '') : ''),
+    acceptTime: item.leg_accept_time || null,
+    finishTime: item.leg_finish_time || null,
+    rejectReason: item.leg_reject_reason || '',
+  }))
+const legSummary = (row) => {
+  const legs = legRows(row)
+  return {
+    legs,
+    total: legs.length,
+    done: legs.filter((l) => l.status === '已完成').length,
+    running: legs.filter((l) => LEG_RUNNING.includes(l.status)).length,
+    rejected: legs.filter((l) => l.status === '待重新指派').length,
+  }
+}
+/* 承运车辆 / 承运司机列：子母车直接把每趟的车、人列出来（≤2 个显示全名） */
+const legVehicleText = (row) => {
+  const v = legRows(row).map((l) => l.vehicle).filter(Boolean)
+  if (!v.length) return ''
+  return v.length <= 2 ? v.join('、') : `${v.length} 辆`
+}
+const legDriverText = (row) => {
+  const legs = legRows(row)
+  const d = legs.filter((l) => l.method === 'driver').map((l) => l.target).filter(Boolean)
+  if (d.length) return d.length <= 2 ? d.join('、') : `${d.length} 人`
+  return legVehicleText(row)
+}
+
+/* 列表「物流状态」列实际显示什么 */
+const displayStatus = (row) => {
+  if (!row) return ''
+  /* ⭐ 子母车：按趟聚合（执行中 1/2 = 2 趟里有 1 趟已完成） */
+  if (isMultiLegRow(row)) {
+    const s = legSummary(row)
+    if (s.done === s.total) return `已完成 ${s.done}/${s.total}`
+    if (s.done > 0 || s.running > 0) return `执行中 ${s.done}/${s.total}`
+    return row.status || '待接单'
+  }
+  if (!row.is_recurring) return row.status
+  const t = recTaskMap.value[row.recurring_group_no]
+  if (t) {
+    if (t.status === '已暂停') return '已暂停'
+    if (t.status === '已结束') return '已结束'
+    /* 还没开始跑的那条（组主 / 待重新指派）显示任务级状态：
+       任务已经有人接了就不是「待接单」了 */
+    if (t.accepted && (row.status === '待接单' || row.status === '待重新指派')) return '执行中'
+  }
+  return row.status
 }
 
 const handleExpandChange = (row, expandedRows) => { /* 保留 */ }
@@ -605,6 +799,8 @@ const fetchData = async () => {
 
     tableData.value = data || []
     total.value = count || 0
+    /* ⭐ 常驻行的「物流状态」按**任务**算（有人接过就是执行中），见 loadRecurringTaskStatus */
+    await loadRecurringTaskStatus(data || [])
     updateStats()
   } catch (err) {
     console.error('加载数据失败', err)
@@ -628,7 +824,7 @@ const updateStats = async () => {
 
     const { count: all } = await buildBase()
 
-    const statuses = ['待接单', '待装车', '装车中', '装车完成', '已发车', '已完成', '已取消']
+    const statuses = ['待接单', '待重新指派', '待装车', '装车中', '装车完成', '已发车', '已到达', '已完成', '已取消']
     const counts = {}
     for (const s of statuses) {
       const { count } = await buildBase().eq('status', s)
@@ -636,13 +832,11 @@ const updateStats = async () => {
     }
 
     stats.value[0].count = all || 0
-    stats.value[1].count = counts['待接单'] || 0
-    stats.value[2].count = counts['待装车'] || 0
-    stats.value[3].count = counts['装车中'] || 0
-    stats.value[4].count = counts['装车完成'] || 0
-    stats.value[5].count = counts['已发车'] || 0
-    stats.value[6].count = counts['已完成'] || 0
-    stats.value[7].count = counts['已取消'] || 0
+    // ⭐ 按 label 对齐而不是下标，避免以后增删状态时错位
+    stats.value.forEach((item, i) => {
+      if (i === 0) return
+      item.count = counts[item.label] || 0
+    })
   } catch (e) {
     console.warn('更新统计失败', e)
   }
@@ -652,11 +846,34 @@ const updateStats = async () => {
 // 状态标签颜色
 // ============================================================
 const statusTagType = (status) => {
+  const s = String(status || '').trim()
   const map = {
-    '待接单': 'info', '待装车': 'warning', '装车中': 'primary',
-    '装车完成': 'success', '已发车': 'success', '已完成': 'success', '已取消': 'danger',
+    '待接单': 'info', '待重新指派': 'danger', '待装车': 'warning', '装车中': 'primary',
+    '装车完成': 'success', '已发车': 'success', '已到达': 'success', '已完成': 'success', '已取消': 'danger',
+    /* ⭐ 常驻任务的任务级状态（见 displayStatus） */
+    '执行中': 'primary', '已暂停': 'info', '已结束': 'info',
   }
-  return map[status] || 'info'
+  if (map[s]) return map[s]
+  /* ⭐ 子母车的聚合状态带计数后缀（「执行中 1/2」「已完成 2/2」） */
+  if (s.indexOf('执行中') === 0) return 'primary'
+  if (s.indexOf('已完成') === 0) return 'success'
+  return 'info'
+}
+
+/* ⭐ 拒单提示：仅在「待重新指派」且有拒单记录时展示 */
+const hasRejectInfo = (row) =>
+  row && row.status === '待重新指派' && !!String(row.reject_reason || '').trim()
+
+const rejectTooltipText = (row) => {
+  const lines = ['拒单原因：' + (row.reject_reason || '--')]
+  if (row.reject_note) lines.push('补充说明：' + row.reject_note)
+  if (row.reject_by) lines.push('拒单司机：' + row.reject_by)
+  if (row.reject_time) {
+    const t = new Date(row.reject_time)
+    lines.push('拒单时间：' + (isNaN(t.getTime()) ? row.reject_time : t.toLocaleString()))
+  }
+  if (row.reject_count) lines.push('累计被拒：' + row.reject_count + ' 次')
+  return lines.join('\n')
 }
 
 // ============================================================
@@ -687,6 +904,9 @@ const handleExport = () => {
     '承运车辆': r.vehicle || '', '承运司机': r.driver || '',
     '承运数量': r.carry_quantity || 0, '接单编号': r.receive_no || '',
     '运单来源': r.source || '', '创建时间': r.create_time || '',
+    '拒单原因': r.reject_reason || '', '拒单补充说明': r.reject_note || '',
+    '拒单司机': r.reject_by || '', '拒单时间': r.reject_time || '',
+    '累计被拒': r.reject_count || 0,
   }))
   const headers = Object.keys(rows[0])
   const csv = [
@@ -719,7 +939,29 @@ const handleView = (row) => {
   router.push({ path: '/waybill/detail', query: { waybill_no: row.waybill_no } })
 }
 
+/* ⭐ 删除闸门（已拍板）
+   只有下面 4 个状态允许删除，其余状态一律不给删：
+     待接单   —— 还没派出去的，删了没有后遗症
+     已完成   —— 运输闭环，允许清理
+     已取消   —— 本来就是作废单
+     待重新指派 —— 司机已拒单，等同作废
+   ⚠️ 执行中的状态（待装车/装车中/装车完成/已发车/已到达）不能删：
+      它们是「在途」记录，删掉会让小程序端的运单、司机占用闸门、
+      围栏打卡与费用上报全部对不上号。 */
+const DELETE_ALLOWED_STATUS = ['待接单', '已完成', '已取消', '待重新指派']
+const canDelete = (row) =>
+  DELETE_ALLOWED_STATUS.includes(String((row && row.status) || '').trim())
+const deleteBlockReason = (row) => {
+  const s = String((row && row.status) || '').trim() || '未知'
+  return `「${s}」不能删除，只有 ${DELETE_ALLOWED_STATUS.join(' / ')} 状态下才允许删除`
+}
+
 const handleDelete = async (row) => {
+  /* 模板上已经禁用，这里再守一道：防止别处复用 handleDelete 绕过闸门 */
+  if (!canDelete(row)) {
+    ElMessage.warning(deleteBlockReason(row))
+    return
+  }
   try {
     await ElMessageBox.confirm('确定删除运单 ' + row.waybill_no + ' 吗？', '提示', { type: 'warning' })
     let q = supabase.from('waybills').delete().eq('id', row.id)
@@ -1065,6 +1307,27 @@ onBeforeUnmount(() => {
   text-align: left;
   padding-left: 8px;
 }
+
+/* ⭐ 状态 cell：待重新指派时附带拒单原因 */
+.status-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: help;
+}
+.reject-reason {
+  font-size: 11px;
+  color: #A32D2D;
+  background: #FCEBEB;
+  border: 1px solid #F7C1C1;
+  border-radius: 4px;
+  padding: 1px 6px;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .waybill-no {
   font-weight: 700;
   color: #0F172A;
@@ -1111,6 +1374,72 @@ onBeforeUnmount(() => {
   padding: 8px 0;
   background: #F8FAFC;
 }
+/* ⭐ 一单多司机/多车（分车承运）：展开明细**自带表头**，和外层表格的列解耦
+   ⚠️ 别再用「固定像素的假列」去对齐外层表头：外层是 min-width 自适应列宽，凑不齐。 */
+.leg-table {
+  margin: 0 12px 4px 46px;
+  border: 1px solid #e8edf3;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+.leg-table-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #fdf2f4;
+}
+.leg-table-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #c8102e;
+}
+.leg-table-sub {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+.leg-row {
+  display: grid;
+  grid-template-columns: 180px 70px 90px 110px 160px 160px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #475569;
+  border-top: 1px solid #f1f5f9;
+}
+.leg-row-head {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+.leg-name {
+  font-weight: 600;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.leg-qty {
+  font-weight: 700;
+  color: #0f172a;
+}
+.leg-time {
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+.leg-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.leg-reject {
+  color: #a32d2d;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .sub-row-wrapper {
   padding-left: 46px;
   overflow: hidden;
@@ -1145,6 +1474,43 @@ onBeforeUnmount(() => {
 }
 :deep(.el-table__row:not(.has-multiple-assign) .el-table__expand-icon) {
   visibility: hidden;
+}
+
+/* ============================================================
+   ⭐ 常驻任务高亮：左侧红色色条 + 淡红底 + 徽标，与普通运单强区分
+   ============================================================ */
+:deep(.el-table__row.is-recurring) {
+  background: #FFFBF3;
+}
+:deep(.el-table__row.is-recurring td:first-child) {
+  position: relative;
+}
+:deep(.el-table__row.is-recurring td:first-child::before) {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #f5a623, #e08a00);
+  
+}
+:deep(.el-table__row.is-recurring:hover > td.el-table__cell) {
+  background: #FFF6E5 !important;
+}
+.recurring-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #f5a623, #e08a00);
+  border-radius: 4px;
+  vertical-align: middle;
+  cursor: help;
+  box-shadow: 0 1px 4px rgba(224, 138, 0, 0.35);
 }
 
 /* 操作按钮 */
@@ -1184,6 +1550,12 @@ onBeforeUnmount(() => {
 .action-view:hover { color: #1D4ED8; background: #EFF6FF; }
 .action-delete { color: #c8102e; }
 .action-delete:hover { color: #7F1D1D; background: #FEF2F2; }
+/* ⭐ 不允许删除的状态：灰掉 + 禁用光标，鼠标悬停出 tooltip 说明原因 */
+.action-delete-off {
+  color: #C0C4CC;
+  cursor: not-allowed;
+}
+.action-delete-off:hover { color: #C0C4CC; background: transparent; }
 
 /* 空状态 */
 .empty-state {

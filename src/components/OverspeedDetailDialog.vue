@@ -779,7 +779,8 @@ watch(() => props.modelValue, async (val) => {
 </style>
 
 <style>
-.overspeed-detail-dialog .el-dialog {
+/* ⭐ el-dialog 会把 class 合并到 .el-dialog 自身，必须用同元素选择器 */
+.overspeed-detail-dialog.el-dialog {
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);

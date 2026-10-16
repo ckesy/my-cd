@@ -1,0 +1,1454 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>分车承运物流状态 · 布局预览</title><style>
+/* ===== 页面容器 =====
+   ⚠️ 这里**不要**再写 height:100% + overflow-y:auto。
+   外层 Dashboard 的 .main-content 已经是滚动容器；两层套在一起时，
+   内层高度被锁死在「一屏」，内容一变高（例如多了「司机已拒单」提示条）
+   就再也拖不动了 —— 交给外层统一滚。 */
+.waybill-detail {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+  padding: 16px 20px 40px;
+  box-sizing: border-box;
+  background: #f8fafc;
+}
+
+/* ===== 页面头部 ===== */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 14px 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.page-header h2 {
+  margin: 0;
+  color: #0F172A;
+  font-weight: 800;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.3px;
+}
+.page-header h2::before {
+  content: '';
+  width: 4px;
+  height: 18px;
+  background: linear-gradient(180deg, #c8102e, #a00d24);
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(200, 16, 46, 0.35);
+}
+
+/* ===== ⭐ 拒单信息提示块 ===== */
+.reject-alert {
+  margin: 14px 0 4px 0;
+  background: #FCEBEB;
+  border: 1px solid #F7C1C1;
+  border-left: 4px solid #A32D2D;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.reject-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #791F1F;
+  margin-bottom: 10px;
+}
+.reject-alert-icon {
+  color: #A32D2D;
+  font-size: 15px;
+}
+.reject-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: #A32D2D;
+  background: #F7C1C1;
+  border-radius: 999px;
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+.reject-alert-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.reject-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.reject-key {
+  flex-shrink: 0;
+  width: 60px;
+  color: #94A3B8;
+}
+.reject-val {
+  color: #1E293B;
+  font-weight: 500;
+  word-break: break-all;
+}
+.reject-mono {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  color: #475569;
+}
+
+/* ===== 分区标题 ===== */
+.section-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 16px 0 12px 0;
+  padding: 10px 14px;
+  background: linear-gradient(90deg, #FEF2F2 0%, #ffffff 100%);
+  border-radius: 8px;
+  border-left: 4px solid #c8102e;
+  line-height: 1.2;
+  text-align: left;
+  box-shadow: 0 2px 8px rgba(200, 16, 46, 0.05);
+  letter-spacing: 0.3px;
+}
+
+/* ===== 打卡行 ===== */
+.checkin-row {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+.checkin-row .el-form-item {
+  margin-bottom: 0;
+}
+.hint-text {
+  font-size: 12px;
+  color: #94A3B8;
+  margin-left: 12px;
+  font-weight: 500;
+}
+
+/* ===== ⭐ 运输节点与打卡管控 ===== */
+.checkin-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 5px 0;
+}
+.checkin-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+.checkin-off-tip {
+  margin-top: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #A32D2D;
+  background: #FCEBEB;
+  border-left: 3px solid #A32D2D;
+  border-radius: 6px;
+}
+.checkin-value {
+  font-size: 12px;
+  color: #475569;
+  font-family: 'Courier New', monospace;
+}
+
+/* ===== ⭐ 实际进度卡（普通运单） ===== */
+.lg-progress-card {
+  padding: 12px 18px 10px 18px;
+  margin-bottom: 10px;
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+.co-tip {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #A32D2D;
+  background: #FEF2F2;
+  border-left: 3px solid #c8102e;
+  border-radius: 6px;
+}
+
+/* ===== 任务卡片 ===== */
+.task-card {
+  position: relative;
+  border-radius: 12px;
+  padding: 14px 18px 10px 18px;
+  margin-bottom: 16px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+.task-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #c8102e, #a00d24);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.task-card:hover {
+  box-shadow: 0 8px 24px rgba(200, 16, 46, 0.1);
+  transform: translateY(-2px);
+  border-color: #FCA5A5;
+}
+.task-card:hover::before {
+  opacity: 1;
+}
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.task-name-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+.task-label {
+  font-weight: 800;
+  font-size: 14px;
+  white-space: nowrap;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+  color: #fff;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.25);
+  letter-spacing: 0.3px;
+}
+.task-name-display {
+  font-size: 14px;
+  color: #0F172A;
+  font-weight: 600;
+}
+
+/* ===== 起/终行 ===== */
+.row-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.row-wrapper:last-of-type {
+  margin-bottom: 0;
+}
+.badge-circle {
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
+  border-radius: 50%;
+  background-color: #c8102e;
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+  text-align: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.35);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.badge-circle:hover {
+  transform: scale(1.1) rotate(-6deg);
+}
+.field-group {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.field-item {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.field-label {
+  white-space: nowrap;
+  font-size: 13px;
+  color: #334155;
+  font-weight: 600;
+}
+.required-star {
+  color: #c8102e;
+  font-weight: 700;
+  margin-right: 2px;
+}
+.field-item .el-select,
+.field-item .el-date-picker,
+.field-item .el-input {
+  flex: 1;
+  min-width: 90px;
+}
+
+/* ===== 货物信息 & 指派信息共用 ===== */
+.info-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+  margin: 0 0 10px 0;
+  align-items: center;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+.info-label {
+  color: #475569;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.info-value {
+  font-weight: 800;
+  color: #c8102e;
+  font-size: 16px;
+  font-family: 'Courier New', monospace;
+}
+
+/* ===== 货物行 ===== */
+.cargo-row {
+  border-radius: 10px;
+  padding: 8px 16px;
+  margin-bottom: 8px;
+  border: 1px solid #E2E8F0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.cargo-row:hover {
+  box-shadow: 0 6px 20px rgba(200, 16, 46, 0.08);
+  border-color: #FCA5A5;
+}
+.cargo-row .el-row {
+  flex-wrap: nowrap;
+}
+.cargo-row .el-form-item {
+  margin-bottom: 0;
+}
+.cargo-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+}
+
+/* ===== 指派卡片 ===== */
+.assign-card {
+  border-radius: 10px;
+  padding: 8px 16px;
+  margin-bottom: 8px;
+  border: 1px solid #E2E8F0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.assign-card:hover {
+  box-shadow: 0 6px 20px rgba(200, 16, 46, 0.08);
+  border-color: #FCA5A5;
+}
+.assign-card .el-row {
+  flex-wrap: nowrap;
+}
+.assign-card .el-form-item {
+  margin-bottom: 0;
+}
+.assign-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+}
+.assign-items {
+  padding-left: 0;
+}
+.assign-item {
+  margin-bottom: 8px;
+}
+.assign-item-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+}
+
+/* ===== 底部按钮（吸底） ===== */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 14px 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
+  flex-wrap: wrap;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 768px) {
+  .field-group {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .field-item {
+    min-width: unset;
+  }
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .form-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .hint-text {
+    display: block;
+    margin-left: 0;
+    margin-top: 4px;
+  }
+  .task-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .cargo-row .el-row,
+  .assign-card .el-row,
+  .assign-item .el-row {
+    flex-wrap: wrap;
+  }
+  .cargo-row .el-col,
+  .assign-card .el-col,
+  .assign-item .el-col {
+    margin-bottom: 6px;
+  }
+}
+
+/* ============================================================
+   ⭐ 标签页切换
+   ============================================================ */
+.detail-tabs {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 0 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+.detail-tab {
+  position: relative;
+  padding: 14px 2px 13px 2px;
+  margin-right: 24px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #94A3B8;
+  cursor: pointer;
+  transition: color 0.2s;
+  font-family: inherit;
+}
+.detail-tab:hover { color: #475569; }
+.detail-tab.active { color: #0F172A; }
+.detail-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  height: 2px;
+  border-radius: 1px;
+  background: #c8102e;
+}
+.detail-tab-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 5px;
+  border-radius: 50%;
+  background: #c8102e;
+  vertical-align: middle;
+}
+.detail-tabs-hint {
+  margin-left: auto;
+  font-size: 12px;
+  color: #94A3B8;
+  font-family: 'Courier New', monospace;
+}
+
+/* ============================================================
+   ⭐ 物流状态标签页（方案 D）
+   ============================================================ */
+.lg-panel { padding-bottom: 8px; }
+
+/* ---- 一级筛选 ---- */
+.lg-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+.lg-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 13px;
+  border: 1px solid transparent;
+  background: #F1F5F9;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.lg-pill:hover { background: #E2E8F0; }
+.lg-pill.active { background: #FCEBEB; color: #A32D2D; border-color: #E24B4A; }
+.lg-pill em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: inherit;
+  opacity: 0.85;
+}
+/* ===== ⭐ 刷新工具条（常驻与普通共用） ===== */
+.lg-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.lg-updated {
+  font-size: 12px;
+  color: #94A3B8;
+  font-family: 'Courier New', monospace;
+}
+.lg-refresh-icon {
+  margin-right: 4px;
+  font-size: 13px;
+  vertical-align: -2px;
+}
+
+/* ---- 已接单二级筛选 ---- */
+.lg-sub-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  margin-bottom: 10px;
+  background: #ffffff;
+  border-radius: 12px;
+  border-left: 3px solid #c8102e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+.lg-sub-branch { font-size: 12px; font-weight: 700; color: #A32D2D; }
+.lg-sub-connector { width: 14px; height: 1px; background: #E2E8F0; }
+.lg-seg {
+  height: 24px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: #F8FAFC;
+  color: #64748B;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.lg-seg:hover { background: #F1F5F9; }
+.lg-seg.active {
+  background: #ffffff;
+  border-color: #E2E8F0;
+  color: #0F172A;
+  font-weight: 600;
+}
+.lg-seg em { font-style: normal; margin-left: 4px; font-size: 11px; color: #94A3B8; }
+
+/* ---- 运输记录卡片 ---- */
+.lg-records {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 10px;
+}
+.lg-record {
+  position: relative;
+  flex: 0 0 auto;
+  width: 220px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+.lg-record:hover {
+  border-color: #FCA5A5;
+  box-shadow: 0 6px 18px rgba(200, 16, 46, 0.08);
+}
+.lg-record.active {
+  border-color: #c8102e;
+  box-shadow: 0 6px 18px rgba(200, 16, 46, 0.14);
+}
+.lg-record-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.lg-record-no {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F172A;
+}
+.lg-status-tag {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9px;
+  white-space: nowrap;
+}
+.lg-record-route {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: #1E293B;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lg-record-route i { font-style: normal; color: #c8102e; margin: 0 2px; }
+.lg-record-meta { margin-top: 4px; font-size: 11.5px; color: #94A3B8; }
+.lg-record-flag {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  background: #f5a623;
+  border-radius: 0 10px 0 8px;
+}
+.lg-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 0;
+  margin-bottom: 10px;
+  background: #ffffff;
+  border: 1px dashed #E2E8F0;
+  border-radius: 12px;
+}
+.lg-empty-text { font-size: 13px; color: #94A3B8; }
+
+/* ---- 地图 + 时间轴 ---- */
+.lg-main { display: flex; gap: 12px; align-items: stretch; }
+.lg-map-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 520px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+}
+.lg-map { width: 100%; height: 100%; }
+.lg-map-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 40px;
+  text-align: center;
+  font-size: 13px;
+  color: #64748B;
+  background: rgba(248, 250, 252, 0.93);
+  z-index: 5;
+}
+.lg-vehicle-card {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  min-width: 220px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  z-index: 6;
+}
+.lg-vehicle-card.is-empty {
+  min-width: 0;
+  max-width: 78%;
+  background: rgba(248, 250, 252, 0.97);
+}
+.lg-vc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.lg-vc-plate {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+}
+.lg-vc-line { margin-top: 4px; font-size: 12px; color: #475569; }
+.lg-vc-mono {
+  font-family: 'Courier New', monospace;
+  font-size: 11.5px;
+  color: #94A3B8;
+}
+.lg-legend {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 12px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 11.5px;
+  color: #64748B;
+  z-index: 6;
+}
+.lg-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.lg-lg-dot { width: 8px; height: 8px; border-radius: 50%; }
+.lg-lg-dot.start { background: #0F6E56; }
+.lg-lg-dot.end { background: #c8102e; }
+.lg-lg-dot.car { background: #C8102E; box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.18); }
+.lg-lg-line {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  background: #c8102e;
+}
+
+/* ---- 行驶轨迹信息条 ---- */
+.lg-track-info {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 11.5px;
+  color: #475569;
+  z-index: 6;
+}
+.lg-ti-label { font-weight: 700; color: #0F172A; }
+.lg-ti-mono { font-family: 'Courier New', monospace; color: #64748B; }
+
+/* ---- 节点时间轴 ---- */
+.lg-timeline {
+  flex: 0 0 306px;
+  display: flex;
+  flex-direction: column;
+  height: 520px;
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.lg-tl-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #F1F5F9;
+}
+.lg-tl-title { font-size: 13px; font-weight: 700; color: #0F172A; }
+.lg-tl-body { flex: 1; overflow-y: auto; padding: 12px 16px 6px 16px; }
+.lg-tl-foot {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  background: #F8FAFC;
+  border-top: 1px solid #F1F5F9;
+}
+.lg-foot-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.9;
+  color: #94A3B8;
+}
+.lg-foot-line b { color: #334155; font-weight: 600; }
+.lg-mono { font-family: 'Courier New', monospace; font-size: 11.5px; }
+
+/* ---- 已接单分组标题 ---- */
+.lg-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 8px 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #F8FAFC;
+  border-left: 3px solid #CBD5E1;
+}
+.lg-group.is-active { background: #FCEBEB; border-left-color: #c8102e; }
+.lg-group.is-done { background: #F1F5F9; border-left-color: #0F6E56; }
+.lg-group-label { font-size: 12.5px; font-weight: 700; color: #0F172A; }
+.lg-group-time { font-size: 11.5px; color: #64748B; }
+.lg-group-operator { margin-left: auto; font-size: 11.5px; color: #94A3B8; }
+
+/* ---- 节点 ---- */
+.lg-node {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  padding: 6px 0 10px 0;
+}
+.lg-node.is-sub {
+  margin-left: 5px;
+  padding-left: 14px;
+  border-left: 1px dashed #E2E8F0;
+}
+.lg-node-dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #CBD5E1;
+}
+.lg-node.is-done .lg-node-dot { background: #0F6E56; border-color: #0F6E56; }
+.lg-node.is-active .lg-node-dot {
+  background: #c8102e;
+  border-color: #c8102e;
+  box-shadow: 0 0 0 4px rgba(200, 16, 46, 0.14);
+}
+.lg-node.is-cancelled .lg-node-dot { background: #94A3B8; border-color: #94A3B8; }
+.lg-node-body { flex: 1; min-width: 0; }
+.lg-node-label { display: flex; align-items: center; gap: 6px; }
+.lg-node-name { font-size: 12.5px; font-weight: 600; color: #0F172A; }
+.lg-node.is-pending .lg-node-name { color: #94A3B8; font-weight: 500; }
+.lg-node-badge {
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 8px;
+  background: #FCEBEB;
+  color: #A32D2D;
+}
+.lg-node-badge.is-done { background: #E1F5EE; color: #0F6E56; }
+.lg-node-time {
+  margin-top: 3px;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: #94A3B8;
+}
+.lg-node-time b {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #475569;
+}
+.lg-node-sep { margin: 0 5px; }
+.lg-running { color: #c8102e !important; }
+.lg-pending { color: #CBD5E1 !important; }
+.lg-node-remark { margin-top: 2px; font-size: 11px; color: #B4B2A9; }
+
+.lg-reassign {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  background: #FCEBEB;
+  border: 1px solid #F7C1C1;
+  border-radius: 8px;
+}
+.lg-reassign-title { font-size: 12px; font-weight: 700; color: #791F1F; }
+.lg-reassign-line { margin-top: 3px; font-size: 11.5px; color: #A32D2D; }
+
+/* ---- 地图标记（高德注入的 DOM，需 :deep 才能命中） ---- */
+.wb-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+}
+.wb-marker.is-car { animation: wbPulse 1.8s ease-out infinite; }
+/* ⭐ 分车承运：当前位置用「车牌气泡」，颜色 = 该趟的颜色（和轨迹 / 车辆卡一致） */
+.wb-marker.is-plate {
+  box-sizing: border-box;
+  width: auto;
+  height: 24px;
+  padding: 0 9px 0 7px;
+  gap: 5px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.2);
+  animation: none;
+}
+.wb-marker.is-plate i {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+@keyframes wbPulse {
+  0% { box-shadow: 0 0 0 0 rgba(200, 16, 46, 0.35); }
+  70% { box-shadow: 0 0 0 12px rgba(200, 16, 46, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(200, 16, 46, 0); }
+}
+
+/* 窄屏：地图与时间轴由左右并排改为上下堆叠 */
+@media (max-width: 1280px) {
+  .lg-main { flex-direction: column; }
+  .lg-map-wrap { height: 400px; }
+  .lg-timeline { flex: 0 0 auto; width: 100%; height: 420px; }
+}
+
+/* ===== 全局样式（输入框禁用状态保留样式） ===== */
+.waybill-detail .el-input.is-disabled .el-input__wrapper {
+  background-color: #f5f7fa;
+}
+.waybill-detail .el-input.is-disabled .el-input__inner {
+  color: #606266;
+}
+.waybill-detail .el-select.is-disabled .el-input__wrapper {
+  background-color: #f5f7fa;
+}
+.waybill-detail .el-date-editor.is-disabled .el-input__wrapper {
+  background-color: #f5f7fa;
+}
+.waybill-detail .el-input-number.is-disabled .el-input__wrapper {
+  background-color: #f5f7fa;
+}
+
+/* ===== ⭐ 常驻任务：任务级操作条（暂停 / 恢复 / 结束） ===== */
+.rec-task-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #c8102e;
+  border-radius: 12px;
+}
+.rec-task-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.rec-task-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+.rec-task-status {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+.rec-task-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rec-task-hint {
+  flex: 1 0 100%;
+  font-size: 11.5px;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+/* ============================================================
+   ⭐ 分车承运（一货多车）：一图叠多车 + 车辆卡联动（方案 A）
+   ============================================================ */
+.lg-multi {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px 14px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+/* 多车地图：和右侧「节点时间」面板等高，左右对齐 */
+.lg-map-wrap-multi {
+  flex: 1 1 auto;
+  height: 520px;
+}
+
+/* ---- 地图上方：每趟一条甘特（计划 vs 实际） ---- */
+.lg-leg-gantt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px 4px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+.lg-gantt-row {
+  padding: 4px 8px 2px 8px;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s, box-shadow 0.2s;
+}
+.lg-gantt-row + .lg-gantt-row { border-top: 1px dashed #e2e8f0; }
+.lg-gantt-row:hover { background: #eef2f7; }
+/* 当前聚焦这一辆：白底浮起来，其余淡出（与地图联动） */
+.lg-gantt-row.is-on {
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+.lg-gantt-row.is-dim { opacity: 0.5; }
+.lg-gantt-row.is-done { border-left-color: #22c55e; }
+.lg-gantt-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2px;
+}
+.lg-gantt-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.lg-gantt-carry {
+  font-size: 11.5px;
+  color: #64748b;
+}
+.lg-gantt-times {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.lg-gantt-reject {
+  margin: 0 2px 4px 2px;
+  font-size: 11.5px;
+  color: #a32d2d;
+}
+
+/* ---- 地图工具条：图例 + 当前聚焦车辆（原来浮在地图上，会压住车牌气泡） ---- */
+.lg-map-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 0 2px;
+  font-size: 11.5px;
+  color: #64748b;
+}
+.lg-map-tools > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.lg-map-focus { margin-left: auto; color: #334155; }
+.lg-map-tip { color: #94a3b8; }
+.lg-map-clear {
+  margin-left: 6px;
+  padding: 1px 8px;
+  font-size: 11px;
+  color: #a32d2d;
+  background: #ffffff;
+  border: 1px solid #e24b4a;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.lg-map-clear:hover { background: #fcebeb; }
+
+/* ---- 右侧：趟次页签 + 该趟车辆实时位置 ---- */
+/* 页签并进标题行，省一行高度给节点时间；趟次多时自动换行 */
+.lg-tl-head-legs {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.lg-tl-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 1 1 auto;
+}
+.lg-tl-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  color: #475569;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.lg-tl-tab i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.lg-tl-tab:hover { background: #f1f5f9; }
+.lg-tl-tab.active {
+  color: #a32d2d;
+  background: #fcebeb;
+  border-color: #e24b4a;
+  font-weight: 700;
+}
+.lg-tl-live {
+  flex-shrink: 0;
+  margin: 10px 16px 0 16px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+}
+.lg-vc-extra {
+  font-style: normal;
+  color: #94a3b8;
+}
+.lg-legs-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+.lg-legs-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.lg-legs-sub {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+.lg-legs-hint {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+/* 趟次色点：甘特行、右侧页签、地图轨迹同一颜色 */
+.lg-leg-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+
+* { box-sizing: border-box; }
+body { margin: 0; background: #eef2f7; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: #0f172a; }
+button { cursor: pointer; font-family: inherit; }
+.page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; padding:14px 20px; background:#fff; border-radius:10px; border-left:4px solid #c8102e; }
+.page-header h2 { margin:0; font-size:17px; }
+.detail-tabs { display:flex; gap:6px; margin-bottom:14px; }
+.detail-tab { padding:8px 18px; border:1px solid #e2e8f0; background:#fff; border-radius:8px; font-size:13px; color:#475569; }
+.detail-tab.active { color:#a32d2d; border-color:#e24b4a; background:#fcebeb; font-weight:700; }
+.lg-toolbar { display:flex; align-items:center; margin-bottom:10px; }
+.lg-updated { font-size:11.5px; color:#94a3b8; }
+.wpb { padding:6px 0 2px; }
+.wpb-axis { position: relative; height: 16px; }
+.wpb-tick { position: absolute; top: 0; transform: translateX(-50%); font-size: 10.5px; color: #94a3b8; white-space: nowrap; }
+.wpb-track { position: relative; height: 34px; margin-bottom: 4px; }
+.wpb-grid { position: absolute; top: 0; bottom: 0; width: 1px; background: #f1f5f9; }
+.wpb-plan { position: absolute; top: 8px; height: 8px; border-radius: 3px; background: #e2e8f0; }
+.wpb-actual { position: absolute; top: 20px; height: 12px; border-radius: 3px; background: #639922; overflow: hidden; }
+.wpb-pred { position: absolute; top: 24px; height: 4px; border-radius: 2px; background: repeating-linear-gradient(90deg, #94a3b8 0 6px, transparent 6px 10px); }
+.wpb-now { position: absolute; top: 0; bottom: 0; width: 1px; background: #c8102e; }
+.wpb-now-label { position: absolute; top: -1px; left: 3px; font-size: 10px; color: #c8102e; }
+.wpb-legend { display: flex; gap: 14px; margin-top: 2px; font-size: 11px; color: #475569; }
+.wpb-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.wpb-legend i { display: inline-block; font-style: normal; }
+.lg-plan { width: 14px; height: 6px; border-radius: 2px; background: #e2e8f0; }
+.lg-actual { width: 14px; height: 10px; border-radius: 2px; background: #639922; }
+.lg-pred { width: 14px; height: 4px; border-radius: 2px; background: repeating-linear-gradient(90deg, #94a3b8 0 5px, transparent 5px 8px); }
+.lg-now { width: 1px; height: 12px; background: #c8102e; }
+.lg-node-time b { color: #334155; }
+.lg-status-tag { flex-shrink:0; font-size:11.5px; font-weight:600; padding:2px 10px; border-radius:999px; }
+</style></head><body>
+<div class="waybill-detail">
+  <div class="page-header"><h2>运单详情</h2><button>返回列表</button></div>
+  <div class="detail-tabs"><button class="detail-tab">运单信息</button><button class="detail-tab active">物流状态</button></div>
+  <div class="lg-panel">
+    <div class="lg-toolbar"><span class="lg-updated">更新于 06:46</span><button style="margin-left:auto">刷新</button></div>
+    <div class="lg-multi">
+      <div class="lg-legs-head">
+        <span class="lg-legs-title">分车承运 · 共 2 趟</span>
+        <span class="lg-legs-sub">已完成 1/2 · 承运合计 50/50</span>
+        <span class="lg-legs-hint">点甘特行可只看这一辆车</span>
+      </div>
+
+      <div class="lg-leg-gantt">
+        <div class="lg-gantt-row is-done">
+          
+  <div class="lg-gantt-head">
+    <span class="lg-leg-dot" style="background:#c8102e"></span>
+    <span class="lg-gantt-name">晋K03115D · 李亚楠</span>
+    <span class="lg-status-tag" style="color:#15803D;background:#DCFCE7">已完成</span>
+    <span class="lg-gantt-carry">承运 25</span>
+    <span class="lg-gantt-times">接单 10-17 05:32 → 完成 10-17 05:52</span>
+  </div>
+          
+  <div class="wpb is-dense">
+    <div class="wpb-axis">
+      <span class="wpb-tick" style="left:2%">10-16 20:00</span>
+      <span class="wpb-tick" style="left:32%">10-17 00:00</span>
+      <span class="wpb-tick" style="left:62%">10-17 04:00</span>
+      <span class="wpb-tick" style="left:92%">10-17 08:00</span>
+    </div>
+    <div class="wpb-track">
+      <span class="wpb-grid" style="left:32%"></span>
+      <span class="wpb-grid" style="left:62%"></span>
+      <div class="wpb-plan" style="left:6%;width:72%"></div>
+      <div class="wpb-actual is-running" style="left:20%;width:32%"></div>
+      
+      <div class="wpb-now" style="left:74%"><span class="wpb-now-label">06:46</span></div>
+    </div>
+    
+  </div>
+        </div>
+        <div class="lg-gantt-row">
+          
+  <div class="lg-gantt-head">
+    <span class="lg-leg-dot" style="background:#2563eb"></span>
+    <span class="lg-gantt-name">晋K09456D · lyn</span>
+    <span class="lg-status-tag" style="color:#1D4ED8;background:#DBEAFE">待装车</span>
+    <span class="lg-gantt-carry">承运 25</span>
+    <span class="lg-gantt-times">接单 10-17 05:32 → 完成 --</span>
+  </div>
+          
+  <div class="wpb is-dense">
+    <div class="wpb-axis">
+      <span class="wpb-tick" style="left:2%">10-16 20:00</span>
+      <span class="wpb-tick" style="left:32%">10-17 00:00</span>
+      <span class="wpb-tick" style="left:62%">10-17 04:00</span>
+      <span class="wpb-tick" style="left:92%">10-17 08:00</span>
+    </div>
+    <div class="wpb-track">
+      <span class="wpb-grid" style="left:32%"></span>
+      <span class="wpb-grid" style="left:62%"></span>
+      <div class="wpb-plan" style="left:6%;width:72%"></div>
+      <div class="wpb-actual is-running" style="left:20%;width:54%"></div>
+      <div class="wpb-pred" style="left:74%;width:22%"></div>
+      <div class="wpb-now" style="left:74%"><span class="wpb-now-label">06:46</span></div>
+    </div>
+    <div class="wpb-legend"><span><i class="lg-plan"></i>计划</span><span><i class="lg-actual"></i>实际</span><span><i class="lg-pred"></i>预测剩余</span><span><i class="lg-now"></i>现在</span></div>
+  </div>
+        </div>
+      </div>
+
+      <div class="lg-map-tools">
+        <span><i class="lg-lg-dot start"></i>装货地</span>
+        <span><i class="lg-lg-dot end"></i>卸货地</span>
+        <span><i class="lg-lg-line"></i>行驶轨迹</span>
+        <span><i class="lg-lg-dot car"></i>车辆位置</span>
+        <span class="lg-map-tip">滚轮滚页面 · 双击地图放大</span>
+        <span class="lg-map-focus">地图：全部 2 辆车 <button class="lg-map-clear">看全部</button></span>
+      </div>
+
+      <div class="lg-main">
+        <div class="lg-map-wrap lg-map-wrap-multi">
+          <div class="lg-map" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;background:#f8fafc">地图（一图叠多车 · 车牌气泡）</div>
+        </div>
+
+        <div class="lg-timeline">
+          <div class="lg-tl-head lg-tl-head-legs">
+            <span class="lg-tl-title">节点时间</span>
+            <span class="lg-tl-tabs">
+              <button class="lg-tl-tab"><i style="background:#c8102e"></i>晋K03115D</button>
+              <button class="lg-tl-tab active"><i style="background:#2563eb"></i>晋K09456D</button>
+            </span>
+          </div>
+          <div class="lg-tl-live">
+            <div class="lg-vc-head"><span class="lg-vc-plate">晋K09456D</span><span class="lg-status-tag" style="color:#B45309;background:#FEF3C7">静止</span></div>
+            <div class="lg-vc-line">停车 <em class="lg-vc-extra">· 轨迹 128 点 · 10-17 05:40 ~ 10-17 06:20</em></div>
+            <div class="lg-vc-line lg-vc-mono">上报 10-17 06:20 · 速度 0 km/h</div>
+          </div>
+          <div class="lg-tl-body">
+            
+  <div class="lg-node is-done is-root">
+    <span class="lg-node-dot"></span>
+    <div class="lg-node-body">
+      <div class="lg-node-label">
+        <span class="lg-node-name">待接单</span>
+        <span class="lg-node-badge is-done">已完成</span>
+      </div>
+      <div class="lg-node-time">
+        <span>进入 <b>10-17 04:04</b></span><span class="lg-node-sep">·</span>
+        <span>完成 <b>10-17 05:32</b></span>
+      </div>
+      
+    </div>
+  </div>
+            <div class="lg-group is-done">
+              <span class="lg-group-label">已接单</span>
+              <span class="lg-group-time">接单 10-17 05:32</span>
+              <span class="lg-group-operator">lyn</span>
+            </div>
+            
+  <div class="lg-node is-active is-sub">
+    <span class="lg-node-dot"></span>
+    <div class="lg-node-body">
+      <div class="lg-node-label">
+        <span class="lg-node-name">待装车</span>
+        <span class="lg-node-badge">进行中</span>
+      </div>
+      <div class="lg-node-time">
+        <span>进入 <b>10-17 05:32</b></span><span class="lg-node-sep">·</span>
+        <span>完成 <b class="lg-running">已停留 1 小时 14 分</b></span>
+      </div>
+      <div class="lg-node-remark">司机已接单，等待到达装货地</div>
+    </div>
+  </div>
+            
+  <div class="lg-node is-pending is-sub">
+    <span class="lg-node-dot"></span>
+    <div class="lg-node-body">
+      <div class="lg-node-label">
+        <span class="lg-node-name">装车完成</span>
+        
+      </div>
+      <div class="lg-node-time">
+        <span>进入 <b>--</b></span><span class="lg-node-sep">·</span>
+        <span>完成 <b class="lg-pending">--</b></span>
+      </div>
+      
+    </div>
+  </div>
+            
+  <div class="lg-node is-pending is-sub">
+    <span class="lg-node-dot"></span>
+    <div class="lg-node-body">
+      <div class="lg-node-label">
+        <span class="lg-node-name">已发车</span>
+        
+      </div>
+      <div class="lg-node-time">
+        <span>进入 <b>--</b></span><span class="lg-node-sep">·</span>
+        <span>完成 <b class="lg-pending">--</b></span>
+      </div>
+      
+    </div>
+  </div>
+            
+  <div class="lg-node is-pending is-sub">
+    <span class="lg-node-dot"></span>
+    <div class="lg-node-body">
+      <div class="lg-node-label">
+        <span class="lg-node-name">已到达</span>
+        
+      </div>
+      <div class="lg-node-time">
+        <span>进入 <b>--</b></span><span class="lg-node-sep">·</span>
+        <span>完成 <b class="lg-pending">--</b></span>
+      </div>
+      
+    </div>
+  </div>
+            
+  <div class="lg-node is-pending is-root">
+    <span class="lg-node-dot"></span>
+    <div class="lg-node-body">
+      <div class="lg-node-label">
+        <span class="lg-node-name">已完成</span>
+        
+      </div>
+      <div class="lg-node-time">
+        <span>进入 <b>--</b></span><span class="lg-node-sep">·</span>
+        <span>完成 <b class="lg-pending">--</b></span>
+      </div>
+      
+    </div>
+  </div>
+          </div>
+          <div class="lg-tl-foot">
+            <div class="lg-foot-line"><span>计划装货</span><b>10-17 20:00</b></div>
+            <div class="lg-foot-line"><span>计划到达</span><b>10-22 07:03</b></div>
+            <div class="lg-foot-line"><span>规划里程</span><b class="lg-mono">1331.12 km</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="height:60px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px">—— 页面最底部（能滚到这里就说明整页滚动正常）——</div>
+</div></body></html>

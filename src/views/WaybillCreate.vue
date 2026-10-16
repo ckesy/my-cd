@@ -7,11 +7,26 @@
     </div>
 
     <el-form label-width="0" label-position="left" size="default">
-      <!-- 装卸货地打卡 -->
+      <!-- ⭐ 运输节点：决定司机端要上报几步 -->
       <div class="checkin-row">
+        <el-form-item label="*运输节点" label-width="140px">
+          <el-radio-group v-model="form.transportMode">
+            <el-radio label="极简">极简</el-radio>
+            <el-radio label="详细">详细</el-radio>
+          </el-radio-group>
+          <span class="hint-text">
+            {{ form.transportMode === '极简'
+              ? '说明：司机只需「接单」和「完成运单」两步，适合短途、无需过程管控的场景'
+              : '说明：司机需按「接单 → 装车完成 → 确认发车 → 确认到达 → 完成运单」逐步上报' }}
+          </span>
+        </el-form-item>
+      </div>
+
+      <!-- ⭐ 装卸货地打卡：只有「详细」模式才有过程节点可校验 -->
+      <div class="checkin-row" v-if="form.transportMode === '详细'">
         <el-form-item label="*装卸货地打卡" label-width="140px">
           <el-switch v-model="form.checkInRequired" active-text="开启" inactive-text="关闭" />
-          <span class="hint-text">说明：开启后，司机需要保证车辆在围栏内，才能进行确认装车、装车完成、确认到达的打卡</span>
+          <span class="hint-text">说明：开启后，司机需要保证车辆在围栏内，才能进行「装车完成」（校验装货地围栏）与「确认到达」（校验卸货地围栏）的打卡</span>
         </el-form-item>
       </div>
 
@@ -25,6 +40,14 @@
           <div class="task-header">
             <div class="task-name-wrapper">
               <span class="task-label">任务{{ tIndex + 1 }}</span>
+              <!-- ⭐ 常驻任务续建：上一趟的计划时间 +1 天，一键填充 -->
+              <el-button
+                v-if="task.planFromPickup || task.planFromPlan"
+                size="small"
+                plain
+                class="shift-plan-btn"
+                @click="shiftPlanTime(task)"
+              >按上一趟 +1 天</el-button>
               <el-input
                 v-model="task.customName"
                 placeholder="请输入任务名称"
@@ -417,8 +440,8 @@
 
       <!-- 底部按钮 -->
       <div class="form-actions">
-        <el-button style="background-color: #f5a623; border-color: #f5a623; color: #fff; font-weight: 600;"
-          @click="openRecurringDialog">设置为常驻任务</el-button>
+        <el-button :style="recurringButtonStyle"
+          @click="openRecurringDialog">{{ isRecurring ? '常驻任务：' + recurringSummary : '设置为常驻任务' }}</el-button>
         <el-button @click="closeForm">关闭</el-button>
         <el-button type="primary" plain style="border-color:#c8102e; color:#c8102e;" @click="publishAndClone">发布并创建相同运单</el-button>
         <el-button type="primary" style="background-color:#c8102e; border-color:#c8102e;" @click="publish">发布</el-button>
@@ -426,32 +449,38 @@
     </el-form>
 
     <!-- ===== 常驻任务弹窗 ===== -->
-    <el-dialog v-model="recurringDialogVisible" title="设置为常驻任务" width="500px" destroy-on-close :show-close="false">
+    <el-dialog v-model="recurringDialogVisible" title="设置为常驻任务" width="520px" destroy-on-close :show-close="false">
       <el-form label-width="140px" size="default">
         <el-form-item label="常驻任务开关">
-          <el-switch v-model="isRecurring" active-text="开" inactive-text="关" />
+          <el-switch v-model="recurringDraft.isRecurring" active-text="开" inactive-text="关" />
+          <span class="recurring-tip">开启后同一任务可产生多条运输记录</span>
         </el-form-item>
-        <template v-if="isRecurring">
+        <template v-if="recurringDraft.isRecurring">
           <el-form-item label="常驻方式">
-            <el-radio-group v-model="recurringType">
+            <el-radio-group v-model="recurringDraft.type">
               <el-radio label="time">按常驻时间</el-radio>
               <el-radio label="count">按接单次数</el-radio>
             </el-radio-group>
           </el-form-item>
-          <template v-if="recurringType === 'time'">
+          <div class="recurring-hint">
+            {{ recurringDraft.type === 'time'
+              ? '按常驻时间：在设置的起止时间内，该任务可无限次接单，每次接单产生一条运输记录。'
+              : '按接单次数：累计接单达到设定次数后不再可接，常驻状态自动置为「已结束」。' }}
+          </div>
+          <template v-if="recurringDraft.type === 'time'">
             <el-form-item label="开始时间" required>
-              <el-date-picker v-model="recurringStart" type="datetime" placeholder="选择开始时间"
-                :disabled-date="disabledStartDate" :default-value="new Date()" style="width:100%;"
+              <el-date-picker v-model="recurringDraft.start" type="datetime" placeholder="选择开始时间"
+                :disabled-date="disabledStartDate" :default-value="new Date()" style="width:100%"
                 value-format="YYYY-MM-DD HH:mm:ss" />
             </el-form-item>
             <el-form-item label="结束时间" required>
-              <el-date-picker v-model="recurringEnd" type="datetime" placeholder="选择结束时间"
-                :disabled-date="disabledEndDate" style="width:100%;" value-format="YYYY-MM-DD HH:mm:ss" />
+              <el-date-picker v-model="recurringDraft.end" type="datetime" placeholder="选择结束时间"
+                :disabled-date="disabledEndDate" style="width:100%" value-format="YYYY-MM-DD HH:mm:ss" />
             </el-form-item>
           </template>
-          <template v-if="recurringType === 'count'">
+          <template v-if="recurringDraft.type === 'count'">
             <el-form-item label="次数上限" required>
-              <el-input-number v-model="recurringCount" :min="1" :step="1" style="width:100%;" />
+              <el-input-number v-model="recurringDraft.count" :min="1" :step="1" style="width:100%" />
             </el-form-item>
           </template>
         </template>
@@ -654,7 +683,13 @@ import {
   Guide, Edit, Close, Files,
 } from '@element-plus/icons-vue'
 import { supabase } from '@/utils/supabase'
+import dayjs from 'dayjs'
+import AMapLoader from '@amap/amap-jsapi-loader'
+import { parseLngLat } from '@/utils/waybillProgress'
 import AddEleFenceDialog from '@/components/AddEleFenceDialog.vue'
+
+/* 高德 JS API Key（与 FullMap / RouteFormDialog 一致） */
+const AMAP_KEY = '273f5c474604b71906674aac159b8f45'
 
 const router = useRouter()
 const route = useRoute()
@@ -708,7 +743,7 @@ const loadFenceList = async () => {
   try {
     let q = supabase
       .from('ele_fences')
-      .select('id, name')
+      .select('id, name, center, location')
       .order('updated_at', { ascending: false })
     if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
     const { data, error } = await q
@@ -716,6 +751,63 @@ const loadFenceList = async () => {
     fenceList.value = data || []
   } catch (e) {
     console.warn('加载围栏失败', e)
+  }
+}
+
+/* ⭐ 围栏名 → 中心坐标（发布时用来算规划里程，避免每次刷新反查围栏） */
+const fenceCenterOf = (name) => {
+  const n = String(name || '').trim()
+  if (!n) return null
+  const hit = (fenceList.value || []).find(f => String(f.name || '').trim() === n)
+  if (!hit) return null
+  return parseLngLat(hit.center) || parseLngLat(hit.location)
+}
+
+/* ⭐ 高德驾车规划：发布时算一次，结果落 waybills.plan_distance / plan_duration */
+let _amapForPlan = null
+const planRoute = async (from, to) => {
+  if (!from || !to) return null
+  try {
+    if (!_amapForPlan) {
+      _amapForPlan = await AMapLoader.load({
+        key: AMAP_KEY,
+        version: '2.0',
+        plugins: ['AMap.Driving'],
+      })
+    }
+    return await new Promise((resolve) => {
+      const driving = new _amapForPlan.Driving({
+        policy: _amapForPlan.DrivingPolicy.LEAST_TIME,
+      })
+      const timer = setTimeout(() => resolve(null), 10000)
+      driving.search(from, to, (status, result) => {
+        clearTimeout(timer)
+        if (status === 'complete' && result && result.routes && result.routes.length) {
+          const r = result.routes[0]
+          resolve({ distance: Number(r.distance) || 0, duration: Number(r.time) || 0 })
+        } else {
+          resolve(null)
+        }
+      })
+    })
+  } catch (e) {
+    console.warn('规划路线计算失败', e)
+    return null
+  }
+}
+
+/* ⭐ 常驻任务续建时取下一个趟次序号 */
+const nextTripSeq = async (groupNo) => {
+  if (!groupNo) return 1
+  try {
+    const { data } = await supabase
+      .from('waybills')
+      .select('trip_seq')
+      .eq('recurring_group_no', groupNo)
+    const max = Math.max(0, ...(data || []).map(r => Number(r.trip_seq) || 0))
+    return max + 1
+  } catch (e) {
+    return 1
   }
 }
 
@@ -998,6 +1090,11 @@ let nextItemId = 1
 let colorIndex = 0
 
 const form = reactive({
+  // ⭐ 运输节点模式：'极简'（接单→完成运单）| '详细'（接单→装车完成→确认发车→确认到达→完成运单）
+  // ⭐ 默认值 = 「极简」（用户 2026-10-17 拍板）：绝大多数场景是短途、不需要过程管控，
+  //    司机少点四步；需要过程管控的再手动切「详细」。
+  transportMode: '极简',
+  // 是否要求装卸货地打卡，仅「详细」模式生效
   checkInRequired: true,
   cargoList: [
     { id: nextCargoId++, name: '', quantity: null, unit: '吨', freight: 0.00, taskId: 1 }
@@ -1015,50 +1112,145 @@ const assignList = ref([
   }
 ])
 
-// 常驻任务
+// ============================================================
+// ⭐ 常驻任务
+// 按常驻时间：时间窗内接单次数不限
+// 按接单次数：接满设定次数后不再产生新的运输记录
+// 同一常驻任务的多条运输记录靠 recurring_group_no 关联
+// ============================================================
+const TZ_FMT = 'YYYY-MM-DD HH:mm:ss'
+
 const recurringDialogVisible = ref(false)
 const isRecurring = ref(false)
 const recurringType = ref('time')
-const recurringStart = ref(new Date())
-const recurringEnd = ref(null)
+const recurringStart = ref('')
+const recurringEnd = ref('')
 const recurringCount = ref(1)
+/* 克隆 / 续建时沿用上一趟的分组号，保证落在同一个常驻任务下 */
+const recurringGroupNo = ref('')
+
+const shortTime = (t) => (t ? dayjs(t).format('MM-DD HH:mm') : '--')
+
+const recurringSummary = computed(() => {
+  if (!isRecurring.value) return '未开启'
+  if (recurringType.value === 'count') return `按次数 · 上限 ${recurringCount.value} 次`
+  return `按时间 · ${shortTime(recurringStart.value)} ~ ${shortTime(recurringEnd.value)}`
+})
+
+const recurringButtonStyle = computed(() =>
+  isRecurring.value
+    ? 'background-color:#c8102e; border-color:#c8102e; color:#fff; font-weight:600;'
+    : 'background-color:#f5a623; border-color:#f5a623; color:#fff; font-weight:600;'
+)
 
 const disabledStartDate = (time) => time.getTime() < new Date().setHours(0, 0, 0, 0)
 const disabledEndDate = (time) => {
   if (!recurringStart.value) return false
-  return time.getTime() < recurringStart.value.getTime()
+  const s = dayjs(recurringStart.value)
+  return s.isValid() ? time.getTime() < s.startOf('day').valueOf() : false
 }
 
+/* 弹窗内先用草稿，点「取消」不会破坏已保存的常驻设置 */
+const recurringDraft = reactive({
+  isRecurring: false,
+  type: 'time',
+  start: '',
+  end: '',
+  count: 1,
+})
+
 const openRecurringDialog = () => {
+  recurringDraft.isRecurring = isRecurring.value
+  recurringDraft.type = recurringType.value
+  recurringDraft.start = recurringStart.value || dayjs().format(TZ_FMT)
+  recurringDraft.end = recurringEnd.value || dayjs().add(30, 'day').format(TZ_FMT)
+  recurringDraft.count = recurringCount.value || 1
   recurringDialogVisible.value = true
-  isRecurring.value = false
-  recurringType.value = 'time'
-  recurringStart.value = new Date()
-  recurringEnd.value = null
-  recurringCount.value = 1
 }
 
 const confirmRecurring = () => {
-  if (isRecurring.value) {
-    if (recurringType.value === 'time') {
-      if (!recurringStart.value || !recurringEnd.value) {
-        ElMessage.warning('请选择完整的时间范围')
+  if (recurringDraft.isRecurring) {
+    if (recurringDraft.type === 'time') {
+      if (!recurringDraft.start || !recurringDraft.end) {
+        ElMessage.warning('请选择完整的常驻时间范围')
         return
       }
-      if (recurringEnd.value.getTime() <= recurringStart.value.getTime()) {
+      const s = dayjs(recurringDraft.start)
+      const e = dayjs(recurringDraft.end)
+      if (!s.isValid() || !e.isValid()) {
+        ElMessage.warning('常驻时间格式不正确')
+        return
+      }
+      if (e.valueOf() <= s.valueOf()) {
         ElMessage.warning('结束时间必须晚于开始时间')
         return
       }
-    } else {
-      if (!recurringCount.value || recurringCount.value < 1) {
-        ElMessage.warning('请输入有效的次数上限')
-        return
-      }
+    } else if (!recurringDraft.count || recurringDraft.count < 1) {
+      ElMessage.warning('请输入有效的次数上限')
+      return
     }
   }
-  ElMessage.success('常驻任务设置已保存')
+
+  isRecurring.value = recurringDraft.isRecurring
+  recurringType.value = recurringDraft.type
+  recurringStart.value = recurringDraft.start
+  recurringEnd.value = recurringDraft.end
+  recurringCount.value = recurringDraft.count
+
+  ElMessage.success(
+    isRecurring.value ? '已设为常驻任务：' + recurringSummary.value : '已关闭常驻任务'
+  )
   markDirty()
   recurringDialogVisible.value = false
+}
+
+/* 发布时写入 waybills 的常驻字段 */
+const buildRecurringFields = (waybillNo, overrideGroupNo) => {
+  if (!isRecurring.value) return { is_recurring: false }
+  return {
+    is_recurring: true,
+    recurring_group_no:
+      overrideGroupNo || recurringGroupNo.value || 'CZ' + String(waybillNo || '').slice(2),
+    recurring_type: recurringType.value,
+    recurring_start_time: recurringType.value === 'time' ? recurringStart.value : null,
+    recurring_end_time: recurringType.value === 'time' ? recurringEnd.value : null,
+    recurring_max_count: recurringType.value === 'count' ? recurringCount.value : null,
+    recurring_accepted_count: 0,
+    recurring_status: '生效中',
+  }
+}
+
+/* 数据库尚未执行迁移时，去掉尚未建列的新字段重试，保证普通运单仍能发布 */
+const OPTIONAL_NEW_COLUMNS = [
+  'is_recurring', 'recurring_group_no', 'recurring_type', 'recurring_start_time',
+  'recurring_end_time', 'recurring_max_count', 'recurring_accepted_count', 'recurring_status',
+  'transport_mode', 'check_in_required',
+  'plan_distance', 'plan_duration',
+  'pickup_lng', 'pickup_lat', 'delivery_lng', 'delivery_lat', 'trip_seq',
+]
+
+const stripNewFields = (list) =>
+  list.map(row => {
+    const copy = { ...row }
+    OPTIONAL_NEW_COLUMNS.forEach(k => { delete copy[k] })
+    return copy
+  })
+
+/* ⭐ 按上一趟 +1 天：常驻任务续建时快速填计划时间
+   没有计划时间，「物流状态」里就画不出计划条、没法做计划 vs 实际对比 */
+const shiftPlanTime = (task) => {
+  if (!task) return
+  const shift = (t) => (t ? dayjs(t).add(1, 'day').format('YYYY-MM-DD HH:mm:ss') : '')
+  const pickup = shift(task.planFromPickup)
+  const plan = shift(task.planFromPlan)
+  if (!pickup && !plan) {
+    ElMessage.warning('上一趟没有填写计划时间，无法填充')
+    return
+  }
+  if (pickup) task.pickupTime = pickup
+  if (plan) task.deliveryTime = plan
+  markDirty()
+  ElMessage.success('已按上一趟 +1 天填充计划时间')
 }
 
 const getItemLabel = (method, index) => {
@@ -1208,6 +1400,19 @@ const applyCloneData = (cloneData) => {
 
     if (cloneData.checkInRequired !== undefined) {
       form.checkInRequired = cloneData.checkInRequired
+    }
+    if (cloneData.transportMode) {
+      form.transportMode = cloneData.transportMode
+    }
+
+    /* ⭐ 常驻任务设置一并还原，保证「创建相同运单」落在同一个常驻任务下 */
+    if (cloneData.recurring) {
+      isRecurring.value = !!cloneData.recurring.isRecurring
+      recurringType.value = cloneData.recurring.type || 'time'
+      recurringStart.value = cloneData.recurring.start || ''
+      recurringEnd.value = cloneData.recurring.end || ''
+      recurringCount.value = cloneData.recurring.count || 1
+      recurringGroupNo.value = cloneData.recurring.groupNo || ''
     }
 
     markDirty()
@@ -1412,6 +1617,25 @@ const validateForm = () => {
         }
       }
     }
+
+    /* ⭐ 子母车（一个任务派给多个司机/车辆）：每个指派的承运数量**之和必须等于货物总量**
+       （默认平分、也可以单独改；改到不等于总量就会丢货/多货，这里直接拦掉） */
+    const taskQty = form.cargoList
+      .filter(c => c.taskId === task.id)
+      .reduce((sum, c) => sum + (Number(c.quantity) || 0), 0)
+    if (taskQty > 0 && taskAssigns.length) {
+      const carrySum = taskAssigns.reduce(
+        (sum, a) => sum + a.items.reduce((s, i) => s + (Number(i.carryQuantity) || 0), 0),
+        0
+      )
+      if (carrySum > 0 && Math.abs(carrySum - taskQty) > 0.01) {
+        ElMessage.error(
+          `任务${tIndex + 1} 的承运数量之和 ${carrySum} 与货物总量 ${taskQty} 不一致，` +
+          `请调整各司机/车辆的装货量（合计必须等于 ${taskQty}）`
+        )
+        return false
+      }
+    }
   }
   return true
 }
@@ -1453,6 +1677,10 @@ const doPublish = async () => {
         driver: '',
         carry_quantity: 0,
         owner_account: isAdmin ? null : myAccount,
+        // ⭐ 运输节点模式：决定司机端要上报几步
+        transport_mode: form.transportMode || '极简',
+        // 打卡只在「详细」模式下有意义
+        check_in_required: form.transportMode === '详细' ? !!form.checkInRequired : false,
       }
             // ⭐ 从指派里提取「车队/机构」目标，写入 assigned_orgs
       const assignedOrgsSet = new Set()
@@ -1502,16 +1730,53 @@ const doPublish = async () => {
     const count = rawRecords.length
     const waybillNos = await generateWaybillNos(count)
 
+    /* ⭐ 常驻任务续建：沿用上一趟的分组号，并取下一个趟次序号
+       （多个任务一起发布时各自独立成组，不共用分组号） */
+    const reuseGroup = !!(recurringGroupNo.value && isRecurring.value && count === 1)
+    const baseTripSeq = reuseGroup ? await nextTripSeq(recurringGroupNo.value) : 1
+
+    /* ⭐ 规划里程与起终点坐标：发布时算一次，
+       之后「物流状态」刷新只拉东风轨迹，不再调高德 */
+    const plans = []
+    for (const task of tasks.value) {
+      const from = fenceCenterOf(task.pickupLocation)
+      const to = fenceCenterOf(task.deliveryLocation)
+      const route = await planRoute(from, to)
+      plans.push({
+        pickup_lng: from ? from[0] : null,
+        pickup_lat: from ? from[1] : null,
+        delivery_lng: to ? to[0] : null,
+        delivery_lat: to ? to[1] : null,
+        plan_distance: route ? Math.round((route.distance / 1000) * 100) / 100 : null,
+        plan_duration: route ? Math.round(route.duration / 60) : null,
+      })
+    }
+
     const waybillList = rawRecords.map((record, idx) => ({
       ...record,
-      waybill_no: waybillNos[idx]
+      waybill_no: waybillNos[idx],
+      ...(plans[idx] || {}),
+      trip_seq: reuseGroup ? baseTripSeq : 1,
+      ...buildRecurringFields(waybillNos[idx], reuseGroup ? recurringGroupNo.value : '')
     }))
 
-    const { data, error } = await supabase
+    let res = await supabase
       .from('waybills')
       .insert(waybillList)
       .select()
 
+    /* ⭐ 数据库还没执行 sql/2026-10-16_recurring_task_and_status_log.sql 时降级：
+       去掉常驻字段重试，保证普通运单仍然能发布 */
+    if (res.error && /column|字段|does not exist|不存在/i.test(res.error.message || '')) {
+      console.warn(
+        '[运单新字段] waybills 缺少常驻任务 / 运输节点字段，本次降级发布。' +
+        '请在 CloudBase 控制台执行 sql/2026-10-16_recurring_task_and_status_log.sql'
+      )
+      ElMessage.warning('数据库尚未支持常驻任务 / 运输节点字段，本次已按普通运单发布')
+      res = await supabase.from('waybills').insert(stripNewFields(waybillList)).select()
+    }
+
+    const { data, error } = res
     if (error) throw error
 
     ElMessage.success(`运单发布成功！共生成 ${waybillList.length} 条运单`)
@@ -1549,6 +1814,9 @@ const publishAndClone = async () => {
         planName: t.planName,
         planColor: t.planColor,
         planInfo: t.planInfo,
+        // ⭐ 续建时用来做「按上一趟 +1 天」，固定记源值，重复点不会累积
+        planFromPickup: t.pickupTime || '',
+        planFromPlan: t.deliveryTime || '',
       })),
       cargoList: form.cargoList.map(c => ({
         name: c.name,
@@ -1566,7 +1834,17 @@ const publishAndClone = async () => {
           carryFreight: item.carryFreight
         }))
       })),
-      checkInRequired: form.checkInRequired
+      checkInRequired: form.checkInRequired,
+      transportMode: form.transportMode,
+      // ⭐ 常驻任务随克隆一起带走（含分组号），续建的是同一常驻任务的新运输记录
+      recurring: {
+        isRecurring: isRecurring.value,
+        type: recurringType.value,
+        start: recurringStart.value,
+        end: recurringEnd.value,
+        count: recurringCount.value,
+        groupNo: recurringGroupNo.value
+      }
     }
     router.push({
       path: '/waybill/create',
@@ -2297,30 +2575,18 @@ defineExpose({ isDirty })
 .fence-cta-pickup:hover .arrow-icon,
 .fence-cta-delivery:hover .arrow-icon { transform: translateX(3px); }
 
-/* 日期选择器紧凑样式 */
-.compact-date-picker .el-picker-panel {
-  font-size: 13px;
-  --el-date-picker-header-padding: 6px 12px;
-  --el-date-picker-cell-size: 26px;
-}
-.compact-date-picker .el-picker-panel .el-date-picker__header { padding: 6px 12px; }
-.compact-date-picker .el-picker-panel .el-date-table td { padding: 4px 0; }
-.compact-date-picker .el-picker-panel .el-date-table td .el-date-table-cell {
-  height: 26px;
-  width: 26px;
-  line-height: 26px;
-}
-.compact-date-picker .el-picker-panel .el-time-panel { max-height: 180px; }
-.compact-date-picker .el-picker-panel .el-time-panel .el-time-panel__content { padding: 4px 0; }
-.compact-date-picker .el-picker-panel .el-time-spinner__item {
-  height: 26px;
-  line-height: 26px;
-}
+/* 日期选择器紧凑样式
+   ⚠️ popper 是 teleport 到 body 的，SFC 里的 scoped 样式**够不到**它。
+   所以这批紧凑样式已经搬到全局 src/style.css 里（并顺手修掉了
+   「给 .el-time-panel 设 max-height 把底部按钮挤到数字上」的 bug），
+   这里只留一句说明，避免以后有人在两个地方各改一半。
+   真正的实现见：src/style.css 的「日期时间选择器」小节。 */
 
 /* ============================================================
    ⭐ 选择路线弹窗（居中 dialog）
    ============================================================ */
-.route-select-dialog .el-dialog {
+/* ⭐ el-dialog 会把 class 合并到 .el-dialog 自身，必须用同元素选择器 */
+.route-select-dialog.el-dialog {
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 24px 72px rgba(15, 23, 42, 0.22);
@@ -2842,5 +3108,33 @@ defineExpose({ isDirty })
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+/* ===== ⭐ 常驻任务弹窗 ===== */
+.recurring-tip {
+  margin-left: 12px;
+  font-size: 12px;
+  color: #94A3B8;
+}
+.shift-plan-btn {
+  flex-shrink: 0;
+  color: #A32D2D !important;
+  border-color: #F7C1C1 !important;
+  background: #FEF2F2 !important;
+  font-weight: 600;
+}
+.shift-plan-btn:hover {
+  background: #FCEBEB !important;
+  border-color: #E24B4A !important;
+}
+.recurring-hint {
+  margin: -4px 0 14px 140px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #A32D2D;
+  background: #FEF2F2;
+  border-left: 3px solid #c8102e;
+  border-radius: 6px;
 }
 </style>

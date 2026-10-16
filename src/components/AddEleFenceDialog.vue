@@ -1,5 +1,6 @@
 <template>
   <el-dialog v-model="visible" :title="isEdit ? '围栏设置 - 编辑' : '围栏设置 - 新增'" width="1050px" top="5vh" destroy-on-close
+    append-to-body
     :close-on-click-modal="false" class="fence-dialog" @close="handleClose">
     <div class="dialog-layout">
       <div class="map-panel">
@@ -681,7 +682,12 @@ const loadEditData = () => {
       if (d.shape === 'circle' && d.center) {
         const [lng, lat] = d.center.split(',').map(Number)
         drawCircle(lng, lat)
-        map.setZoom(14)
+        // ⭐ 圆形也要把地图定位到围栏中心
+        //（drawCircle 只设了 Circle 对象的中心，不会移动地图；多边形/线形走 setFitView 所以能跳）
+        if (!isNaN(lng) && !isNaN(lat)) {
+          map.setCenter([lng, lat])
+          map.setZoom(14)
+        }
       } else if (d.shape === 'polygon' && d.points) {
         drawPolygonFromPoints(d.points)
       } else if (d.shape === 'polyline' && d.points) {
@@ -1406,12 +1412,9 @@ const submitForm = (isContinue) => {
 </script>
 
 <style scoped>
-:deep(.fence-dialog .el-dialog) {
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  animation: dialogBounceIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
+/* ⭐ 弹窗外壳规则已移到文件末尾的全局 <style> 块：
+   class 会被合并到 .el-dialog 自身，且 scoped 的 :deep() 需要祖先带 scope 属性，
+   原写法 `:deep(.fence-dialog .el-dialog)` 永远不会匹配。 */
 
 @keyframes dialogBounceIn {
   from {
@@ -1423,24 +1426,6 @@ const submitForm = (isContinue) => {
     opacity: 1;
     transform: scale(1) translateY(0);
   }
-}
-
-:deep(.fence-dialog .el-dialog__header) {
-  padding: 16px 24px;
-  margin: 0;
-  border-bottom: 1px solid #F1F5F9;
-  position: relative;
-}
-
-:deep(.fence-dialog .el-dialog__header::after) {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: -1px;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, rgba(211, 47, 47, 0) 0%, rgba(211, 47, 47, 0.7) 50%, rgba(211, 47, 47, 0) 100%);
-  animation: headerGlow 2.5s ease-in-out infinite;
 }
 
 @keyframes headerGlow {
@@ -1455,21 +1440,13 @@ const submitForm = (isContinue) => {
   }
 }
 
-:deep(.fence-dialog .el-dialog__title) {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1E293B;
-}
-
-:deep(.fence-dialog .el-dialog__body) {
-  padding: 0;
-  position: relative;
-}
-
 .dialog-layout {
   display: flex;
+  /* 兜底高度（父级非 flex 容器时生效） */
   height: 68vh;
-  min-height: 540px;
+  /* ⭐ 父级为 flex 时吃满弹窗剩余高度，不再用 68vh/540px 硬撑 */
+  flex: 1;
+  min-height: 0;
 }
 
 .map-panel {
@@ -1613,7 +1590,7 @@ const submitForm = (isContinue) => {
 
 .form-panel {
   flex: 1;
-  padding: 20px;
+  padding: 16px;
   overflow-y: auto;
   background-color: #FFFFFF;
 }
@@ -1628,7 +1605,7 @@ const submitForm = (isContinue) => {
 }
 
 .stagger-form :deep(.el-form-item) {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   animation: fieldSlideIn 0.4s ease-out backwards;
 }
 
@@ -2258,5 +2235,64 @@ const submitForm = (isContinue) => {
     transform: translate(-50%, 50%) scale(6);
     opacity: 0;
   }
+}
+
+/* ============================================================
+   ⭐ 围栏弹窗外壳
+   el-dialog 会把 class 合并到 .el-dialog 元素自身（不是父级），
+   所以外壳必须用「同元素」选择器 `.fence-dialog.el-dialog`；
+   header/body/title 是其子元素，用后代选择器即可。
+   ============================================================ */
+.fence-dialog.el-dialog {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  animation: dialogBounceIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-width: 94vw;
+  /* ⭐ 自适应高度 + 纵向 flex：高度 = min(上限, 视口 − 上边距 − 下边距 − 安全余量)
+     地图/表单区吃满剩余空间，保证整窗放得下、不出现外层滚动 */
+  display: flex;
+  flex-direction: column;
+  height: min(820px, calc(96vh - 80px));
+}
+
+.fence-dialog .el-dialog__header {
+  padding: 16px 24px;
+  margin: 0;
+  border-bottom: 1px solid #F1F5F9;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.fence-dialog .el-dialog__header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(211, 47, 47, 0) 0%, rgba(211, 47, 47, 0.7) 50%, rgba(211, 47, 47, 0) 100%);
+  animation: headerGlow 2.5s ease-in-out infinite;
+}
+
+.fence-dialog .el-dialog__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.fence-dialog .el-dialog__body {
+  padding: 0;
+  position: relative;
+  /* ⭐ 撑满头部/底部之外的剩余高度，内部交给 .dialog-layout */
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fence-dialog .el-dialog__footer {
+  flex-shrink: 0;
 }
 </style>

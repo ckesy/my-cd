@@ -2,7 +2,8 @@
   <el-dialog
     :model-value="modelValue"
     :title="readonly ? '查看路线' : (isEdit ? '编辑路线' : '新增路线')"
-    width="1440px"
+    width="min(1280px, 88vw)"
+    append-to-body
     top="4vh"
     destroy-on-close
     :close-on-click-modal="false"
@@ -1891,8 +1892,11 @@ if (isCustomer) {
 .rf-stage {
   position: relative;
   width: 100%;
-  height: 76vh;
-  min-height: 560px;
+  /* 兜底高度：父级若非 flex 容器时生效 */
+  height: calc(96vh - 220px);
+  /* ⭐ 父级为 flex 时占满剩余空间（flex-basis 优先于 height），永不撑破弹窗 */
+  flex: 1;
+  min-height: 0;
   background: #F1F5F9;
   border-radius: 4px;
   overflow: hidden;
@@ -1935,14 +1939,16 @@ if (isCustomer) {
 .info-card {
   top: 16px;
   left: 16px;
-  width: 440px;
+  /* ⭐ 自适应宽度：窗口大则舒展（≤400），窗口小则紧凑（≥280） */
+  width: clamp(280px, 28vw, 400px);
   max-height: calc(100% - 32px);
 }
 
 .plan-panel {
   top: 16px;
   right: 16px;
-  width: 520px;
+  /* ⭐ 自适应宽度：窗口大则舒展（≤470），窗口小则紧凑（≥320） */
+  width: clamp(320px, 34vw, 470px);
   max-height: calc(100% - 32px);
 }
 
@@ -2030,7 +2036,7 @@ if (isCustomer) {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 18px 22px;
+  padding: 14px 16px;
 }
 
 .card-body::-webkit-scrollbar { width: 5px; }
@@ -2124,7 +2130,7 @@ if (isCustomer) {
 }
 
 /* 基础信息表单 */
-.info-form :deep(.el-form-item) { margin-bottom: 18px; }
+.info-form :deep(.el-form-item) { margin-bottom: 12px; }
 
 .info-form :deep(.el-form-item__label) {
   font-weight: 700;
@@ -2957,16 +2963,8 @@ if (isCustomer) {
 @keyframes loadingSpin { to { transform: rotate(360deg); } }
 .loading-card p { font-size: 14px; color: #475569; font-weight: 600; margin: 0; }
 
-@media (max-width: 1200px) {
-  .info-card { width: 380px; }
-  .plan-panel { width: 440px; }
-}
-@media (max-width: 1000px) {
-  .info-card { width: 340px; }
-  .plan-panel { width: 400px; }
-}
+/* ⭐ 宽度已由 clamp() 随窗口自适应，这里只处理超窄屏的上下堆叠 */
 @media (max-width: 900px) {
-  .rf-stage { height: 90vh; }
   .info-card { width: calc(100% - 32px); max-height: 45%; }
   .plan-panel {
     width: calc(100% - 32px);
@@ -2979,18 +2977,27 @@ if (isCustomer) {
 </style>
 
 <style>
-.route-form-dialog .el-dialog {
+/* ⭐ 注意：el-dialog 会把 class 合并到 .el-dialog 自身（不是父级），
+   必须用「同元素」选择器；写成后代选择器 .route-form-dialog .el-dialog 不会匹配 */
+.route-form-dialog.el-dialog {
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 24px 72px rgba(15, 23, 42, 0.22);
-  width: 1440px;
-  max-width: 96vw;
+  /* ⭐ 自适应宽度：大屏最多 1280，窄屏最多占 88vw */
+  width: min(1280px, 88vw);
+  max-width: 88vw;
+  /* ⭐ 自适应高度 + 纵向 flex：整体高度 = min(上限, 视口 - 上边距 - 下边距 - 安全余量)
+     地图区 flex:1 吃掉剩余空间，保证头部和底部按钮永远可见、不会超出屏幕 */
+  display: flex;
+  flex-direction: column;
+  height: min(760px, calc(96vh - 80px));
 }
 .route-form-dialog .el-dialog__header {
   padding: 18px 26px;
   margin: 0;
   border-bottom: 1px solid #F1F5F9;
   background: linear-gradient(180deg, #FFFFFF, #FAFBFC);
+  flex-shrink: 0;
 }
 .route-form-dialog .el-dialog__title {
   font-weight: 800;
@@ -3001,11 +3008,18 @@ if (isCustomer) {
 .route-form-dialog .el-dialog__body {
   padding: 0;
   background: #F8FAFC;
+  /* ⭐ 撑满头部/底部之外的剩余高度，内部再交给 .rf-stage */
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .route-form-dialog .el-dialog__footer {
   padding: 14px 26px;
   background: #fff;
   border-top: 1px solid #F1F5F9;
+  flex-shrink: 0;
 }
 .route-form-dialog .el-dialog__footer .el-button {
   border-radius: 10px;

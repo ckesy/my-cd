@@ -267,3 +267,51 @@ code, pre {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* ==========================================
+   ⭐ 日期时间选择器（el-date-picker type="datetime"）
+   ------------------------------------------
+   el-date-picker 的 popper 是 teleport 到 body 的，SFC 里的 scoped 样式
+   **够不到它**（选择器会带上 [data-v-xxx] 而匹配不到），所以这类覆盖
+   必须写在全局样式里，否则既白写又让人误以为生效了。
+
+   ⚠️ 千万不要给 .el-time-panel 设 max-height：
+   它内部是「输入头 → 滚动区 → 底部按钮」三段式布局，压整体高度会把
+   「取消 / 确定」挤到时间数字上面，底部还会透出下层内容（叠在一起、能看见
+   日历的数字穿过去）。要紧凑就压滚动区高度。
+   ========================================== */
+.el-picker-panel .el-time-panel {
+  max-height: none;
+  background-color: #fff;
+}
+.el-picker-panel .el-time-panel__content {
+  overflow: hidden;
+}
+/* 默认把时间滚动区收窄一点，面板不至于比日历高太多 */
+.el-picker-panel .el-time-spinner__wrapper {
+  max-height: 160px;
+}
+
+/* 紧凑模式：WaybillCreate 上挂了 popper-class="compact-date-picker" */
+.compact-date-picker .el-picker-panel,
+.compact-date-picker.el-picker-panel {
+  font-size: 13px;
+}
+.compact-date-picker .el-date-picker__header {
+  padding: 6px 12px;
+}
+.compact-date-picker .el-date-table td {
+  padding: 4px 0;
+}
+.compact-date-picker .el-date-table td .el-date-table-cell {
+  height: 26px;
+  width: 26px;
+  line-height: 26px;
+}
+.compact-date-picker .el-time-spinner__item {
+  height: 26px;
+  line-height: 26px;
+}
+.compact-date-picker .el-time-spinner__wrapper {
+  max-height: 132px;
+}

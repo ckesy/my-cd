@@ -1609,7 +1609,8 @@ onBeforeUnmount(() => {
 }
 
 /* 角色表单弹窗 */
-.role-form-dialog .el-dialog {
+/* ⭐ el-dialog 会把 class 合并到 .el-dialog 自身，必须用同元素选择器 */
+.role-form-dialog.el-dialog {
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 24px 72px rgba(15, 23, 42, 0.22);

@@ -1053,15 +1053,17 @@ onMounted(async () => {
 }
 .search-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 12px;
   align-items: center;
 }
-.search-select { width: 180px; }
-.search-select-sm { width: 150px; }   /* ⭐ 停留点数下拉 */
-.search-input { width: 160px; }
-.search-datetime { width: 380px; }
-.search-btns { display: flex; gap: 10px; margin-left: auto; }
+.search-select { width: 150px; flex-shrink: 0; }
+.search-select-sm { width: 130px; flex-shrink: 0; }   /* ⭐ 停留点数下拉 */
+.search-input { width: 140px; flex-shrink: 0; }
+/* ⭐ 时间选择器缩短，并作为唯一可收缩项，保证整行不换行 */
+.search-datetime { width: 300px; min-width: 0; flex-shrink: 1; }
+:deep(.search-datetime .el-range-input) { font-size: 12px; }
+.search-btns { display: flex; gap: 10px; margin-left: auto; flex-shrink: 0; }
 
 :deep(.el-button) {
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);

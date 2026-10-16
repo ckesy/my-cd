@@ -879,7 +879,8 @@ const handleClosed = () => {
 <!-- ========== 全局样式（地图标记 / 弹窗外壳）========== -->
 <style>
 /* ---- 弹窗外壳 ---- */
-.stay-detail-dialog .el-dialog {
+/* ⭐ el-dialog 会把 class 合并到 .el-dialog 自身，必须用同元素选择器 */
+.stay-detail-dialog.el-dialog {
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 30px 80px rgba(15, 23, 42, 0.25);
@@ -945,6 +946,6 @@ const handleClosed = () => {
 
 /* ---- 响应式 ---- */
 @media (max-width: 960px) {
-  .stay-detail-dialog .el-dialog { width: 94vw !important; }
+  .stay-detail-dialog.el-dialog { width: 94vw !important; }
 }
 </style>

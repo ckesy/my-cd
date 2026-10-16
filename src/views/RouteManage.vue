@@ -138,9 +138,10 @@
                 <el-table-column
                   v-if="col.prop === 'action'"
                   :label="col.label"
-                  :width="col.width || 320"
+                  :width="col.width || 250"
                   :align="col.align"
                   :fixed="col.fixed || false"
+                  class-name="action-col"
                 >
                   <template #default="{ row }">
                     <div class="action-cell">
@@ -381,7 +382,7 @@ const DEFAULT_COLUMNS = [
   { prop: 'plan_count', label: '方案数量', visible: true, fixed: false, minWidth: 100, align: 'center' },
   { prop: 'creator', label: '创建人', visible: true, fixed: false, minWidth: 110, align: 'center' },
   { prop: 'created_at', label: '创建时间', visible: true, fixed: false, minWidth: 170, align: 'center' },
-  { prop: 'action', label: '操作', visible: true, fixed: 'right', width: 320, align: 'center' },
+  { prop: 'action', label: '操作', visible: true, fixed: 'right', width: 250, align: 'center' },
 ]
 const columnConfig = ref(JSON.parse(JSON.stringify(DEFAULT_COLUMNS)))
 const visibleColumns = computed(() => columnConfig.value.filter(c => c.visible))
@@ -943,24 +944,30 @@ onBeforeUnmount(() => {
 /* ============================================================
    ⭐ 操作列：胶囊按钮（重新设计）
    ============================================================ */
+/* ⭐ 操作列收窄：去掉单元格多余内边距，按钮紧凑化 */
+:deep(.action-col .cell) {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
 .action-cell {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 5px;
+  flex-wrap: nowrap;
 }
 
 .op-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 0 10px;
-  height: 26px;
-  border-radius: 13px;
+  gap: 3px;
+  padding: 0 7px;
+  height: 24px;
+  border-radius: 12px;
   border: 1px solid;
   background: #fff;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -970,7 +977,7 @@ onBeforeUnmount(() => {
   letter-spacing: 0.2px;
   outline: none;
 }
-.op-btn .el-icon { font-size: 13px; }
+.op-btn .el-icon { font-size: 12px; }
 .op-btn:active { transform: translateY(0) scale(0.96); }
 
 /* 详情 - 红色描边 */

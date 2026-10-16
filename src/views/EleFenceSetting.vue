@@ -42,56 +42,57 @@
 
     <!-- 表格卡片 -->
     <div class="table-card fade-up" style="animation-delay: 0.1s">
-      <el-table :data="tableData" border stripe style="width: 100%;" size="default" v-loading="loading"
-        class="custom-table"
-        :header-cell-style="{ background: '#F1F5F9', color: '#0F172A', fontWeight: '700', fontSize: '13px' }">
-        <el-table-column prop="name" label="围栏名称" min-width="160" align="center" show-overflow-tooltip>
-          <template #default="{ row }">
-            <div class="name-wrap">
-              <span class="name-bar"></span>
-              <span class="name-text">{{ row.name }}</span>
+      <div class="table-wrap">
+        <el-table :data="tableData" border stripe style="width: 100%;" size="default" v-loading="loading"
+          class="custom-table" height="100%"
+          :header-cell-style="{ background: '#F1F5F9', color: '#0F172A', fontWeight: '700', fontSize: '13px' }">
+          <el-table-column prop="name" label="围栏名称" min-width="160" align="center" show-overflow-tooltip>
+            <template #default="{ row }">
+              <div class="name-wrap">
+                <span class="name-bar"></span>
+                <span class="name-text">{{ row.name }}</span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="org" label="所属机构" min-width="140" align="center" show-overflow-tooltip />
+          <el-table-column prop="attr" label="围栏属性" min-width="110" align="center" show-overflow-tooltip />
+          <el-table-column label="围栏形状" min-width="100" align="center">
+            <template #default="{ row }">
+              <span class="shape-tag" :class="row.shape">{{ shapeText(row.shape) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="围栏参数" min-width="120" align="center">
+            <template #default="{ row }">
+              <span v-if="row.shape === 'circle'" class="param-text">{{ row.radius }} 米</span>
+              <span v-else-if="row.shape === 'polyline'" class="param-text">偏移 {{ row.bufferradius }} 米</span>
+              <span v-else-if="row.shape === 'district'" class="param-text">区划 {{ row.adcode }}</span>
+              <span v-else class="param-text">顶点 {{ countPoints(row.points) }} 个</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="location" label="地址信息" min-width="220" show-overflow-tooltip align="center" />
+          <el-table-column label="更新时间" min-width="160" align="center">
+            <template #default="{ row }">
+              <span class="time-text">{{ formatDateTime(row.updated_at) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="140" align="center" fixed="right">
+            <template #default="{ row }">
+              <el-button type="text" size="small" class="action-btn edit" @click="handleEdit(row)">编辑</el-button>
+              <el-button type="text" size="small" class="action-btn delete" @click="handleDelete(row)">删除</el-button>
+            </template>
+          </el-table-column>
+
+          <template #empty>
+            <div class="empty-state">
+              <el-icon class="empty-icon">
+                <MapLocation />
+              </el-icon>
+              <p>暂无电子围栏数据</p>
+              <span class="empty-sub">点击右上角"新增"创建你的第一个围栏吧</span>
             </div>
           </template>
-        </el-table-column>
-        <el-table-column prop="org" label="所属机构" min-width="140" align="center" show-overflow-tooltip />
-        <el-table-column prop="attr" label="围栏属性" min-width="110" align="center" show-overflow-tooltip />
-        <el-table-column label="围栏形状" min-width="100" align="center">
-          <template #default="{ row }">
-            <span class="shape-tag" :class="row.shape">{{ shapeText(row.shape) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="围栏参数" min-width="120" align="center">
-          <template #default="{ row }">
-            <span v-if="row.shape === 'circle'" class="param-text">{{ row.radius }} 米</span>
-            <span v-else-if="row.shape === 'polyline'" class="param-text">偏移 {{ row.bufferradius }} 米</span>
-            <span v-else-if="row.shape === 'district'" class="param-text">区划 {{ row.adcode }}</span>
-            <span v-else class="param-text">顶点 {{ countPoints(row.points) }} 个</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="location" label="地址信息" min-width="220" show-overflow-tooltip align="center" />
-        <el-table-column label="更新时间" min-width="160" align="center">
-          <template #default="{ row }">
-            <span class="time-text">{{ formatDateTime(row.updated_at) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="140" align="center" fixed="right">
-          <template #default="{ row }">
-            <el-button type="text" size="small" class="action-btn edit" @click="handleEdit(row)">编辑</el-button>
-            <el-button type="text" size="small" class="action-btn delete" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-
-        <template #empty>
-          <div class="empty-state">
-            <el-icon class="empty-icon">
-              <MapLocation />
-            </el-icon>
-            <p>暂无电子围栏数据</p>
-            <span class="empty-sub">点击右上角"新增"创建你的第一个围栏吧</span>
-          </div>
-        </template>
-      </el-table>
-
+        </el-table>
+      </div>
       <div class="pagination-wrapper">
         <span class="total-text">共 {{ total }} 条</span>
         <el-pagination background layout="sizes, prev, pager, next, jumper" :total="total" :page-size="pageSize"
@@ -423,7 +424,10 @@ onMounted(async () => {
 .ele-fence-page {
   padding: 6px 16px 16px;
   background-color: #f8fafc;
-  min-height: 100vh;
+  height: calc(100vh - 101px);
+  max-height: calc(100vh - 101px);
+  box-sizing: border-box;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -438,6 +442,27 @@ onMounted(async () => {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   padding: 16px;
   transition: box-shadow 0.3s ease;
+}
+
+/* 搜索卡片固定高度，不参与伸缩 */
+.search-card {
+  flex-shrink: 0;
+}
+
+/* 表格卡片占满剩余高度，内部滚动 */
+.table-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 表格区域撑满卡片剩余空间，表体内部滚动（表头固定） */
+.table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .search-card:hover,
@@ -703,6 +728,7 @@ onMounted(async () => {
   padding-top: 16px;
   border-top: 1px solid #E2E8F0;
   margin-top: 16px;
+  flex-shrink: 0;
 }
 
 .total-text {

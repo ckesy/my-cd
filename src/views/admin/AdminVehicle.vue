@@ -1584,7 +1584,8 @@ onBeforeUnmount(() => {
   gap: 0 12px;
 }
 
-.light-dialog .el-dialog {
+/* ⭐ el-dialog 会把 class 合并到 .el-dialog 自身，必须用同元素选择器 */
+.light-dialog.el-dialog {
   border-radius: 12px;
 }
 

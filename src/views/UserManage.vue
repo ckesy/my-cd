@@ -339,6 +339,12 @@
                     </el-icon>
                     {{ data.vehicleCount > 0 ? `${data.vehicleCount} 辆` : '暂无车辆' }}
                   </span>
+                  <span class="node-drivers" :class="{ empty: !data.driverCount }">
+                    <el-icon v-if="data.driverCount > 0">
+                      <Avatar />
+                    </el-icon>
+                    {{ data.driverCount > 0 ? `${data.driverCount} 名` : '暂无司机' }}
+                  </span>
                 </template>
 
                 <template v-else-if="data.type === 'org'">
@@ -352,6 +358,12 @@
                       <Van />
                     </el-icon>
                     {{ data.vehicleCount > 0 ? `${data.vehicleCount} 辆` : '暂无车辆' }}
+                  </span>
+                  <span class="node-drivers" :class="{ empty: !data.driverCount }">
+                    <el-icon v-if="data.driverCount > 0">
+                      <Avatar />
+                    </el-icon>
+                    {{ data.driverCount > 0 ? `${data.driverCount} 名` : '暂无司机' }}
                   </span>
                 </template>
 
@@ -377,6 +389,12 @@
                       <Van />
                     </el-icon>
                     {{ data.vehicleCount > 0 ? `${data.vehicleCount} 辆` : '暂无车辆' }}
+                  </span>
+                  <span class="node-drivers" :class="{ empty: !data.driverCount }">
+                    <el-icon v-if="data.driverCount > 0">
+                      <Avatar />
+                    </el-icon>
+                    {{ data.driverCount > 0 ? `${data.driverCount} 名` : '暂无司机' }}
                   </span>
                   <span class="status-tag mini" :class="data.status === 1 ? 'on' : 'off'">
                     {{ data.status === 1 ? '启用' : '禁用' }}
@@ -1053,6 +1071,32 @@ const loadOrgTree = async () => {
     const { data: vehiclesRaw } = await vehicleQuery
     const vehiclesList = vehiclesRaw || []
 
+    // ⭐ 查询司机并按「所属组织结构」(drivers.org 名称) 聚合到机构
+    //    司机档案的隔离与展示均以 drivers.org 为准（不是 org_id）
+    //    仅统计本机构下的司机，不递归叠加子/父机构
+    let driverQuery = supabase.from('drivers').select('id, org, org_id')
+    if (isCustomer && myAccount) driverQuery = driverQuery.eq('customer_id', myCustomerId || '00000000-0000-0000-0000-000000000000')
+    const { data: driversRaw } = await driverQuery
+    const driversList = driversRaw || []
+
+    const orgNameById = {}
+    ;(orgs || []).forEach(o => { orgNameById[String(o.id)] = String(o.name || '').trim() })
+
+    const directDriverByOrgName = {}
+    driversList.forEach(d => {
+      let name = String(d.org || '').trim()
+      // 兜底：org 名称为空时用 org_id 反查机构名
+      if (!name && d.org_id != null) name = orgNameById[String(d.org_id)] || ''
+      if (name) directDriverByOrgName[name] = (directDriverByOrgName[name] || 0) + 1
+    })
+
+    // 按 org_id 反查机构名后取司机数
+    const driverCountByOrgId = (orgId) => {
+      if (orgId == null) return 0
+      const n = orgNameById[String(orgId)] || ''
+      return n ? (directDriverByOrgName[n] || 0) : 0
+    }
+
     const orgsList = orgs || []
     const fleetsList = fleets || []
     const usersList = users || []
@@ -1091,6 +1135,7 @@ const loadOrgTree = async () => {
         roleName: role ? role.name : '--',
         ownerName: owner ? owner.name : '',
         vehicleCount: u.org_id ? (recursiveVehicleByOrg[String(u.org_id)] || 0) : 0,
+        driverCount: driverCountByOrgId(u.org_id),
       }
     }
 
@@ -1122,6 +1167,7 @@ const loadOrgTree = async () => {
           level: org.level,
           isRoot: org.is_root,
           vehicleCount: recursiveVehicleByOrg[String(org.id)] || 0,
+          driverCount: directDriverByOrgName[String(org.name || '').trim()] || 0,
           children: [...buildOrgChildren(org.id), ...orgFleets, ...orgUsers],
         }
       })
@@ -1145,6 +1191,7 @@ const loadOrgTree = async () => {
         type: 'root',
         label: root.name,
         vehicleCount: recursiveVehicleByOrg[String(root.id)] || 0,
+        driverCount: directDriverByOrgName[String(root.name || '').trim()] || 0,
         children: [...buildOrgChildren(root.id), ...rootDirectUsers],
       }))
     } else {
@@ -1153,6 +1200,7 @@ const loadOrgTree = async () => {
         type: 'root',
         label: root.name,
         vehicleCount: recursiveVehicleByOrg[root.id] || 0,
+        driverCount: directDriverByOrgName[String(root.name || '').trim()] || 0,
         children: [...buildOrgChildren(root.id), ...rootDirectUsers],
       }))
     }
@@ -2108,6 +2156,30 @@ onBeforeUnmount(() => {
 }
 
 .node-vehicles.empty {
+  background: #F1F5F9;
+  color: #94A3B8;
+  font-weight: 600;
+}
+
+/* ⭐ 司机数徽章（绿色系，仅统计本机构，不递归） */
+.node-drivers {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+  color: #15803D;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: #DCFCE7;
+  white-space: nowrap;
+}
+
+.node-drivers .el-icon {
+  font-size: 12px;
+}
+
+.node-drivers.empty {
   background: #F1F5F9;
   color: #94A3B8;
   font-weight: 600;
