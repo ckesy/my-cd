@@ -86,6 +86,36 @@ const routes = [
   },
 
   // ==========================================
+  // 👇 运营管理（综合报表 / 能耗报告 / 驾驶行为报表）
+  // ==========================================
+  {
+    path: '/operation',
+    name: 'Operation',
+    redirect: '/operation/summary',
+    meta: { title: '运营管理', icon: 'DataLine' },
+    children: [
+      {
+        path: 'summary',
+        name: 'OperationSummary',
+        component: () => import('../views/Dashboard.vue'),
+        meta: { title: '综合报表' }
+      },
+      {
+        path: 'energy',
+        name: 'OperationEnergy',
+        component: () => import('../views/Dashboard.vue'),
+        meta: { title: '能耗报告' }
+      },
+      {
+        path: 'driving',
+        name: 'OperationDriving',
+        component: () => import('../views/Dashboard.vue'),
+        meta: { title: '驾驶行为报表' }
+      }
+    ]
+  },
+
+  // ==========================================
   // 👇 入口选择页（管理员登录后进入）
   // ==========================================
   {

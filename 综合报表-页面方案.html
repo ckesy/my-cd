@@ -1,0 +1,2151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>综合报表 · 页面承载方案</title>
+  <style>
+    :root {
+      --red: #c8102e;
+      --red-deep: #a00d24;
+      --red-soft: #fef2f2;
+      --ink: #0f172a;
+      --ink-2: #1f2937;
+      --muted: #64748b;
+      --muted-2: #94a3b8;
+      --line: #edf1f6;
+      --bg: #f5f7fa;
+      --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue',
+        'PingFang SC', 'HarmonyOS Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 26px 24px 70px;
+      background: var(--bg);
+      font-family: var(--font);
+      color: var(--ink-2);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .wrap { max-width: 1300px; margin: 0 auto; }
+
+    .page-head { margin-bottom: 22px; }
+
+    .page-head h1 {
+      margin: 0 0 8px;
+      font-size: 23px;
+      font-weight: 800;
+      color: var(--ink);
+      letter-spacing: 0.2px;
+    }
+
+    .page-head p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 860px;
+    }
+
+    .conclusion {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      padding: 11px 14px;
+      background: #fff;
+      border: 1px solid #fde3e3;
+      border-left: 3px solid var(--red);
+      border-radius: 10px;
+      font-size: 12.5px;
+      color: #7f1d1d;
+      line-height: 1.7;
+    }
+
+    .conclusion b { color: var(--red-deep); }
+
+    /* ---------- 方案块 ---------- */
+    .scheme { margin-top: 26px; }
+
+    .scheme-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 9px;
+      flex-wrap: wrap;
+    }
+
+    .scheme-tag {
+      font-size: 11px;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(135deg, #c8102e, #a00d24);
+      padding: 3px 9px;
+      border-radius: 6px;
+      letter-spacing: 0.6px;
+    }
+
+    .scheme-title { font-size: 15px; font-weight: 800; color: var(--ink); }
+
+    .scheme-desc {
+      font-size: 12.3px;
+      color: var(--muted-2);
+      padding-left: 8px;
+      border-left: 1px solid #e2e8f0;
+    }
+
+    /* ---------- 系统外壳 ---------- */
+    .frame {
+      position: relative;
+      height: 700px;
+      border-radius: 13px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.07);
+      background: #fff;
+      display: flex;
+      font-size: 12px;
+    }
+
+    .side {
+      width: 190px;
+      flex-shrink: 0;
+      background: #fff;
+      border-right: 1px solid #eef2f7;
+      padding: 8px 6px;
+      overflow: hidden;
+    }
+
+    .side .brand {
+      font-size: 12.5px;
+      font-weight: 800;
+      color: var(--ink);
+      padding: 6px 10px 10px;
+      letter-spacing: 0.4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .side .brand i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.12);
+    }
+
+    .mi {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      height: 29px;
+      padding: 0 10px;
+      border-radius: 7px;
+      color: #64748b;
+      font-size: 11.5px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .mi.sub { padding-left: 26px; height: 26px; font-size: 11px; }
+
+    .mi.active {
+      background: var(--red-soft);
+      color: var(--red);
+      font-weight: 700;
+      position: relative;
+    }
+
+    .mi.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 14px;
+      background: var(--red);
+      border-radius: 0 3px 3px 0;
+    }
+
+    .mi .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.55;
+    }
+
+    .main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      background: #f8fafc;
+    }
+
+    .hdr {
+      height: 40px;
+      flex-shrink: 0;
+      background: #fff;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 10px;
+    }
+
+    .hdr .t { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+
+    .hdr .r { margin-left: auto; display: flex; gap: 6px; }
+
+    .hdr .pill {
+      font-size: 10.5px;
+      padding: 3px 9px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      color: #64748b;
+      background: #fff;
+      font-weight: 600;
+    }
+
+    .hdr .pill.red { background: var(--red); border-color: var(--red); color: #fff; }
+
+    .rail {
+      height: 27px;
+      flex-shrink: 0;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 14px;
+    }
+
+    .rail .tag {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 5px;
+      background: var(--red-soft);
+      color: var(--red);
+      border: 1px solid #fecaca;
+      font-weight: 700;
+    }
+
+    .rail .tag.ghost { background: #f8fafc; color: #94a3b8; border-color: transparent; }
+
+    .content {
+      flex: 1;
+      min-height: 0;
+      padding: 9px 12px 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* ---------- 通用小件 ---------- */
+    .bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 7px 9px;
+      flex-shrink: 0;
+    }
+
+    .sel {
+      height: 23px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 0 8px;
+      border-radius: 6px;
+      background: #f8fafc;
+      border: 1px solid #e8edf4;
+      font-size: 10.5px;
+      color: #475569;
+      font-weight: 600;
+    }
+
+    .sel .c { color: #cbd5e1; font-size: 8px; }
+
+    .btn {
+      height: 23px;
+      padding: 0 10px;
+      border-radius: 6px;
+      font-size: 10.5px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #475569;
+    }
+
+    .btn.primary { background: var(--red); border-color: var(--red); color: #fff; }
+
+    .spacer { margin-left: auto; }
+
+    .pane {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 9px 10px;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pane-h {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 7px;
+      flex-shrink: 0;
+    }
+
+    .pane-h .ttl {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--ink);
+      letter-spacing: 0.2px;
+    }
+
+    .pane-h .sub { font-size: 10px; color: var(--muted-2); font-weight: 600; }
+
+    .pane-h .act {
+      margin-left: auto;
+      font-size: 10px;
+      color: var(--red);
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: var(--red-soft);
+    }
+
+    /* 日历 */
+    .cal {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-auto-rows: 58px;
+      align-content: start;
+      gap: 4px;
+    }
+
+    .cal .wd {
+      font-size: 9px;
+      color: #94a3b8;
+      text-align: center;
+      font-weight: 700;
+      padding-bottom: 2px;
+    }
+
+    .cal .cell {
+      border-radius: 6px;
+      padding: 5px 6px;
+      height: 58px;
+      background: #f8fafc;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cal .cell .d { font-size: 8.5px; color: #9aa7b8; font-weight: 700; }
+    .cal .cell .v { font-size: 13px; font-weight: 800; color: #111827; margin-top: 2px; letter-spacing: -0.2px; }
+    .cal .cell .r { font-size: 8.5px; color: #9f1239; font-weight: 700; margin-top: 1px; }
+    .cal .cell.empty { background: #fbfcfe; border: 1px dashed #e8edf4; }
+    .cal .cell.today { box-shadow: inset 0 0 0 1.2px var(--red); }
+
+    .cal.xs { grid-auto-rows: 22px; gap: 3px; }
+    .cal.xs .cell { height: 22px; padding: 2px 4px; }
+    .cal.xs .cell .d { font-size: 6.5px; }
+    .cal.xs .cell .v { font-size: 9px; margin-top: 0; }
+    .cal.xs .cell .r { display: none; }
+    .cal.xs .wd { font-size: 7px; }
+    .cal.xs .cell .rest-txt { font-size: 7.5px; }
+
+    .cal.sm { grid-auto-rows: 34px; }
+    .cal.sm .cell { height: 34px; padding: 2px 4px; }
+    .cal.sm .cell .d { font-size: 7.5px; }
+    .cal.sm .cell .v { font-size: 10.5px; margin-top: 0; }
+    .cal.sm .cell .r { font-size: 7.5px; margin-top: 0; }
+    .cal.sm .wd { font-size: 8px; }
+
+    .cal-legend {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-top: 8px;
+      border-top: 1px dashed #f1f5f9;
+      font-size: 9px;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+
+    .cal-legend .sw { display: flex; gap: 2px; }
+    .cal-legend .sw i { width: 14px; height: 7px; border-radius: 2px; display: inline-block; }
+
+    .day-strip {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: #fdf6f6;
+      border: 1px solid #fbe3e3;
+      font-size: 9.5px;
+      color: #9f1239;
+      font-weight: 600;
+      flex-wrap: wrap;
+    }
+
+    .day-strip b { font-size: 11.5px; color: #111827; font-weight: 800; }
+    .day-strip .k { color: #b9808a; font-weight: 600; }
+
+    .lv1 { background: #fff8f8; }
+    .lv2 { background: #ffe4e4; }
+    .lv3 { background: #ffcaca; }
+    .lv4 { background: #f9a8a8; }
+    .lv5 { background: #ef8a8a; }
+
+    /* 矩阵 */
+    .mx { display: grid; gap: 3px; align-content: start; }
+    .mx .hcell { font-size: 8.5px; color: #94a3b8; text-align: center; font-weight: 700; }
+    .mx .vcell { font-size: 9px; color: #64748b; font-weight: 700; }
+    .mx .cell {
+      border-radius: 4px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .mx .grow {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #fdf6f6;
+      border-radius: 5px;
+      padding: 3px 6px;
+      font-size: 8.5px;
+      color: #9f1239;
+      font-weight: 800;
+    }
+
+    .mx .grow span { font-weight: 600; color: #b9808a; }
+
+    .mx .cell.blank { background: #f8fafc; color: #dbe3ec; }
+
+    /* 象限 */
+    .quad-svg { width: 100%; height: 100%; display: block; }
+
+    /* 排行 */
+    .rk-row {
+      display: grid;
+      grid-template-columns: 16px 68px 1fr 56px 38px;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 0;
+      font-size: 10px;
+    }
+
+    .rk-delta { font-size: 8.5px; font-weight: 800; text-align: right; }
+    .rk-delta.good { color: #0f9d58; }
+    .rk-delta.bad { color: var(--red); }
+
+    .rk-idx {
+      width: 15px;
+      height: 15px;
+      border-radius: 4px;
+      background: #f1f5f9;
+      color: #94a3b8;
+      font-size: 8.5px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rk-row:first-child .rk-idx { background: var(--red); color: #fff; }
+    .rk-name { font-size: 10px; font-weight: 700; color: var(--ink); }
+    .rk-track { height: 7px; border-radius: 4px; background: #f8fafc; }
+    .rk-bar { height: 7px; border-radius: 4px; background: linear-gradient(90deg, #e8566b, #c8102e); }
+    .rk-val { text-align: right; font-size: 10px; font-weight: 700; color: var(--ink); }
+
+    /* 剖面 */
+    .tl-axis { position: relative; height: 12px; margin-left: 70px; margin-bottom: 3px; }
+    .tl-axis span { position: absolute; transform: translateX(-50%); font-size: 8px; color: #b6c2d2; font-weight: 600; }
+
+    .tl-row {
+      display: grid;
+      grid-template-columns: 64px 1fr 42px;
+      gap: 6px;
+      align-items: center;
+      padding: 3px 0;
+      border-bottom: 1px solid #fbfcfe;
+    }
+
+    .tl-v { font-size: 8.5px; color: #94a3b8; font-weight: 700; text-align: right; }
+
+    .tl-legend {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      padding-top: 7px;
+      border-top: 1px dashed #f1f5f9;
+      font-size: 8.5px;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+
+    .tl-legend i { display: inline-block; width: 12px; height: 6px; border-radius: 2px; margin-right: 4px; vertical-align: 1px; }
+    .lg-run { background: linear-gradient(90deg, #e8566b, #c8102e); }
+    .lg-off { background: #e3e9f2; }
+    .lg-warn { background: #fbd9b0; }
+    .tl-name { font-size: 9px; font-weight: 700; color: #334155; }
+    .tl-track { position: relative; height: 13px; background: #f8fafc; border-radius: 4px; overflow: hidden; }
+    .tl-run { position: absolute; top: 2px; bottom: 2px; border-radius: 3px; background: linear-gradient(90deg, #e8566b, #c8102e); }
+    .tl-off { position: absolute; top: 3px; bottom: 3px; border-radius: 3px; background: #e3e9f2; }
+    .tl-off.warn { background: #fbd9b0; }
+
+    /* 待办 */
+    .is-row {
+      display: grid;
+      grid-template-columns: 4px 60px 52px 1fr;
+      gap: 6px;
+      align-items: center;
+      padding: 4px 0;
+      border-bottom: 1px solid #f6f8fb;
+      font-size: 9.5px;
+    }
+
+    .is-row:last-child { border-bottom: 0; }
+
+    .fchip {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 10px;
+      border: 1px solid #e8edf4;
+      background: #fff;
+      color: #64748b;
+    }
+
+    .fchip.active {
+      background: var(--red-soft);
+      border-color: #fecaca;
+      color: var(--red);
+    }
+
+    .mx-foot {
+      margin-top: auto;
+      padding-top: 7px;
+      border-top: 1px dashed #f1f5f9;
+      font-size: 9px;
+      color: #94a3b8;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .mx-foot b { color: var(--red); font-weight: 800; }
+    .is-lv { width: 4px; height: 14px; border-radius: 2px; }
+    .is-lv.h { background: var(--red); }
+    .is-lv.m { background: #f0a04b; }
+    .is-name { font-weight: 700; color: var(--ink); }
+    .is-tag {
+      font-size: 8.5px;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: var(--red-soft);
+      color: #9f1239;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .is-tag.t2 { background: #fff7ed; color: #b45309; }
+    .is-desc { color: #64748b; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+    /* 节律 */
+    .rh { display: grid; grid-template-columns: 24px repeat(24, 1fr); gap: 2px; }
+    .rh .wd { font-size: 9px; color: #94a3b8; font-weight: 700; display: flex; align-items: center; }
+    .rh .hl { font-size: 7.5px; color: #c3cddb; text-align: center; font-weight: 600; }
+    .rh .c { height: 12px; border-radius: 2px; background: #f8fafc; }
+
+    .rh.big { gap: 3px; }
+    .rh.big .c { height: 34px; border-radius: 4px; }
+    .rh.big .wd { font-size: 10px; color: #64748b; }
+
+    .rh-legend { display: flex; align-items: center; gap: 6px; margin-top: 9px; font-size: 8.5px; color: #94a3b8; font-weight: 600; }
+    .rh-legend .sw { display: flex; gap: 2px; }
+    .rh-legend .sw i { width: 16px; height: 7px; border-radius: 2px; display: inline-block; }
+
+    /* ---------- 方案 A：页内 Tab ---------- */
+    .tabs {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 4px;
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+
+    .tab {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #64748b;
+      padding: 5px 11px;
+      border-radius: 7px;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .tab:hover { color: var(--red); background: #fff8f8; }
+
+    .tab.active {
+      background: linear-gradient(135deg, #c8102e, #a00d24);
+      color: #fff;
+      box-shadow: 0 3px 8px rgba(200, 16, 46, 0.28);
+    }
+
+    .tab .badge {
+      background: rgba(255, 255, 255, 0.28);
+      border-radius: 6px;
+      padding: 0 4px;
+      font-size: 8.5px;
+    }
+
+    .tab:not(.active) .badge { background: #fee2e2; color: #b91c1c; }
+
+    .tab-body { flex: 1; min-height: 0; }
+    .tab-body > .fade { animation: fadeUp 0.24s cubic-bezier(0.25, 1, 0.5, 1); height: 100%; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .cal-wrap { display: grid; grid-template-columns: 1fr 196px; gap: 10px; height: 100%; }
+
+    .stat-mini { display: flex; flex-direction: column; gap: 6px; }
+
+    .stat-mini .line {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #64748b;
+      padding: 3px 0;
+    }
+
+    .stat-mini .line b { font-size: 11.5px; color: var(--ink); font-weight: 800; }
+
+    /* ---------- 方案 B：总览 + 下钻 ---------- */
+    .health {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr) 1.1fr;
+      gap: 7px;
+      flex-shrink: 0;
+    }
+
+    .hcard {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 7px 9px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hcard .ic {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      background: var(--red-soft);
+      color: var(--red);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .hcard .lab { font-size: 9px; color: #94a3b8; font-weight: 600; }
+    .hcard .val { font-size: 14px; font-weight: 800; color: var(--ink); line-height: 1.15; }
+    .hcard .val small { font-size: 8.5px; color: #94a3b8; font-weight: 700; }
+    .hcard .cmp { font-size: 8.5px; font-weight: 700; color: #0f9d58; }
+
+    .grid2 {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      grid-template-rows: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 7px;
+    }
+
+    .card-hover { transition: transform 0.18s, box-shadow 0.18s; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08); }
+
+    /* ---------- 方案 C：左侧视图导航 ---------- */
+    .c-body { display: flex; gap: 9px; flex: 1; min-height: 0; }
+
+    .vnav {
+      width: 122px;
+      flex-shrink: 0;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 6px;
+    }
+
+    .vnav .grp {
+      font-size: 8.5px;
+      color: #b6c2d2;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      padding: 7px 8px 4px;
+    }
+
+    .vitem {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 26px;
+      padding: 0 8px;
+      border-radius: 6px;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.18s;
+    }
+
+    .vitem:hover { background: #fff8f8; color: var(--red); }
+
+    .vitem.active {
+      background: var(--red-soft);
+      color: var(--red);
+      font-weight: 800;
+    }
+
+    .vitem.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 5px;
+      bottom: 5px;
+      width: 2.5px;
+      border-radius: 0 3px 3px 0;
+      background: var(--red);
+    }
+
+    .vitem .n {
+      margin-left: auto;
+      font-size: 8.5px;
+      background: #fee2e2;
+      color: #b91c1c;
+      border-radius: 5px;
+      padding: 0 4px;
+      font-weight: 800;
+    }
+
+    .c-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+
+    /* ---------- 方案 D：工作台 ---------- */
+    .wb {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-template-rows: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 7px;
+    }
+
+    .scope {
+      font-size: 8.5px;
+      font-weight: 700;
+      color: #94a3b8;
+      background: #f8fafc;
+      border: 1px solid #e8edf4;
+      border-radius: 5px;
+      padding: 1px 5px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.18s;
+    }
+
+    .scope:hover { color: var(--red); border-color: #fecaca; }
+
+    .scope.custom {
+      color: var(--red);
+      background: var(--red-soft);
+      border-color: #fecaca;
+    }
+
+    .scope.custom::before {
+      content: '●';
+      font-size: 6px;
+      margin-right: 3px;
+      vertical-align: 1px;
+    }
+
+    .chips {
+      display: flex;
+      gap: 4px;
+      padding: 2px;
+      border-radius: 7px;
+      background: #f1f5f9;
+    }
+
+    .chip {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #64748b;
+      padding: 3px 9px;
+      border-radius: 5px;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .chip:hover { color: var(--red); }
+
+    .chip.active {
+      background: #fff;
+      color: var(--red);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+    }
+
+    .vwrap { height: 100%; display: flex; flex-direction: column; }
+    .vbody { flex: 1; min-height: 0; }
+    .vbody > * { height: 100%; min-height: 0; }
+
+    .vbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #f1f5f9;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .vbar .vsub { font-size: 9.5px; color: #94a3b8; font-weight: 600; }
+
+    .stage { position: relative; flex: 1; min-height: 0; }
+
+    .wb-area {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .table-area {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 9px 11px;
+      min-height: 0;
+    }
+
+    .stage[data-mode="table"] .wb-area { display: none; }
+    .stage[data-mode="table"] .table-area { display: flex; }
+
+    /* 模式切换 */
+    .modes {
+      display: inline-flex;
+      gap: 2px;
+      padding: 2px;
+      border-radius: 8px;
+      background: #f1f5f9;
+    }
+
+    .mode {
+      border: 0;
+      background: transparent;
+      font-family: inherit;
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #64748b;
+      padding: 4px 11px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mode:hover { color: var(--red); }
+
+    .mode.active {
+      background: #fff;
+      color: var(--red);
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1);
+    }
+
+    /* 明细表 */
+    .tbl-bar {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid #f1f5f9;
+      flex-shrink: 0;
+    }
+
+    .tbl-bar .ttl { font-size: 11.5px; font-weight: 800; color: var(--ink); }
+    .tbl-bar .sub { font-size: 9.5px; color: #94a3b8; font-weight: 600; }
+
+    .tbl-scroll { flex: 1; min-height: 0; overflow: auto; margin-top: 6px; }
+
+    .tbl-row {
+      display: grid;
+      grid-template-columns: 118px 96px 146px 82px 92px 86px 86px 76px 168px;
+      align-items: center;
+      gap: 0;
+      border-bottom: 1px solid #f6f8fb;
+      min-width: 950px;
+    }
+
+    .tbl-row > div {
+      padding: 5px 6px;
+      font-size: 9.5px;
+      color: #334155;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tbl-head {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #f8fafc;
+      border-bottom: 1px solid #eef2f7;
+    }
+
+    .tbl-head > div {
+      font-size: 9px;
+      font-weight: 800;
+      color: #64748b;
+      padding: 6px;
+    }
+
+    .tbl-row .num { font-weight: 700; color: #111827; font-variant-numeric: tabular-nums; }
+    .tbl-row .plate { font-weight: 800; color: var(--ink); }
+    .tbl-row .vin { font-size: 8.5px; letter-spacing: 0.2px; }
+    .tbl-row .loc { text-align: left; color: #64748b; font-size: 9px; }
+
+    .mini-tag {
+      display: inline-block;
+      font-size: 8.5px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 6px;
+    }
+
+    .mini-tag.driving { background: #ecfdf5; color: #059669; }
+    .mini-tag.parked { background: #fffbeb; color: #d97706; }
+    .mini-tag.offline { background: #f1f5f9; color: #64748b; }
+
+    .tbl-foot {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-top: 7px;
+      margin-top: 4px;
+      border-top: 1px solid #f1f5f9;
+      font-size: 9px;
+      color: #94a3b8;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .tbl-foot .pg {
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      background: var(--red);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 800;
+    }
+
+    .tbl-foot .pg.ghost { background: #f1f5f9; color: #94a3b8; }
+
+    .link-cell { color: var(--red); cursor: pointer; }
+
+    .icon-chip {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      border: 1px solid #e8edf4;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #94a3b8;
+    }
+
+    .wb-area > .wb { flex: 1; min-height: 0; }
+
+    .expander {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      display: none;
+      flex-direction: column;
+      background: #f8fafc;
+      border-radius: 11px;
+      will-change: transform, opacity;
+    }
+
+    .expander.open { display: flex; }
+
+    .exp-body { flex: 1; min-height: 0; }
+    .exp-body > .fade { height: 100%; }
+
+    .exp-back {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      z-index: 7;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 14px;
+      border: 0;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #c8102e, #a00d24);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(200, 16, 46, 0.32);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .exp-back:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(200, 16, 46, 0.42); }
+    .exp-back .ar { font-size: 12px; }
+
+    .tile { cursor: pointer; }
+
+    .tile {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 8px 10px;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: box-shadow 0.18s, transform 0.18s;
+    }
+
+    .tile:hover { box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08); transform: translateY(-1px); }
+
+    .tile .grab {
+      position: absolute;
+      top: 6px;
+      right: 7px;
+      font-size: 9px;
+      color: #cbd5e1;
+      letter-spacing: 1px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .tile:hover .grab { opacity: 1; }
+
+    .tile.editing { border-style: dashed; border-color: #fca5a5; background: #fffcfc; }
+    .tile { overflow: hidden; }
+
+    .t-alert {
+      position: absolute;
+      inset: 0;
+      border-radius: 11px;
+      border: 1.5px dashed var(--red);
+      background: rgba(200, 16, 46, 0.04);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: var(--red);
+      font-weight: 800;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .tile:hover .t-alert { opacity: 1; }
+
+    /* ---------- 说明 ---------- */
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 9px;
+      margin-top: 10px;
+    }
+
+    .meta-item {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 11px;
+    }
+
+    .meta-k {
+      font-size: 9.5px;
+      color: #b6c2d2;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .meta-v { font-size: 11.3px; color: #475569; line-height: 1.65; }
+    .meta-v b { color: var(--ink); font-weight: 700; }
+
+    /* ---------- 收尾对比 ---------- */
+    table.cmp {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    table.cmp th, table.cmp td {
+      padding: 9px 12px;
+      text-align: left;
+      border-bottom: 1px solid #f4f7fb;
+    }
+
+    table.cmp th {
+      background: #f8fafc;
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+    }
+
+    table.cmp td:first-child { font-weight: 700; color: var(--ink); }
+    table.cmp tr:last-child td { border-bottom: 0; }
+    table.cmp .rec { color: var(--red); font-weight: 800; }
+
+    @media (max-width: 1100px) {
+      .meta { grid-template-columns: repeat(2, 1fr); }
+      .health { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="page-head">
+      <h1>综合报表 · 页面承载方案</h1>
+      <p>7 个视图全部保留，问题只剩「怎么装进一个页面」。下面是 4 种承载方式，都按你系统现有的外壳（侧边栏 220 / 顶栏 48 / 页签栏）做的真实比例稿，
+        可以直接对着比。</p>
+      <div class="conclusion">
+        <span>💡</span>
+        <span><b>先说结论：</b>不建议把 7 个视图做成 7 个菜单项（侧边栏会爆炸、权限也要改 7 次）。
+          如果选 D：<b>D 的展开态就是 A</b>（同一套视图、同样占满内容区），所以选了 D 等于同时拿到 A 的能力，不用再做一套 Tab。
+          建议分两步：<b>一期</b>固定布局 + 点磁贴展开全屏；<b>二期</b>再加拖拽编排与布局保存。</span>
+      </div>
+    </div>
+
+    <!-- ================= A ================= -->
+    <div class="scheme">
+      <div class="scheme-head">
+        <span class="scheme-tag">方案 A</span>
+        <span class="scheme-title">页内 Tab · 一个页面切 7 个视图</span>
+        <span class="scheme-desc">菜单不变，筛选条常驻，Tab 下方整块替换</span>
+      </div>
+
+      <div class="frame" id="frameA">
+        <aside class="side" data-side></aside>
+        <div class="main">
+          <div class="hdr">
+            <span class="t">车队管理平台</span>
+            <span class="r"><span class="pill">设置</span><span class="pill red">退出</span></span>
+          </div>
+          <div class="rail"><span class="tag">综合报表 ×</span><span class="tag ghost">运单管理 ×</span></div>
+          <div class="content">
+            <div class="bar">
+              <span class="sel">全部机构 <span class="c">▼</span></span>
+              <span class="sel">全部车牌 <span class="c">▼</span></span>
+              <span class="sel">日报 · 2026-10-17 <span class="c">▼</span></span>
+              <span class="spacer"></span>
+              <span class="btn primary">搜索</span>
+              <span class="btn">重置</span>
+              <span class="btn">导出</span>
+            </div>
+            <div class="tabs" id="tabsA"></div>
+            <div class="tab-body" id="bodyA"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <div class="meta-item"><div class="meta-k">位置</div><div class="meta-v">筛选条下方一条 Tab，<b>7 个视图平铺</b>；Tab 与筛选条都常驻，不随视图刷新。</div></div>
+        <div class="meta-item"><div class="meta-k">排版</div><div class="meta-v">Tab 高 34，内容区 <b>整块替换</b>；每个视图内部自己分栏，互不影响。</div></div>
+        <div class="meta-item"><div class="meta-k">动效</div><div class="meta-v">切换：<b>淡入 + 上移 8px，220ms</b>；Tab 选中底色 180ms；数字用滚动过渡。</div></div>
+        <div class="meta-item"><div class="meta-k">适合</div><div class="meta-v">日常最常用。缺点是只能看一个视图，跨视图对比要来回切。</div></div>
+      </div>
+    </div>
+
+    <!-- ================= B ================= -->
+    <div class="scheme">
+      <div class="scheme-head">
+        <span class="scheme-tag">方案 B</span>
+        <span class="scheme-title">总览工作台 · 体检带 + 四宫格下钻</span>
+        <span class="scheme-desc">首屏给结论，点卡片放大看细节</span>
+      </div>
+
+      <div class="frame" id="frameB">
+        <aside class="side" data-side></aside>
+        <div class="main">
+          <div class="hdr">
+            <span class="t">车队管理平台</span>
+            <span class="r"><span class="pill">设置</span><span class="pill red">退出</span></span>
+          </div>
+          <div class="rail"><span class="tag">综合报表 ×</span></div>
+          <div class="content">
+            <div class="bar">
+              <span class="sel">全部机构 <span class="c">▼</span></span>
+              <span class="sel">2026-10-01 ~ 10-17 <span class="c">▼</span></span>
+              <span class="spacer"></span>
+              <span class="btn primary">刷新</span>
+              <span class="btn">导出</span>
+            </div>
+
+            <div class="health" id="healthB"></div>
+
+            <div class="grid2">
+              <div class="pane card-hover" style="grid-row: span 2">
+                <div class="pane-h"><span class="ttl">效率象限</span><span class="sub">40 台 · 中位数分界</span><span class="act">展开 ↗</span></div>
+                <div id="quadB" style="flex:1;min-height:0"></div>
+              </div>
+              <div class="pane card-hover">
+                <div class="pane-h"><span class="ttl">今日待办</span><span class="sub">18 条 · 5 类</span><span class="act">全部 ↗</span></div>
+                <div id="issuesB" style="flex:1;overflow:hidden"></div>
+        <div class="mx-foot"><span>电耗超标 5 · 出勤不足 2 · 下电 9 · 骤降 2</span><span>查看全部 <b>18 条 ›</b></span></div>
+              </div>
+              <div class="pane card-hover">
+                <div class="pane-h"><span class="ttl">车队排行</span><span class="scope" title="默认跟随全局：本月">10/01–10/17</span><span class="act">展开 ↗</span></div>
+                <div id="rankB" style="flex:1"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <div class="meta-item"><div class="meta-k">位置</div><div class="meta-v">顶部一条 <b>体检带</b>（出勤/电耗/异常/里程），下面 <b>1 大 2 小</b> 卡片；象限占主位。</div></div>
+        <div class="meta-item"><div class="meta-k">交互</div><div class="meta-v">卡片 hover 抬 2px；点「展开」用 <b>共享元素过渡</b>放大成全屏视图，Esc 收回。</div></div>
+        <div class="meta-item"><div class="meta-k">动效</div><div class="meta-v">展开 <b>FLIP 320ms</b> 弹性；数据刷新时卡片内数字 600ms 递增，骨架屏 1.2s shimmer。</div></div>
+        <div class="meta-item"><div class="meta-k">适合</div><div class="meta-v">老板/调度早上第一眼看全局；细节靠下钻，不挤在一屏。</div></div>
+      </div>
+    </div>
+
+    <!-- ================= C ================= -->
+    <div class="scheme">
+      <div class="scheme-head">
+        <span class="scheme-tag">方案 C</span>
+        <span class="scheme-title">页内左侧导航 · 按视角分组</span>
+        <span class="scheme-desc">视图再多也不挤，适合 100 台车队</span>
+      </div>
+
+      <div class="frame" id="frameC">
+        <aside class="side" data-side></aside>
+        <div class="main">
+          <div class="hdr">
+            <span class="t">车队管理平台</span>
+            <span class="r"><span class="pill">设置</span><span class="pill red">退出</span></span>
+          </div>
+          <div class="rail"><span class="tag">综合报表 ×</span></div>
+          <div class="content">
+            <div class="bar">
+              <span class="sel">全部机构 <span class="c">▼</span></span>
+              <span class="sel">2026-10-14 ~ 10-17 <span class="c">▼</span></span>
+              <span class="spacer"></span>
+              <span class="btn primary">搜索</span>
+              <span class="btn">导出</span>
+            </div>
+            <div class="c-body">
+              <nav class="vnav" id="vnavC"></nav>
+              <div class="c-main" id="bodyC"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <div class="meta-item"><div class="meta-k">位置</div><div class="meta-v">页面内左栏 <b>122px</b>，按「时间视角 / 车辆视角 / 诊断」分三组；右侧内容区自适应。</div></div>
+        <div class="meta-item"><div class="meta-k">排版</div><div class="meta-v">导航常驻不折叠，<b>异常待办带角标</b>；内容区可放更宽的矩阵/剖面。</div></div>
+        <div class="meta-item"><div class="meta-k">动效</div><div class="meta-v">选中项左侧红条 <b>scaleY 180ms</b> 弹入；内容区 <b>横向滑入 12px</b> + 淡入。</div></div>
+        <div class="meta-item"><div class="meta-k">适合</div><div class="meta-v">视图多、要长期扩展（以后加「电池健康」「司机评分」直接加一项）。</div></div>
+      </div>
+    </div>
+
+    <!-- ================= D ================= -->
+    <div class="scheme">
+      <div class="scheme-head">
+        <span class="scheme-tag">方案 D</span>
+        <span class="scheme-title">工作台 + 明细表 · 8 个入口</span>
+        <span class="scheme-desc">7 个视图磁贴 + 原来那张表；左上角切换，点磁贴展开 = 方案 A 的整页视图</span>
+      </div>
+
+      <div class="frame" id="frameD">
+        <aside class="side" data-side></aside>
+        <div class="main">
+          <div class="hdr">
+            <span class="t">车队管理平台</span>
+            <span class="r"><span class="pill">设置</span><span class="pill red">退出</span></span>
+          </div>
+          <div class="rail"><span class="tag">综合报表 ×</span></div>
+          <div class="content">
+            <div class="bar">
+              <div class="modes" id="modeD">
+                <button class="mode active" data-mode="wb">工作台</button>
+                <button class="mode" data-mode="table">明细表</button>
+              </div>
+              <span class="sel">全部机构 <span class="c">▼</span></span>
+              <span class="sel" data-bar="wb">统计周期：本月 <span class="c">▼</span></span>
+              <span class="sel" data-bar="table">日报 <span class="c">▼</span></span>
+              <span class="sel" data-bar="table">2026-10-16 <span class="c">▼</span></span>
+              <span class="spacer"></span>
+              <span class="btn layout-btn">编辑布局</span>
+              <span class="btn primary layout-btn">保存</span>
+              <span class="btn" id="tblToolBtn" style="display:none">刷新</span>
+            </div>
+
+            <div class="stage" id="stageD" data-mode="wb">
+              <!-- 工作台：7 个视图磁贴 -->
+              <div class="wb-area" id="wbArea">
+                <div class="wb" id="wbD"></div>
+
+                <!-- 展开态：与方案 A 的整页视图同一套内容 -->
+                <div class="expander" id="expD">
+                  <div class="exp-body" id="expBody"></div>
+                  <button class="exp-back" id="expBack">
+                    <span class="ar">←</span> 返回工作台
+                  </button>
+                </div>
+              </div>
+
+              <!-- 明细表：就是现在综合报表那张表 -->
+              <div class="table-area" id="tableArea"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <div class="meta-item"><div class="meta-k">位置</div><div class="meta-v">12 栅格两行：<b>日历(5) + 待办(3) + 象限(4)</b> / <b>排行 + 矩阵 + 剖面 + 节律（各 3）</b>，7 个视图一屏全见。</div></div>
+        <div class="meta-item"><div class="meta-k">切换 / 筛选</div><div class="meta-v">左上 <b>「工作台 ⇄ 明细表」</b>开关，筛选条跟着换控件：工作台是<b>统计周期</b>，明细表是<b>日期类型 + 日期</b>；机构/车牌两边共用。</div></div>
+        <div class="meta-item"><div class="meta-k">各视图的日期</div><div class="meta-v">磁贴标题右侧的<b>灰色胶囊</b>是它当前口径（默认跟随全局）；点一下变<b>红色=已单独设置</b>，展开后控件升到内容区顶部。</div></div>
+        <div class="meta-item"><div class="meta-k">动效</div><div class="meta-v">展开 <b>FLIP 340ms</b>（从磁贴长出来）、收回 180ms；模式切换 <b>180ms 淡入</b>；二期拖拽让位 180ms。</div></div>
+      </div>
+    </div>
+
+    <!-- ================= 对比 ================= -->
+    <div class="scheme">
+      <div class="scheme-head">
+        <span class="scheme-tag">对比</span>
+        <span class="scheme-title">四版怎么选</span>
+      </div>
+      <table class="cmp">
+        <tr><th>方案</th><th>首屏信息量</th><th>切换成本</th><th>扩展性</th><th>实现成本</th><th>建议</th></tr>
+        <tr><td>A 页内 Tab</td><td>中</td><td>低（一次点击）</td><td>中</td><td>低</td><td class="rec">作为骨架，先做</td></tr>
+        <tr><td>B 总览工作台</td><td>高</td><td>中（要点开展开）</td><td>中</td><td>中</td><td class="rec">体检带并入 A</td></tr>
+        <tr><td>C 左侧视图导航</td><td>中</td><td>低</td><td>高</td><td>低</td><td>视图继续变多时切到 C</td></tr>
+        <tr><td>D 工作台 + 明细表</td><td>最高（7 视图 + 表格）</td><td>低</td><td>高</td><td>中</td><td class="rec">推荐：一屏 7 视图，表格用开关切</td></tr>
+      </table>
+      <div class="conclusion" style="margin-top:12px">
+        <span>✅</span>
+        <span><b>落地建议（D 为主，8 个入口）：</b>筛选条 → 左上 <b>「工作台 / 明细表」</b> 开关 →
+          工作台里 7 个视图磁贴一屏铺开，点任意磁贴 <b>FLIP 展开成整页视图</b>（= A 的对应页签）→「返回工作台」收回；
+          明细表就是现在这张表，点车牌能反查该车日历。<b>一期</b>固定布局就够用，<b>二期</b>再加拖拽编排与按角色保存。</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ============================================================
+       迷你数据（只求像，不求全）
+       ============================================================ */
+    const ORGS = ['十堰分公司', '襄阳分公司', '武汉分公司', '宜昌分公司']
+    const PLATES = [
+      '鄂C30010D', '鄂C30024D', '鄂C30031D', '鄂C30046D',
+      '鄂F30220D', '鄂F30231D', '鄂F30244D', '鄂F30258D',
+      '鄂A30404D', '鄂A30418D', '鄂E30611D', '鄂E30628D',
+    ]
+    const TODAY = 17
+
+    const hash = (s) => {
+      let h = 2166136261
+      for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) }
+      h ^= h >>> 16; h = Math.imul(h, 2246822507)
+      h ^= h >>> 13; h = Math.imul(h, 3266489909)
+      h ^= h >>> 16
+      return (h >>> 0) / 4294967295
+    }
+
+    const lvl = (rate) => {
+      if (!rate) return 'lv1'
+      if (rate < 205) return 'lv1'
+      if (rate < 220) return 'lv2'
+      if (rate < 235) return 'lv3'
+      return 'lv4'
+    }
+
+    function day(plate, d) {
+      const s = hash(plate + '|' + d)
+      if (s < 0.14) return { d, rest: true }
+      const base = 90 + hash(plate) * 260
+      return {
+        d,
+        km: Math.round(base * (0.5 + s)),
+        rate: Math.round(195 + hash('r' + plate + d) * 50),
+      }
+    }
+
+    /* ---------- 迷你视图 ---------- */
+    const VIEWS = {
+      cal(dense) {
+        let h = ['一', '二', '三', '四', '五', '六', '日'].map((w) => `<div class="wd">${w}</div>`).join('')
+        for (let i = 0; i < 3; i++) h += '<div class="cell empty"></div>'
+        for (let d = 1; d <= 31; d++) {
+          const x = day('鄂C30010D', Math.min(d, TODAY))
+          if (d > TODAY) { h += `<div class="cell empty"><div class="d">${d}</div></div>`; continue }
+          if (x.rest) { h += `<div class="cell"><div class="d">${d}</div><div class="v" style="font-size:9px;color:#cbd5e1;margin-top:8px">未运行</div></div>`; continue }
+          h += `<div class="cell ${lvl(x.rate)} ${d === TODAY ? 'today' : ''}">
+            <div class="d">${d}</div>
+            <div class="v">${x.km}<span style="font-size:8px;font-weight:600;color:#6b7280">km</span></div>
+            <div class="r">${x.rate}</div>
+          </div>`
+        }
+        const cls = dense === 'xs' ? 'xs' : dense ? 'sm' : ''
+        return `<div class="cal ${cls}">${h}</div>`
+      },
+
+      matrix(dense) {
+        const allDays = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+        const days = dense === 'tiny' ? allDays.slice(0, 6) : allDays
+        const all = [
+          { org: '十堰分公司', rows: ['鄂C30010D', '鄂C30024D', '鄂C30031D', '鄂C30046D', '鄂C30052D'] },
+          { org: '襄阳分公司', rows: ['鄂F30220D', '鄂F30231D', '鄂F30244D', '鄂F30258D', '鄂F30261D'] },
+          { org: '武汉分公司', rows: ['鄂A30404D', '鄂A30418D', '鄂A30425D', '鄂A30439D', '鄂A30442D'] },
+        ]
+        const tiny = dense === 'tiny'
+        const groups = all.slice(0, tiny ? 2 : 3).map((g) => ({
+          ...g,
+          rows: g.rows.slice(0, tiny ? 2 : 5),
+        }))
+
+        let h = `<div class="mx" style="grid-template-columns: 62px repeat(${days.length}, 1fr)">`
+        h += '<div class="hcell"></div>' + days.map((d) => `<div class="hcell">10/${String(d).padStart(2, '0')}</div>`).join('')
+        groups.forEach((g) => {
+          h += `<div class="grow">${g.org}<span>${g.rows.length} 台 · 均值 ${212 + Math.round(hash(g.org) * 12)} kWh/100km</span></div>`
+          g.rows.forEach((p) => {
+            h += `<div class="vcell">${p}</div>`
+            days.forEach((d) => {
+              const x = day(p, d)
+              h += x.rest ? '<div class="cell blank">–</div>' : `<div class="cell ${lvl(x.rate)}">${x.km}</div>`
+            })
+          })
+        })
+        h += '</div>'
+        return h
+      },
+
+      quad(dense) {
+        const W = dense ? 420 : 300
+        const H = dense ? 250 : 210
+        const pts = []
+        for (let i = 0; i < 42; i++) {
+          const x = hash('x' + i) * 100
+          const y = hash('y' + i) * 100
+          pts.push([26 + (x / 100) * (W - 40), H - 22 - (y / 100) * (H - 40)])
+        }
+        const dots = pts.map((p) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6"
+          fill="${['#c8102e', '#e8a33d', '#4f7cac', '#7f8c9b'][Math.floor(Math.random() * 4)]}" fill-opacity="0.72" stroke="#fff" stroke-width="0.8"/>`).join('')
+        return `<svg class="quad-svg" viewBox="0 0 ${W} ${H}">
+          <line x1="26" y1="${H - 22}" x2="${W - 14}" y2="${H - 22}" stroke="#e2e8f0"/>
+          <line x1="26" y1="10" x2="26" y2="${H - 22}" stroke="#e2e8f0"/>
+          <line x1="${W / 2}" y1="10" x2="${W / 2}" y2="${H - 22}" stroke="#cbd5e1" stroke-dasharray="4 3"/>
+          <line x1="26" y1="${H / 2}" x2="${W - 14}" y2="${H / 2}" stroke="#cbd5e1" stroke-dasharray="4 3"/>
+          ${dots}
+          <text x="30" y="20" font-size="7.5" fill="#c98f99" font-weight="700">低效·低利用</text>
+          <text x="${W - 18}" y="20" text-anchor="end" font-size="7.5" fill="#c98f99" font-weight="700">低效·高利用</text>
+          <text x="30" y="${H - 26}" font-size="7.5" fill="#94a3b8" font-weight="700">高效·低利用</text>
+          <text x="${W - 18}" y="${H - 26}" text-anchor="end" font-size="7.5" fill="#94a3b8" font-weight="700">高效·高利用</text>
+        </svg>`
+      },
+
+      rank(dense) {
+        const rows = PLATES.slice(0, 10).map((p, i) => ({
+          p,
+          v: 246 - i * 5 - Math.round(hash(p) * 4),
+        }))
+        const shown = rows.slice(0, dense ? 10 : 5)
+        const max = Math.max(...shown.map((r) => r.v))
+        const min = Math.min(...shown.map((r) => r.v))
+        const pos = (v) => 52 + ((v - min) / (max - min || 1)) * 48
+        return shown.map((r, i) => {
+          const d = (hash('d' + r.p) - 0.5) * 0.14
+          return `<div class="rk-row">
+            <span class="rk-idx">${i + 1}</span>
+            <span class="rk-name">${r.p}</span>
+            <div class="rk-track"><div class="rk-bar" style="width:${pos(r.v)}%"></div></div>
+            <span class="rk-val">${r.v}.2</span>
+            <span class="rk-delta ${d < 0 ? 'good' : 'bad'}">${d > 0 ? '+' : ''}${(d * 100).toFixed(1)}%</span>
+          </div>`
+        }).join('')
+      },
+
+      timeline(dense) {
+        const rows = PLATES.slice(0, dense === 'tile' ? 4 : dense ? 12 : 6)
+        const axis = [0, 3, 6, 9, 12, 15, 18, 21, 24].map((h) =>
+          `<span style="left:${(h / 24) * 100}%">${String(h).padStart(2, '0')}</span>`).join('')
+
+        const body = rows.map((p, i) => {
+          const st = 5.2 + hash('s' + p) * 3
+          const run = 2.5 + hash('h' + p) * 7
+          const off = 0.8 + hash('o' + p) * 6
+          const end = Math.min(23.4, st + run + off)
+          const warn = off > 5
+          return `<div class="tl-row">
+            <div class="tl-name">${p}</div>
+            <div class="tl-track">
+              <div class="tl-off ${warn ? 'warn' : ''}" style="left:${((st + run) / 24) * 100}%;width:${((end - st - run) / 24) * 100}%"></div>
+              <div class="tl-run" style="left:${(st / 24) * 100}%;width:${(run / 24) * 100}%"></div>
+            </div>
+            <div class="tl-v">${Math.round(60 + hash('k' + p) * 380)} km</div>
+          </div>`
+        }).join('')
+
+        return `<div class="tl-axis">${axis}</div>${body}
+          <div class="tl-legend"><span><i class="lg-run"></i>运行</span><span><i class="lg-off"></i>下电</span><span><i class="lg-warn"></i>下电 &gt; 5h</span><span style="margin-left:auto">橙色段 = 长时等靠</span></div>`
+      },
+
+      issues(dense) {
+        const data = [
+          ['鄂C30010D', '电耗超标', '百公里 242.3，高于车队 P85（237）', 'h', ''],
+          ['鄂F30220D', '出勤不足', '区间仅出勤 6 天（工作日 13 天）', 'h', ''],
+          ['鄂A30404D', '里程骤降', '昨日 68 km，较 7 日均值 -72%', 'm', 't2'],
+          ['鄂E30611D', '长时下电', '下电 7.3h、运行 4.1h，疑似等靠', 'm', 't2'],
+          ['鄂C30031D', '电耗超标', '百公里 238.4，高于车队 P85（237）', 'h', ''],
+          ['鄂F30231D', '电耗超标', '百公里 237.9，高于车队 P85（237）', 'h', ''],
+          ['鄂A30418D', '长时下电', '下电 6.4h、运行 5.2h', 'm', 't2'],
+          ['鄂C30046D', '里程骤降', '昨日 41 km，较 7 日均值 -61%', 'm', 't2'],
+          ['鄂E30611D', '出勤不足', '区间仅出勤 8 天', 'h', ''],
+          ['鄂A30425D', '长时下电', '下电 6.1h、运行 6.0h', 'm', 't2'],
+        ]
+        return data.slice(0, dense ? 14 : 5).map((r) => `
+          <div class="is-row">
+            <span class="is-lv ${r[3]}"></span>
+            <span class="is-name">${r[0]}</span>
+            <span class="is-tag ${r[4]}">${r[1]}</span>
+            <span class="is-desc">${r[2]}</span>
+          </div>`).join('')
+      },
+
+      rhythm(big) {
+        let h = '<div></div>' + Array.from({ length: 24 }, (_, i) =>
+          `<div class="hl">${i % 3 === 0 ? i : ''}</div>`).join('')
+        const WD = ['一', '二', '三', '四', '五', '六', '日']
+        WD.forEach((w, wi) => {
+          h += `<div class="wd">${w}</div>`
+          for (let i = 0; i < 24; i++) {
+            const base = i >= 6 && i <= 20 ? 1 : 0.12
+            const v = Math.min(1, base * (0.55 + hash('c' + wi + i) * 0.6) * (wi > 4 ? 0.7 : 1))
+            const r = Math.round(255 - 55 * v)
+            const g = Math.round(245 - 229 * v)
+            const b = Math.round(245 - 199 * v)
+            h += `<div class="c" style="background:rgb(${r},${g},${b})"></div>`
+          }
+        })
+        return `<div class="rh ${big ? 'big' : ''}">${h}</div>`
+      },
+    }
+
+    /* ---------- 侧边栏 ---------- */
+    function sidebar() {
+      return `
+        <div class="mi active"><span class="dot"></span>首页</div>
+        <div class="mi"><span class="dot"></span>行车管理</div>
+        <div class="mi"><span class="dot"></span>电子围栏管理</div>
+        <div class="mi active"><span class="dot"></span>运营管理</div>
+        <div class="mi sub active">综合报表</div>
+        <div class="mi sub">能耗报告</div>
+        <div class="mi sub">驾驶行为报表</div>
+        <div class="mi"><span class="dot"></span>运输管理</div>
+        <div class="mi"><span class="dot"></span>基础数据管理</div>
+        <div class="mi"><span class="dot"></span>系统管理</div>`
+    }
+
+    document.querySelectorAll('[data-side]').forEach((el) => { el.innerHTML = sidebar() })
+
+    /* ============================================================
+       方案 A
+       ============================================================ */
+    const TABS = [
+      { k: 'cal', label: '日历热力' },
+      { k: 'matrix', label: '车辆矩阵' },
+      { k: 'quad', label: '效率象限' },
+      { k: 'rank', label: '车队排行' },
+      { k: 'timeline', label: '运行剖面' },
+      { k: 'issues', label: '异常待办', badge: 18 },
+      { k: 'rhythm', label: '周节律' },
+    ]
+
+    let tabA = 'cal'
+    const tabsEl = document.getElementById('tabsA')
+    const bodyEl = document.getElementById('bodyA')
+
+    function renderTabsA() {
+      tabsEl.innerHTML = TABS.map((t) => `
+        <div class="tab ${t.k === tabA ? 'active' : ''}" data-k="${t.k}">
+          ${t.label}${t.badge ? `<span class="badge">${t.badge}</span>` : ''}
+        </div>`).join('')
+    }
+
+    function viewBar(k) {
+      if (k === 'cal') {
+        return `<div class="vbar">
+          <span class="sel">单车：鄂A39907D <span class="c">▼</span></span>
+          <span class="month-nav"><button>‹</button><span>2026 年 10 月</span><button>›</button></span>
+          <div class="chips" style="margin-left:auto">
+            <span class="chip active">行驶里程</span><span class="chip">行驶电耗</span><span class="chip">百公里电耗</span>
+          </div>
+        </div>`
+      }
+      if (k === 'matrix') {
+        return `<div class="vbar">
+          <div class="chips"><span class="chip active">明细视图</span><span class="chip">出勤视图</span></div>
+          <div class="chips"><span class="chip active">全部车辆</span><span class="chip">只看异常</span></div>
+          <span class="spacer"></span>
+          <span class="vsub">共 40 台 · 展开 15 台 · 点机构名折叠</span>
+        </div>`
+      }
+      if (k === 'quad') {
+        return `<div class="vbar">
+          <span class="vsub">区间：2026-10-01 ~ 10-17</span>
+          <div class="chips" style="margin-left:auto">
+            <span class="chip active">横轴：日均里程</span><span class="chip">横轴：出勤天数</span>
+          </div>
+        </div>`
+      }
+      if (k === 'rank') {
+        return `<div class="vbar">
+          <div class="chips"><span class="chip active">百公里电耗</span><span class="chip">行驶里程</span><span class="chip">行驶电耗</span></div>
+          <span class="spacer"></span>
+          <div class="chips"><span class="chip active">按车辆</span><span class="chip">按机构</span></div>
+        </div>`
+      }
+      if (k === 'timeline') {
+        return `<div class="vbar">
+          <span class="sel">2026-10-16 <span class="c">▼</span></span>
+          <div class="chips" style="margin-left:auto">
+            <span class="chip active">按出车时间</span><span class="chip">按里程</span><span class="chip">按下电时长</span>
+          </div>
+        </div>`
+      }
+      if (k === 'rhythm') {
+        return `<div class="vbar">
+          <span class="vsub">口径：近 4 周 · 在途车辆数（按运行开始~结束推算）</span>
+          <div class="chips" style="margin-left:auto">
+            <span class="chip active">按小时</span><span class="chip">按半天</span>
+          </div>
+        </div>`
+      }
+      return ''
+    }
+
+    function fullView(k) {
+      let inner = ''
+      if (k === 'cal') {
+        inner = `<div class="cal-wrap">
+          <div class="pane" style="padding:7px 8px;justify-content:center">
+            ${VIEWS.cal(false)}
+            <div class="cal-legend">
+              <span>电耗</span>
+              <span class="sw">
+                <i style="background:#fff8f8"></i><i style="background:#ffe4e4"></i><i style="background:#ffcaca"></i>
+                <i style="background:#f9a8a8"></i><i style="background:#ef8a8a"></i>
+              </span>
+              <span>低 → 高</span>
+              <span style="margin-left:auto">点格子可看当天明细</span>
+            </div>
+            <div class="day-strip">
+              <span><span class="k">10/17 当天</span> <b>149.4 km</b></span>
+              <span><span class="k">电耗</span> <b>322 kWh</b></span>
+              <span><span class="k">百公里</span> <b>215.6</b></span>
+              <span><span class="k">运行</span> <b>05:27 - 13:16</b></span>
+              <span style="margin-left:auto;color:#15803d">较月均 -0.9</span>
+            </div>
+          </div>
+          <div class="pane">
+            <div class="pane-h"><span class="ttl">10 月概览</span></div>
+            <div class="stat-mini">
+              <div class="line"><span>行驶里程</span><b>1,742 km</b></div>
+              <div class="line"><span>行驶电耗</span><b>3,772 kWh</b></div>
+              <div class="line"><span>百公里电耗</span><b>216.5</b></div>
+              <div class="line"><span>运行天数</span><b>13 天</b></div>
+            </div>
+            <div style="margin-top:8px;padding:7px 8px;border-radius:7px;background:#f0fdf4;color:#15803d;font-size:9.5px;font-weight:700">
+              较车队均值 -1.2 kWh/100km
+            </div>
+          </div>
+        </div>`
+      } else if (k === 'matrix') {
+        inner = `<div class="pane" style="height:100%">
+          <div class="pane-h"><span class="ttl">车辆 × 日期</span><span class="sub">共 40 台 · 展开 15 台</span>
+            <span class="act">只看异常</span></div>
+          <div style="flex:1;overflow:hidden">${VIEWS.matrix(true)}</div>
+          <div class="mx-foot"><span>共 40 台 · 展开 15 台 · 点机构名折叠</span><span>行高：<b>紧凑</b></span></div>
+        </div>`
+      } else if (k === 'quad') {
+        inner = `<div style="height:100%;display:grid;grid-template-columns:1fr 180px;gap:10px">
+          <div class="pane"><div class="pane-h"><span class="ttl">效率象限</span><span class="sub">40 台</span></div>
+            <div style="flex:1">${VIEWS.quad(true)}</div></div>
+          <div class="pane">
+            <div class="pane-h"><span class="ttl">四象限</span></div>
+            <div class="stat-mini">
+              <div class="line"><span>高效·高利用</span><b>10 台</b></div>
+              <div class="line"><span>高效·低利用</span><b>11 台</b></div>
+              <div class="line"><span>低效·高利用</span><b>10 台</b></div>
+              <div class="line"><span>低效·低利用</span><b>9 台</b></div>
+            </div>
+          </div>
+        </div>`
+      } else if (k === 'rank') {
+        inner = `<div style="height:100%;display:grid;grid-template-columns:1fr 186px;gap:10px">
+          <div class="pane"><div class="pane-h"><span class="ttl">百公里电耗排行</span><span class="sub">头 10</span></div>
+            ${VIEWS.rank(true)}
+            <div class="mx-foot"><span>中间 30 台已折叠 · 展开全部</span><span>环比：<b>绿色变好</b></span></div>
+          </div>
+          <div class="pane">
+            <div class="pane-h"><span class="ttl">区间小结</span></div>
+            <div class="stat-mini">
+              <div class="line"><span>最好成绩</span><b>188.2</b></div>
+              <div class="line"><span>最差成绩</span><b>242.3</b></div>
+              <div class="line"><span>车队均值</span><b>217.4</b></div>
+            </div>
+            <div style="margin-top:8px;padding:7px 8px;border-radius:7px;background:#fdf6f6;color:#9f1239;font-size:9.5px;font-weight:700;line-height:1.5">
+              头尾相差 29%，建议先看 3 台超标车的线路
+            </div>
+          </div>
+        </div>`
+      } else if (k === 'timeline') {
+        inner = `<div class="pane" style="height:100%">
+          <div class="pane-h"><span class="ttl">单日运行剖面</span><span class="sub">2026-10-16 · 按出车时间</span></div>
+          <div style="flex:1">${VIEWS.timeline(true)}</div>
+        </div>`
+      } else if (k === 'issues') {
+        inner = `<div style="height:100%;display:grid;grid-template-columns:1fr 186px;gap:10px">
+          <div class="pane">
+            <div class="pane-h"><span class="ttl">异常待办</span><span class="sub">18 条 · 5 类</span><span class="act">全部展开</span></div>
+            <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap">
+              <span class="fchip active">全部 18</span><span class="fchip">电耗超标 5</span>
+              <span class="fchip">出勤不足 2</span><span class="fchip">长时下电 9</span><span class="fchip">里程骤降 2</span>
+            </div>
+            <div style="flex:1;overflow:hidden">${VIEWS.issues(true)}</div>
+          </div>
+          <div class="pane">
+            <div class="pane-h"><span class="ttl">按机构</span></div>
+            <div class="stat-mini">
+              <div class="line"><span>十堰分公司</span><b>6 条</b></div>
+              <div class="line"><span>襄阳分公司</span><b>5 条</b></div>
+              <div class="line"><span>武汉分公司</span><b>4 条</b></div>
+              <div class="line"><span>宜昌分公司</span><b>3 条</b></div>
+            </div>
+            <div style="margin-top:8px;padding:7px 8px;border-radius:7px;background:#fff7ed;color:#b45309;font-size:9.5px;font-weight:700;line-height:1.5">
+              电耗超标集中在十堰，建议先核对装载率与线路
+            </div>
+          </div>
+        </div>`
+      } else {
+        inner = `<div style="height:100%;display:grid;grid-template-columns:1fr 196px;gap:10px">
+          <div class="pane">
+            <div class="pane-h"><span class="ttl">周节律</span><span class="sub">一周 × 24 小时 · 在途车辆数</span></div>
+            ${VIEWS.rhythm(true)}
+            <div class="rh-legend">
+              <span>少</span>
+              <span class="sw">
+                <i style="background:#fff5f5"></i><i style="background:#eca5b0"></i><i style="background:#df7081"></i>
+                <i style="background:#d33e56"></i><i style="background:#c8102e"></i>
+              </span>
+              <span>多</span>
+              <span style="margin-left:auto">深色 = 同时在途的车更多</span>
+            </div>
+          </div>
+          <div class="pane">
+            <div class="pane-h"><span class="ttl">读图</span></div>
+            <div class="stat-mini">
+              <div class="line"><span>工作日在途峰值</span><b>37 台</b></div>
+              <div class="line"><span>工作日均</span><b>16.0 台</b></div>
+              <div class="line"><span>周末均</span><b>12.5 台</b></div>
+              <div class="line"><span>夜间 22-01</span><b>2.0 台</b></div>
+            </div>
+            <div style="margin-top:8px;padding:7px 8px;border-radius:7px;background:#fdf6f6;color:#9f1239;font-size:9.5px;font-weight:700;line-height:1.55">
+              06-09 与 17-20 双高峰；周末整体变浅，运力有富余，可安排保养或调休
+            </div>
+          </div>
+        </div>`
+      }
+      return `<div class="vwrap">${viewBar(k)}<div class="vbody">${inner}</div></div>`
+    }
+
+    function renderBodyA() {
+      bodyEl.innerHTML = `<div class="fade">${fullView(tabA)}</div>`
+    }
+
+    tabsEl.addEventListener('click', (e) => {
+      const t = e.target.closest('.tab'); if (!t) return
+      if (tabA === t.dataset.k) return
+      tabA = t.dataset.k
+      renderTabsA()
+      renderBodyA()
+    })
+    renderTabsA()
+    renderBodyA()
+
+    /* ============================================================
+       方案 B
+       ============================================================ */
+    document.getElementById('healthB').innerHTML = `
+      <div class="hcard"><div class="ic">✓</div><div><div class="lab">今日出勤</div><div class="val">32<small> / 40 台</small></div></div></div>
+      <div class="hcard"><div class="ic">⚡</div><div><div class="lab">百公里电耗</div><div class="val">217.4<small> kWh</small></div><div class="cmp">↓ 1.6% 环比</div></div></div>
+      <div class="hcard"><div class="ic" style="background:#fff7ed;color:#d97706">!</div><div><div class="lab">异常待办</div><div class="val">18<small> 条</small></div></div></div>
+      <div class="hcard"><div class="ic">↔</div><div><div class="lab">日均里程</div><div class="val">1,240<small> km</small></div></div></div>
+      <div class="hcard" style="align-items:stretch;padding:6px 8px">
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+          <div class="lab" style="margin-bottom:3px">近 7 日走势</div>
+          <svg viewBox="0 0 120 26" width="100%" height="26" preserveAspectRatio="none">
+            <polyline points="0,20 17,16 34,19 51,10 68,13 85,7 102,9 120,5" fill="none" stroke="#c8102e" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>`
+
+    document.getElementById('quadB').innerHTML = VIEWS.quad(true)
+    document.getElementById('issuesB').innerHTML = VIEWS.issues(false)
+    document.getElementById('rankB').innerHTML = VIEWS.rank(false)
+
+    /* ============================================================
+       方案 C
+       ============================================================ */
+    const NAV = [
+      { grp: '全局' },
+      { k: 'quad', label: '效率象限' },
+      { k: 'issues', label: '异常待办', n: 18 },
+      { grp: '时间视角' },
+      { k: 'cal', label: '日历热力' },
+      { k: 'rhythm', label: '周节律' },
+      { k: 'timeline', label: '运行剖面' },
+      { grp: '车辆视角' },
+      { k: 'matrix', label: '车辆矩阵' },
+      { k: 'rank', label: '车队排行' },
+    ]
+
+    let navC = 'matrix'
+    const navEl = document.getElementById('vnavC')
+    const bodyC = document.getElementById('bodyC')
+
+    function renderNavC() {
+      navEl.innerHTML = NAV.map((n) => {
+        if (n.grp) return `<div class="grp">${n.grp}</div>`
+        return `<div class="vitem ${n.k === navC ? 'active' : ''}" data-k="${n.k}">
+          ${n.label}${n.n ? `<span class="n">${n.n}</span>` : ''}</div>`
+      }).join('')
+    }
+
+    function renderBodyC() {
+      const inner = navC === 'matrix'
+        ? `<div class="pane" style="height:100%">
+             <div class="pane-h"><span class="ttl">车辆 × 日期</span><span class="sub">共 40 台</span><span class="act">只看异常</span></div>
+             <div style="flex:1">${VIEWS.matrix(false)}</div>
+             <div class="mx-foot"><span>共 40 台 · 展开 15 台 · 点机构名折叠</span><span>只看异常：<b>17 台</b></span></div>
+           </div>`
+        : navC === 'timeline'
+          ? `<div class="pane" style="height:100%">
+               <div class="pane-h"><span class="ttl">单日运行剖面</span><span class="sub">2026-10-16</span></div>
+               <div style="flex:1">${VIEWS.timeline('tile')}</div></div>`
+          : navC === 'cal'
+            ? `<div class="pane" style="height:100%">${VIEWS.cal(false)}</div>`
+            : navC === 'quad'
+              ? `<div class="pane" style="height:100%"><div class="pane-h"><span class="ttl">效率象限</span></div>${VIEWS.quad(true)}</div>`
+              : navC === 'rank'
+                ? `<div class="pane" style="height:100%"><div class="pane-h"><span class="ttl">车队排行</span></div>${VIEWS.rank(true)}</div>`
+                : navC === 'issues'
+                  ? `<div class="pane" style="height:100%"><div class="pane-h"><span class="ttl">异常待办</span><span class="sub">18 条</span></div>${VIEWS.issues(true)}</div>`
+                  : `<div class="pane" style="height:100%"><div class="pane-h"><span class="ttl">周节律</span></div><div style="flex:1">${VIEWS.rhythm(true)}</div></div>`
+
+      bodyC.innerHTML = `<div class="fade">${inner}</div>`
+    }
+
+    navEl.addEventListener('click', (e) => {
+      const it = e.target.closest('.vitem'); if (!it) return
+      navC = it.dataset.k
+      renderNavC()
+      renderBodyC()
+    })
+    renderNavC()
+    renderBodyC()
+
+    /* ============================================================
+       方案 D
+       ============================================================ */
+    document.getElementById('wbD').innerHTML = `
+      <div class="tile" style="grid-column: span 5" data-view="cal">
+        <span class="grab">⠿</span>
+        <div class="pane-h"><span class="ttl">逐日日历</span><span class="scope" title="默认跟随全局：本月；点击可单独设置">鄂A39907D · 10 月</span><span class="act">展开 ↗</span></div>
+        <div style="flex:1;min-height:0;overflow:hidden">${VIEWS.cal('xs')}</div>
+      </div>
+
+      <div class="tile" style="grid-column: span 3" data-view="issues">
+        <span class="grab">⠿</span>
+        <div class="pane-h"><span class="ttl">异常待办</span><span class="scope" title="默认跟随全局：截至 10/17">截至 10/17</span><span class="act">全部 ↗</span></div>
+        <div style="flex:1;overflow:hidden">${VIEWS.issues(false)}</div>
+      </div>
+
+      <div class="tile" style="grid-column: span 4" data-view="quad">
+        <span class="grab">⠿</span>
+        <div class="pane-h"><span class="ttl">效率象限</span><span class="scope" title="默认跟随全局：本月">10/01–10/17</span><span class="act">展开 ↗</span></div>
+        <div style="flex:1;min-height:0;overflow:hidden">${VIEWS.quad(false)}</div>
+      </div>
+
+      <div class="tile" style="grid-column: span 3" data-view="rank">
+        <span class="grab">⠿</span>
+        <div class="pane-h"><span class="ttl">车队排行</span><span class="scope" title="默认跟随全局：本月">10/01–10/17</span><span class="act">展开 ↗</span></div>
+        <div style="flex:1;overflow:hidden">${VIEWS.rank(false)}</div>
+      </div>
+
+      <div class="tile" style="grid-column: span 3" data-view="matrix">
+        <span class="grab">⠿</span>
+        <div class="pane-h"><span class="ttl">车辆矩阵</span><span class="scope" title="默认跟随全局：本月">10/04–10/17</span><span class="act">展开 ↗</span></div>
+        <div style="flex:1;overflow:hidden">${VIEWS.matrix('tiny')}</div>
+      </div>
+
+      <div class="tile" style="grid-column: span 3" data-view="timeline">
+        <span class="grab">⠿</span>
+        <div class="pane-h"><span class="ttl">运行剖面</span><span class="scope" title="单日视图：默认取统计周期最后一天">10/16</span><span class="act">展开 ↗</span></div>
+        <div style="flex:1;overflow:hidden">${VIEWS.timeline('tile')}</div>
+      </div>
+
+      <div class="tile" style="grid-column: span 3" data-view="rhythm">
+        <span class="grab">⠿</span>
+        <div class="pane-h"><span class="ttl">周节律</span><span class="scope" title="默认跟随全局：近 4 周">近 4 周</span><span class="act">展开 ↗</span></div>
+        <div style="flex:1;min-height:0;overflow:hidden">${VIEWS.rhythm(false)}</div>
+      </div>`
+
+    /* ---------- 明细表（= 现在综合报表那张表） ---------- */
+    const ORG_OF = (p) => (p.startsWith('鄂C') ? '十堰分公司' : p.startsWith('鄂F') ? '襄阳分公司' : p.startsWith('鄂A') ? '武汉分公司' : '宜昌分公司')
+    const LOCS = ['湖北省十堰市张湾区汉江路', '湖北省襄阳市樊城区前进路', '湖北省武汉市东西湖区革新大道', '湖北省宜昌市伍家岗区城东大道']
+
+    function vehStats(p) {
+      let km = 0, fuel = 0, days = 0
+      for (let d = 1; d <= TODAY; d++) {
+        const x = day(p, d)
+        if (!x.rest) { km += x.km; fuel += x.km * x.rate / 100; days++ }
+      }
+      return { km, fuel, rate: km ? (fuel / km) * 100 : 0, days }
+    }
+
+    function buildTable() {
+      const rows = PLATES.slice(0, 10).map((p) => {
+        const st = vehStats(p)
+        const r = hash('st' + p)
+        const status = r > 0.62 ? '行驶' : r > 0.28 ? '静止' : '离线'
+        const cls = status === '行驶' ? 'driving' : status === '静止' ? 'parked' : 'offline'
+        const odo = 38000 + Math.round(hash('od' + p) * 90000)
+        const vin = 'LGAG4PY3' + (hash('v' + p) > 0.5 ? '1' : '3') + 'S601' + String(1000 + Math.round(hash('n' + p) * 8000)).slice(-4)
+        return `<div class="tbl-row">
+          <div>${ORG_OF(p)}</div>
+          <div class="plate link-cell" data-plate="${p}">${p}</div>
+          <div class="vin">${vin}</div>
+          <div class="num">${odo.toLocaleString()}</div>
+          <div class="num">${st.rate.toFixed(2)}</div>
+          <div class="num">${st.km.toFixed(1)}</div>
+          <div class="num">${st.fuel.toFixed(1)}</div>
+          <div><span class="mini-tag ${cls}">${status}</span></div>
+          <div class="loc">${LOCS[Math.floor(hash('l' + p) * 4)]}</div>
+        </div>`
+      }).join('')
+
+      document.getElementById('tableArea').innerHTML = `
+        <div class="tbl-bar">
+          <span class="ttl">明细表</span>
+          <span class="sub">共 40 台 · 当前 10 条 · 点车牌可回看该车日历</span>
+          <span class="spacer"></span>
+          <span class="btn">导出</span>
+          <span class="icon-chip">⟳</span>
+          <span class="icon-chip">☰</span>
+          <span class="icon-chip">⚙</span>
+          <span class="icon-chip">⛶</span>
+        </div>
+        <div class="tbl-scroll">
+          <div class="tbl-row tbl-head">
+            <div>所属机构</div><div>车牌号</div><div>VIN</div>
+            <div>累计里程</div><div>百公里电耗</div><div>行驶里程</div><div>行驶电耗</div>
+            <div>在线状态</div><div>当前位置</div>
+          </div>
+          ${rows}
+        </div>
+        <div class="tbl-foot">
+          <span>共 40 条</span>
+          <span class="spacer"></span>
+          <span>每页 20 条</span>
+          <span class="pg">1</span><span class="pg ghost">2</span>
+        </div>`
+    }
+    buildTable()
+
+    /* ---------- 工作台 / 明细表 切换 ---------- */
+    const stageD = document.getElementById('stageD')
+    const modeBox = document.getElementById('modeD')
+
+    function switchMode(mode) {
+      if (stageD.dataset.mode === mode) return
+      stageD.dataset.mode = mode
+      ;[...modeBox.children].forEach((b) => b.classList.toggle('active', b.dataset.mode === mode))
+      document.querySelectorAll('#frameD .layout-btn').forEach((el) => {
+        el.style.display = mode === 'table' ? 'none' : ''
+      })
+      document.getElementById('tblToolBtn').style.display = mode === 'table' ? '' : 'none'
+      document.querySelectorAll('#frameD [data-bar]').forEach((el) => {
+        el.style.display = el.dataset.bar === mode ? '' : 'none'
+      })
+      closeFull()
+      const pane = mode === 'table' ? document.getElementById('tableArea') : document.getElementById('wbArea')
+      pane.classList.remove('fade')
+      void pane.offsetWidth
+      pane.classList.add('fade')
+    }
+
+    modeBox.addEventListener('click', (e) => {
+      const b = e.target.closest('.mode'); if (!b) return
+      switchMode(b.dataset.mode)
+    })
+
+    /* 表里点车牌 → 回工作台并展开该车日历 */
+    document.getElementById('tableArea').addEventListener('click', (e) => {
+      const cell = e.target.closest('.link-cell')
+      if (!cell) return
+      switchMode('wb')
+      const tile = document.querySelector('#wbD .tile[data-view="cal"]')
+      setTimeout(() => openFull('cal', tile), 80)
+    })
+
+    /* ---------- D 的展开态    /* ---------- D 的展开态（= 方案 A 的整页视图） ---------- */
+    const expEl = document.getElementById('expD')
+    const expBody = document.getElementById('expBody')
+
+    function openFull(key, fromEl) {
+      expBody.innerHTML = `<div class="fade">${fullView(key)}</div>`
+      expEl.classList.add('open')
+      expEl.style.transition = 'none'
+      expEl.style.transform = 'none'
+      expEl.style.opacity = '1'
+
+      if (fromEl) {
+        const from = fromEl.getBoundingClientRect()
+        const to = expEl.getBoundingClientRect()
+        if (to.width && to.height) {
+          const sx = from.width / to.width
+          const sy = from.height / to.height
+          expEl.style.transformOrigin = 'top left'
+          expEl.style.transform = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${sx}, ${sy})`
+          expEl.style.opacity = '0.55'
+          requestAnimationFrame(() => {
+            expEl.style.transition = 'transform .34s cubic-bezier(.34,1.2,.64,1), opacity .22s ease'
+            expEl.style.transform = 'none'
+            expEl.style.opacity = '1'
+          })
+        }
+      }
+    }
+
+    function closeFull() {
+      if (!expEl.classList.contains('open')) return
+      expEl.style.transition = 'transform .18s ease, opacity .18s ease'
+      expEl.style.transform = 'scale(.985)'
+      expEl.style.opacity = '0'
+      setTimeout(() => {
+        expEl.classList.remove('open')
+        expEl.style.transition = ''
+        expEl.style.transform = ''
+        expEl.style.opacity = ''
+      }, 180)
+    }
+
+    document.querySelectorAll('#frameD [data-bar]').forEach((el) => {
+      el.style.display = el.dataset.bar === 'wb' ? '' : 'none'
+    })
+
+    document.getElementById('wbD').addEventListener('click', (e) => {
+      // 口径胶囊：灰色=跟随全局，点一下变成红色「已单独设置」
+      const sc = e.target.closest('.scope')
+      if (sc) { e.stopPropagation(); sc.classList.toggle('custom'); return }
+
+      const tile = e.target.closest('.tile')
+      if (!tile) return
+      openFull(tile.dataset.view, tile)
+    })
+
+    document.getElementById('expBack').addEventListener('click', closeFull)
+
+    document.querySelector('#frameD .bar').addEventListener('click', (e) => {
+      const q = e.target.closest('[data-open]')
+      if (!q) return
+      openFull(q.dataset.open, q)
+    })
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeFull()
+    })
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>综合报表 · 呈现方案 v2</title>
+  <style>
+    :root {
+      --red: #c8102e;
+      --red-deep: #a00d24;
+      --red-soft: #fef2f2;
+      --ink: #0f172a;
+      --ink-2: #1f2937;
+      --muted: #64748b;
+      --muted-2: #94a3b8;
+      --line: #edf1f6;
+      --bg: #f5f7fa;
+      --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue',
+        'PingFang SC', 'HarmonyOS Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 26px 24px 60px;
+      background: var(--bg);
+      font-family: var(--font);
+      color: var(--ink-2);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .wrap { max-width: 1300px; margin: 0 auto; }
+
+    /* ---------- 页头 ---------- */
+    .page-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 18px;
+    }
+
+    .page-head h1 {
+      margin: 0 0 7px;
+      font-size: 23px;
+      font-weight: 800;
+      color: var(--ink);
+      letter-spacing: 0.2px;
+    }
+
+    .page-head p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 720px;
+    }
+
+    .head-right { flex-shrink: 0; text-align: right; }
+
+    .scale-label {
+      font-size: 11.5px;
+      color: var(--muted-2);
+      font-weight: 600;
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+
+    .scale-toggle {
+      display: inline-flex;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 3px;
+      gap: 2px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+
+    .scale-toggle button {
+      border: 0;
+      background: transparent;
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--muted);
+      padding: 5px 14px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .scale-toggle button.active {
+      background: linear-gradient(135deg, #c8102e, #a00d24);
+      color: #fff;
+      box-shadow: 0 3px 8px rgba(200, 16, 46, 0.28);
+    }
+
+    /* ---------- 区块 ---------- */
+    section { margin-bottom: 30px; }
+
+    .sec-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .sec-no {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #c8102e, #a00d24);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(200, 16, 46, 0.25);
+    }
+
+    .sec-title { font-size: 16px; font-weight: 800; color: var(--ink); }
+
+    .sec-desc {
+      font-size: 12.5px;
+      color: var(--muted-2);
+      padding-left: 8px;
+      border-left: 1px solid #e2e8f0;
+    }
+
+    .sec-new {
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      padding: 2px 7px;
+      border-radius: 5px;
+      letter-spacing: 0.5px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+      padding: 14px 16px;
+    }
+
+    /* ---------- 通用控件 ---------- */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding-bottom: 11px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #f1f5f9;
+      flex-wrap: wrap;
+    }
+
+    .fake-select {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 30px;
+      padding: 0 11px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      font-size: 12.5px;
+      color: var(--ink-2);
+      font-weight: 600;
+    }
+
+    .fake-select .caret { color: var(--muted-2); font-size: 9px; }
+
+    .month-nav {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      height: 30px;
+    }
+
+    .month-nav button {
+      border: 0;
+      background: #fff;
+      height: 30px;
+      width: 28px;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .month-nav button:hover { background: var(--red-soft); color: var(--red); }
+
+    .month-nav span {
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 0 9px;
+      color: var(--ink);
+      background: #fff;
+    }
+
+    .chips {
+      display: flex;
+      gap: 5px;
+      background: #f1f5f9;
+      padding: 3px;
+      border-radius: 9px;
+    }
+
+    .chips.right { margin-left: auto; }
+
+    .chip {
+      border: 0;
+      background: transparent;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 4px 11px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .chip:hover { color: var(--red); }
+
+    .chip.active {
+      background: #fff;
+      color: var(--red);
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1);
+    }
+
+    .count-tip {
+      margin-left: auto;
+      font-size: 11.5px;
+      color: var(--muted-2);
+      font-weight: 600;
+    }
+
+    .note {
+      margin-top: 9px;
+      font-size: 11.8px;
+      color: var(--muted-2);
+      line-height: 1.7;
+    }
+
+    .note b { color: var(--muted); }
+
+    /* ---------- 00 大车队 ---------- */
+    .fit-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .fit-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 13px 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .fit-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 14px;
+      bottom: 14px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: linear-gradient(180deg, #e8566b, #c8102e);
+      opacity: 0.75;
+    }
+
+    .fit-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--ink);
+      margin-bottom: 5px;
+      padding-left: 11px;
+    }
+
+    .fit-desc {
+      font-size: 11.8px;
+      color: var(--muted);
+      line-height: 1.65;
+      padding-left: 11px;
+    }
+
+    /* ---------- 01 日历 ---------- */
+    .cal-layout {
+      display: grid;
+      grid-template-columns: 1fr 258px;
+      gap: 14px;
+    }
+
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+
+    .cal-wd {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted-2);
+      padding: 3px 0 5px;
+      letter-spacing: 1px;
+    }
+
+    .cal-cell {
+      position: relative;
+      border-radius: 9px;
+      padding: 6px 8px 7px;
+      min-height: 84px;
+      background: #f8fafc;
+      border: 1px solid transparent;
+      transition: transform 0.16s, box-shadow 0.16s;
+      overflow: hidden;
+      cursor: default;
+    }
+
+    .cal-cell.has-data { cursor: pointer; }
+
+    .cal-cell.has-data:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(200, 16, 46, 0.14);
+      z-index: 2;
+    }
+
+    .cal-cell.empty { background: #fbfcfe; border: 1px dashed #e8edf4; }
+    .cal-cell.today { box-shadow: inset 0 0 0 1.5px var(--red); }
+    .cal-cell.picked { border-color: #c8102e; box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.16); }
+
+    .cal-d { font-size: 10.5px; color: var(--muted-2); font-weight: 600; letter-spacing: 0.4px; }
+    .cal-d.wk { color: #b8c4d4; }
+
+    .cal-main {
+      margin-top: 5px;
+      font-size: 17px;
+      font-weight: 700;
+      color: #111827;
+      letter-spacing: -0.2px;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .cal-main small { font-size: 9px; font-weight: 600; color: #6b7280; margin-left: 2px; }
+
+    .cal-sub {
+      margin-top: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #9f1239;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cal-foot {
+      margin-top: 2px;
+      font-size: 9.5px;
+      color: #94a3b8;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .lv0 { background: #fbfcfe; }
+    .lv1 { background: #fff8f8; }
+    .lv2 { background: #ffe4e4; }
+    .lv3 { background: #ffcaca; }
+    .lv4 { background: #f9a8a8; }
+    .lv5 { background: #ef8a8a; }
+    .lv4 .cal-sub, .lv5 .cal-sub { color: #7f1d1d; }
+
+    .cal-side { display: flex; flex-direction: column; gap: 10px; }
+
+    .side-card {
+      background: #fcfdfe;
+      border: 1px solid #eef2f7;
+      border-radius: 11px;
+      padding: 11px 13px;
+    }
+
+    .side-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.4px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .side-title .day {
+      font-size: 12px;
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .stat-line {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 3.5px 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .stat-line b {
+      font-size: 13.5px;
+      color: var(--ink);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-line b small { font-size: 10px; color: var(--muted-2); font-weight: 600; margin-left: 2px; }
+
+    .cmp {
+      margin-top: 8px;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 5px 9px;
+      border-radius: 7px;
+      background: #fff7ed;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+
+    .cmp.good { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+
+    .legend-bar {
+      height: 7px;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #fff8f8, #ffe4e4, #ffcaca, #f9a8a8, #ef8a8a);
+      margin: 3px 0 5px;
+    }
+
+    .legend-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted-2); }
+
+    /* ---------- 02 矩阵 ---------- */
+    .mx-scroll {
+      max-height: 452px;
+      overflow: auto;
+      border: 1px solid #f1f5f9;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .mx-row {
+      display: grid;
+      grid-template-columns: 176px repeat(14, minmax(42px, 1fr)) 78px 68px;
+      gap: 3px;
+      align-items: center;
+      padding: 0 6px;
+    }
+
+    .mx-head {
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      background: #f8fafc;
+      padding-top: 6px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #eef2f7;
+    }
+
+    .mx-head .mx-cell,
+    .mx-head .mx-veh,
+    .mx-head .mx-total {
+      font-size: 10px;
+      color: var(--muted-2);
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 0.2px;
+    }
+
+    .mx-head .mx-veh { text-align: left; padding-left: 4px; }
+
+    .mx-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 8px;
+      margin-top: 4px;
+      background: #fdf6f6;
+      border-radius: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .mx-group:hover { background: #fdeeee; }
+
+    .mx-group .g-name { font-size: 11.5px; font-weight: 800; color: #9f1239; }
+    .mx-group .g-meta { font-size: 10.5px; color: #b9808a; font-weight: 600; }
+    .mx-group .g-arrow { margin-left: auto; font-size: 9px; color: #c98f99; }
+
+    .mx-body-row {
+      border-bottom: 1px solid #f7f9fc;
+      min-height: 38px;
+    }
+
+    .mx-veh {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding-left: 4px;
+      position: sticky;
+      left: 0;
+      background: #fff;
+      z-index: 2;
+    }
+
+    .mx-plate { font-size: 12px; font-weight: 700; color: var(--ink); letter-spacing: 0.2px; }
+    .mx-org { font-size: 10px; color: var(--muted-2); }
+
+    .mx-cell {
+      border-radius: 6px;
+      padding: 4px 2px;
+      text-align: center;
+      background: #f8fafc;
+      min-height: 32px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      line-height: 1.2;
+    }
+
+    .mx-km { font-size: 12px; font-weight: 700; color: #111827; font-variant-numeric: tabular-nums; }
+    .mx-rate { font-size: 9.5px; color: #9f1239; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .mx-cell.blank .mx-km { color: #cbd5e1; }
+    .mx-cell.blank .mx-rate { color: transparent; }
+
+    .mx-total {
+      text-align: right;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--ink);
+      padding-right: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .mx-total small { font-size: 9.5px; color: var(--muted-2); font-weight: 600; }
+
+    .mx-sum {
+      text-align: right;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #9f1239;
+      font-variant-numeric: tabular-nums;
+      padding-right: 4px;
+    }
+
+    /* 出勤模式 */
+    .mx-compact .mx-row { min-height: 24px; grid-template-columns: 176px repeat(14, minmax(40px, 1fr)) 78px 68px; }
+    .mx-compact .mx-cell { min-height: 20px; padding: 2px; }
+    .mx-compact .mx-rate { display: none; }
+    .mx-compact .mx-km { font-size: 11px; }
+    .mx-compact .mx-body-row { min-height: 24px; }
+    .mx-compact .mx-veh { padding-top: 2px; padding-bottom: 2px; }
+
+    /* ---------- 03 象限 ---------- */
+    .quad-layout { display: grid; grid-template-columns: 1fr 258px; gap: 16px; }
+
+    .quad-legend {
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+      color: var(--muted);
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .quad-legend i {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+
+    .quad-side .side-card { margin-bottom: 10px; }
+
+    .quad-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px dashed #f1f5f9;
+    }
+
+    .quad-item:last-child { border-bottom: 0; }
+
+    .quad-dot { width: 8px; height: 8px; border-radius: 2px; margin-top: 4px; flex-shrink: 0; }
+
+    .quad-name { font-size: 12px; font-weight: 700; color: var(--ink); }
+    .quad-name span { font-size: 11px; color: var(--muted-2); font-weight: 600; margin-left: 4px; }
+    .quad-tip { font-size: 10.5px; color: var(--muted-2); margin-top: 2px; line-height: 1.5; }
+
+    /* ---------- 04 排行 ---------- */
+    .rank-row {
+      display: grid;
+      grid-template-columns: 20px 90px 1fr 92px 46px;
+      align-items: center;
+      gap: 9px;
+      padding: 6px 0;
+      border-bottom: 1px dashed #f1f5f9;
+    }
+
+    .rank-row:last-child { border-bottom: 0; }
+
+    .rank-idx {
+      width: 19px;
+      height: 19px;
+      border-radius: 6px;
+      background: #f1f5f9;
+      color: var(--muted);
+      font-size: 10.5px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rank-row.top1 .rank-idx { background: var(--red); color: #fff; }
+
+    .rank-name { font-size: 12px; font-weight: 700; color: var(--ink); }
+
+    .rank-track { position: relative; height: 10px; background: #f8fafc; border-radius: 5px; }
+
+    .rank-bar {
+      height: 10px;
+      border-radius: 5px;
+      background: linear-gradient(90deg, #e8566b, #c8102e);
+    }
+
+    .rank-bar.dim { background: linear-gradient(90deg, #cbd5e1, #94a3b8); }
+
+    .rank-avg {
+      position: absolute;
+      top: -3px;
+      bottom: -3px;
+      width: 1px;
+      border-left: 1.5px dashed #94a3b8;
+    }
+
+    .rank-val {
+      text-align: right;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rank-val small { font-size: 9.5px; color: var(--muted-2); font-weight: 600; margin-left: 2px; }
+
+    .rank-delta { font-size: 10.5px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+    .rank-delta.good { color: #0f9d58; }
+    .rank-delta.bad { color: #c8102e; }
+
+    .rank-fold {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+      margin: 6px 0;
+      padding: 6px;
+      border-radius: 8px;
+      background: #f8fafc;
+      font-size: 11.5px;
+      color: var(--muted);
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px dashed #e2e8f0;
+    }
+
+    .rank-fold:hover { background: var(--red-soft); color: var(--red); border-color: #fecaca; }
+
+    /* ---------- 05 剖面 ---------- */
+    .tl-scroll { max-height: 400px; overflow: auto; }
+
+    .tl-head {
+      display: grid;
+      grid-template-columns: 168px 1fr 96px;
+      gap: 10px;
+      font-size: 10px;
+      color: var(--muted-2);
+      font-weight: 700;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #f1f5f9;
+      margin-bottom: 4px;
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 3;
+    }
+
+    .tl-axis { position: relative; height: 13px; }
+    .tl-axis span { position: absolute; transform: translateX(-50%); font-size: 9.5px; color: var(--muted-2); }
+
+    .tl-row {
+      display: grid;
+      grid-template-columns: 168px 1fr 96px;
+      gap: 10px;
+      align-items: center;
+      padding: 3px 0;
+      border-bottom: 1px solid #fbfcfe;
+    }
+
+    .tl-track {
+      position: relative;
+      height: 22px;
+      background: #f8fafc;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .tl-grid { position: absolute; top: 0; bottom: 0; width: 1px; background: #eef2f7; }
+
+    .tl-off { position: absolute; top: 5px; bottom: 5px; background: #e3e9f2; border-radius: 3px; }
+    .tl-off.warn { background: #fbd9b0; box-shadow: inset 0 0 0 1px #f4c188; }
+
+    .tl-run {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      background: linear-gradient(90deg, #e8566b, #c8102e);
+      border-radius: 4px;
+      box-shadow: 0 2px 5px rgba(200, 16, 46, 0.2);
+    }
+
+    .tl-run.warn { background: linear-gradient(90deg, #f0a04b, #d97706); box-shadow: 0 2px 5px rgba(217, 119, 6, 0.22); }
+
+    .tl-times {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 9px;
+      color: #fff;
+      font-weight: 700;
+      padding: 0 5px;
+      white-space: nowrap;
+    }
+
+    .tl-times.end { color: #64748b; }
+
+    .tl-val { text-align: right; font-size: 12px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .tl-val small { display: block; font-size: 9.5px; color: var(--muted-2); font-weight: 600; }
+
+    .tl-warn { font-size: 9.5px; color: #b45309; font-weight: 700; }
+
+    /* ---------- 06 异常 ---------- */
+    .issue-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+
+    .issue-chip {
+      border: 1px solid #e8edf4;
+      background: #fff;
+      border-radius: 16px;
+      padding: 4px 11px;
+      font-family: inherit;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .issue-chip b { color: var(--red); margin-left: 4px; font-weight: 800; }
+    .issue-chip:hover { border-color: #fecaca; color: var(--red); }
+    .issue-chip.active { background: linear-gradient(135deg, #c8102e, #a00d24); color: #fff; border-color: transparent; }
+    .issue-chip.active b { color: #fff; }
+
+    .issue-row {
+      display: grid;
+      grid-template-columns: 6px 150px 78px 1fr 92px 76px;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 4px;
+      border-bottom: 1px solid #f6f8fb;
+      font-size: 12px;
+    }
+
+    .issue-row:hover { background: #fdfafa; }
+
+    .issue-level { width: 6px; height: 22px; border-radius: 3px; }
+    .issue-level.h { background: #c8102e; }
+    .issue-level.m { background: #f0a04b; }
+    .issue-level.l { background: #cbd5e1; }
+
+    .issue-veh { font-weight: 700; color: var(--ink); font-size: 12px; }
+    .issue-veh small { display: block; font-size: 10px; color: var(--muted-2); font-weight: 600; }
+
+    .issue-tag {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 5px;
+      text-align: center;
+      background: #fef2f2;
+      color: #9f1239;
+      border: 1px solid #fde3e3;
+      white-space: nowrap;
+    }
+
+    .issue-tag.t2 { background: #fff7ed; color: #b45309; border-color: #fde68a; }
+    .issue-tag.t3 { background: #f8fafc; color: #64748b; border-color: #e8edf4; }
+
+    .issue-desc { color: var(--muted); line-height: 1.5; }
+    .issue-desc b { color: var(--ink); font-weight: 700; }
+
+    .issue-date { font-size: 11px; color: var(--muted-2); text-align: right; font-variant-numeric: tabular-nums; }
+
+    .issue-act {
+      font-size: 11px;
+      color: var(--red);
+      font-weight: 700;
+      text-align: right;
+      cursor: pointer;
+    }
+
+    /* ---------- 07 节律 ---------- */
+    .rhythm-layout { display: grid; grid-template-columns: 1fr 250px; gap: 16px; }
+
+    .rh-grid { display: grid; grid-template-columns: 34px repeat(24, 1fr); gap: 3px; align-items: center; }
+
+    .rh-wd { font-size: 10px; color: var(--muted-2); font-weight: 700; text-align: center; }
+    .rh-h { font-size: 9px; color: var(--muted-2); text-align: center; font-weight: 600; }
+
+    .rh-cell {
+      height: 26px;
+      border-radius: 3px;
+      background: #f8fafc;
+    }
+
+    .rh-legend { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 10px; color: var(--muted-2); }
+    .rh-scale { display: flex; gap: 2px; }
+    .rh-scale i { width: 16px; height: 8px; border-radius: 2px; display: inline-block; }
+
+    @media (max-width: 1120px) {
+      .cal-layout, .quad-layout, .rhythm-layout { grid-template-columns: 1fr; }
+      .fit-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="page-head">
+      <div>
+        <h1>综合报表 · 呈现方案 <span style="font-size:13px;color:#94a3b8;font-weight:700">v2</span></h1>
+        <p>保留 01 日历、02 矩阵、04 排行、05 剖面（已优化），去掉 03 趋势；新增 03 效率象限、06 异常待办、07 周节律。
+          右上角可切换车队规模，直接看 40 台 / 100 台下的表现。</p>
+      </div>
+      <div class="head-right">
+        <div class="scale-label">车队规模</div>
+        <div class="scale-toggle" id="scaleToggle">
+          <button data-scale="40" class="active">40 台</button>
+          <button data-scale="100">100 台</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 00 大车队 ================= -->
+    <section>
+      <div class="sec-head">
+        <span class="sec-no">00</span>
+        <span class="sec-title">车队一多怎么办</span>
+        <span class="sec-desc">四个收敛手段，后面每个视图都在用</span>
+      </div>
+      <div class="fit-grid">
+        <div class="fit-card">
+          <div class="fit-title">按机构折叠</div>
+          <div class="fit-desc">先看机构小计（台数 / 均值 / 异常数），点开才看单车。100 台默认只铺 4 行。</div>
+        </div>
+        <div class="fit-card">
+          <div class="fit-title">紧凑 + 虚拟滚动</div>
+          <div class="fit-desc">行高 24~38px 可切，表头与首列固定，只渲染可视区。100 台滚动不卡。</div>
+        </div>
+        <div class="fit-card">
+          <div class="fit-title">一键只看异常</div>
+          <div class="fit-desc">按阈值/分位收敛到几台，把「翻 100 行」变成「看 8 条」。日常巡检最常用。</div>
+        </div>
+        <div class="fit-card">
+          <div class="fit-title">头尾各 5 名</div>
+          <div class="fit-desc">榜单只留最好与最差，中间折叠；全量按需展开或搜索车牌。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 01 日历 ================= -->
+    <section>
+      <div class="sec-head">
+        <span class="sec-no">01</span>
+        <span class="sec-title">逐日日历热力</span>
+        <span class="sec-desc">单车复盘 · 点格子看当天明细</span>
+      </div>
+      <div class="card">
+        <div class="toolbar">
+          <span class="fake-select">鄂A39907D <span class="caret">▼</span></span>
+          <div class="month-nav"><button>‹</button><span>2026 年 10 月</span><button>›</button></div>
+          <div class="chips right" id="calChips">
+            <button class="chip active" data-metric="km">行驶里程</button>
+            <button class="chip" data-metric="fuel">行驶电耗</button>
+            <button class="chip" data-metric="rate">百公里电耗</button>
+          </div>
+        </div>
+        <div class="cal-layout">
+          <div>
+            <div class="cal-grid" id="calGrid"></div>
+            <div class="note">底色 = 当日百公里电耗；点任意一天，右侧切换成当天明细。灰底虚线是还没到的日期。</div>
+          </div>
+          <div class="cal-side">
+            <div class="side-card" id="dayCard"></div>
+            <div class="side-card">
+              <div class="side-title">本月概览</div>
+              <div class="stat-line"><span>行驶里程</span><b id="mKm">–<small>km</small></b></div>
+              <div class="stat-line"><span>行驶电耗</span><b id="mFuel">–<small>kWh</small></b></div>
+              <div class="stat-line"><span>百公里电耗</span><b id="mRate">–<small>kWh</small></b></div>
+              <div class="stat-line"><span>运行天数</span><b id="mDays">–<small>天</small></b></div>
+            </div>
+            <div class="side-card">
+              <div class="side-title">电耗色阶</div>
+              <div class="legend-bar"></div>
+              <div class="legend-labels"><span>低 · 190</span><span>高 · 250</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 02 矩阵 ================= -->
+    <section>
+      <div class="sec-head">
+        <span class="sec-no">02</span>
+        <span class="sec-title">车辆 × 日期 矩阵</span>
+        <span class="sec-desc">车队横比 · 明细 / 出勤双模式 + 机构折叠 + 只看异常</span>
+      </div>
+      <div class="card">
+        <div class="toolbar">
+          <div class="chips" id="mxMode">
+            <button class="chip active" data-mode="detail">明细视图</button>
+            <button class="chip" data-mode="compact">出勤视图</button>
+          </div>
+          <div class="chips" id="mxFilter">
+            <button class="chip active" data-filter="all">全部车辆</button>
+            <button class="chip" data-filter="bad">只看异常</button>
+          </div>
+          <span class="count-tip" id="mxCount"></span>
+        </div>
+        <div class="mx-scroll" id="mxScroll">
+          <div id="matrix"></div>
+        </div>
+        <div class="note">
+          明细：上排里程 / 下排百公里电耗；出勤：只留里程，色深=跑得多，一眼看出谁在停。
+          <b>100 台时按机构折叠，默认只展开第一组，表头和车辆列固定，区块内滚动。</b>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 03 象限 ================= -->
+    <section>
+      <div class="sec-head">
+        <span class="sec-no">03</span>
+        <span class="sec-title">效率象限</span>
+        <span class="sec-new">新玩法</span>
+        <span class="sec-desc">把「跑得多不多」和「费不费电」放进同一张图，100 台也不会看不过来</span>
+      </div>
+      <div class="card">
+        <div class="toolbar">
+          <span class="fake-select">2026-10-01 ~ 2026-10-17 · 全车队 <span class="caret">▼</span></span>
+          <div class="chips right" id="quadChips">
+            <button class="chip active" data-x="km">横轴：日均里程</button>
+            <button class="chip" data-x="days">横轴：出勤天数</button>
+          </div>
+        </div>
+        <div class="quad-layout">
+          <div>
+            <div id="quadChart"></div>
+            <div class="quad-legend" id="quadLegend"></div>
+          </div>
+          <div class="quad-side" id="quadSide"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 04 排行 ================= -->
+    <section>
+      <div class="sec-head">
+        <span class="sec-no">04</span>
+        <span class="sec-title">车队排行</span>
+        <span class="sec-desc">考核视角 · 默认只留头尾各 5 名，中间折叠</span>
+      </div>
+      <div class="card">
+        <div class="toolbar">
+          <span class="fake-select">2026-10-01 ~ 2026-10-17 <span class="caret">▼</span></span>
+          <div class="chips" id="rankChips">
+            <button class="chip active" data-metric="rate">百公里电耗</button>
+            <button class="chip" data-metric="km">行驶里程</button>
+            <button class="chip" data-metric="fuel">行驶电耗</button>
+          </div>
+          <div class="chips" id="rankGroup">
+            <button class="chip active" data-by="vehicle">按车辆</button>
+            <button class="chip" data-by="org">按机构</button>
+          </div>
+        </div>
+        <div id="rankList"></div>
+        <div class="note">最右侧是环比（与上一个等长区间相比的变化）：绿色代表变好、红色代表变差，考核看趋势比看绝对值更有意义。</div>
+      </div>
+    </section>
+
+    <!-- ================= 05 剖面 ================= -->
+    <section>
+      <div class="sec-head">
+        <span class="sec-no">05</span>
+        <span class="sec-title">单日运行剖面</span>
+        <span class="sec-desc">排班 / 停驶排查 · 紧凑行 + 按机构分组 + 异常高亮</span>
+      </div>
+      <div class="card">
+        <div class="toolbar">
+          <span class="fake-select">2026-10-16 <span class="caret">▼</span></span>
+          <div class="chips" id="tlSort">
+            <button class="chip active" data-sort="start">按出车时间</button>
+            <button class="chip" data-sort="km">按里程</button>
+            <button class="chip" data-sort="off">按下电时长</button>
+          </div>
+          <div class="chips" id="tlFilter">
+            <button class="chip active" data-filter="all">全部</button>
+            <button class="chip" data-filter="warn">只看异常</button>
+          </div>
+        </div>
+        <div class="tl-scroll" id="tlScroll">
+          <div class="tl-head">
+            <div>车辆</div>
+            <div class="tl-axis" id="tlAxis"></div>
+            <div style="text-align:right">里程 / 电耗</div>
+          </div>
+          <div id="timeline"></div>
+        </div>
+        <div class="note">橙色 = 下电超过 5 小时（等靠、异常停车或没关电门）；100 台时区块内滚动、表头固定，按下电时长排序可把异常顶到最上面。</div>
+      </div>
+    </section>
+
+    <!-- ================= 06 异常 ================= -->
+    <section>
+      <div class="sec-head">
+        <span class="sec-no">06</span>
+        <span class="sec-title">异常待办</span>
+        <span class="sec-new">新玩法</span>
+        <span class="sec-desc">从「看数据」变成「给结论」——每天先看这 10 条</span>
+      </div>
+      <div class="card">
+        <div class="issue-chips" id="issueChips"></div>
+        <div id="issueList"></div>
+        <div class="note">规则可配：电耗超 P85、里程较自身近 7 日均值腰斩、下电超 6 小时、连续 3 天未运行、平均车速低于 8km/h。</div>
+      </div>
+    </section>
+
+    <!-- ================= 07 节律 ================= -->
+    <section>
+      <div class="sec-head">
+        <span class="sec-no">07</span>
+        <span class="sec-title">周节律热力</span>
+        <span class="sec-new">新玩法</span>
+        <span class="sec-desc">队伍整体作息：一周 × 24 小时，看在途车辆数</span>
+      </div>
+      <div class="card">
+        <div class="rhythm-layout">
+          <div>
+            <div class="rh-grid" id="rhythm"></div>
+            <div class="rh-legend">
+              <span>在途车辆</span>
+              <span class="rh-scale">
+                <i style="background:#fff5f5"></i><i style="background:#eca5b0"></i><i style="background:#df7081"></i>
+                <i style="background:#d33e56"></i><i style="background:#c8102e"></i>
+              </span>
+              <span>少 → 多</span>
+            </div>
+          </div>
+          <div class="quad-side" id="rhythmSide"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    /* ============================================================
+       数据
+       ============================================================ */
+    const ORGS = ['十堰分公司', '襄阳分公司', '武汉分公司', '宜昌分公司']
+    const ORG_COLORS = ['#c8102e', '#e8a33d', '#4f7cac', '#7f8c9b']
+    const PLATE_PREFIX = ['鄂C', '鄂F', '鄂A', '鄂E']
+    const DAYS = 31
+    const TODAY = 17
+
+    let SCALE = 40
+    let VEHICLES = []
+
+    const hash = (s) => {
+      let h = 2166136261
+      for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) }
+      h ^= h >>> 16; h = Math.imul(h, 2246822507)
+      h ^= h >>> 13; h = Math.imul(h, 3266489909)
+      h ^= h >>> 16
+      return (h >>> 0) / 4294967295
+    }
+
+    const r1 = (n) => Math.round(n * 10) / 10
+
+    function buildVehicles(n) {
+      const list = []
+      for (let i = 0; i < n; i++) {
+        const oi = i % 4
+        const longHaul = hash('t' + i) > 0.62
+        list.push({
+          plate: PLATE_PREFIX[oi] + (30000 + i * 13 + oi * 7) + 'D',
+          org: ORGS[oi],
+          orgIndex: oi,
+          vin: 'LGAG4PY3' + (hash('v' + i) > 0.5 ? '1' : '3') + 'S601' + String(1000 + i * 7).slice(-4),
+          base: longHaul ? 260 + hash('b' + i) * 220 : 70 + hash('b' + i) * 120,
+          rate: 190 + hash('r' + i) * 50,
+          idx: i,
+          anomaly: i === 2 ? 'drop' : i === 7 ? 'drop' : i === 4 ? 'idle' : i === 11 ? 'idle' : null,
+        })
+      }
+      return list
+    }
+
+    function dayData(v, d) {
+      if (d > TODAY) return null
+      // 演示用：个别车出勤明显不足
+      if (v.anomaly === 'idle' && d <= 8) return { d, km: 0, fuel: 0, rate: 0, rest: true }
+
+      const wd = (3 + d - 1) % 7
+      const s = hash(v.vin + '|' + d)
+      if (s < (wd >= 5 ? 0.36 : 0.11)) return { d, km: 0, fuel: 0, rate: 0, rest: true }
+
+      let km = r1(v.base * (0.5 + s * 1.1))
+      // 演示用：某天里程骤降
+      if (v.anomaly === 'drop' && d === 16) km = r1(km * 0.2)
+      const rate = r1(v.rate + (hash('q' + v.vin + d) - 0.5) * 34)
+      const fuel = r1((km * rate) / 100)
+      const startH = 5.2 + hash('s' + v.vin + d) * 3.4
+      const runH = km / (34 + hash('w' + v.vin + d) * 14)
+      const offH = 1.2 + hash('o' + v.vin + d) * 6.2
+      return { d, km, fuel, rate, rest: false, startH, runH, offH, endH: Math.min(23.6, startH + runH + offH) }
+    }
+
+    const monthOf = (v) => Array.from({ length: DAYS }, (_, i) => dayData(v, i + 1)).filter(Boolean)
+    const sum = (list, key) => list.reduce((a, b) => a + (b[key] || 0), 0)
+    const fmtH = (h) => {
+      const hh = Math.floor(h)
+      const mm = Math.round((h - hh) * 60)
+      return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0')
+    }
+
+    function vehicleStats(v) {
+      const data = monthOf(v)
+      const run = data.filter((x) => !x.rest)
+      const km = sum(run, 'km')
+      const fuel = sum(run, 'fuel')
+      return {
+        plate: v.plate, org: v.org, orgIndex: v.orgIndex, vin: v.vin,
+        km, fuel, rate: km ? (fuel / km) * 100 : 0,
+        days: run.length,
+        avgKm: run.length ? km / run.length : 0,
+        avgOff: run.length ? sum(run, 'offH') / run.length : 0,
+        data,
+      }
+    }
+
+    /* ============================================================
+       01 日历
+       ============================================================ */
+    const calGrid = document.getElementById('calGrid')
+    const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
+    let calMetric = 'km'
+    let pickedDay = TODAY
+
+    const kmLevel = (km) => {
+      if (!km) return 'lv0'
+      if (km >= 400) return 'lv5'
+      if (km >= 250) return 'lv4'
+      if (km >= 150) return 'lv3'
+      if (km >= 70) return 'lv2'
+      return 'lv1'
+    }
+
+    const rateLevel = (rate) => {
+      if (!rate) return 'lv0'
+      if (rate < 200) return 'lv1'
+      if (rate < 215) return 'lv2'
+      if (rate < 230) return 'lv3'
+      if (rate < 245) return 'lv4'
+      return 'lv5'
+    }
+
+    function renderCalendar() {
+      if (!VEHICLES.length) return
+      const v = VEHICLES[0]
+      const data = monthOf(v)
+      const byDay = {}
+      data.forEach((x) => { byDay[x.d] = x })
+      const offset = 3 // 2026-10-01 周四
+
+      let html = WEEKDAYS.map((w) => `<div class="cal-wd">${w}</div>`).join('')
+      for (let i = 0; i < offset; i++) html += '<div class="cal-cell empty"></div>'
+
+      for (let d = 1; d <= DAYS; d++) {
+        const x = byDay[d]
+        const wk = ((offset + d - 1) % 7) >= 5 ? ' wk' : ''
+        const cls = [d === TODAY ? 'today' : '', d === pickedDay ? 'picked' : ''].join(' ')
+
+        if (!x) { html += `<div class="cal-cell empty"><div class="cal-d${wk}">${d}</div></div>`; continue }
+        if (x.rest) {
+          html += `<div class="cal-cell lv0 ${cls}" data-day="${d}">
+            <div class="cal-d${wk}">${d}</div>
+            <div class="cal-main" style="color:#cbd5e1;font-size:13px;margin-top:9px">未运行</div>
+          </div>`
+          continue
+        }
+        const main = calMetric === 'km' ? x.km : calMetric === 'fuel' ? x.fuel : x.rate
+        const unit = calMetric === 'km' ? 'km' : calMetric === 'fuel' ? 'kWh' : 'kWh/100km'
+        const sub = calMetric === 'rate' ? `${x.km.toFixed(1)} km` : `${x.rate.toFixed(1)} kWh/100km`
+        const foot = calMetric === 'rate' ? `${x.fuel.toFixed(0)} kWh` : `${x.fuel.toFixed(0)} kWh`
+
+        html += `<div class="cal-cell has-data ${rateLevel(x.rate)} ${cls}" data-day="${d}">
+          <div class="cal-d${wk}">${d}</div>
+          <div class="cal-main">${main.toFixed(1)}<small>${unit}</small></div>
+          <div class="cal-sub">${sub}</div>
+          <div class="cal-foot">${foot}</div>
+        </div>`
+      }
+      calGrid.innerHTML = html
+
+      const km = sum(data.filter((x) => !x.rest), 'km')
+      const fuel = sum(data.filter((x) => !x.rest), 'fuel')
+      document.getElementById('mKm').innerHTML = `${km.toFixed(0)}<small>km</small>`
+      document.getElementById('mFuel').innerHTML = `${fuel.toFixed(0)}<small>kWh</small>`
+      document.getElementById('mRate').innerHTML = `${(fuel / km * 100).toFixed(1)}<small>kWh</small>`
+      document.getElementById('mDays').innerHTML = `${data.filter((x) => !x.rest).length}<small>天</small>`
+
+      renderDayCard()
+    }
+
+    function renderDayCard() {
+      const v = VEHICLES[0]
+      const stats = vehicleStats(v)
+      const x = stats.data.find((i) => i.d === pickedDay && !i.rest)
+      const card = document.getElementById('dayCard')
+      if (!x) {
+        card.innerHTML = `<div class="side-title"><span class="day">10 月 ${pickedDay} 日</span></div>
+          <div style="font-size:12px;color:#94a3b8;padding:8px 0">当天未运行</div>`
+        return
+      }
+      const gap = x.rate - stats.rate
+      card.innerHTML = `
+        <div class="side-title"><span class="day">10 月 ${pickedDay} 日</span><span>当日明细</span></div>
+        <div class="stat-line"><span>行驶里程</span><b>${x.km.toFixed(1)}<small>km</small></b></div>
+        <div class="stat-line"><span>行驶电耗</span><b>${x.fuel.toFixed(0)}<small>kWh</small></b></div>
+        <div class="stat-line"><span>百公里电耗</span><b>${x.rate.toFixed(1)}<small>kWh</small></b></div>
+        <div class="stat-line"><span>运行时段</span><b style="font-size:12px">${fmtH(x.startH)} - ${fmtH(x.endH)}</b></div>
+        <div class="stat-line"><span>运行 / 下电</span><b style="font-size:12px">${x.runH.toFixed(1)}h / ${x.offH.toFixed(1)}h</b></div>
+        <div class="cmp ${gap <= 0 ? 'good' : ''}">较本月均值 ${gap > 0 ? '+' : ''}${gap.toFixed(1)} kWh/100km</div>`
+    }
+
+    calGrid.addEventListener('click', (e) => {
+      const cell = e.target.closest('.cal-cell')
+      if (!cell || !cell.dataset.day) return
+      const day = Number(cell.dataset.day)
+      const hit = monthOf(VEHICLES[0]).find((x) => x.d === day && !x.rest)
+      if (!hit) return
+      pickedDay = day
+      document.querySelectorAll('.cal-cell').forEach((c) => c.classList.remove('picked'))
+      cell.classList.add('picked')
+      renderDayCard()
+    })
+
+    document.getElementById('calChips').addEventListener('click', (e) => {
+      const b = e.target.closest('.chip'); if (!b) return
+      calMetric = b.dataset.metric
+      ;[...b.parentNode.children].forEach((x) => x.classList.toggle('active', x === b))
+      renderCalendar()
+    })
+
+    /* ============================================================
+       02 矩阵
+       ============================================================ */
+    let mxMode = 'detail'
+    let mxFilter = 'all'
+    const collapsed = {}
+
+    function matrixData() {
+      const from = 4, to = 17
+      const days = []
+      for (let d = from; d <= to; d++) days.push(d)
+
+      const rows = VEHICLES.map((v) => {
+        const st = vehicleStats(v)
+        const byDay = {}
+        st.data.forEach((x) => { byDay[x.d] = x })
+        const km = sum(st.data.filter((x) => x.d >= from && x.d <= to && !x.rest), 'km')
+        return { ...st, byDay, rangeKm: km }
+      })
+
+      // 异常：区间电耗高于 P85 或 出勤天数明显偏少
+      const sorted = [...rows].sort((a, b) => b.rate - a.rate)
+      const p85 = sorted[Math.floor(sorted.length * 0.15)]?.rate || 240
+      let workdays = 0
+      for (let d = 1; d <= TODAY; d++) if (((3 + d - 1) % 7) < 5) workdays++
+      const idleLimit = Math.round(workdays * 0.6)
+      const filtered = mxFilter === 'bad'
+        ? rows.filter((r) => r.rate > p85 || r.days <= idleLimit)
+        : rows
+
+      return { days, rows: filtered, total: rows.length, p85 }
+    }
+
+    function renderMatrix() {
+      const { days, rows, total } = matrixData()
+      const wrap = document.getElementById('matrix')
+      wrap.className = mxMode === 'compact' ? 'mx-compact' : ''
+
+      let html = `<div class="mx-row mx-head">
+        <div class="mx-veh">车辆 / 机构</div>
+        ${days.map((d) => `<div class="mx-cell">10/${String(d).padStart(2, '0')}</div>`).join('')}
+        <div class="mx-total">区间里程</div>
+        <div class="mx-total">百公里</div>
+      </div>`
+
+      const groups = {}
+      rows.forEach((r) => { (groups[r.org] = groups[r.org] || []).push(r) })
+
+      Object.keys(groups).forEach((org, gi) => {
+        const list = groups[org]
+        const avgRate = list.reduce((a, b) => a + b.rate, 0) / list.length
+        // 只看异常时全部展开，方便一次看完命中项
+        const isCollapsed = mxFilter === 'bad'
+          ? false
+          : (collapsed[org] === undefined ? gi > 0 : collapsed[org])
+
+        html += `<div class="mx-group" data-org="${org}" data-collapsed="${isCollapsed ? 1 : 0}">
+          <span class="g-name">${org}</span>
+          <span class="g-meta">${list.length} 台 · 均值 ${avgRate.toFixed(1)} kWh/100km</span>
+          <span class="g-arrow">${isCollapsed ? '展开 ▾' : '收起 ▴'}</span>
+        </div>`
+
+        if (!isCollapsed) {
+          list.forEach((r) => {
+            html += `<div class="mx-row mx-body-row">
+              <div class="mx-veh"><div>
+                <div class="mx-plate">${r.plate}</div>
+              </div></div>
+              ${days.map((d) => {
+                const x = r.byDay[d]
+                if (!x || x.rest) return `<div class="mx-cell blank"><div class="mx-km">–</div><div class="mx-rate">–</div></div>`
+                const cellCls = mxMode === 'compact' ? kmLevel(x.km) : rateLevel(x.rate)
+                return `<div class="mx-cell ${cellCls}">
+                  <div class="mx-km">${x.km.toFixed(0)}</div>
+                  <div class="mx-rate">${x.rate.toFixed(0)}</div>
+                </div>`
+              }).join('')}
+              <div class="mx-total">${r.rangeKm.toFixed(0)}<small> km</small></div>
+              <div class="mx-sum">${r.rate.toFixed(0)}</div>
+            </div>`
+          })
+        }
+      })
+
+      wrap.innerHTML = html
+      const shown = Object.keys(groups).reduce((n, org) => {
+        const gi = Object.keys(groups).indexOf(org)
+        // 只看异常时全部展开，方便一次看完命中项
+        const isCollapsed = mxFilter === 'bad'
+          ? false
+          : (collapsed[org] === undefined ? gi > 0 : collapsed[org])
+        return n + (isCollapsed ? 0 : groups[org].length)
+      }, 0)
+      document.getElementById('mxCount').textContent = mxFilter === 'bad'
+        ? `共 ${total} 台 · 命中异常 ${rows.length} 台`
+        : `共 ${total} 台 · 展开 ${shown} 台 · 点机构名折叠`
+    }
+
+    document.getElementById('mxMode').addEventListener('click', (e) => {
+      const b = e.target.closest('.chip'); if (!b) return
+      mxMode = b.dataset.mode
+      ;[...b.parentNode.children].forEach((x) => x.classList.toggle('active', x === b))
+      renderMatrix()
+    })
+
+    document.getElementById('mxFilter').addEventListener('click', (e) => {
+      const b = e.target.closest('.chip'); if (!b) return
+      mxFilter = b.dataset.filter
+      ;[...b.parentNode.children].forEach((x) => x.classList.toggle('active', x === b))
+      renderMatrix()
+    })
+
+    document.getElementById('matrix').addEventListener('click', (e) => {
+      const g = e.target.closest('.mx-group'); if (!g) return
+      const org = g.dataset.org
+      collapsed[org] = g.dataset.collapsed !== '1'
+      renderMatrix()
+    })
+
+    /* ============================================================
+       03 象限
+       ============================================================ */
+    let quadX = 'km'
+    const quadChips = document.getElementById('quadChips')
+
+    function renderQuadrant() {
+      const stats = VEHICLES.map(vehicleStats)
+      const orgs = [...new Set(VEHICLES.map((v) => v.org))]
+      const W = 780, H = 330
+      const P = { l: 52, r: 22, t: 16, b: 40 }
+      const iw = W - P.l - P.r, ih = H - P.t - P.b
+
+      const xOf = (s) => (quadX === 'km' ? s.avgKm : s.days)
+      const xs = stats.map(xOf)
+      const ys = stats.map((s) => s.rate)
+      const xMax = Math.max(...xs) * 1.08 || 10
+      const yMin = Math.min(...ys) - 6
+      const yMax = Math.max(...ys) + 6
+
+      const px = (v) => P.l + (v / xMax) * iw
+      const py = (v) => P.t + ih - ((v - yMin) / (yMax - yMin)) * ih
+
+      const med = (arr) => {
+        const a = [...arr].sort((m, n) => m - n)
+        return a[Math.floor(a.length / 2)]
+      }
+      const mx = med(xs), my = med(ys)
+
+      let grid = ''
+      for (let i = 0; i <= 4; i++) {
+        const y = P.t + (ih / 4) * i
+        grid += `<line x1="${P.l}" y1="${y}" x2="${W - P.r}" y2="${y}" stroke="#f1f5f9"/>`
+      }
+      for (let i = 0; i <= 4; i++) {
+        const x = P.l + (iw / 4) * i
+        grid += `<line x1="${x}" y1="${P.t}" x2="${x}" y2="${P.t + ih}" stroke="#f8fafc"/>`
+      }
+
+      const dots = stats.map((s) => {
+        const idx = ORGS.indexOf(s.org)
+        return `<circle cx="${px(xOf(s)).toFixed(1)}" cy="${py(s.rate).toFixed(1)}" r="4.6"
+          fill="${ORG_COLORS[idx]}" fill-opacity="0.72" stroke="#fff" stroke-width="1.2">
+          <title>${s.plate} · ${s.org}\n日均 ${s.avgKm.toFixed(0)} km · ${s.rate.toFixed(1)} kWh/100km · 出勤 ${s.days} 天</title>
+        </circle>`
+      }).join('')
+
+      // 标注最费电的 3 台 + 跑得最多的 2 台
+      const labelSet = new Set([
+        ...[...stats].sort((a, b) => b.rate - a.rate).slice(0, 3).map((s) => s.plate),
+        ...[...stats].sort((a, b) => b.avgKm - a.avgKm).slice(0, 2).map((s) => s.plate),
+      ])
+
+      const placed = []
+      const labels = stats.filter((s) => labelSet.has(s.plate))
+        .sort((a, b) => xOf(a) - xOf(b))
+        .map((s) => {
+          const x = px(xOf(s))
+          const y = py(s.rate)
+          if (placed.some((p) => Math.abs(p.x - x) < 64 && Math.abs(p.y - y) < 13)) return ''
+          placed.push({ x, y })
+          return `<text x="${(x + 7).toFixed(1)}" y="${(y - 6).toFixed(1)}"
+            font-size="9.5" fill="#64748b" font-weight="600">${s.plate}</text>`
+        }).join('')
+
+      const qCount = [
+        stats.filter((s) => xOf(s) >= mx && s.rate <= my).length,
+        stats.filter((s) => xOf(s) < mx && s.rate <= my).length,
+        stats.filter((s) => xOf(s) >= mx && s.rate > my).length,
+        stats.filter((s) => xOf(s) < mx && s.rate > my).length,
+      ]
+
+      const xLabels = [0, 0.25, 0.5, 0.75, 1].map((t) => {
+        const v = xMax * t
+        return `<text x="${(P.l + iw * t).toFixed(0)}" y="${H - 22}" text-anchor="middle" font-size="10" fill="#94a3b8">${Math.round(v)}</text>`
+      }).join('')
+
+      const yLabels = [0, 0.25, 0.5, 0.75, 1].map((t) => {
+        const v = yMin + (yMax - yMin) * t
+        const y = P.t + ih - ih * t
+        return `<text x="${P.l - 8}" y="${y + 3}" text-anchor="end" font-size="10" fill="#94a3b8">${Math.round(v)}</text>`
+      }).join('')
+
+      document.getElementById('quadChart').innerHTML = `
+        <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;height:auto">
+          ${grid}
+          <line x1="${px(mx)}" y1="${P.t}" x2="${px(mx)}" y2="${P.t + ih}" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="5 4"/>
+          <line x1="${P.l}" y1="${py(my)}" x2="${W - P.r}" y2="${py(my)}" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="5 4"/>
+          <text x="${P.l + 8}" y="${P.t + 14}" font-size="10" fill="#c98f99" font-weight="700">低效 · 低利用</text>
+          <text x="${W - P.r - 8}" y="${P.t + 14}" text-anchor="end" font-size="10" fill="#c98f99" font-weight="700">低效 · 高利用</text>
+          <text x="${P.l + 8}" y="${P.t + ih - 8}" font-size="10" fill="#94a3b8" font-weight="700">高效 · 低利用</text>
+          <text x="${W - P.r - 8}" y="${P.t + ih - 8}" text-anchor="end" font-size="10" fill="#94a3b8" font-weight="700">高效 · 高利用</text>
+          ${dots}
+          ${labels}
+          ${xLabels}
+          ${yLabels}
+          <text x="${W / 2}" y="${H - 6}" text-anchor="middle" font-size="10.5" fill="#94a3b8">${quadX === 'km' ? '日均行驶里程 km' : '出勤天数 天'}</text>
+          <text x="12" y="${P.t + ih / 2}" font-size="10.5" fill="#94a3b8" transform="rotate(-90 12 ${P.t + ih / 2})" text-anchor="middle">百公里电耗 kWh</text>
+        </svg>`
+
+      document.getElementById('quadLegend').innerHTML = orgs.map((o, i) =>
+        `<span><i style="background:${ORG_COLORS[ORGS.indexOf(o)]}"></i>${o}</span>`).join('')
+
+      document.getElementById('quadSide').innerHTML = `
+        <div class="side-card">
+          <div class="side-title">四象限 <span style="font-weight:600;color:#94a3b8">${stats.length} 台</span></div>
+          <div class="quad-item">
+            <span class="quad-dot" style="background:#0f9d58"></span>
+            <div><div class="quad-name">高效 · 高利用<span>${qCount[0]} 台</span></div>
+            <div class="quad-tip">标杆车，可复制它的线路与驾驶习惯</div></div>
+          </div>
+          <div class="quad-item">
+            <span class="quad-dot" style="background:#4f7cac"></span>
+            <div><div class="quad-name">高效 · 低利用<span>${qCount[1]} 台</span></div>
+            <div class="quad-tip">省电但跑得少，优先补运力</div></div>
+          </div>
+          <div class="quad-item">
+            <span class="quad-dot" style="background:#e8a33d"></span>
+            <div><div class="quad-name">低效 · 高利用<span>${qCount[2]} 台</span></div>
+            <div class="quad-tip">跑得多也费电，重点看装载与工况</div></div>
+          </div>
+          <div class="quad-item">
+            <span class="quad-dot" style="background:#c8102e"></span>
+            <div><div class="quad-name">低效 · 低利用<span>${qCount[3]} 台</span></div>
+            <div class="quad-tip">既费电又闲置，优先处置</div></div>
+          </div>
+        </div>
+        <div class="side-card">
+          <div class="side-title">怎么用</div>
+          <div style="font-size:11.5px;color:#64748b;line-height:1.75">
+            虚线是车队中位数。点每个点是单台车，10 秒就能看完 100 台，比翻表格快。
+          </div>
+        </div>`
+
+      quadChips.querySelectorAll('.chip').forEach((b) => b.classList.toggle('active', b.dataset.x === quadX))
+    }
+
+    quadChips.addEventListener('click', (e) => {
+      const b = e.target.closest('.chip'); if (!b) return
+      quadX = b.dataset.x
+      renderQuadrant()
+    })
+
+    /* ============================================================
+       04 排行
+       ============================================================ */
+    let rankMetric = 'rate'
+    let rankBy = 'vehicle'
+    let rankExpanded = false
+
+    function rankData() {
+      let rows
+      if (rankBy === 'org') {
+        rows = ORGS.map((org) => {
+          const list = VEHICLES.filter((v) => v.org === org).map(vehicleStats)
+          const km = list.reduce((a, b) => a + b.km, 0)
+          const fuel = list.reduce((a, b) => a + b.fuel, 0)
+          return { plate: org, org, km, fuel, rate: km ? (fuel / km) * 100 : 0, count: list.length }
+        })
+      } else {
+        rows = VEHICLES.map(vehicleStats)
+      }
+      rows.forEach((r) => {
+        r.delta = (hash('d' + r.plate + rankMetric) - 0.5) * 0.16 // ±8%
+      })
+      rows.sort((a, b) => b[rankMetric] - a[rankMetric])
+      return rows
+    }
+
+    function renderRank() {
+      const conf = {
+        rate: { unit: 'kWh/100km', digits: 1, lowerBetter: true },
+        km: { unit: 'km', digits: 0, lowerBetter: false },
+        fuel: { unit: 'kWh', digits: 0, lowerBetter: false },
+      }[rankMetric]
+
+      const rows = rankData()
+      const vals = rows.map((r) => r[rankMetric])
+      const max = Math.max(...vals), min = Math.min(...vals)
+      const avg = vals.reduce((a, b) => a + b, 0) / vals.length
+      const pos = (v) => 52 + ((v - min) / (max - min || 1)) * 48
+
+      const rowHtml = (r, i) => `
+        <div class="rank-row ${i === 0 ? 'top1' : ''}">
+          <span class="rank-idx">${i + 1}</span>
+          <span class="rank-name">${r.plate}${rankBy === 'org' ? `<small style="color:#94a3b8;font-weight:600"> · ${r.count}台</small>` : ''}</span>
+          <div class="rank-track">
+            <div class="rank-bar" style="width:${pos(r[rankMetric])}%"></div>
+            <i class="rank-avg" style="left:${pos(avg)}%"></i>
+          </div>
+          <span class="rank-val">${r[rankMetric].toFixed(conf.digits)}<small>${conf.unit}</small></span>
+          <span class="rank-delta ${((rankMetric === 'rate' ? -r.delta : r.delta) > 0) ? 'good' : 'bad'}">${r.delta > 0 ? '+' : ''}${(r.delta * 100).toFixed(1)}%</span>
+        </div>`
+
+      let html = ''
+      if (rows.length <= 12 || rankExpanded) {
+        html = rows.map((r, i) => rowHtml(r, i)).join('')
+        if (rows.length > 12) {
+          html += `<div class="rank-fold" id="rankFold">收起 · 只看头尾各 5 名 ▴</div>`
+        }
+      } else {
+        html = rows.slice(0, 5).map((r, i) => rowHtml(r, i)).join('')
+        html += `<div class="rank-fold" id="rankFold">中间 ${rows.length - 10} 台已折叠 · 展开全部 ▾</div>`
+        html += rows.slice(-5).map((r, i) => rowHtml(r, rows.length - 5 + i)).join('')
+      }
+
+      document.getElementById('rankList').innerHTML = html
+      const fold = document.getElementById('rankFold')
+      if (fold) fold.onclick = () => { rankExpanded = !rankExpanded; renderRank() }
+    }
+
+    document.getElementById('rankChips').addEventListener('click', (e) => {
+      const b = e.target.closest('.chip'); if (!b) return
+      rankMetric = b.dataset.metric
+      ;[...b.parentNode.children].forEach((x) => x.classList.toggle('active', x === b))
+      renderRank()
+    })
+
+    document.getElementById('rankGroup').addEventListener('click', (e) => {
+      const b = e.target.closest('.chip'); if (!b) return
+      rankBy = b.dataset.by
+      ;[...b.parentNode.children].forEach((x) => x.classList.toggle('active', x === b))
+      renderRank()
+    })
+
+    /* ============================================================
+       05 剖面
+       ============================================================ */
+    let tlSort = 'start'
+    let tlFilter = 'all'
+
+    function renderTimeline() {
+      const axis = document.getElementById('tlAxis')
+      axis.innerHTML = [0, 3, 6, 9, 12, 15, 18, 21, 24]
+        .map((h) => `<span style="left:${(h / 24) * 100}%">${String(h).padStart(2, '0')}</span>`).join('')
+
+      const day = 16
+      let rows = VEHICLES.map((v) => {
+        const x = dayData(v, day)
+        return { v, x }
+      }).filter((r) => r.x)
+
+      if (tlFilter === 'warn') rows = rows.filter((r) => !r.x.rest && r.x.offH > 5)
+      rows.sort((a, b) => {
+        if (tlSort === 'km') return (b.x.km || 0) - (a.x.km || 0)
+        if (tlSort === 'off') return (b.x.offH || 0) - (a.x.offH || 0)
+        if (a.x.rest) return 1
+        if (b.x.rest) return -1
+        return a.x.startH - b.x.startH
+      })
+
+      document.getElementById('timeline').innerHTML = rows.map(({ v, x }) => {
+        if (x.rest) {
+          return `<div class="tl-row">
+            <div class="mx-veh"><div><div class="mx-plate">${v.plate}</div><div class="mx-org">${v.org}</div></div></div>
+            <div class="tl-track"><div class="tl-off" style="left:0;right:0"></div>
+              <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9.5px;color:#94a3b8;font-weight:700;letter-spacing:2px">未运行</span>
+            </div>
+            <div class="tl-val" style="color:#cbd5e1">–</div>
+          </div>`
+        }
+        const startPct = Math.max(0, (x.startH / 24) * 100)
+        const runPct = Math.min(100 - startPct, (x.runH / 24) * 100)
+        const endPct = Math.min(100, (x.endH / 24) * 100)
+        const warn = x.offH > 5
+        return `<div class="tl-row">
+          <div class="mx-veh"><div><div class="mx-plate">${v.plate}</div><div class="mx-org">${v.org}</div></div></div>
+          <div class="tl-track">
+            ${[3, 6, 9, 12, 15, 18, 21].map((h) => `<div class="tl-grid" style="left:${(h / 24) * 100}%"></div>`).join('')}
+            <div class="tl-off ${warn ? 'warn' : ''}" style="left:${startPct}%;width:${Math.max(0, endPct - startPct)}%"></div>
+            <div class="tl-run" style="left:${startPct}%;width:${runPct}%"></div>
+            <div class="tl-times" style="left:${startPct}%">${fmtH(x.startH)}</div>
+            <div class="tl-times end" style="right:${100 - endPct}%;left:auto">${fmtH(x.endH)}</div>
+          </div>
+          <div class="tl-val">${x.km.toFixed(0)} km<small>${x.rate.toFixed(0)} kWh/100km</small>
+            ${warn ? `<span class="tl-warn">下电 ${x.offH.toFixed(1)}h</span>` : ''}
+          </div>
+        </div>`
+      }).join('')
+    }
+
+    document.getElementById('tlSort').addEventListener('click', (e) => {
+      const b = e.target.closest('.chip'); if (!b) return
+      tlSort = b.dataset.sort
+      ;[...b.parentNode.children].forEach((x) => x.classList.toggle('active', x === b))
+      renderTimeline()
+    })
+
+    document.getElementById('tlFilter').addEventListener('click', (e) => {
+      const b = e.target.closest('.chip'); if (!b) return
+      tlFilter = b.dataset.filter
+      ;[...b.parentNode.children].forEach((x) => x.classList.toggle('active', x === b))
+      renderTimeline()
+    })
+
+    /* ============================================================
+       06 异常待办
+       ============================================================ */
+    let issueType = 'all'
+
+    function buildIssues() {
+      const stats = VEHICLES.map(vehicleStats)
+      const rates = stats.map((s) => s.rate).sort((a, b) => a - b)
+      const p85 = rates[Math.floor(rates.length * 0.85)]
+      const list = []
+
+      let workdays = 0
+      for (let d = 1; d <= TODAY; d++) if (((3 + d - 1) % 7) < 5) workdays++
+
+      stats.forEach((s) => {
+        const last = s.data.filter((x) => !x.rest)
+        const tail = last[last.length - 1]
+        if (s.rate > p85) {
+          list.push({
+            type: 'rate', level: 'h', plate: s.plate, org: s.org,
+            desc: `百公里电耗 <b>${s.rate.toFixed(1)}</b> kWh，高于车队 P85（${p85.toFixed(0)}）`,
+            date: `10/${tail ? tail.d : TODAY}`, act: '看日历',
+          })
+        }
+        if (tail && tail.d >= 15) {
+          const prev = last.slice(-7, -1)
+          const avgPrev = prev.length ? prev.reduce((a, b) => a + b.km, 0) / prev.length : 0
+          if (avgPrev > 60 && tail.km < avgPrev * 0.5) {
+            list.push({
+              type: 'drop', level: 'm', plate: s.plate, org: s.org,
+              desc: `当日里程 <b>${tail.km.toFixed(0)} km</b>，较近 7 日均值（${avgPrev.toFixed(0)}）腰斩`,
+              date: `10/${tail.d}`, act: '看日历',
+            })
+          }
+          if (tail.offH > 6 && tail.runH < 9) {
+            list.push({
+              type: 'off', level: 'm', plate: s.plate, org: s.org,
+              desc: `下电 <b>${tail.offH.toFixed(1)}h</b>、运行 ${tail.runH.toFixed(1)}h，疑似长时间等靠`,
+              date: `10/${tail.d}`, act: '看剖面',
+            })
+          }
+        }
+        if (s.days <= Math.round(workdays * 0.65)) {
+          list.push({
+            type: 'idle', level: 'h', plate: s.plate, org: s.org,
+            desc: `区间内仅出勤 <b>${s.days} 天</b>（工作日 ${workdays} 天），累计 ${s.km.toFixed(0)} km`,
+            date: `近 ${TODAY} 天`, act: '看日历',
+          })
+        }
+      })
+
+      const order = { h: 0, m: 1, l: 2 }
+      list.sort((a, b) => order[a.level] - order[b.level])
+      return { list, p85 }
+    }
+
+    function renderIssues() {
+      const { list } = buildIssues()
+      const types = [
+        { key: 'all', label: '全部' },
+        { key: 'rate', label: '电耗超标' },
+        { key: 'drop', label: '里程骤降' },
+        { key: 'off', label: '长时下电' },
+        { key: 'idle', label: '出勤不足' },
+      ]
+      const counts = {}
+      list.forEach((i) => { counts[i.type] = (counts[i.type] || 0) + 1 })
+
+      document.getElementById('issueChips').innerHTML = types.map((t) => {
+        const n = t.key === 'all' ? list.length : (counts[t.key] || 0)
+        return `<button class="issue-chip ${issueType === t.key ? 'active' : ''}" data-type="${t.key}">${t.label}<b>${n}</b></button>`
+      }).join('')
+
+      const shown = (issueType === 'all' ? list : list.filter((i) => i.type === issueType)).slice(0, 12)
+      const tagMap = { rate: ['电耗超标', ''], drop: ['里程骤降', 't2'], off: ['长时下电', 't2'], idle: ['出勤不足', ''] }
+
+      document.getElementById('issueList').innerHTML = shown.map((i) => `
+        <div class="issue-row">
+          <span class="issue-level ${i.level}"></span>
+          <div class="issue-veh">${i.plate}<small>${i.org}</small></div>
+          <span class="issue-tag ${tagMap[i.type][1]}">${tagMap[i.type][0]}</span>
+          <div class="issue-desc">${i.desc}</div>
+          <div class="issue-date">${i.date}</div>
+          <div class="issue-act">${i.act} ›</div>
+        </div>`).join('')
+    }
+
+    document.getElementById('issueChips').addEventListener('click', (e) => {
+      const b = e.target.closest('.issue-chip'); if (!b) return
+      issueType = b.dataset.type
+      renderIssues()
+    })
+
+    /* ============================================================
+       07 节律
+       ============================================================ */
+    function renderRhythm() {
+      const grid = document.getElementById('rhythm')
+      const WD = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+      const counts = Array.from({ length: 7 }, () => new Array(24).fill(0))
+      const dateCount = new Array(7).fill(0)
+
+      // 10/1 是周四 → 星期索引
+      for (let d = 1; d <= TODAY; d++) dateCount[(3 + d - 1) % 7]++
+
+      VEHICLES.forEach((v) => {
+        for (let d = 1; d <= TODAY; d++) {
+          const x = dayData(v, d)
+          if (!x || x.rest) continue
+          const wd = (3 + d - 1) % 7
+          const from = Math.floor(x.startH)
+          const to = Math.min(23, Math.floor(x.endH))
+          for (let h = from; h <= to; h++) counts[wd][h]++
+        }
+      })
+
+      // 每个「星期几 × 小时」平均在途车辆数
+      const avg = counts.map((row, w) => row.map((c) => (dateCount[w] ? c / dateCount[w] : 0)))
+      const flat = avg.flat()
+      const max = Math.max(...flat) || 1
+
+      const lvl = (v) => {
+        const t = Math.pow(Math.min(1, Math.max(0, v / max)), 0.78)
+        const r = Math.round(255 - 55 * t)
+        const g = Math.round(245 - 229 * t)
+        const b = Math.round(245 - 199 * t)
+        return `rgb(${r},${g},${b})`
+      }
+
+      let html = '<div></div>' + Array.from({ length: 24 }, (_, h) =>
+        `<div class="rh-h">${h % 3 === 0 ? h : ''}</div>`).join('')
+
+      WD.forEach((w, wi) => {
+        html += `<div class="rh-wd">${w}</div>`
+        for (let h = 0; h < 24; h++) {
+          html += `<div class="rh-cell" style="background:${lvl(avg[wi][h])}" title="${w} ${String(h).padStart(2, '0')}:00 · 在途约 ${Math.round(avg[wi][h])} 台"></div>`
+        }
+      })
+      grid.innerHTML = html
+
+      const peak = Math.max(...avg.map((r) => Math.max(...r)))
+      const weekend = (avg[5].reduce((a, b) => a + b, 0) + avg[6].reduce((a, b) => a + b, 0)) / 48
+      const weekday = avg.slice(0, 5).reduce((a, r) => a + r.reduce((m, n) => m + n, 0), 0) / 120
+      const night = (avg[0][22] + avg[0][23] + avg[0][0] + avg[0][1]) / 4
+
+      document.getElementById('rhythmSide').innerHTML = `
+        <div class="side-card">
+          <div class="side-title">读图</div>
+          <div class="stat-line"><span>工作日在途峰值</span><b>${Math.round(peak)}<small>台</small></b></div>
+          <div class="stat-line"><span>工作日均</span><b>${weekday.toFixed(1)}<small>台</small></b></div>
+          <div class="stat-line"><span>周末均</span><b>${weekend.toFixed(1)}<small>台</small></b></div>
+          <div class="stat-line"><span>夜间（22-01）</span><b>${night.toFixed(1)}<small>台</small></b></div>
+        </div>
+        <div class="side-card">
+          <div class="side-title">能看出什么</div>
+          <div style="font-size:11.5px;color:#64748b;line-height:1.75">
+            深色集中在 06-09 与 17-20 是双高峰；周末整体变浅说明运力有富余，可安排保养或调休。
+          </div>
+        </div>`
+    }
+
+    /* ============================================================
+       启动 / 规模切换
+       ============================================================ */
+    function renderAll() {
+      renderCalendar()
+      renderMatrix()
+      renderQuadrant()
+      renderRank()
+      renderTimeline()
+      renderIssues()
+      renderRhythm()
+    }
+
+    document.getElementById('scaleToggle').addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b) return
+      SCALE = Number(b.dataset.scale)
+      ;[...b.parentNode.children].forEach((x) => x.classList.toggle('active', x === b))
+      VEHICLES = buildVehicles(SCALE)
+      Object.keys(collapsed).forEach((k) => delete collapsed[k])
+      renderAll()
+    })
+
+    VEHICLES = buildVehicles(SCALE)
+    renderAll()
+  </script>
+</body>
+
+</html>

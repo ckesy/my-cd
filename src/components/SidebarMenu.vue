@@ -33,12 +33,18 @@
       <el-menu-item index="/ele-fence/alert-query">提醒事件查询</el-menu-item>
     </el-sub-menu>
 
-    <el-menu-item v-if="hasPerm('operation')" index="/dashboard/运营管理">
-      <el-icon>
-        <DataLine />
-      </el-icon>
-      <span>运营管理</span>
-    </el-menu-item>
+    <!-- 运营管理 -->
+    <el-sub-menu v-if="hasPerm('operation')" index="operation-management">
+      <template #title>
+        <el-icon>
+          <DataLine />
+        </el-icon>
+        <span>运营管理</span>
+      </template>
+      <el-menu-item index="/operation/summary">综合报表</el-menu-item>
+      <el-menu-item index="/operation/energy">能耗报告</el-menu-item>
+      <el-menu-item index="/operation/driving">驾驶行为报表</el-menu-item>
+    </el-sub-menu>
 
     <!-- 运输管理 ⭐ 加路线管理 -->
     <el-sub-menu v-if="hasPerm('waybill') || hasPerm('report') || hasPerm('route')" index="transport-management">

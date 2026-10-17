@@ -460,6 +460,15 @@
         <el-form-item label="密码" :required="!isEdit">
           <el-input v-model="form.password" :placeholder="isEdit ? '不修改请留空' : '请输入密码'" show-password maxlength="32" />
         </el-form-item>
+        <!-- ⭐ 是否允许该账号登录小程序管理端（users.mp_login_enabled） -->
+        <el-form-item label="小程序登录">
+          <div class="mp-login-item">
+            <el-switch v-model="form.mp_login_enabled" />
+            <span class="mp-login-tip">
+              {{ form.mp_login_enabled ? '可登录小程序管理端：建单 / 派单 / 看运单' : '关闭后小程序登录会提示「该账号未开通小程序登录」' }}
+            </span>
+          </div>
+        </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" maxlength="200"
             show-word-limit />
@@ -888,6 +897,8 @@ const saving = ref(false)
 const form = reactive({
   id: null, account: '', name: '', phone: '', email: '',
   org_id: null, role_id: null, password: '', remark: '',
+  // ⭐ 小程序登录开关（users.mp_login_enabled）：新增默认开，编辑回显实际值
+  mp_login_enabled: true,
 })
 
 const resetForm = () => {
@@ -895,6 +906,7 @@ const resetForm = () => {
     id: null, account: '', name: '', phone: '', email: '',
     org_id: customerRootOrg.value?.id || null,
     role_id: null, password: '', remark: '',
+    mp_login_enabled: true,
   })
 }
 
@@ -917,6 +929,8 @@ const handleEdit = (row) => {
     role_id: row.role_id,
     remark: row.remark || '',
     password: '',
+    // 老数据没有这一列时为 undefined → 按「未开通」显示
+    mp_login_enabled: row.mp_login_enabled === true,
   })
   dialogVisible.value = true
 }
@@ -938,6 +952,7 @@ const saveUser = async () => {
       org_id: form.org_id,
       role_id: form.role_id,
       remark: form.remark,
+      mp_login_enabled: form.mp_login_enabled !== false,
       updated_at: new Date().toISOString(),
     }
     if (form.password) payload.password = form.password
@@ -2321,6 +2336,18 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 4px;
   animation: roleTipIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ⭐ 小程序登录开关：开关 + 一句说明，说明跟着状态变 */
+.mp-login-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mp-login-tip {
+  font-size: 12.5px;
+  color: #64748B;
+  line-height: 1.5;
 }
 
 @keyframes roleTipIn {

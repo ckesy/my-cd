@@ -45,7 +45,10 @@ export const PERMISSION_MODULES = [
     icon: 'DataLine',
     sort: 4,
     items: [
-      { key: 'operation', name: '运营管理', sort: 1 },
+      // ⭐ 三个子报表共用 operation 权限（与「系统管理」三项共用 system 的做法一致）
+      { key: 'operation', name: '综合报表', sort: 1 },
+      { key: 'operation', name: '能耗报告', sort: 2 },
+      { key: 'operation', name: '驾驶行为报表', sort: 3 },
     ],
   },
   {

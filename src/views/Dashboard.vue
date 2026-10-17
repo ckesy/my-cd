@@ -76,6 +76,17 @@
             <DriverArchive />
           </template>
 
+          <!-- 运营管理 -->
+          <template v-else-if="route.path === '/operation/summary'">
+            <OperationSummary />
+          </template>
+          <template v-else-if="route.path === '/operation/energy'">
+            <OperationEnergy />
+          </template>
+          <template v-else-if="route.path === '/operation/driving'">
+            <OperationDriving />
+          </template>
+
           <!-- 电子围栏管理 -->
           <template v-else-if="route.path === '/ele-fence/setting'">
             <EleFenceSetting />
@@ -135,6 +146,11 @@ import EleFenceSetting from '../views/EleFenceSetting.vue'
 import EleFenceAlertSetting from '../views/EleFenceAlertSetting.vue'
 import EleFenceAlertQuery from '../views/EleFenceAlertQuery.vue'
 
+// ⭐ 运营管理
+import OperationSummary from '../views/OperationSummary.vue'
+import OperationEnergy from '../views/OperationEnergy.vue'
+import OperationDriving from '../views/OperationDriving.vue'
+
 import UserManage from '../views/UserManage.vue'
 import RoleManage from '../views/RoleManage.vue'
 import OrgManage from '../views/OrgManage.vue'
@@ -192,6 +208,9 @@ const routePermissionMap = {
   '/ele-fence/alert-setting': 'ele_fence',
   '/ele-fence/alert-query': 'ele_fence',
   '/dashboard/运营管理': 'operation',
+  '/operation/summary': 'operation',
+  '/operation/energy': 'operation',
+  '/operation/driving': 'operation',
   '/waybill': 'waybill',
   '/waybill/create': 'waybill',
   '/waybill/detail': 'waybill',
@@ -260,6 +279,9 @@ const pathLabels = {
   '/dashboard/外观巡检管理': '外观巡检管理',
   '/dashboard/电子围栏管理': '电子围栏管理',
   '/dashboard/运营管理': '运营管理',
+  '/operation/summary': '综合报表',
+  '/operation/energy': '能耗报告',
+  '/operation/driving': '驾驶行为报表',
   '/dashboard/运输管理': '运输管理',
   '/dashboard/基础数据管理': '基础数据管理',
   '/dashboard/系统管理': '系统管理',
@@ -572,7 +594,9 @@ const goLogin = () => {
 }
 
 .content-wrapper:has(.client-home),
-.content-wrapper:has(.fullmap) {
+.content-wrapper:has(.fullmap),
+.content-wrapper:has(.summary-page),
+.content-wrapper:has(.placeholder-page) {
   padding: 0;
 }
 

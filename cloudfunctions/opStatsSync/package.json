@@ -1,0 +1,9 @@
+{
+  "name": "opStatsSync",
+  "version": "1.0.0",
+  "description": "运营报表逐日统计同步：东风能耗接口 → vehicle_daily_stats",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.2.0"
+  }
+}

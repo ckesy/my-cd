@@ -71,8 +71,31 @@
 - 同车 / 同司机并发规则：同一车牌或同一司机在同一 `owner_account` 下只能有一条
   未结束的运输记录（未结束 = 不属于 已完成/已取消/待重新指派）。
 
+## 运营报表（Web）
+
+- 菜单：运营管理 → 综合报表 `/operation/summary`、能耗报告 `/operation/energy`、
+  驾驶行为报表 `/operation/driving`，三项共用 `operation` 权限 key。
+- 接口封装统一在 `src/utils/dongfengReport.js`，**别在页面里另写一套**。
+- ⭐ `track/tripAnalysisOil`：**只能 POST，参数放 query，body 传 `{}`**；
+  参数写进 body 会一直返回 `2101 入参错误`（东风侧报错）。
+- ⭐ 能耗接口单位：`tripMileage` 米、`sumTravelFuel` Wh、`travelSumDuration` 分钟、
+  `travelAvgDuration` m/s（×3.6 → km/h）、`hundredSumTravelFuel` **恒为 0.02 不可用**，
+  百公里电耗用「行驶电耗 ÷ 行驶里程 × 100」现算。
+- 累计里程（里程表读数）不在能耗接口里，取 `track/history` 当天最大 `mileage`（米）÷1000。
+- 当前位置：`dongfeng-lostlocation` 的 `address` 实际是「纬度,经度」，
+  要真实地址得用高德 JS Geocoder 逆地理编码（坐标缓存，别每刷一次都请求）。
+- ⭐ 东风能耗数据有 **1 天左右延迟**：查「当天/昨天」常返回 `code:3000 查询成功 data:null`，
+  按「无数据」处理（显示 `--`），页面要给出延迟提示，别让用户以为系统坏了。
+- 表格数字字体统一用 `--num-font`（系统无衬线，不用 Courier 等宽）。
+- 数据呈现方案稿：`综合报表-呈现方案.html`（日历热力 / 车辆×日期矩阵 / KPI+双轴 /
+  排行 / 24h 剖面 五个版本）。
+
 ## 其它
 
+- ⭐ el-table 动态列两个坑：
+  1. `el-table-column` 外层包 `<template v-for>` 会被拆成 Fragment，列注册不上
+     （表头空、行渲染成空 tr）→ 直接对 `el-table-column` 用 `v-for`；
+  2. 列配置必须显式写 `visible: true`，否则 `filter(c => c.visible)` 会把列全部过滤掉。
 - Web 端禁止 `app.callFunction`（匿名登录会 `EXCEED_AUTHORITY`），云函数走 HTTP 网关；
   小程序端反之，必须用 `wx.cloud.callFunction`。
 - 改登录/权限相关文件后必须退出重登再验证。

@@ -22,6 +22,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@cloudbase/node-sdk": "^3.18.3",
     "@vitejs/plugin-vue": "^6.0.6",
     "vite": "^8.0.12"
   }
