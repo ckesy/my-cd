@@ -99,3 +99,20 @@
 - Web 端禁止 `app.callFunction`（匿名登录会 `EXCEED_AUTHORITY`），云函数走 HTTP 网关；
   小程序端反之，必须用 `wx.cloud.callFunction`。
 - 改登录/权限相关文件后必须退出重登再验证。
+
+## 布局 / 弹窗（Web 外壳）
+
+- ⭐ **页面根节点高度不要写 `100vh`**。外壳吃掉了 48(header) + 36(tabs) + 1 + 16(内边距)，
+  写 `100vh` 必定整页上下滚。做法二选一：`calc(100vh - 101px)`，或更稳的
+  `.content-wrapper:has(.xxx-page){height:100%;overflow:hidden;padding:0}` + 页面 `height:100%`。
+- ⭐ **`el-dialog` 放在主内容区里必须加 `append-to-body`**：`.content-wrapper` 上有
+  `animate-fade-up` 的 transform（keyframes 结束后仍是 `matrix(...)`），
+  会让 `position: fixed` 变成「相对该祖先定位」，弹窗一高就把 `el-main` 撑出滚动条、底部被切。
+- ⭐ `el-dialog` 的**根元素就是**你传进去的 class（`.el-dialog.my-dialog`），
+  所以 `:deep(.my-dialog .el-dialog)` 永远匹配不到；而且 `append-to-body` 后脱离 scoped，
+  这类样式只能写进**全局 `<style>`**。
+- 弹窗要「永不滚动」的写法：`.el-dialog` 用 flex 列 + `max-height: calc(100vh - 5vh - 16px)`
+  + `margin-bottom: 0`；header/footer `flex:0 0 auto`；body `flex:1;min-height:0;overflow:hidden`；
+  内部主区块 `flex: 0 1 520px; min-height: 200px`（矮屏压缩内容，不撑出滚动）。
+- 验证手段：headless Edge（`--headless=new --remote-debugging-port`）+ 原生 WebSocket 走 CDP，
+  先注入 `localStorage.currentUser` 再 `Page.navigate`，量 `scrollHeight - clientHeight`。

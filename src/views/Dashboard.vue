@@ -600,6 +600,14 @@ const goLogin = () => {
   padding: 0;
 }
 
+/* ⭐ 组织管理：整页固定高度，页面本身不滚动（内部左右两栏各自滚） */
+.content-wrapper:has(.org-manage-page) {
+  padding: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
 .animate-fade-up {
   animation: fadeUp 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }

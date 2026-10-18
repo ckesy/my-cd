@@ -1067,8 +1067,10 @@ onBeforeUnmount(() => {
     </el-dialog>
 
     <!-- 分配车辆弹窗 -->
+    <!-- ⭐ append-to-body：挂到 body 上，否则会被 .content-wrapper 的 transform 变成
+         "固定定位的包含块"，弹窗一高就把整页顶出滚动条 -->
     <el-dialog v-model="assignDialogVisible" width="960px" top="5vh" destroy-on-close :close-on-click-modal="false"
-      class="assign-vehicle-dialog">
+      append-to-body class="assign-vehicle-dialog">
       <template #header>
         <div class="assign-header">
           <span class="assign-title">分配车辆</span>
@@ -1272,8 +1274,10 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 12px;
   padding: 12px;
-  height: 100vh;
-  max-height: 100vh;
+  /* ⭐ 整页固定高度：由外壳 .content-wrapper 给满，绝不写 100vh
+     （100vh 会多出 header 48 + tabs 36 + 1 + 16 内边距，整页就会上下滚） */
+  height: 100%;
+  max-height: 100%;
   box-sizing: border-box;
   overflow: hidden;
   background: #F8FAFC;
@@ -2060,33 +2064,10 @@ onBeforeUnmount(() => {
 /* ============================================================
    分配车辆弹窗 - 双栏看板
    ============================================================ */
-:deep(.assign-vehicle-dialog .el-dialog) {
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 24px 72px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(226, 232, 240, 0.5);
-  animation: dialogIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-:deep(.assign-vehicle-dialog .el-dialog__header) {
-  padding: 16px 24px;
-  margin: 0;
-  border-bottom: 1px solid #F1F5F9;
-  background: linear-gradient(180deg, #FFFFFF, #FAFBFC);
-}
-
-:deep(.assign-vehicle-dialog .el-dialog__body) {
-  padding: 16px 20px 0;
-  background: #F8FAFC;
-  max-height: 76vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-:deep(.assign-vehicle-dialog .el-dialog__footer) {
-  padding: 0;
-  border-top: 1px solid #F1F5F9;
-}
+/* ⚠️ 注意：el-dialog 的根元素本身就是 .assign-vehicle-dialog（不是它的子节点），
+   而且弹窗加了 append-to-body 后已经脱离 scoped 作用域，
+   所以任何 `:deep(.assign-vehicle-dialog .el-dialog)` 都匹配不到。
+   弹窗的尺寸/布局规则统一写在文件末尾的全局 <style> 块里。 */
 
 .assign-header {
   display: flex;
@@ -2221,8 +2202,10 @@ onBeforeUnmount(() => {
   border-radius: 14px;
   border: 1px solid #E2E8F0;
   overflow: hidden;
-  height: 520px;
-  flex-shrink: 0;
+  /* ⭐ 常规 520 高；矮屏时允许被压缩（列内部各自滚动），不会顶出弹窗 */
+  flex: 0 1 520px;
+  min-height: 200px;
+  max-height: 520px;
 }
 
 .board-divider {
@@ -2839,14 +2822,15 @@ onBeforeUnmount(() => {
 
   :deep(.assign-vehicle-dialog .el-dialog__body) {
     padding: 12px 14px 0;
-    max-height: 80vh;
   }
 
   .assign-board {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr 32px 1fr;
+    flex: 1 1 auto;
     height: auto;
-    max-height: 68vh;
+    min-height: 0;
+    max-height: none;
   }
 
   .board-divider {
@@ -3156,4 +3140,38 @@ body {
   background: linear-gradient(135deg, #c8102e, #a00d24) !important;
   border-color: #c8102e !important;
 }
+
+/* ============================================================
+   ⭐ 分配车辆弹窗：整体锁在视口内，永不出现上下滚动
+   （弹窗根元素就是 .el-dialog.assign-vehicle-dialog，
+     append-to-body 后又脱离了 scoped 作用域，所以规则写在全局块）
+   ============================================================ */
+.el-dialog.assign-vehicle-dialog {
+  display: flex;
+  flex-direction: column;
+  /* top="5vh" 由组件内联给出，这里留 16px 底部呼吸位 */
+  max-height: calc(100vh - 5vh - 16px);
+  margin-bottom: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 24px 72px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(226, 232, 240, 0.5);
+}
+
+.el-dialog.assign-vehicle-dialog>.el-dialog__header {
+  flex: 0 0 auto;
+}
+
+.el-dialog.assign-vehicle-dialog>.el-dialog__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.el-dialog.assign-vehicle-dialog>.el-dialog__footer {
+  flex: 0 0 auto;
+}
+
 </style>
