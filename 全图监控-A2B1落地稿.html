@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>全图监控 · A2 + B1 + C1 落地稿</title>
+  <style>
+    :root {
+      --red: #c8102e;
+      --ink: #0f172a;
+      --ink-2: #1f2937;
+      --muted: #64748b;
+      --muted-2: #94a3b8;
+      --line: #e8edf4;
+      --bg: #f5f7fa;
+      --indigo: #4f46e5;
+      --cyan: #22d3ee;
+      --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue',
+        'PingFang SC', 'HarmonyOS Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0; padding: 30px 24px 72px; background: var(--bg); font-family: var(--font);
+      color: var(--ink-2); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    }
+
+    .wrap { max-width: 1220px; margin: 0 auto; }
+
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+    .page-head h1 { margin: 0 0 8px; font-size: 24px; font-weight: 800; color: var(--ink); letter-spacing: .2px; }
+    .page-head p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.7; max-width: 660px; }
+    .tags { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .tag { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; border: 1px solid #c7d2fe; background: #eef2ff; color: #3730a3; }
+    .tag.gray { border-color: var(--line); background: #fff; color: var(--muted); }
+    .tag.red { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+
+    section { margin-bottom: 40px; }
+    .sec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .sec-num {
+      width: 26px; height: 26px; border-radius: 8px; flex: 0 0 auto; color: #fff; font-size: 13px; font-weight: 800;
+      display: grid; place-items: center; background: linear-gradient(135deg, var(--indigo), #3730a3);
+      box-shadow: 0 6px 14px rgba(79, 70, 229, .28);
+    }
+    .sec-head h2 { margin: 0; font-size: 17px; font-weight: 800; color: var(--ink); }
+    .sec-desc { font-size: 12.5px; color: var(--muted); margin: 0 0 16px 36px; line-height: 1.7; }
+
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: 0 1px 2px rgba(15,23,42,.03), 0 12px 32px rgba(15,23,42,.04); }
+
+    /* =================== 真机壳 =================== */
+    .shell {
+      position: relative;
+      width: 1160px; max-width: 100%; border-radius: 14px; overflow: hidden; background: #f8fafc;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, .16), 0 0 0 1px rgba(15, 23, 42, .06);
+      display: flex; font-size: 12px;
+    }
+
+    /* ⭐ 窄条导航：默认 58px 只露图标；悬停临时展开；点图钉固定 */
+    .shell-nav {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 58px; z-index: 40;
+      background: #fff; border-right: 1px solid #eef2f7; padding: 8px 0;
+      display: flex; flex-direction: column; overflow: hidden;
+      transition: width .26s cubic-bezier(.4, 0, .2, 1), box-shadow .26s;
+    }
+    .shell-nav:hover, .shell.pin .shell-nav {
+      width: 172px; box-shadow: 14px 0 34px rgba(15, 23, 42, .10);
+    }
+    .shell-main { margin-left: 58px; flex: 1; min-width: 0; display: flex; flex-direction: column; transition: margin-left .26s cubic-bezier(.4, 0, .2, 1); }
+    /* 悬停 = 浮层展开，不推挤内容（避免地图 resize 重绘）；固定 = 真的让位 */
+    .shell.pin .shell-main { margin-left: 172px; }
+
+    .nav-logo { display: flex; align-items: center; height: 30px; margin: 0 6px 8px 0; white-space: nowrap; overflow: hidden; }
+    .nav-logo .ic { width: 46px; text-align: center; flex: 0 0 auto; font-size: 14px; }
+    .nav-logo .lb { font-size: 12px; font-weight: 800; color: #0f172a; }
+
+    .nav-item {
+      position: relative; display: flex; align-items: center; height: 28px; margin: 0 6px 2px 0;
+      border-radius: 0 7px 7px 0; color: #475569; font-size: 11.5px; font-weight: 600; white-space: nowrap;
+    }
+    .nav-item .ic { width: 46px; text-align: center; flex: 0 0 auto; opacity: .85; font-size: 13px; }
+    .nav-item.on { background: #fef2f2; color: var(--red); font-weight: 800; }
+    .nav-item.on::before { content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; border-radius: 0 3px 3px 0; background: var(--red); }
+    .nav-sub { display: none; }
+
+    .lb { opacity: 0; transition: opacity .16s; }
+    .shell-nav:hover .lb, .shell.pin .lb { opacity: 1; transition-delay: .05s; }
+    .shell-nav:hover .nav-sub, .shell.pin .nav-sub { display: block; }
+
+    .nav-pin {
+      margin-top: auto; display: flex; align-items: center; height: 30px; margin-right: 6px;
+      border-radius: 0 7px 7px 0; color: #94a3b8; font-size: 11px; font-weight: 700; cursor: pointer;
+      white-space: nowrap;
+    }
+    .nav-pin .ic { width: 46px; text-align: center; flex: 0 0 auto; font-size: 12px; }
+    .nav-pin:hover { background: #f8fafc; color: #475569; }
+    .shell.pin .nav-pin { color: var(--red); background: #fef2f2; }
+    .shell-head { height: 38px; background: #fff; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; }
+    .shell-head .t { font-size: 13px; font-weight: 700; color: #1e293b; }
+    .shell-head .b { display: flex; gap: 6px; }
+    .mini-btn { font-size: 10.5px; padding: 3px 9px; border-radius: 6px; border: 1px solid #e2e8f0; background: #fff; color: #475569; }
+    .mini-btn.red { background: var(--red); border-color: var(--red); color: #fff; font-weight: 700; }
+    .shell-tabs { height: 26px; background: #fff; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 6px; padding: 0 14px; }
+    .shell-tabs .tab { font-size: 10.5px; padding: 2px 8px; border-radius: 5px; background: #f1f5f9; color: #64748b; }
+    .shell-tabs .tab.on { background: #fef2f2; color: var(--red); font-weight: 700; }
+
+    .map-stage { position: relative; height: 556px; background: #eef2f6; overflow: hidden; }
+    .map-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+    /* ⭐ 全屏态：外壳全部让位，地图铺满（参考现有表格全屏的样式） */
+    .shell.fs .shell-nav,
+    .shell.fs .shell-head,
+    .shell.fs .shell-tabs { display: none; }
+    .shell.fs .shell-main { margin-left: 0; }
+    .shell.fs .map-stage { height: 620px; }
+    .fs-topbar { display: none; }
+    .shell.fs .fs-topbar { display: flex; }
+    .fs-chip {
+      height: 26px; padding: 0 10px; border-radius: 7px; display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 700; background: #fff; color: #475569; box-shadow: 0 0 0 1px rgba(226,232,240,.9) inset;
+    }
+    .fs-chip.on { background: #fef2f2; color: var(--red); box-shadow: 0 0 0 1px #fecaca inset; }
+    .fs-exit {
+      height: 28px; padding: 0 12px; border-radius: 7px; border: none; color: #fff; font-size: 11.5px; font-weight: 800;
+      background: linear-gradient(135deg, #e11d48, #be123c); box-shadow: 0 8px 18px rgba(190, 18, 60, .3);
+      display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-family: inherit;
+    }
+    .fs-enter {
+      height: 30px; padding: 0 11px; border-radius: 8px; cursor: pointer; font-family: inherit;
+      background: rgba(17, 28, 51, .8); border: 1px solid rgba(129, 140, 248, .34); color: #dbe4ff;
+      font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .fs-enter:hover { background: rgba(30, 45, 80, .92); }
+    .shell.fs .fs-enter { display: none; }
+    .fs-exit { display: none; }
+    .shell.fs .fs-exit { display: inline-flex; }
+    .fs-hint { display: none; }
+    .shell.fs .fs-hint { display: inline; }
+
+    /* B1 两种状态切换 */
+    .b1switch { display: inline-flex; gap: 4px; padding: 3px; background: #f1f5f9; border-radius: 9px; margin-bottom: 10px; }
+    .b1switch button {
+      border: none; background: transparent; font-family: inherit; font-size: 11.5px; font-weight: 700;
+      color: #64748b; padding: 5px 12px; border-radius: 7px; cursor: pointer;
+    }
+    .b1switch button.on { background: #fff; color: #3730a3; box-shadow: 0 2px 8px rgba(15,23,42,.10); }
+
+    .cardslot .idle-only { display: none; }
+    .cardslot.idle .task-only { display: none; }
+    .cardslot.idle .idle-only { display: block; }
+
+    /* =================== 左侧悬浮面板（A2） =================== */
+    .side {
+      position: absolute; left: 16px; top: 16px; bottom: 16px; width: 260px; background: rgba(255, 255, 255, .96);
+      border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, .1), 0 0 0 1px rgba(255, 255, 255, .6) inset;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .side.wide { width: 320px; }
+
+    .sf { padding: 8px 10px; border-bottom: 1px solid rgba(226, 232, 240, .7); flex: 0 0 auto; }
+    .sf-row { display: flex; gap: 6px; }
+    .fake-sel {
+      height: 28px; border-radius: 7px; background: #f8fafc; box-shadow: 0 0 0 1px #e2e8f0 inset;
+      display: flex; align-items: center; padding: 0 8px; color: #94a3b8; font-size: 11px; justify-content: space-between;
+      min-width: 0;
+    }
+    .fake-sel span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fake-sel i { color: #cbd5e1; font-style: normal; font-size: 9px; }
+    .fake-search { flex: 1; display: flex; align-items: center; gap: 5px; }
+    .fake-input {
+      height: 28px; border-radius: 7px; background: #f8fafc; box-shadow: 0 0 0 1px #e2e8f0 inset;
+      display: flex; align-items: center; gap: 5px; padding: 0 8px; color: #b6c2d2; font-size: 11px; flex: 1; min-width: 0;
+    }
+    .fake-btn {
+      height: 28px; border-radius: 7px; background: var(--red); color: #fff; font-size: 11px; font-weight: 700;
+      display: inline-flex; align-items: center; justify-content: center; padding: 0 10px; flex: 0 0 auto;
+    }
+    .fake-link { font-size: 10.5px; color: #94a3b8; flex: 0 0 auto; padding: 0 2px; }
+
+    .chips { display: flex; gap: 5px; margin-top: 6px; overflow: hidden; }
+    .chip2 {
+      font-size: 10.5px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #fff;
+      box-shadow: 0 0 0 1px #e2e8f0 inset; color: #64748b; white-space: nowrap; flex: 0 0 auto;
+    }
+    .chip2.on { background: #eef2ff; box-shadow: 0 0 0 1px #c7d2fe inset; color: #3730a3; font-weight: 800; }
+    .chip2 b { font-weight: 800; margin-left: 2px; }
+
+    .side-list-head {
+      display: flex; align-items: center; gap: 6px; padding: 6px 10px 4px; color: #475569; font-size: 11px; font-weight: 700; flex: 0 0 auto;
+    }
+    .side-list-head .cnt { color: #94a3b8; font-weight: 600; }
+    .side-list-head .cl { margin-left: auto; color: #cbd5e1; font-size: 11px; }
+
+    .tree { flex: 1; min-height: 0; overflow: hidden; padding: 0 4px 8px; }
+    .org-row { display: flex; align-items: center; gap: 5px; height: 24px; padding: 0 6px; color: #334155; font-size: 11px; font-weight: 700; }
+    .org-row .n { color: #94a3b8; font-weight: 600; }
+    .org-row .cv { margin-left: auto; color: #cbd5e1; font-size: 9px; }
+
+    .vrow { border-radius: 7px; padding: 4px 6px; margin: 1px 0; }
+    .vrow.two { height: 44px; display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+    .vrow.one { height: 26px; display: flex; align-items: center; gap: 5px; }
+    .vrow:hover { background: #f8fafc; }
+    .vrow.sel { background: #eef2ff; box-shadow: 0 0 0 1px #c7d2fe inset; }
+    .vr1 { display: flex; align-items: center; gap: 5px; min-width: 0; }
+    .vr2 { display: flex; align-items: center; gap: 5px; min-width: 0; color: #64748b; font-size: 10px; }
+    .pt { font-size: 11.5px; font-weight: 800; color: #0f172a; letter-spacing: .1px; white-space: nowrap; }
+    .bdg { font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; white-space: nowrap; flex: 0 0 auto; }
+    .bdg.run { color: #3730a3; background: #eef2ff; }
+    .bdg.load { color: #92400e; background: #fef3c7; }
+    .bdg.done { color: #166534; background: #dcfce7; }
+    .bdg.none { color: #94a3b8; background: #f1f5f9; font-weight: 700; }
+    .pct2 { margin-left: auto; font-size: 9.5px; font-weight: 800; color: #4f46e5; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+    .route2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+    .mbar { height: 3px; border-radius: 3px; background: #eef2f7; overflow: hidden; flex: 0 0 auto; width: 44px; }
+    .mbar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #6366f1, #22d3ee); }
+    .eta2 { color: #94a3b8; font-variant-numeric: tabular-nums; white-space: nowrap; flex: 0 0 auto; }
+    .dot { width: 5px; height: 5px; border-radius: 50%; flex: 0 0 auto; }
+    .dot.g { background: #22c55e; box-shadow: 0 0 0 2.5px rgba(34,197,94,.15); }
+    .dot.a { background: #f59e0b; box-shadow: 0 0 0 2.5px rgba(245,158,11,.15); }
+    .dot.s { background: #cbd5e1; }
+    .st2 { margin-left: auto; font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; flex: 0 0 auto; }
+    .st2.run { color: #166534; background: #dcfce7; }
+    .st2.stop { color: #475569; background: #e2e8f0; }
+    .st2.off { color: #94a3b8; background: #f1f5f9; }
+
+    /* 标注点 */
+    .anno {
+      position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #c8102e; color: #fff;
+      font-size: 9.5px; font-weight: 800; display: grid; place-items: center; z-index: 20;
+      box-shadow: 0 0 0 3px rgba(200, 16, 46, .18);
+    }
+
+    .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 22px; margin-top: 14px; font-size: 12px; color: var(--muted); line-height: 1.7; }
+    .legend b { color: var(--ink-2); }
+    .legend .num {
+      display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: #c8102e;
+      color: #fff; font-size: 9px; font-weight: 800; margin-right: 5px; vertical-align: 1px;
+    }
+
+    .budget { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; }
+    .budget .b { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+    .budget .b .k { font-size: 10.5px; color: var(--muted-2); }
+    .budget .b .v { font-size: 15px; font-weight: 800; color: var(--ink); margin-top: 2px; }
+    .budget .b .v small { font-size: 10.5px; color: var(--muted); font-weight: 600; margin-left: 3px; }
+    .budget .b .d { font-size: 10.5px; color: #16a34a; margin-top: 2px; font-weight: 700; }
+    .budget .b .d.warn { color: #b45309; }
+
+    /* =================== B 区卡片 =================== */
+    .cardrow { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+    .cardslot { background: #eef2f6; border: 1px solid var(--line); border-radius: 14px; padding: 14px; width: 348px; position: relative; }
+    .cardslot .cap { font-size: 11px; color: var(--muted); margin-bottom: 8px; font-weight: 700; }
+    .cardslot .cap b { color: var(--ink); }
+
+    .vcard { background: #fff; border-radius: 12px; box-shadow: 0 16px 36px rgba(15,23,42,.14), 0 0 0 1px rgba(226,232,240,.9); overflow: hidden; }
+    .vc-head { display: flex; align-items: center; gap: 6px; padding: 9px 12px 8px; border-bottom: 1px solid #f1f5f9; }
+    .vc-plate { font-size: 13px; font-weight: 800; color: #0f172a; }
+    .vc-vin { margin-left: auto; font-size: 9px; color: #b6c2d2; font-weight: 600; letter-spacing: .2px; }
+    .vc-met { display: flex; gap: 8px; padding: 9px 12px 0; }
+    .vm { flex: 1; background: #f8fafc; border-radius: 8px; padding: 6px 9px; }
+    .vm .k { font-size: 9.5px; color: #94a3b8; }
+    .vm .v { font-size: 15px; font-weight: 800; color: #0f172a; line-height: 1.25; font-variant-numeric: tabular-nums; }
+    .vm .v small { font-size: 9.5px; color: #94a3b8; font-weight: 700; margin-left: 2px; }
+
+    .vc-task { margin: 9px 12px 0; padding: 10px 11px; border-radius: 10px; background: linear-gradient(180deg, #fbfcff, #f6f8ff); border: 1px solid #e8ecfb; }
+    .vt-route { font-size: 12px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 5px; }
+    .vt-route i { color: #a5b4fc; font-style: normal; }
+    .vt-bar { display: flex; align-items: center; gap: 7px; margin-top: 7px; }
+    .vt-bar .bar { flex: 1; height: 5px; border-radius: 3px; background: #e8ecfb; overflow: hidden; }
+    .vt-bar .bar i { display: block; height: 100%; background: linear-gradient(90deg, #6366f1, #22d3ee); border-radius: 3px; }
+    .vt-bar b { font-size: 10px; color: #4f46e5; font-weight: 800; }
+    .vt-meta { font-size: 10px; color: #64748b; margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .vt-meta b { color: #334155; font-weight: 800; }
+
+    .vc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; padding: 9px 12px 0; }
+    .vc-grid .g { display: flex; align-items: baseline; gap: 5px; font-size: 10px; min-width: 0; }
+    .vc-grid .g span { color: #94a3b8; flex: 0 0 auto; }
+    .vc-grid .g b { color: #334155; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .vc-foot { display: flex; align-items: center; gap: 6px; padding: 10px 12px 11px; }
+    .ico-btn { width: 26px; height: 26px; border-radius: 7px; border: 1px solid #e2e8f0; background: #fff; color: #64748b; font-size: 12px; display: grid; place-items: center; flex: 0 0 auto; }
+    .primary { margin-left: auto; height: 28px; padding: 0 11px; border-radius: 7px; border: none; color: #fff; font-size: 11px; font-weight: 800; background: linear-gradient(135deg, #4f46e5, #3730a3); box-shadow: 0 8px 18px rgba(79,70,229,.26); }
+
+    /* 原卡片样式（对照） */
+    .ocard { background: #fff; border-radius: 12px; box-shadow: 0 16px 36px rgba(15,23,42,.14); padding: 10px 12px 12px; }
+    .ocard .orow { display: flex; align-items: baseline; gap: 8px; padding: 4px 0; font-size: 11px; }
+    .ocard .orow .k { color: #94a3b8; width: 62px; flex: 0 0 auto; }
+    .ocard .orow .v { color: #1f2937; font-weight: 700; }
+    .ocard .otop { display: flex; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; margin-bottom: 6px; }
+    .ocard .otop .box { flex: 1; background: #f8fafc; border-radius: 7px; padding: 5px 8px; }
+    .ocard .otop .box .k { font-size: 9px; color: #94a3b8; }
+    .ocard .otop .box .v { font-size: 14px; font-weight: 800; color: #0f172a; }
+    .ocard .obtns { display: flex; gap: 6px; margin-top: 10px; }
+    .ocard .obtns .b { flex: 1; height: 26px; border-radius: 7px; background: #f1f5f9; color: #475569; font-size: 10.5px; font-weight: 700; display: grid; place-items: center; }
+
+    /* Tab 版 */
+    .tabs2 { display: flex; gap: 14px; padding: 8px 12px 0; border-bottom: 1px solid #f1f5f9; }
+    .tabs2 .t { font-size: 11px; font-weight: 700; color: #94a3b8; padding-bottom: 6px; position: relative; }
+    .tabs2 .t.on { color: #3730a3; }
+    .tabs2 .t.on::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: #4f46e5; border-radius: 2px; }
+
+    /* 抽屉 */
+    .strip { position: relative; height: 190px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #eef2f6; }
+    .drawer {
+      position: absolute; left: 12px; right: 12px; bottom: 12px; background: #fff; border-radius: 13px;
+      box-shadow: 0 20px 44px rgba(15,23,42,.18); padding: 10px 12px; display: flex; align-items: center; gap: 10px;
+    }
+    .dw-plate { font-size: 12.5px; font-weight: 800; color: #0f172a; white-space: nowrap; }
+    .dw-sub { font-size: 10px; color: #94a3b8; margin-top: 2px; white-space: nowrap; }
+    .dw-line { width: 1px; height: 30px; background: #eef2f7; flex: 0 0 auto; }
+    .dw-task { flex: 0 1 380px; min-width: 240px; }
+    .dw-sp { flex: 1; }
+    .dw-route { font-size: 11px; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dw-bar { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+    .dw-bar .bar { flex: 1; height: 4px; border-radius: 3px; background: #eef2f7; overflow: hidden; }
+    .dw-bar .bar i { display: block; height: 100%; background: linear-gradient(90deg,#6366f1,#22d3ee); }
+    .dw-eta { text-align: right; white-space: nowrap; }
+    .dw-eta .a { font-size: 13px; font-weight: 800; color: #0f172a; }
+    .dw-eta .b { font-size: 9.5px; color: #94a3b8; margin-top: 1px; }
+    .dw-btn { height: 30px; padding: 0 12px; border-radius: 8px; border: none; color: #fff; font-size: 11px; font-weight: 800; background: linear-gradient(135deg,#4f46e5,#3730a3); white-space: nowrap; }
+
+    table.cmp { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; border-radius: 12px; overflow: hidden; margin-top: 16px; }
+    table.cmp th, table.cmp td { padding: 9px 11px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+    table.cmp th { background: #f8fafc; font-weight: 800; color: var(--ink); font-size: 11.5px; }
+    table.cmp td:first-child { font-weight: 700; color: var(--ink-2); width: 150px; }
+    table.cmp tr:last-child td { border-bottom: none; }
+    .ok { color: #15803d; font-weight: 700; }
+    .mid { color: #b45309; font-weight: 700; }
+    .no { color: #b91c1c; font-weight: 700; }
+
+    .note { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 12px 14px; font-size: 12.5px; color: #92400e; line-height: 1.75; margin-top: 14px; }
+    .note.blue { background: #eef2ff; border-color: #c7d2fe; color: #3730a3; }
+    .note b { font-weight: 800; }
+
+    ul.plain { margin: 8px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--muted); line-height: 1.85; }
+    ul.plain b { color: var(--ink-2); }
+    .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    @media (max-width: 1240px) { .shell { transform-origin: top left; } }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="page-head">
+      <div>
+        <h1>全图监控 · A2 + B1 + C1 落地稿</h1>
+        <p>按 1:1 尺寸放进真实页面里画：左侧 260px 悬浮面板 + 组织树怎么塞下双行任务卡；
+          原车辆小卡片的 9 项信息怎么安置；沉浸态和前后态怎么衔接。</p>
+      </div>
+      <div class="tags">
+        <span class="tag">A2 双行列表</span>
+        <span class="tag">B1 信息不丢</span>
+        <span class="tag">C1 HUD</span>
+      </div>
+    </div>
+
+    <!-- ============ 1. A2 ============ -->
+    <section>
+      <div class="sec-head"><span class="sec-num">1</span><h2>A2 放进全图监控：组织树 + 双行卡片共存</h2></div>
+      <p class="sec-desc">真实宽度 260px（可拖到 440）。核心取舍：<b>有任务才双行（44px），空闲压成单行（26px）</b>，
+        再用「任务筛选 chip」当第二层过滤 —— 这样比"所有车都双行"少一半高度。
+        另外主菜单收成 <b>58px 窄条</b>（悬停临时展开、点图钉固定），把 112px 让给地图。</p>
+
+      <div class="shell">
+        <div class="anno" style="left:62px;top:520px">0</div>
+        <div class="shell-nav">
+          <div class="nav-logo"><span class="ic">🚚</span><span class="lb">车队管理平台</span></div>
+          <div class="nav-item"><span class="ic">🏠</span><span class="lb">首页</span></div>
+          <div class="nav-item"><span class="ic">📍</span><span class="lb">行车管理</span></div>
+          <div class="nav-item on"><span class="ic">🗺️</span><span class="lb">全图监控</span></div>
+          <div class="nav-item"><span class="ic">⭕</span><span class="lb">电子围栏</span></div>
+          <div class="nav-item"><span class="ic">📊</span><span class="lb">运营管理</span></div>
+          <div class="nav-item"><span class="ic">📦</span><span class="lb">运输管理</span></div>
+          <div class="nav-item"><span class="ic">🗂️</span><span class="lb">基础数据</span></div>
+          <div class="nav-item"><span class="ic">⚙️</span><span class="lb">系统管理</span></div>
+          <div class="nav-pin" data-pin><span class="ic">📌</span><span class="lb">固定菜单</span></div>
+        </div>
+
+        <div class="shell-main">
+          <div class="shell-head">
+            <span class="t">车队管理平台</span>
+            <div class="b"><span class="mini-btn">设置</span><span class="mini-btn red">退出登录</span></div>
+          </div>
+          <div class="shell-tabs"><span class="tab">角色管理 ×</span><span class="tab">首页 ×</span><span class="tab on">全图监控 ×</span></div>
+
+          <div class="map-stage">
+            <svg class="map-svg" viewBox="0 0 992 556" preserveAspectRatio="none">
+              <rect width="992" height="556" fill="#eef2f6"/>
+              <path d="M-20 430 C160 400 300 460 470 438 S800 480 1010 440 L1010 570 L-20 570Z" fill="#e4eef6"/>
+              <path d="M-20 300 C140 288 240 320 380 312 S650 330 1010 300" stroke="#e2e9f1" stroke-width="24" fill="none"/>
+              <path d="M180 -20 C200 130 160 260 210 420 S230 520 220 570" stroke="#e5ecf4" stroke-width="16" fill="none"/>
+              <path d="M520 -20 C540 110 500 240 530 400" stroke="#e9eff6" stroke-width="11" fill="none"/>
+              <path d="M800 -20 C820 150 780 300 810 570" stroke="#e6edf4" stroke-width="14" fill="none"/>
+              <path d="M-20 140 C200 130 400 165 620 145 S880 130 1010 145" stroke="#e8eef5" stroke-width="9" fill="none"/>
+              <g fill="#e4efe6"><rect x="600" y="200" width="130" height="86" rx="12"/><rect x="840" y="330" width="120" height="96" rx="12"/></g>
+              <g fill="#dbe4ee"><rect x="560" y="330" width="66" height="44" rx="6"/><rect x="634" y="330" width="50" height="44" rx="6"/><rect x="560" y="382" width="50" height="38" rx="6"/></g>
+              <g font-size="10" font-family="-apple-system, sans-serif" fill="#c3cfdd">
+                <text x="612" y="248">晋阳湖</text><text x="856" y="384">郑东新区</text><text x="660" y="112">G55 二广高速</text>
+              </g>
+              <!-- 其他车辆 -->
+              <g>
+                <g transform="translate(618 262)"><circle r="5" fill="#94a3b8" stroke="#fff" stroke-width="2"/><text y="-10" fill="#8fa0b5" font-size="8.5" text-anchor="middle" font-family="-apple-system, sans-serif">晋K03115D</text></g>
+                <g transform="translate(700 372)"><circle r="5" fill="#f59e0b" stroke="#fff" stroke-width="2"/><text y="-10" fill="#b45309" font-size="8.5" text-anchor="middle" font-family="-apple-system, sans-serif">晋K06200D</text></g>
+                <g transform="translate(860 214)"><circle r="5" fill="#94a3b8" stroke="#fff" stroke-width="2"/><text y="-10" fill="#8fa0b5" font-size="8.5" text-anchor="middle" font-family="-apple-system, sans-serif">晋K05897D</text></g>
+                <g transform="translate(880 470)"><circle r="5" fill="#c8102e" stroke="#fff" stroke-width="2"/><text y="-10" fill="#c8102e" font-size="8.5" text-anchor="middle" font-family="-apple-system, sans-serif">晋K05851D</text></g>
+              </g>
+            </svg>
+
+            <div class="anno" style="left:264px;top:22px">1</div>
+            <div class="anno" style="left:264px;top:96px">2</div>
+            <div class="anno" style="left:150px;top:186px">3</div>
+            <div class="anno" style="left:264px;top:250px">4</div>
+            <div class="anno" style="left:264px;top:420px">5</div>
+
+            <!-- 面板 -->
+            <div class="side">
+              <div class="sf">
+                <div class="sf-row">
+                  <div class="fake-sel" style="flex:1"><span>全部车队</span><i>▾</i></div>
+                  <div class="fake-sel" style="width:96px"><span>车辆状态</span><i>▾</i></div>
+                </div>
+                <div class="sf-row" style="margin-top:6px">
+                  <div class="fake-input">⌕ 车牌/昵称/车架</div>
+                  <div class="fake-btn">搜索</div>
+                  <div class="fake-link">重置</div>
+                </div>
+                <div class="chips">
+                  <span class="chip2 on">有任务<b>6</b></span>
+                  <span class="chip2">在途<b>4</b></span>
+                  <span class="chip2">待装<b>2</b></span>
+                  <span class="chip2">空闲<b>6</b></span>
+                </div>
+              </div>
+
+              <div class="side-list-head">
+                <span>🚐</span><span>山西卡友新能源运输有限公司</span><span class="cnt">(12)</span>
+                <span class="cl">‹</span>
+              </div>
+
+              <div class="tree">
+                <div class="org-row"><span>▾</span><span>山西卡友新能源运输有限公司</span><span class="n">(12)</span><span style="margin-left:auto;font-size:9px;font-weight:800;color:#4f46e5;background:#eef2ff;border-radius:4px;padding:1px 5px">4 单</span></div>
+
+                <div class="vrow two sel">
+                  <div class="vr1"><span class="dot g"></span><span class="pt">晋K05851D</span><span class="bdg run">在途</span><span class="pct2">47%</span></div>
+                  <div class="vr2"><span class="route2">太原→郑州</span><span class="mbar"><i style="width:47%"></i></span><span class="eta2">18:40</span></div>
+                </div>
+
+                <div class="vrow two">
+                  <div class="vr1"><span class="dot a"></span><span class="pt">晋K06200D</span><span class="bdg load">待装车</span><span class="pct2">0%</span></div>
+                  <div class="vr2"><span class="route2">榆次→石家庄</span><span class="mbar"><i style="width:2%"></i></span><span class="eta2">15:30</span></div>
+                </div>
+
+                <div class="vrow two">
+                  <div class="vr1"><span class="dot g"></span><span class="pt">晋K05897D</span><span class="bdg run">在途</span><span class="pct2">88%</span></div>
+                  <div class="vr2"><span class="route2">临汾→西安</span><span class="mbar"><i style="width:88%"></i></span><span class="eta2">16:05</span></div>
+                </div>
+
+                <div class="vrow two">
+                  <div class="vr1"><span class="dot g"></span><span class="pt">晋K02347D</span><span class="bdg run">在途</span><span class="pct2">31%</span></div>
+                  <div class="vr2"><span class="route2">长治→邯郸</span><span class="mbar"><i style="width:31%"></i></span><span class="eta2">19:20</span></div>
+                </div>
+
+                <div class="vrow two">
+                  <div class="vr1"><span class="dot a"></span><span class="pt">晋K01156D</span><span class="bdg done">已到达</span><span class="pct2">100%</span></div>
+                  <div class="vr2"><span class="route2">太原→晋城</span><span class="mbar"><i style="width:100%"></i></span><span class="eta2">13:12</span></div>
+                </div>
+
+                <div class="vrow one"><span class="dot s"></span><span class="pt">晋K03115D</span><span class="bdg none">空闲</span><span class="st2 run">行驶</span></div>
+                <div class="vrow one"><span class="dot s"></span><span class="pt">晋K02901D</span><span class="bdg none">空闲</span><span class="st2 stop">静止</span></div>
+                <div class="vrow one"><span class="dot s"></span><span class="pt">晋K07012D</span><span class="bdg none">空闲</span><span class="st2 stop">静止</span></div>
+                <div class="vrow one"><span class="dot s"></span><span class="pt">晋K04455D</span><span class="bdg none">空闲</span><span class="st2 off">离线</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div><span class="num">0</span><b>主菜单 58px 窄条：</b>默认只露图标，<b>悬停临时展开</b>成 172px
+          （浮在地图上层、不推挤内容，避免地图 resize 重绘），点底部 📌 <b>固定</b>后常驻；
+          固定状态记 localStorage，刷新后保持。</div>
+        <div><span class="num">1</span><b>筛选区不加整块，改成一行：</b>机构 + 状态两个下拉并排（96px），搜索框和按钮同行，
+          「重置」降级成文字链。原 156px → <b>118px</b>。</div>
+        <div><span class="num">2</span><b>任务筛选做成横向 chip 行（26px）：</b>有任务 / 在途 / 待装 / 空闲，
+          和上面的「车况」是两层过滤，不再占第二块高度。</div>
+        <div><span class="num">3</span><b>组织树原样保留：</b>组织节点仍可折叠，只在标题右侧加「有任务 N」计数，
+          车辆依旧是组织的子节点 —— 树结构零改动。</div>
+        <div><span class="num">4</span><b>有任务的行才双行（44px）：</b>第一行 车牌+任务状态+进度%，
+          第二行 线路（自动省略）+迷你进度条+ETA。260px 宽刚好放得下。</div>
+        <div><span class="num">5</span><b>空闲车压成单行（26px）：</b>只显示车牌 + 「空闲」徽标 + 车况，
+          和原来的行高一模一样。12 台车实际只多占约 90px，不会滚成瀑布。</div>
+        <div><b>兜底：</b>面板可拖宽到 440，宽度 ≥300 时第二行自动显示完整线路名与更长进度条。</div>
+      </div>
+
+      <div class="budget">
+        <div class="b"><div class="k">原列表高度占用</div><div class="v">156 <small>px 筛选</small></div><div class="d warn">树区只剩 336px</div></div>
+        <div class="b"><div class="k">改后筛选区</div><div class="v">118 <small>px</small></div><div class="d">省 38px</div></div>
+        <div class="b"><div class="k">6 有任务 + 6 空闲</div><div class="v">426 <small>px</small></div><div class="d warn">超出 ~90px（滚动）</div></div>
+        <div class="b"><div class="k">全部双行（对比）</div><div class="v">528 <small>px</small></div><div class="d warn">超出 ~190px</div></div>
+      </div>
+
+      <div class="note blue">
+        <b>为什么不用第二套 Tab（组织/任务）？</b>你已经有 260px 的面板 + 组织树，再加 Tab 会让"我到底在看哪个维度"变模糊。
+        现在是「车况筛选 + 任务 chip」两层叠加，树不动、行变高，认知成本最低。
+        如果以后车辆上到 100 台，再考虑 A3 的分组视图（那是另一个取舍）。
+      </div>
+    </section>
+
+    <!-- ============ 2. B1 ============ -->
+    <section>
+      <div class="sec-head"><span class="sec-num">2</span><h2>B1 原卡片的信息往哪放</h2></div>
+      <p class="sec-desc">原卡片 9 项（VIN / 速度 / 海拔 / 机构 / 司机 / 燃料 / 方向 / ACC / 上报 / 位置）+ 2 个按钮。
+        <b>结论：有任务时才加任务区（且一项不删，总高只多 20px）；没有任务就完全回到原卡片。</b></p>
+
+      <div class="b1switch" data-b1switch>
+        <button class="on" data-b1="task">有任务的车（6 台）</button>
+        <button data-b1="idle">空闲车（6 台）</button>
+      </div>
+
+      <div class="cardrow">
+        <!-- 原卡片 -->
+        <div class="cardslot">
+          <div class="cap">现状 <b>· 约 372px 高</b></div>
+          <div class="ocard">
+            <div class="otop">
+              <div class="box"><div class="k">当前速度</div><div class="v">0 <span style="font-size:9px;color:#94a3b8">km/h</span></div></div>
+              <div class="box"><div class="k">海拔高度</div><div class="v">0.0 <span style="font-size:9px;color:#94a3b8">m</span></div></div>
+            </div>
+            <div class="orow"><span class="k">VIN</span><span class="v" style="font-family:ui-monospace">LGAG4PY31R6002566</span></div>
+            <div class="orow"><span class="k">所属机构</span><span class="v">山西卡友新能源运输有限公司</span></div>
+            <div class="orow"><span class="k">司机</span><span class="v">--</span></div>
+            <div class="orow"><span class="k">燃料类型</span><span class="v">纯电动</span></div>
+            <div class="orow"><span class="k">行驶方向</span><span class="v">0°</span></div>
+            <div class="orow"><span class="k">ACC 状态</span><span class="v">ACC 关，未定位</span></div>
+            <div class="orow"><span class="k">上报时间</span><span class="v">2026-10-18 13:36:53</span></div>
+            <div class="orow"><span class="k">当前位置</span><span class="v">37.07267, 111.993324</span></div>
+            <div class="obtns"><div class="b">实时跟踪</div><div class="b">轨迹回放</div></div>
+          </div>
+          <div style="font-size:11px;color:#b45309;margin-top:8px;font-weight:700">9 行平铺 · 高度全靠"一行一项"</div>
+        </div>
+
+        <!-- B1-a -->
+        <div class="cardslot" id="b1slot" style="border-color:#c7d2fe;box-shadow:0 0 0 3px rgba(99,102,241,.10)">
+          <div class="cap">推荐 <b>B1-a ·
+              <span class="task-only">有任务：多一块任务区 · 约 392px</span>
+              <span class="idle-only">无任务：原卡片原样 · 约 372px</span></b></div>
+
+          <!-- 有任务 -->
+          <div class="vcard task-only">
+            <div class="vc-head">
+              <span class="dot g"></span><span class="vc-plate">晋K05851D</span>
+              <span class="st2 run">行驶</span>
+              <span class="vc-vin">VIN …6002566</span>
+            </div>
+            <div class="vc-met">
+              <div class="vm"><div class="k">当前速度</div><div class="v">62<small>km/h</small></div></div>
+              <div class="vm"><div class="k">海拔</div><div class="v">0.0<small>m</small></div></div>
+            </div>
+            <div class="vc-task">
+              <div class="vt-route">太原·晋源仓 <i>→</i> 郑州·郑东仓</div>
+              <div class="vt-bar"><span class="bdg run">在途</span><div class="bar"><i style="width:47%"></i></div><b>47%</b></div>
+              <div class="vt-meta"><span>剩 <b>118</b> km</span><span>预计 <b>18:40</b> 送达</span><span>已行 104 km</span></div>
+            </div>
+            <div class="vc-grid">
+              <div class="g"><span>机构</span><b>山西卡友新能源…</b></div>
+              <div class="g"><span>司机</span><b>张建军</b></div>
+              <div class="g"><span>燃料</span><b>纯电动</b></div>
+              <div class="g"><span>方向</span><b>东北 42°</b></div>
+              <div class="g"><span>ACC</span><b>开 · 已定位</b></div>
+              <div class="g"><span>上报</span><b>13:36:53</b></div>
+            </div>
+            <div class="vc-foot">
+              <div class="ico-btn" title="实时跟踪">◎</div>
+              <div class="ico-btn" title="轨迹回放">↺</div>
+              <div class="primary">查看物流概览 →</div>
+            </div>
+          </div>
+
+          <!-- 无任务：完全回到原卡片 -->
+          <div class="ocard idle-only">
+            <div class="otop">
+              <div class="box"><div class="k">当前速度</div><div class="v">0 <span style="font-size:9px;color:#94a3b8">km/h</span></div></div>
+              <div class="box"><div class="k">海拔高度</div><div class="v">0.0 <span style="font-size:9px;color:#94a3b8">m</span></div></div>
+            </div>
+            <div class="orow"><span class="k">VIN</span><span class="v" style="font-family:ui-monospace">LGAG4PY31R6002566</span></div>
+            <div class="orow"><span class="k">所属机构</span><span class="v">山西卡友新能源运输有限公司</span></div>
+            <div class="orow"><span class="k">司机</span><span class="v">--</span></div>
+            <div class="orow"><span class="k">燃料类型</span><span class="v">纯电动</span></div>
+            <div class="orow"><span class="k">行驶方向</span><span class="v">0°</span></div>
+            <div class="orow"><span class="k">ACC 状态</span><span class="v">ACC 关，未定位</span></div>
+            <div class="orow"><span class="k">上报时间</span><span class="v">2026-10-18 13:36:53</span></div>
+            <div class="orow"><span class="k">当前位置</span><span class="v">37.07267, 111.993324</span></div>
+            <div class="obtns"><div class="b">实时跟踪</div><div class="b">轨迹回放</div></div>
+          </div>
+
+          <div class="task-only" style="font-size:11px;color:#15803d;margin-top:8px;font-weight:700">只多 20px，信息一项没丢</div>
+          <div class="idle-only" style="font-size:11px;color:#64748b;margin-top:8px;font-weight:700">
+            没有任务 → 不渲染任务区、不出现「查看物流概览」，布局与现在完全一致</div>
+        </div>
+
+        <!-- B1-b -->
+        <div class="cardslot">
+          <div class="cap">备选 <b>B1-b · Tab 版 · 约 330px</b></div>
+          <div class="vcard">
+            <div class="vc-head">
+              <span class="dot g"></span><span class="vc-plate">晋K05851D</span>
+              <span class="st2 run">行驶</span>
+            </div>
+            <div class="tabs2"><span class="t on">任务</span><span class="t">车辆参数</span></div>
+            <div class="vc-task" style="margin-top:9px">
+              <div class="vt-route">太原·晋源仓 <i>→</i> 郑州·郑东仓</div>
+              <div class="vt-bar"><span class="bdg run">在途</span><div class="bar"><i style="width:47%"></i></div><b>47%</b></div>
+              <div class="vt-meta"><span>剩 <b>118</b> km</span><span>预计 <b>18:40</b></span></div>
+            </div>
+            <div class="vc-grid">
+              <div class="g"><span>速度</span><b>62 km/h</b></div>
+              <div class="g"><span>ACC</span><b>开 · 已定位</b></div>
+              <div class="g"><span>机构</span><b>山西卡友…</b></div>
+              <div class="g"><span>上报</span><b>13:36:53</b></div>
+            </div>
+            <div class="vc-foot">
+              <div class="ico-btn">◎</div>
+              <div class="primary">查看物流概览 →</div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:#b45309;margin-top:8px;font-weight:700">高度最省，但要切 Tab 才能看全参数</div>
+        </div>
+      </div>
+
+      <table class="cmp">
+        <tr><th>原卡片信息</th><th>B1-a 网格压缩版</th><th>B1-b Tab 版</th><th>B3 抽屉版</th></tr>
+        <tr><td>VIN</td><td class="ok">标题右侧小字（缩写 …6002566，悬浮看全）</td><td class="ok">「车辆参数」Tab 内</td><td class="mid">「详情」图标里</td></tr>
+        <tr><td>当前速度 / 海拔</td><td class="ok">顶部两个小方块并列</td><td class="ok">顶部保留</td><td class="ok">抽屉第一行</td></tr>
+        <tr><td>所属机构 / 司机 / 燃料 / 方向 / ACC / 上报</td><td class="ok">3×2 网格，一行两项</td><td class="mid">「车辆参数」Tab</td><td class="mid">「详情」图标里</td></tr>
+        <tr><td>当前位置经纬度</td><td class="mid">移到地图上（不再显示数字）</td><td class="mid">「车辆参数」Tab</td><td class="mid">「详情」图标里</td></tr>
+        <tr><td>实时跟踪 / 轨迹回放</td><td class="ok">两个图标按钮，不占一行</td><td class="ok">图标按钮</td><td class="ok">「详情」里</td></tr>
+        <tr><td>任务信息</td><td class="ok">中间独立任务块（最显眼）</td><td class="ok">默认 Tab</td><td class="ok">抽屉主体</td></tr>
+        <tr><td>卡片高度</td><td class="mid">392px（+20）</td><td class="ok">330px（-42）</td><td class="ok">88px</td></tr>
+      </table>
+
+      <div class="note">
+        <b>建议：主推 B1-a，B3 作为"列表行点开"的补充入口，而不是二选一。</b>
+        点击地图上的车标记 → 出 B1-a 卡片（要看清这辆车的全部信息）；
+        点击左侧列表的行 → 出 B3 抽屉（快速扫一票活的进度，不挡地图中央）。
+        两者互斥显示，切换时不重拉数据 —— 这样"信息完整"和"不挡地图"都拿到了。
+        <br><br>
+        <b>无任务的车：</b>任务块整段不渲染，卡片完全回到原样（就是上面"现状"那张），
+        「查看物流概览」按钮也不出现 —— 点了没东西可看，不如不给。
+        列表里这种车还是单行 26px + 「空闲」徽标，点开也不会误导。
+      </div>
+
+      <!-- 抽屉 -->
+      <div class="cardslot" style="width:100%;margin-top:16px;background:#fff;border:none;padding:0">
+        <div class="cap">B3 抽屉（列表行点开时）<b> · 88px 高，贴在底部</b></div>
+        <div class="strip">
+          <svg class="map-svg" viewBox="0 0 1100 190" preserveAspectRatio="none">
+            <rect width="1100" height="190" fill="#eef2f6"/>
+            <path d="M-20 120 C200 100 380 150 560 128 S880 160 1120 130" stroke="#e2e9f1" stroke-width="18" fill="none"/>
+            <path d="M300 -20 C320 60 280 130 310 200" stroke="#e6edf4" stroke-width="12" fill="none"/>
+            <path d="M760 -20 C780 70 740 140 770 200" stroke="#e6edf4" stroke-width="12" fill="none"/>
+            <g transform="translate(640 92)"><circle r="6" fill="#c8102e" stroke="#fff" stroke-width="2"/><text y="-12" fill="#c8102e" font-size="10" text-anchor="middle" font-family="-apple-system, sans-serif">晋K05851D</text></g>
+          </svg>
+          <div class="drawer">
+            <div>
+              <div class="dw-plate">晋K05851D</div>
+              <div class="dw-sub">行驶 · 62km/h · ACC 开</div>
+            </div>
+            <div class="dw-line"></div>
+            <div class="dw-task">
+              <div class="dw-route">太原·晋源仓 → 郑州·郑东仓</div>
+              <div class="dw-bar"><span class="bdg run">在途</span><div class="bar"><i style="width:47%"></i></div><span style="font-size:9.5px;color:#4f46e5;font-weight:800">47%</span></div>
+            </div>
+            <div class="dw-sp"></div>
+            <div class="dw-line"></div>
+            <div class="dw-eta">
+              <div class="a">18:40</div>
+              <div class="b">剩 118km</div>
+            </div>
+            <div class="dw-line"></div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <div class="ico-btn" title="车辆详情">ⓘ</div>
+              <div class="dw-btn">查看物流概览 →</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 3. C1 ============ -->
+    <section>
+      <div class="sec-head"><span class="sec-num">3</span><h2>C1 和前后态的衔接</h2></div>
+      <p class="sec-desc">沉浸态不是一个独立页面，是同一个地图实例换皮 + 重新取景：
+        <b>底图切 amap://styles/blue、只留一台车、画一条发光路线</b>，返回时把这些状态复原。
+        右上角新增 <b>「⛶ 全屏」</b>：点了就照你那张表格全屏的样式走 —— 左侧菜单、顶栏、页签全部让位，
+        地图铺满整个窗口，右上角换成红色 <b>「✕ 退出全屏」</b>，其余 HUD 元素位置不变。</p>
+
+      <div class="shell" id="c1shell">
+        <div class="shell-nav">
+          <div class="nav-logo"><span class="ic">🚚</span><span class="lb">车队管理平台</span></div>
+          <div class="nav-item"><span class="ic">🏠</span><span class="lb">首页</span></div>
+          <div class="nav-item"><span class="ic">📍</span><span class="lb">行车管理</span></div>
+          <div class="nav-item on"><span class="ic">🗺️</span><span class="lb">全图监控</span></div>
+          <div class="nav-item"><span class="ic">⭕</span><span class="lb">电子围栏</span></div>
+          <div class="nav-item"><span class="ic">📊</span><span class="lb">运营管理</span></div>
+          <div class="nav-item"><span class="ic">📦</span><span class="lb">运输管理</span></div>
+          <div class="nav-item"><span class="ic">🗂️</span><span class="lb">基础数据</span></div>
+          <div class="nav-item"><span class="ic">⚙️</span><span class="lb">系统管理</span></div>
+          <div class="nav-pin" data-pin><span class="ic">📌</span><span class="lb">固定菜单</span></div>
+        </div>
+        <div class="shell-main">
+          <div class="shell-head">
+            <span class="t">车队管理平台</span>
+            <div class="b"><span class="mini-btn">设置</span><span class="mini-btn red">退出登录</span></div>
+          </div>
+          <div class="shell-tabs"><span class="tab">角色管理 ×</span><span class="tab">首页 ×</span><span class="tab on">全图监控 ×</span></div>
+
+          <div class="map-stage" style="background:#0b1220">
+            <svg class="map-svg" viewBox="0 0 992 556" preserveAspectRatio="none">
+              <rect width="992" height="556" fill="#0b1220"/>
+              <path d="M-20 430 C160 400 300 460 470 438 S800 480 1010 440 L1010 570 L-20 570Z" fill="#0e2242"/>
+              <g stroke="#1d3255" fill="none" stroke-linecap="round">
+                <path d="M-20 300 C140 288 240 320 380 312 S650 330 1010 300" stroke-width="24"/>
+                <path d="M180 -20 C200 130 160 260 210 420 S230 520 220 570" stroke-width="15"/>
+                <path d="M520 -20 C540 110 500 240 530 400" stroke-width="10"/>
+                <path d="M800 -20 C820 150 780 300 810 570" stroke-width="13"/>
+                <path d="M-20 140 C200 130 400 165 620 145 S880 130 1010 145" stroke-width="8"/>
+              </g>
+              <g fill="#132743"><rect x="600" y="200" width="130" height="86" rx="12"/><rect x="840" y="330" width="120" height="96" rx="12"/></g>
+              <g font-size="10" fill="#2b4a73" font-family="-apple-system, sans-serif"><text x="612" y="248">晋阳湖</text><text x="856" y="384">郑东新区</text><text x="660" y="112">G55 二广高速</text></g>
+
+              <defs>
+                <linearGradient id="lg" x1="0" y1="1" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#4338ca"/><stop offset="55%" stop-color="#6366f1"/><stop offset="100%" stop-color="#22d3ee"/>
+                </linearGradient>
+                <filter id="bl"><feGaussianBlur stdDeviation="8"/></filter>
+              </defs>
+              <path d="M250 420 C400 380 430 280 560 268 S790 250 880 180" stroke="#4f46e5" stroke-width="18" fill="none" opacity=".38" filter="url(#bl)"/>
+              <path d="M250 420 C400 380 430 280 560 268 S790 250 880 180" stroke="url(#lg)" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+              <path d="M250 420 C400 380 430 280 560 268" stroke="#2b3b57" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+              <path d="M250 420 C400 380 430 280 560 268 S790 250 880 180" stroke="#dff9ff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-dasharray="3 14"/>
+              <g><circle cx="250" cy="420" r="8" fill="#0b1220" stroke="#818cf8" stroke-width="2.4"/><circle cx="250" cy="420" r="3" fill="#a5b4fc"/><text x="232" y="444" fill="#c7d2fe" font-size="10.5" font-weight="700" font-family="-apple-system, sans-serif">起点 · 太原晋源仓</text></g>
+              <g><circle cx="880" cy="180" r="10" fill="#0b1220" stroke="#22d3ee" stroke-width="2.6"/><circle cx="880" cy="180" r="3.8" fill="#67e8f9"/><text x="800" y="162" fill="#a5f3fc" font-size="10.5" font-weight="700" font-family="-apple-system, sans-serif">终点 · 郑州郑东仓</text></g>
+              <g transform="translate(470 300)">
+                <circle r="15" fill="#22d3ee" opacity=".18"/>
+                <circle r="9" fill="rgba(34,211,238,.18)" stroke="rgba(103,232,249,.75)"/>
+                <circle r="4.6" fill="#e0f2fe"/><circle r="2.2" fill="#0ea5e9"/>
+                <text y="-18" fill="#e0f2fe" font-size="10.5" font-weight="800" text-anchor="middle" font-family="-apple-system, sans-serif">晋K05851D</text>
+              </g>
+            </svg>
+
+            <!-- HUD -->
+            <div style="position:absolute;left:16px;top:14px;display:flex;align-items:center;gap:8px">
+              <div style="height:30px;padding:0 11px;border-radius:8px;background:rgba(17,28,51,.8);border:1px solid rgba(129,140,248,.38);color:#dbe4ff;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px">← 返回全图</div>
+              <div style="height:30px;padding:0 12px;border-radius:8px;background:rgba(17,28,51,.8);border:1px solid rgba(129,140,248,.3);color:#e8eeff;font-size:11.5px;font-weight:800;display:flex;align-items:center;gap:6px">
+                <span style="width:6px;height:6px;border-radius:50%;background:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.18)"></span>晋K05851D · 在途
+              </div>
+            </div>
+
+            <div style="position:absolute;right:16px;top:14px;display:flex;gap:7px;align-items:flex-start">
+              <button class="fs-enter" id="fsBtn">⛶ 全屏</button>
+              <div style="min-width:92px;padding:7px 11px;border-radius:10px;background:rgba(17,28,51,.8);border:1px solid rgba(129,140,248,.3)">
+                <div style="font-size:9px;color:#8ea3c8;font-weight:700">预计送达</div>
+                <div style="font-size:17px;font-weight:800;color:#67e8f9;text-shadow:0 0 16px rgba(34,211,238,.45)">18:40</div>
+              </div>
+              <div style="min-width:92px;padding:7px 11px;border-radius:10px;background:rgba(17,28,51,.8);border:1px solid rgba(129,140,248,.3)">
+                <div style="font-size:9px;color:#8ea3c8;font-weight:700">剩余里程</div>
+                <div style="font-size:17px;font-weight:800;color:#f8fafc">118<span style="font-size:10px;color:#a9bbd8;margin-left:2px">km</span></div>
+              </div>
+              <div style="min-width:92px;padding:7px 11px;border-radius:10px;background:rgba(17,28,51,.8);border:1px solid rgba(129,140,248,.3)">
+                <div style="font-size:9px;color:#8ea3c8;font-weight:700">剩余时间</div>
+                <div style="font-size:17px;font-weight:800;color:#f8fafc">2<span style="font-size:10px;color:#a9bbd8">h</span>05<span style="font-size:10px;color:#a9bbd8">m</span></div>
+              </div>
+              <button class="fs-exit" id="fsExit">✕ 退出全屏</button>
+            </div>
+
+            <div style="position:absolute;right:16px;top:296px;width:196px;background:rgba(17,28,51,.8);border:1px solid rgba(129,140,248,.28);border-radius:11px;padding:11px 13px">
+              <div style="font-size:10px;color:#8ea3c8;letter-spacing:.5px;font-weight:800;margin-bottom:7px">任务进度</div>
+              <div style="position:relative;padding-left:13px">
+                <div style="position:absolute;left:3px;top:6px;bottom:6px;width:1px;background:rgba(99,102,241,.3)"></div>
+                <div style="font-size:10.5px;color:#7c8db0;padding:2px 0;position:relative">接单 <i style="font-style:normal;color:#5f7398">13:02</i></div>
+                <div style="font-size:10.5px;color:#7c8db0;padding:2px 0">装车完成 <i style="font-style:normal;color:#5f7398">13:36</i></div>
+                <div style="font-size:10.5px;color:#e8eeff;font-weight:700;padding:2px 0">已发车 <i style="font-style:normal;color:#5f7398">13:41</i></div>
+                <div style="font-size:10.5px;color:#7c8db0;padding:2px 0">确认到达</div>
+                <div style="font-size:10.5px;color:#7c8db0;padding:2px 0">完成运单</div>
+              </div>
+              <div style="margin-top:8px;font-size:9.5px;color:#5f7398;border-top:1px solid rgba(99,102,241,.22);padding-top:7px">常驻任务 · 今日第 2/5 次</div>
+            </div>
+
+            <div style="position:absolute;left:16px;right:16px;bottom:14px;background:rgba(17,28,51,.82);border:1px solid rgba(129,140,248,.28);border-radius:12px;padding:10px 14px 12px">
+              <div style="display:flex;justify-content:space-between;font-size:10.5px;color:#a9bbd8">
+                <span><b style="color:#e8eeff">太原·晋源仓</b> 13:41 发车</span>
+                <span>已行 <b style="color:#e8eeff">104</b> / 计划 <b style="color:#e8eeff">222</b> km</span>
+                <span><b style="color:#e8eeff">郑州·郑东仓</b> 预计 18:40</span>
+              </div>
+              <div style="position:relative;height:5px;border-radius:3px;background:rgba(99,102,241,.18);margin:9px 0 7px">
+                <div style="position:absolute;left:0;top:0;bottom:0;width:47%;border-radius:3px;background:linear-gradient(90deg,#4338ca,#22d3ee);box-shadow:0 0 14px rgba(34,211,238,.45)"></div>
+                <div style="position:absolute;top:50%;left:47%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#e0f2fe;box-shadow:0 0 0 3px rgba(34,211,238,.35),0 0 18px rgba(34,211,238,.8)"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:9.5px;color:#6b7f9f">
+                <span>定位 12 秒前上报 · 62 km/h</span><span>进度 47% · 剩余 118 km · 预计 18:40 送达</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cols2" style="margin-top:16px">
+        <div class="card">
+          <h4 style="margin:0 0 8px;font-size:13px;color:var(--ink)">进入 / 返回的状态契约</h4>
+          <ul class="plain">
+            <li><b>进入前记下：</b>面板宽度、列表滚动位置、底图样式、地图缩放与中心点、当前筛选条件。</li>
+            <li><b>退出时还原：</b>只还原这些，<b>不重新拉定位</b>（复用 25s 缓存），列表不闪、不跳。</li>
+            <li><b>地图实例复用：</b>不新建 AMap，只 <code>setMapStyle('amap://styles/blue')</code> +
+              隐藏其他 marker + 画 route 覆盖物；返回时反向执行，避免重建地图导致的闪白。</li>
+            <li><b>ESC / 返回 / 点空白</b>三种退出方式都走同一个 restore 函数。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4 style="margin:0 0 8px;font-size:13px;color:var(--ink)">沉浸态里为什么没有左侧列表</h4>
+          <ul class="plain">
+            <li>只有一个任务要看，列表是干扰项 —— 收起后地图可视面积从 <b>732px</b> 变成 <b>992px</b>（+35%）。</li>
+            <li>切换任务用顶部车牌胶囊（点开是下拉，只有这台车相关的运单：当前 + 还有 N 票）。</li>
+            <li>想回列表不用退出：左下角留一个 <b>「‹ 列表」</b> 迷你把手，hover 临时浮出。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4. 交互闭环 ============ -->
+    <section>
+      <div class="sec-head"><span class="sec-num">4</span><h2>完整交互闭环</h2></div>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
+          <span class="tag gray">全图监控</span><span>→</span>
+          <span class="tag gray">左侧双行列表（有任务 44px / 空闲 26px）</span><span>→</span>
+          <span class="tag gray">点地图标记 = B1-a 卡片；点列表行 = B3 抽屉</span><span>→</span>
+          <span class="tag">「查看物流概览」</span><span>→</span>
+          <span class="tag">C1 沉浸态（靛青蓝 + 单车主线）</span><span>→</span>
+          <span class="tag gray">← 返回 / ESC</span>
+        </div>
+        <ul class="plain" style="margin-top:12px">
+          <li><b>无任务的车：</b>列表里是单行 + 「空闲」徽标；点开卡片/抽屉时按钮变灰，文案「该车暂无进行中运单」。</li>
+          <li><b>多票的车：</b>卡片任务块右上角 `还有 2 票 ›`，点开切换，路线重绘但不重建地图。</li>
+          <li><b>常驻任务：</b>任务块显示「今日第 2/5 次」，进度按当次趟次；沉浸态节点轴下方同样标注。</li>
+          <li><b>定位停更 &gt; 30 分钟：</b>进度条变虚、ETA 位置显示「定位停更」，不给假时间。</li>
+        </ul>
+      </div>
+    </section>
+
+    <div class="note">
+      <b>还剩两个需要你拍板的：</b>① 沉浸态左下角要不要留「‹ 列表」把手（我倾向于留，成本 0）；
+      ② 点列表行出抽屉、点地图标记出卡片，这个分工你认不认（不认就统一都用卡片）。
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      /* ---------- 导航图钉 ---------- */
+      document.querySelectorAll('[data-pin]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var shell = btn.closest('.shell');
+          shell.classList.toggle('pin');
+          btn.querySelector('.lb').textContent = shell.classList.contains('pin') ? '取消固定' : '固定菜单';
+        });
+      });
+
+      /* ---------- B1 有任务 / 无任务 ---------- */
+      var sw = document.querySelector('[data-b1switch]');
+      var slot = document.getElementById('b1slot');
+      if (sw && slot) {
+        sw.querySelectorAll('button').forEach(function (b) {
+          b.addEventListener('click', function () {
+            sw.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); });
+            b.classList.add('on');
+            slot.classList.toggle('idle', b.dataset.b1 === 'idle');
+          });
+        });
+      }
+
+      /* ---------- C1 全屏 ---------- */
+      var shellC1 = document.getElementById('c1shell');
+      var fsBtn = document.getElementById('fsBtn');
+      var fsExit = document.getElementById('fsExit');
+      if (fsBtn) fsBtn.addEventListener('click', function () { shellC1.classList.add('fs'); });
+      if (fsExit) fsExit.addEventListener('click', function () { shellC1.classList.remove('fs'); });
+    })();
+  </script>
+</body>
+
+</html>

@@ -1,8 +1,12 @@
 <template>
   <el-container style="height:100vh; overflow: hidden; background-color: #F8FAFC;">
-    <!-- 侧边栏 -->
-    <el-aside width="220px" class="sidebar-container">
-      <SidebarMenu :active-path="activeMenu" @menu-select="handleMenuSelect" />
+    <!-- 侧边栏：窄条 64px，悬停临时展开，图钉固定 -->
+    <el-aside :width="navPinned ? '220px' : '64px'" class="sidebar-container">
+      <div class="nav-shell" :class="{ expanded: navPinned || navHover, pinned: navPinned }"
+        @mouseenter="navHover = true" @mouseleave="navHover = false">
+        <SidebarMenu :active-path="activeMenu" :expanded="navPinned || navHover" :pinned="navPinned"
+          @menu-select="handleMenuSelect" @toggle-pin="toggleNavPin" />
+      </div>
     </el-aside>
     <el-container>
       <!-- 顶部标题栏 -->
@@ -59,6 +63,13 @@
           <template v-else-if="route.path === '/waybill/create'">
             <WaybillCreate ref="waybillCreateRef" />
           </template>
+          <!-- ⭐ 费用管理 -->
+          <template v-else-if="route.path === '/fee/stats'">
+            <FeeStats />
+          </template>
+          <template v-else-if="route.path === '/fee/config'">
+            <FeeApprovalSetting />
+          </template>
           <!-- ⭐ 路线管理 -->
           <template v-else-if="route.path === '/route/manage'">
             <RouteManage />
@@ -74,6 +85,14 @@
           <!-- 司机档案 -->
           <template v-else-if="route.path === '/driver-archive'">
             <DriverArchive />
+          </template>
+
+          <!-- ⭐ 档案管理 -->
+          <template v-else-if="route.path === '/archive/customer'">
+            <CustomerArchive />
+          </template>
+          <template v-else-if="route.path === '/archive/cargo'">
+            <CargoArchive />
           </template>
 
           <!-- 运营管理 -->
@@ -141,6 +160,8 @@ import Waybill from '../views/Waybill.vue'
 import Report from '../views/Report.vue'
 import VehicleArchive from '../views/VehicleArchive.vue'
 import DriverArchive from '../views/DriverArchive.vue'
+import CustomerArchive from '../views/CustomerArchive.vue'
+import CargoArchive from '../views/CargoArchive.vue'
 
 import EleFenceSetting from '../views/EleFenceSetting.vue'
 import EleFenceAlertSetting from '../views/EleFenceAlertSetting.vue'
@@ -157,6 +178,8 @@ import OrgManage from '../views/OrgManage.vue'
 
 // ⭐ 路线管理
 import RouteManage from '../views/RouteManage.vue'
+import FeeStats from '../views/FeeStats.vue'
+import FeeApprovalSetting from '../views/FeeApprovalSetting.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -214,20 +237,36 @@ const routePermissionMap = {
   '/waybill': 'waybill',
   '/waybill/create': 'waybill',
   '/waybill/detail': 'waybill',
+  '/fee/stats': 'fee_stats',
   // ⭐ 路线管理暂时不做权限限制（新功能，等业务明确后再加 'route'）
   // '/route/manage': 'route',
   '/report': 'report',
   '/vehicle-archive': 'vehicle_archive',
   '/driver-archive': 'driver_archive',
+  // ⭐ 档案管理暂时不做权限限制（新功能，等权限数据补齐后再放开这两行）
+  // '/archive/customer': 'customer_archive',
+  // '/archive/cargo': 'cargo_archive',
+  // '/dashboard/档案管理': 'customer_archive',
   '/dashboard/系统管理': 'system',
   '/dashboard/user': 'system',
   '/dashboard/role': 'system',
   '/dashboard/org': 'system',
 }
 
+// ⭐ 主账号：客户身份且不是子账号（管理员模拟进入也放行，便于配置）
+const isMaster = computed(() => {
+  if (!currentUser) return false
+  if (currentUser.role === 'admin') return true
+  return currentUser.role === 'customer' && !currentUser.isSubAccount
+})
+
 const isPermitted = computed(() => {
   if (clientPerms.value === null) return true
   if (route.path === '/dashboard' && !route.params.page) return true
+  // 费用审批设置只给主账号：不看权限 key，避免被误配给其他角色
+  if (route.path === '/fee/config') return isMaster.value
+  // 费用统计：主账号始终可见；其他人看功能配置
+  if (route.path === '/fee/stats') return isMaster.value || clientPerms.value.includes('fee_stats')
   const permKey = routePermissionMap[route.path]
   if (!permKey) return true
   return clientPerms.value.includes(permKey)
@@ -290,8 +329,13 @@ const pathLabels = {
   '/route/manage': '路线管理',
   '/report': '车队运营报告',
   '/waybill/create': '新建运单',
+  '/fee/stats': '费用统计',
+  '/fee/config': '费用审批设置',
   '/vehicle-archive': '车辆档案',
   '/driver-archive': '司机档案',
+  '/archive/customer': '客户档案',
+  '/archive/cargo': '货物档案',
+  '/dashboard/档案管理': '档案管理',
   '/ele-fence/setting': '围栏设置',
   '/ele-fence/alert-setting': '提醒设置',
   '/ele-fence/alert-query': '提醒事件查询',
@@ -353,6 +397,16 @@ const handleMenuSelect = (index) => {
   checkAndNavigate(index)
 }
 
+// ============================================================
+// ⭐ 左侧导航：窄条 / 悬停临时展开 / 图钉固定
+// ============================================================
+const navPinned = ref(localStorage.getItem('nav_pinned') === '1')
+const navHover = ref(false)
+const toggleNavPin = () => {
+  navPinned.value = !navPinned.value
+  localStorage.setItem('nav_pinned', navPinned.value ? '1' : '0')
+}
+
 const closeTab = (tab) => {
   const index = tabs.value.findIndex((t) => t.path === tab.path)
   if (index === -1) return
@@ -406,7 +460,31 @@ const goLogin = () => {
   background: #FFFFFF;
   box-shadow: 1px 0 8px rgba(0, 0, 0, 0.03);
   border-right: 1px solid #E2E8F0;
-  z-index: 10;
+  z-index: 30;
+  overflow: visible !important;
+  position: relative;
+  transition: width .28s cubic-bezier(.34, 1.2, .64, 1) !important;
+}
+
+/* ⭐ 窄条导航：默认 64px；悬停/固定时展开为 220px（悬停是浮层，不推挤右侧内容） */
+.nav-shell {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 64px;
+  background: #FFFFFF;
+  overflow: hidden;
+  transition: width .28s cubic-bezier(.34, 1.2, .64, 1), box-shadow .28s ease;
+  z-index: 31;
+}
+
+.nav-shell.expanded {
+  width: 220px;
+}
+
+.nav-shell.expanded:not(.pinned) {
+  box-shadow: 14px 0 36px rgba(15, 23, 42, .12);
 }
 
 .dashboard-header {
@@ -602,6 +680,23 @@ const goLogin = () => {
 
 /* ⭐ 组织管理：整页固定高度，页面本身不滚动（内部左右两栏各自滚） */
 .content-wrapper:has(.org-manage-page) {
+  padding: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* ⭐ 用户管理：同上，表格改内部滚动 */
+.content-wrapper:has(.user-manage-page) {
+  padding: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* ⭐ 档案管理（客户档案 / 货物档案）：整页定高，内部各自滚 */
+.content-wrapper:has(.customer-archive-page),
+.content-wrapper:has(.cargo-archive-page) {
   padding: 0;
   height: 100%;
   max-height: 100%;

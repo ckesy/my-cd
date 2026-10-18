@@ -161,7 +161,7 @@
               </div>
             </div>
 
-            <el-table ref="tableRef" :data="pagedData" v-loading="loading" border stripe :size="tableSize"
+            <el-table ref="tableRef" :data="pagedData" v-loading="loading" border stripe :size="tableSize" height="100%"
               class="custom-table" :header-cell-style="{ background: '#F8FAFC', color: '#0F172A', fontWeight: '700' }">
               <template v-for="col in visibleColumns" :key="col.prop">
                 <el-table-column v-if="col.prop === 'status'" :label="col.label"
@@ -417,8 +417,9 @@
     </template>
 
     <!-- 新增/编辑用户弹窗 -->
+    <!-- ⭐ append-to-body：脱离 .content-wrapper 的 transform 包含块，弹窗才不会撑出页面滚动 -->
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑用户' : '新增用户'" width="560px" destroy-on-close
-      :close-on-click-modal="false" class="manage-dialog">
+      append-to-body :close-on-click-modal="false" class="manage-dialog">
       <el-form :model="form" label-width="90px" class="manage-form" size="default">
         <el-form-item label="登录账号" required>
           <el-input v-model="form.account" placeholder="请输入登录账号" maxlength="32" clearable />
@@ -482,7 +483,7 @@
 
     <!-- 权限配置弹窗 -->
     <el-dialog v-model="permDialogVisible" :title="`权限配置 - ${permTargetUser?.name || ''}`" width="1000px" top="6vh"
-      destroy-on-close :close-on-click-modal="false" class="permission-dialog">
+      destroy-on-close append-to-body :close-on-click-modal="false" class="permission-dialog">
       <div class="perm-tabs">
         <div v-for="tab in permTabs" :key="tab.key" class="perm-tab" :class="{ active: permActiveTab === tab.key }"
           @click="permActiveTab = tab.key">
@@ -1366,7 +1367,12 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 100%;
+  /* ⭐ 整页固定高度：外壳 .content-wrapper 给满，页面本身不滚动，
+     表格改由内部滚动（el-table height="100%"） */
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
   background: #F8FAFC;
   font-size: 13px;
 }
@@ -1556,6 +1562,8 @@ onBeforeUnmount(() => {
 .table-card-wrap {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .table-card-wrap.is-fullscreen {
@@ -1644,6 +1652,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   padding: 12px 16px;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   transition: all 0.3s;
@@ -1958,6 +1967,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   padding: 16px;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -2832,5 +2842,48 @@ onBeforeUnmount(() => {
 
 .org-tree-select-popper .el-tree-node.is-current>.el-tree-node__content .el-tree-node__label {
   color: #c8102e;
+}
+
+/* ============================================================
+   ⭐ 弹窗尺寸锁在视口内（根元素就是 .el-dialog.xxx，
+     append-to-body 后脱离 scoped，规则必须写全局块；只做布局不动配色）
+   ============================================================ */
+.el-dialog.manage-dialog {
+  display: flex;
+  flex-direction: column;
+  /* 未传 top，走 EP 默认 margin-top: 15vh */
+  max-height: calc(100vh - 15vh - 16px);
+  margin-bottom: 0;
+}
+
+.el-dialog.manage-dialog>.el-dialog__header,
+.el-dialog.manage-dialog>.el-dialog__footer {
+  flex: 0 0 auto;
+}
+
+.el-dialog.manage-dialog>.el-dialog__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.el-dialog.permission-dialog {
+  display: flex;
+  flex-direction: column;
+  /* top="6vh" 由组件内联给出 */
+  max-height: calc(100vh - 6vh - 16px);
+  margin-bottom: 0;
+}
+
+.el-dialog.permission-dialog>.el-dialog__header,
+.el-dialog.permission-dialog>.el-dialog__footer {
+  flex: 0 0 auto;
+}
+
+.el-dialog.permission-dialog>.el-dialog__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
 }
 </style>

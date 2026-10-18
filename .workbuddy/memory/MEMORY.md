@@ -116,3 +116,44 @@
   内部主区块 `flex: 0 1 520px; min-height: 200px`（矮屏压缩内容，不撑出滚动）。
 - 验证手段：headless Edge（`--headless=new --remote-debugging-port`）+ 原生 WebSocket 走 CDP，
   先注入 `localStorage.currentUser` 再 `Page.navigate`，量 `scrollHeight - clientHeight`。
+- ⭐ 页面里**含表格**时（如用户管理）：`.page{height:100%;min-height:0;overflow:hidden}` +
+  卡片 `flex:1;min-height:0` + `<el-table height="100%">` → 表格内部滚、页面不动。
+- ⚠️ 子元素 `height:100%` 要求父级高度确定：`.content-wrapper` 只有 `min-height:100%`，
+  必须在 Dashboard 里补 `.content-wrapper:has(.xxx-page){padding:0;height:100%;overflow:hidden}`。
+- ⚠️ **AMap 2.0 的 marker 用 `hide()/show()`**，`setVisible()` 不生效；
+  `map.setMapStyle('amap://styles/xxx')` 在当前 key 下也不生效（实测无反应），
+  要深色底图就上 CSS `filter`（但会连折线一起反相 → 折线改画独立 SVG 图层）。
+- ⚠️ 全屏（fixed 铺满视口）必须去掉祖先 transform：
+  `.content-wrapper:has(.fullmap.is-fs){transform:none!important;animation:none!important}`。
+- 左侧导航：`el-aside` 宽 64/220 + 内部 `.nav-shell` 绝对定位做宽度动画，
+  悬停浮层不推挤、`pinned` 才真加宽；状态存 `localStorage.nav_pinned`。
+
+## 档案管理（客户档案 / 货物档案）
+
+- 菜单在 `系统管理` 上方，权限 key：`customer_archive` / `cargo_archive`。
+- ⭐ **客户档案 ≠ `customers` 表**。`customers` 是登录租户（手机号+密码+平台权限）；
+  客户档案是业务发货/收货方，用 `customer_archives` + `customer_contacts`
+  （`sql/2026-10-18_customer_archive.sql`）。
+- 联系人角色 `roles` 存 CSV：`装货` / `卸货` / `唯一`（唯一 = 两端都带入）。
+  建运单时按角色过滤：同角色 1 个自动带入，多个让用户选；`唯一` 会连另一端的
+  客户和电话一起填。字段落在 waybills 的 `customer_archive_*` / `*_contact_*`。
+- ⭐ **列表四件套统一用 `components/TableTools.vue`**（刷新 / 密度 / 列设置 / 全屏），
+  别再在页面里手写一遍；全屏只给状态，铺满样式由页面自己加。
+- ⚠️ **el-table 列宽超出容器时是「压扁」不是横向滚动**：窄列（状态/操作）用固定
+  `width`，宽列用 `minWidth`，且宽度合计要小于容器宽度并留余量。
+- 省市区数据统一在 `src/utils/regionData.js`（`PROVINCE_OPTIONS` / `REGION_CASCADER`）。
+- 合同附件临时存 `contract_data`（base64，≤5MB）+ `has_contract`，列表不拉内容。
+
+## 数据库授权与 ID 类型（踩过两次）
+
+- ⭐ **新建业务表必须带授权段**：Web 端走匿名登录（anon 角色），表建完只授了控制台账号，
+  前端 INSERT/UPDATE/DELETE 一律 `permission denied`。建表脚本末尾必须跟
+  `GRANT SELECT, INSERT, UPDATE, DELETE ... TO anon/authenticated`（模板见
+  `sql/2026-10-18_customer_archive_grant.sql`），并 `SELECT pg_notify('pgrst','reload schema')`。
+  现象提示：SELECT 通（列表 0 条）、写操作被拒。
+- ⭐ **`organizations.id` / `customers.id` 是整数**（不是 uuid）。新表引用它们一律 `text`，
+  前端写入前 `String()`；声明成 uuid 会报 `invalid input syntax for type uuid: "5"`。
+  自建表的 `id` 若用 `gen_random_uuid()` 则确实是 uuid（如 `customer_archives.id`）。
+- 前端对新字段/新表一律做**降级重试**（WaybillCreate 的 `stripNewFields`、
+  CustomerArchive 的 `insertArchive/updateArchive`）：命中类型/列不存在错误就剥字段重试，
+  别让没跑迁移的环境直接不可用。

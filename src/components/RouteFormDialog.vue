@@ -199,6 +199,14 @@
               <span>已高亮方案 {{ activePlanIndexDisplay }}，再次点击卡片取消</span>
             </div>
 
+            <!-- ⭐ 一键规划：把每个方案都跑一次高德驾车，距离/时长/高速费 + **折线** 一起写进方案 -->
+            <div v-if="!readonly" class="plan-batch">
+              <el-button size="small" :loading="batchPlanning" @click.stop="planAllPlans">
+                一键规划全部方案
+              </el-button>
+              <span class="plan-batch-tip">折线会一起存下来，小程序地图用它画线</span>
+            </div>
+
             <div
               v-for="(plan, idx) in form.plans"
               :key="plan._key"
@@ -578,6 +586,7 @@ const createPlan = (name) => ({
   name: name || `方案${planKeyCounter - 1}`,
   type: 'auto',
   waypoints: [],
+  polyline: '',
   distance: '',
   duration: '',
   toll: '',
@@ -1071,6 +1080,7 @@ const handleOpened = async () => {
         distance: p.distance || '',
         duration: p.duration || '',
         toll: p.toll || '',
+        polyline: p.polyline || '',
       }))
     } else {
       form.plans = [createPlan('方案一')]
@@ -1291,6 +1301,86 @@ const formatDurationBySec = (seconds) => {
   return `${m}分钟`
 }
 
+/* 折线抽稀：Douglas-Peucker（eps 以「度」为单位，0.0004 ≈ 44 米）+ 上限 1200 点。
+   不抽稀的话一条长途 2 万点：库里几百 KB，接口和地图都吃力。 */
+const simplifyPath = (pts, eps = 0.0004) => {
+  if (!pts || pts.length <= 2) return pts || []
+  const sq = eps * eps
+  const dist2 = (p, a, b) => {
+    let x = a[0]
+    let y = a[1]
+    let dx = b[0] - x
+    let dy = b[1] - y
+    if (dx || dy) {
+      const t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy)
+      if (t > 1) {
+        x = b[0]
+        y = b[1]
+      } else if (t > 0) {
+        x += dx * t
+        y += dy * t
+      }
+    }
+    dx = p[0] - x
+    dy = p[1] - y
+    return dx * dx + dy * dy
+  }
+  const walk = (arr, first, last, out) => {
+    let maxD = 0
+    let idx = -1
+    for (let i = first + 1; i < last; i++) {
+      const d = dist2(arr[i], arr[first], arr[last])
+      if (d > maxD) {
+        maxD = d
+        idx = i
+      }
+    }
+    if (maxD > sq && idx > 0) {
+      walk(arr, first, idx, out)
+      out.push(arr[idx])
+      walk(arr, idx, last, out)
+    }
+  }
+  const out = [pts[0]]
+  walk(pts, 0, pts.length - 1, out)
+  out.push(pts[pts.length - 1])
+  if (out.length <= 1200) return out
+  const step = Math.ceil(out.length / 1200)
+  const thin = []
+  for (let i = 0; i < out.length; i += step) thin.push(out[i])
+  if (thin[thin.length - 1] !== out[out.length - 1]) thin.push(out[out.length - 1])
+  return thin
+}
+
+/* 折线入库：抽稀后 5 位小数（约 1 米）编码；小程序按 "lng,lat;lng,lat" 解析 */
+const encodePolyline = (pts) =>
+  simplifyPath(pts)
+    .map(([lng, lat]) => `${Number(lng).toFixed(5)},${Number(lat).toFixed(5)}`)
+    .join(';')
+
+/* 一键规划：逐个方案跑一遍驾车规划（不逐条弹成功提示），完事提示「记得保存」 */
+const batchPlanning = ref(false)
+const planAllPlans = async () => {
+  if (!form.pickup_point || !form.delivery_point) {
+    return ElMessage.warning('请先选择装货点 / 卸货点')
+  }
+  batchPlanning.value = true
+  let ok = 0
+  try {
+    for (let i = 0; i < form.plans.length; i++) {
+      await handlePlanRoute(i, true)
+      if (form.plans[i].polyline) ok++
+    }
+    if (ok) ElMessage.success(`已规划 ${ok}/${form.plans.length} 个方案，记得点保存`)
+    else ElMessage.warning('没有规划成功：检查装卸货点能否解析成坐标')
+  } catch (e) {
+    console.error('[route-form] 批量规划失败', e)
+    ElMessage.error('批量规划失败：' + e.message)
+  } finally {
+    batchPlanning.value = false
+  }
+}
+
 const handlePlanRoute = async (idx, silent = false) => {
   const plan = form.plans[idx]
   if (!plan) return
@@ -1374,6 +1464,7 @@ const handlePlanRoute = async (idx, silent = false) => {
               return
             }
 
+            plan.polyline = encodePolyline(fullPath)
             drawPlanRoute(plan._key, idx, fullPath, originLngLat, destLngLat, waypointLngLats)
 
             if (!silent) {
@@ -1438,6 +1529,7 @@ const handleSubmit = async () => {
         distance: p.distance || '',
         duration: p.duration || '',
         toll: p.toll || '',
+        polyline: p.polyline || '',
       })),
       plan_count: form.plans.length,
       updated_at: new Date().toISOString(),
@@ -3323,5 +3415,21 @@ if (isCustomer) {
   font-family: 'Courier New', monospace;
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
   pointer-events: none;
+}
+
+/* ---------- 一键规划 ---------- */
+.plan-batch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px dashed #dbe3ee;
+}
+.plan-batch-tip {
+  font-size: 12px;
+  color: #64748b;
 }
 </style>

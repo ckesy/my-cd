@@ -1,98 +1,137 @@
 <template>
-  <el-menu class="sidebar-menu" :default-active="activePath" unique-opened @select="handleSelect">
-    <el-menu-item v-if="hasPerm('home')" index="/dashboard">
-      <el-icon>
-        <HomeFilled />
-      </el-icon>
-      <span>首页</span>
-    </el-menu-item>
-
-    <el-sub-menu v-if="hasPerm('driving_fullmap') || hasPerm('vehicle_fault') || hasPerm('appearance_inspect')"
-      index="drive-management">
-      <template #title>
+  <div class="sidebar-wrap" :class="{ collapsed: !expanded }">
+    <el-menu class="sidebar-menu" :default-active="activePath" unique-opened @select="handleSelect">
+      <el-menu-item v-if="hasPerm('home')" index="/dashboard">
         <el-icon>
-          <Van />
+          <HomeFilled />
         </el-icon>
-        <span>行车管理</span>
-      </template>
-      <el-menu-item v-if="hasPerm('driving_fullmap')" index="/fullmap">全图监控</el-menu-item>
-      <el-menu-item v-if="hasPerm('vehicle_fault')" index="/dashboard/车辆故障管理">车辆故障管理</el-menu-item>
-      <el-menu-item v-if="hasPerm('appearance_inspect')" index="/dashboard/外观巡检管理">外观巡检管理</el-menu-item>
-    </el-sub-menu>
+        <span class="menu-label">首页</span>
+      </el-menu-item>
 
-    <!-- 电子围栏管理 -->
-    <el-sub-menu v-if="hasPerm('ele_fence')" index="ele-fence-management">
-      <template #title>
-        <el-icon>
-          <Location />
-        </el-icon>
-        <span>电子围栏管理</span>
-      </template>
-      <el-menu-item index="/ele-fence/setting">围栏设置</el-menu-item>
-      <el-menu-item index="/ele-fence/alert-setting">提醒设置</el-menu-item>
-      <el-menu-item index="/ele-fence/alert-query">提醒事件查询</el-menu-item>
-    </el-sub-menu>
+      <el-sub-menu v-if="hasPerm('driving_fullmap') || hasPerm('vehicle_fault') || hasPerm('appearance_inspect')"
+        index="drive-management">
+        <template #title>
+          <el-icon>
+            <Van />
+          </el-icon>
+          <span class="menu-label">行车管理</span>
+        </template>
+        <el-menu-item v-if="hasPerm('driving_fullmap')" index="/fullmap">全图监控</el-menu-item>
+        <el-menu-item v-if="hasPerm('vehicle_fault')" index="/dashboard/车辆故障管理">车辆故障管理</el-menu-item>
+        <el-menu-item v-if="hasPerm('appearance_inspect')" index="/dashboard/外观巡检管理">外观巡检管理</el-menu-item>
+      </el-sub-menu>
 
-    <!-- 运营管理 -->
-    <el-sub-menu v-if="hasPerm('operation')" index="operation-management">
-      <template #title>
-        <el-icon>
-          <DataLine />
-        </el-icon>
-        <span>运营管理</span>
-      </template>
-      <el-menu-item index="/operation/summary">综合报表</el-menu-item>
-      <el-menu-item index="/operation/energy">能耗报告</el-menu-item>
-      <el-menu-item index="/operation/driving">驾驶行为报表</el-menu-item>
-    </el-sub-menu>
+      <el-sub-menu v-if="hasPerm('ele_fence')" index="ele-fence-management">
+        <template #title>
+          <el-icon>
+            <Location />
+          </el-icon>
+          <span class="menu-label">电子围栏管理</span>
+        </template>
+        <el-menu-item index="/ele-fence/setting">围栏设置</el-menu-item>
+        <el-menu-item index="/ele-fence/alert-setting">提醒设置</el-menu-item>
+        <el-menu-item index="/ele-fence/alert-query">提醒事件查询</el-menu-item>
+      </el-sub-menu>
 
-    <!-- 运输管理 ⭐ 加路线管理 -->
-    <el-sub-menu v-if="hasPerm('waybill') || hasPerm('report') || hasPerm('route')" index="transport-management">
-      <template #title>
-        <el-icon>
-          <Tickets />
-        </el-icon>
-        <span>运输管理</span>
-      </template>
-      <el-menu-item v-if="hasPerm('waybill')" index="/waybill">运单管理</el-menu-item>
-      <el-menu-item index="/route/manage">路线管理</el-menu-item>
-      <el-menu-item v-if="hasPerm('report')" index="/report">车队运营报告</el-menu-item>
-    </el-sub-menu>
+      <el-sub-menu v-if="hasPerm('operation')" index="operation-management">
+        <template #title>
+          <el-icon>
+            <DataLine />
+          </el-icon>
+          <span class="menu-label">运营管理</span>
+        </template>
+        <el-menu-item index="/operation/summary">综合报表</el-menu-item>
+        <el-menu-item index="/operation/energy">能耗报告</el-menu-item>
+        <el-menu-item index="/operation/driving">驾驶行为报表</el-menu-item>
+      </el-sub-menu>
 
-    <el-sub-menu v-if="hasPerm('vehicle_archive') || hasPerm('driver_archive')" index="base-data-management">
-      <template #title>
-        <el-icon>
-          <User />
-        </el-icon>
-        <span>基础数据管理</span>
-      </template>
-      <el-menu-item v-if="hasPerm('vehicle_archive')" index="/vehicle-archive">车辆档案</el-menu-item>
-      <el-menu-item v-if="hasPerm('driver_archive')" index="/driver-archive">司机档案</el-menu-item>
-    </el-sub-menu>
+      <el-sub-menu v-if="hasPerm('waybill') || hasPerm('report') || hasPerm('route')" index="transport-management">
+        <template #title>
+          <el-icon>
+            <Tickets />
+          </el-icon>
+          <span class="menu-label">运输管理</span>
+        </template>
+        <el-menu-item v-if="hasPerm('waybill')" index="/waybill">运单管理</el-menu-item>
+        <el-menu-item index="/route/manage">路线管理</el-menu-item>
+        <el-menu-item v-if="hasPerm('report')" index="/report">车队运营报告</el-menu-item>
+      </el-sub-menu>
 
-    <!-- 系统管理 -->
-    <el-sub-menu v-if="hasPerm('system')" index="system-management">
-      <template #title>
-        <el-icon>
-          <Setting />
-        </el-icon>
-        <span>系统管理</span>
-      </template>
-      <el-menu-item index="/dashboard/user">用户管理</el-menu-item>
-      <el-menu-item index="/dashboard/role">角色管理</el-menu-item>
-      <el-menu-item index="/dashboard/org">组织管理</el-menu-item>
-    </el-sub-menu>
-  </el-menu>
+      <!-- ⭐ 费用管理：与「运输管理」平级；审批设置只有主账号能看到 -->
+      <el-sub-menu v-if="showFeeMenu" index="fee-management">
+        <template #title>
+          <el-icon>
+            <Wallet />
+          </el-icon>
+          <span class="menu-label">费用管理</span>
+        </template>
+        <el-menu-item v-if="isMaster || hasPerm('fee_stats')" index="/fee/stats">费用统计</el-menu-item>
+        <el-menu-item v-if="isMaster" index="/fee/config">费用审批设置</el-menu-item>
+      </el-sub-menu>
+
+      <el-sub-menu v-if="hasPerm('vehicle_archive') || hasPerm('driver_archive')" index="base-data-management">
+        <template #title>
+          <el-icon>
+            <User />
+          </el-icon>
+          <span class="menu-label">基础数据管理</span>
+        </template>
+        <el-menu-item v-if="hasPerm('vehicle_archive')" index="/vehicle-archive">车辆档案</el-menu-item>
+        <el-menu-item v-if="hasPerm('driver_archive')" index="/driver-archive">司机档案</el-menu-item>
+      </el-sub-menu>
+
+      <!-- ⭐ 档案管理：和「系统管理」平级的一级菜单
+           ⚠️ 和「路线管理」一样，新功能暂时不挂权限（历史客户的权限数据里还没有
+           customer_archive / cargo_archive，一挂就整组菜单都不显示）。
+           等权限数据补齐后再把 v-if="hasPerm('customer_archive')" 加回来。 -->
+      <el-sub-menu index="archive-management">
+        <template #title>
+          <el-icon>
+            <FolderOpened />
+          </el-icon>
+          <span class="menu-label">档案管理</span>
+        </template>
+        <el-menu-item index="/archive/customer">客户档案</el-menu-item>
+        <el-menu-item index="/archive/cargo">货物档案</el-menu-item>
+      </el-sub-menu>
+
+      <el-sub-menu v-if="hasPerm('system')" index="system-management">
+        <template #title>
+          <el-icon>
+            <Setting />
+          </el-icon>
+          <span class="menu-label">系统管理</span>
+        </template>
+        <el-menu-item index="/dashboard/user">用户管理</el-menu-item>
+        <el-menu-item index="/dashboard/role">角色管理</el-menu-item>
+        <el-menu-item index="/dashboard/org">组织管理</el-menu-item>
+      </el-sub-menu>
+    </el-menu>
+
+    <!-- ⭐ 底部图钉：固定 / 取消固定 -->
+    <div class="nav-pin" :class="{ on: pinned }" @click.stop="emit('toggle-pin')">
+      <span class="pin-ic">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 4h6l-1 6 3 3H7l3-3-1-6Z" />
+          <path d="M12 13v7" />
+        </svg>
+      </span>
+      <span class="menu-label">{{ pinned ? '取消固定' : '固定菜单' }}</span>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { HomeFilled, Van, Location, DataLine, Tickets, User, Setting } from '@element-plus/icons-vue'
+import { HomeFilled, Van, Location, DataLine, Tickets, User, Setting, FolderOpened, Wallet } from '@element-plus/icons-vue'
 
-defineProps({
-  activePath: { type: String, required: true }
+const props = defineProps({
+  activePath: { type: String, required: true },
+  expanded: { type: Boolean, default: false },
+  pinned: { type: Boolean, default: false },
 })
-const emit = defineEmits(['menuSelect'])
+const emit = defineEmits(['menuSelect', 'toggle-pin'])
 const handleSelect = (index) => emit('menuSelect', index)
 
 // ============================================================
@@ -117,17 +156,79 @@ const hasPerm = (key) => {
   if (clientPerms.value === null) return true
   return clientPerms.value.includes(key)
 }
+
+// ⭐ 主账号：客户身份且不是子账号（管理员模拟进入也视为可配）
+const isMaster = computed(() => {
+  if (!currentUser) return false
+  if (currentUser.role === 'admin') return true
+  return currentUser.role === 'customer' && !currentUser.isSubAccount
+})
+
+// 费用管理整组：主账号看全部；其他人只有拿到 fee_stats 才显示
+const showFeeMenu = computed(() => isMaster.value || hasPerm('fee_stats'))
 </script>
 
 <style scoped>
-.sidebar-menu {
+.sidebar-wrap {
+  position: relative;
   height: 100%;
+  background: #FFFFFF;
+  overflow: hidden;
+}
+
+.nav-pin {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 10px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  color: #94A3B8;
+  cursor: pointer;
+  transition: all .22s cubic-bezier(.34, 1.2, .64, 1);
+  z-index: 3;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), #fff 40%);
+}
+
+.nav-pin:hover {
+  color: #475569;
+  background: #F8FAFC;
+  transform: translateY(-1px);
+}
+
+.nav-pin.on {
+  color: #D32F2F;
+  background: #FEF2F2;
+}
+
+.nav-pin .pin-ic {
+  width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  transition: transform .3s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.nav-pin:hover .pin-ic {
+  transform: rotate(-12deg) scale(1.08);
+}
+
+.nav-pin.on .pin-ic {
+  transform: rotate(0deg);
+}
+
+.sidebar-menu {
+  height: calc(100% - 46px);
   border-right: none !important;
   background-color: #FFFFFF;
-  padding: 12px 8px;
+  padding: 10px 0 0;
   box-sizing: border-box;
   overflow-y: auto;
   overflow-x: hidden;
+  width: 220px;
 }
 
 .sidebar-menu::-webkit-scrollbar {
@@ -143,6 +244,7 @@ const hasPerm = (key) => {
   border-radius: 2px;
 }
 
+/* ⭐ 图标槽固定 48px：窄条时图标居中，展开时位置不跳 */
 .sidebar-menu :deep(.el-menu-item),
 .sidebar-menu :deep(.el-sub-menu__title) {
   height: 44px;
@@ -152,14 +254,31 @@ const hasPerm = (key) => {
   margin: 4px 8px;
   position: relative;
   overflow: hidden;
+  padding-left: 16px !important;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .sidebar-menu :deep(.el-menu-item .el-icon),
 .sidebar-menu :deep(.el-sub-menu__title .el-icon) {
   margin-right: 10px;
-  font-size: 16px;
+  font-size: 17px;
+  flex: 0 0 auto;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s;
+}
+
+.menu-label {
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity .18s ease;
+}
+
+.sidebar-wrap.collapsed .menu-label {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar-wrap.collapsed .sidebar-menu :deep(.el-sub-menu__icon-arrow) {
+  opacity: 0;
 }
 
 .sidebar-menu :deep(.el-menu-item:hover .el-icon),
@@ -168,7 +287,7 @@ const hasPerm = (key) => {
 }
 
 .sidebar-menu :deep(.el-sub-menu__icon-arrow) {
-  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s, opacity .18s;
 }
 
 .sidebar-menu :deep(.el-sub-menu.is-opened .el-sub-menu__icon-arrow) {
@@ -248,11 +367,17 @@ const hasPerm = (key) => {
   overflow: hidden;
 }
 
+/* 窄条时子菜单内容不占位（避免出现空白行） */
+.sidebar-wrap.collapsed .sidebar-menu :deep(.el-menu--inline) {
+  display: none;
+}
+
 .sidebar-menu :deep(.el-menu--inline .el-menu-item) {
   height: 38px;
   line-height: 38px;
   margin: 2px 8px 2px 24px;
   font-size: 13px;
+  padding-left: 16px !important;
   transform-origin: top;
   animation: subMenuFadeIn 0.3s ease-out forwards;
 }

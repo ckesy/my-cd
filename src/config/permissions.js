@@ -63,20 +63,41 @@ export const PERMISSION_MODULES = [
     ],
   },
   {
+    key: 'fee',
+    name: '费用管理',
+    icon: 'Wallet',
+    sort: 6,
+    items: [
+      { key: 'fee_stats', name: '费用统计', sort: 1 },
+      // ⭐ 审批设置只给主账号：任何角色都勾不上（与「系统管理」同一套置灰机制）
+      { key: 'fee_config', name: '费用审批设置', sort: 2, adminOnly: true },
+    ],
+  },
+  {
     key: 'base_data',
     name: '基础数据管理',
     icon: 'User',
-    sort: 6,
+    sort: 7,
     items: [
       { key: 'vehicle_archive', name: '车辆档案', sort: 1 },
       { key: 'driver_archive', name: '司机档案', sort: 2 },
     ],
   },
   {
+    key: 'archive',
+    name: '档案管理',
+    icon: 'FolderOpened',
+    sort: 8,
+    items: [
+      { key: 'customer_archive', name: '客户档案', sort: 1 },
+      { key: 'cargo_archive', name: '货物档案', sort: 2 },
+    ],
+  },
+  {
     key: 'system',
     name: '系统管理',
     icon: 'Setting',
-    sort: 7,
+    sort: 9,
     items: [
       { key: 'system', name: '用户管理', sort: 1 },
       { key: 'system', name: '角色管理', sort: 2 },

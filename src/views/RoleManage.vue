@@ -240,8 +240,9 @@
     </Teleport>
 
     <!-- 新增 / 编辑角色弹窗 -->
+    <!-- ⭐ append-to-body：脱离 .content-wrapper 的 transform 包含块，弹窗才不会撑出页面滚动 -->
     <el-dialog v-model="formVisible" :title="isEdit ? '编辑角色' : '新增角色'" width="540px" top="15vh" destroy-on-close
-      :close-on-click-modal="false" class="role-form-dialog">
+      append-to-body :close-on-click-modal="false" class="role-form-dialog">
       <el-form :model="form" label-width="90px" label-position="right" size="default">
         <el-form-item label="角色名称" required>
           <el-input v-model="form.name" placeholder="请输入角色名称" maxlength="20" show-word-limit />
@@ -1699,5 +1700,28 @@ onBeforeUnmount(() => {
 }
 .role-org-popper .el-select-dropdown__item.is-selected::after {
   color: #c8102e;
+}
+
+/* ============================================================
+   ⭐ 弹窗尺寸锁在视口内（弹窗根元素就是 .el-dialog.xxx，
+     且 append-to-body 后脱离 scoped，规则必须写全局块）
+   规则只做布局，不动原有配色/内边距
+   ============================================================ */
+.el-dialog.role-form-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 15vh - 16px);
+  margin-bottom: 0;
+}
+
+.el-dialog.role-form-dialog>.el-dialog__header,
+.el-dialog.role-form-dialog>.el-dialog__footer {
+  flex: 0 0 auto;
+}
+
+.el-dialog.role-form-dialog>.el-dialog__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 </style>

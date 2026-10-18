@@ -32,6 +32,17 @@ const routes = [
     name: 'WaybillCreate',
     component: () => import('../views/Dashboard.vue'),
   },
+  // ⭐ 费用管理（与运输管理平级）
+  {
+    path: '/fee/stats',
+    name: 'FeeStats',
+    component: () => import('../views/Dashboard.vue'),
+  },
+  {
+    path: '/fee/config',
+    name: 'FeeApprovalSetting',
+    component: () => import('../views/Dashboard.vue'),
+  },
   {
     path: '/waybill/detail',
     name: 'WaybillDetail',
@@ -111,6 +122,30 @@ const routes = [
         name: 'OperationDriving',
         component: () => import('../views/Dashboard.vue'),
         meta: { title: '驾驶行为报表' }
+      }
+    ]
+  },
+
+  // ==========================================
+  // 👇 档案管理（客户档案 / 货物档案）
+  // ==========================================
+  {
+    path: '/archive',
+    name: 'Archive',
+    redirect: '/archive/customer',
+    meta: { title: '档案管理', icon: 'FolderOpened' },
+    children: [
+      {
+        path: 'customer',
+        name: 'CustomerArchive',
+        component: () => import('../views/Dashboard.vue'),
+        meta: { title: '客户档案' }
+      },
+      {
+        path: 'cargo',
+        name: 'CargoArchive',
+        component: () => import('../views/Dashboard.vue'),
+        meta: { title: '货物档案' }
       }
     ]
   },

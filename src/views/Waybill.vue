@@ -298,6 +298,18 @@
                   </template>
                 </el-table-column>
 
+                <el-table-column v-else-if="col.prop === 'fee'" :label="col.label"
+                  :min-width="col.minWidth" :align="col.align" :fixed="col.fixed || false">
+                  <template #default="{ row }">
+                    <div v-if="feeOf(row)" class="fee-cell">
+                      <span class="fee-total">¥{{ feeOf(row).total.toFixed(2) }}</span>
+                      <span v-if="feeOf(row).mine" class="fee-badge is-mine">待我审 {{ feeOf(row).mine }}</span>
+                      <span v-else-if="feeOf(row).pending" class="fee-badge">待审 {{ feeOf(row).pending }}</span>
+                    </div>
+                    <span v-else class="fee-none">—</span>
+                  </template>
+                </el-table-column>
+
                 <el-table-column v-else-if="col.prop === 'action'" :label="col.label"
                   :width="col.width || 100" :align="col.align" :fixed="col.fixed || false">
                   <template #default="{ row }">
@@ -492,7 +504,9 @@ const DEFAULT_COLUMNS = [
   { prop: 'carryQuantity', label: '承运数量', visible: true, fixed: false, minWidth: 100, align: 'center' },
   { prop: 'receiveNo', label: '接单编号', visible: true, fixed: false, minWidth: 130, align: 'center' },
   { prop: 'source', label: '运单来源', visible: true, fixed: false, minWidth: 100, align: 'center' },
+  { prop: 'creator', label: '发起人', visible: true, fixed: false, minWidth: 100, align: 'center' },
   { prop: 'createTime', label: '创建运单时间', visible: true, fixed: false, minWidth: 170, align: 'center' },
+  { prop: 'fee', label: '费用', visible: true, fixed: false, minWidth: 150, align: 'center' },
   { prop: 'action', label: '操作', visible: true, fixed: 'right', width: 130, align: 'center' },
 ]
 const columnConfig = ref(JSON.parse(JSON.stringify(DEFAULT_COLUMNS)))
@@ -744,7 +758,11 @@ const displayStatus = (row) => {
     if (t.status === '已结束') return '已结束'
     /* 还没开始跑的那条（组主 / 待重新指派）显示任务级状态：
        任务已经有人接了就不是「待接单」了 */
-    if (t.accepted && (row.status === '待接单' || row.status === '待重新指派')) return '执行中'
+    /* 用户 2026-10-18：常驻任务只要「没结束」且被接过，就是**执行中** ——
+       不能因为某一趟跑完了就显示「已完成」（任务本身还在有效期内、还能继续接）。
+       结束 / 暂停已在上面的分支优先返回。 */
+    if (t.accepted) return '执行中'
+    return '待接单'
   }
   return row.status
 }
@@ -779,6 +797,11 @@ const fetchData = async () => {
 
     query = applyIsolation(query)
 
+    /* ⭐ 常驻任务：列表里一个组只留「组主」（trip_seq=1），
+       司机每接一趟都会新建趟次行，不该每趟多出一条运单 —— 趟次进度进详情「物流状态」。
+       过滤放在查询层，分页/计数才准（用户 2026-10-18 拍板，小程序管理端同样处理）。 */
+    query = query.or('is_recurring.is.null,is_recurring.eq.false,trip_seq.eq.1')
+
     if (searchForm.waybillNo) query = query.ilike('waybill_no', '%' + searchForm.waybillNo + '%')
     if (searchForm.receiveNo) query = query.ilike('receive_no', '%' + searchForm.receiveNo + '%')
     if (searchForm.plate) query = query.ilike('vehicle', '%' + searchForm.plate + '%')
@@ -799,6 +822,8 @@ const fetchData = async () => {
 
     tableData.value = data || []
     total.value = count || 0
+    /* ⭐ 一次性聚合本页费用，别在单元格里逐行查 */
+    loadFeeSummary(data || [])
     /* ⭐ 常驻行的「物流状态」按**任务**算（有人接过就是执行中），见 loadRecurringTaskStatus */
     await loadRecurringTaskStatus(data || [])
     updateStats()
@@ -879,6 +904,51 @@ const rejectTooltipText = (row) => {
 // ============================================================
 // 搜索 / 重置 / 刷新
 // ============================================================
+/* ============================================================
+   ⭐ 费用列：本页运单的上报汇总（一次 in 查询）
+   ============================================================ */
+const feeMap = ref({})
+
+const feeOf = (row) => feeMap.value[row.waybill_no] || null
+
+const meInfo = (() => {
+  try { return JSON.parse(localStorage.getItem('currentUser') || '{}') } catch { return {} }
+})()
+const meIsMaster = meInfo.role === 'admin' || (meInfo.role === 'customer' && !meInfo.isSubAccount)
+
+const canApproveReport = (r) => {
+  if (!r || r.status !== '审核中') return false
+  const flow = Array.isArray(r.flow) ? r.flow : []
+  const step = flow[(Number(r.current_level) || 0) - 1]
+  if (!step) return false
+  if (step.approver_id && Number(step.approver_id) === Number(meInfo.id)) return true
+  return step.role === 'owner' && meIsMaster
+}
+
+const loadFeeSummary = async (rows) => {
+  const nos = (rows || []).map((r) => r.waybill_no).filter(Boolean)
+  if (!nos.length) { feeMap.value = {}; return }
+  try {
+    const { data, error } = await supabase
+      .from('reports')
+      .select('waybill_no,type,status,amount,current_level,flow')
+      .in('waybill_no', nos)
+    if (error) throw error
+
+    const map = {}
+    ;(data || []).forEach((r) => {
+      const m = map[r.waybill_no] || (map[r.waybill_no] = { total: 0, pending: 0, mine: 0 })
+      if (['expense', 'subsidy', 'loan', 'violation'].includes(r.type)) m.total += Number(r.amount) || 0
+      if (r.status === '审核中') m.pending += 1
+      if (canApproveReport(r)) m.mine += 1
+    })
+    feeMap.value = map
+  } catch (e) {
+    console.warn('[运单列表] 费用汇总失败（reports 表未初始化？）', e)
+    feeMap.value = {}
+  }
+}
+
 const handleSearch = () => { currentPage.value = 1; fetchData() }
 const handleReset = () => {
   Object.assign(searchForm, { org: '', source: '', waybillNo: '', receiveNo: '', plate: '', driver: '' })
@@ -903,7 +973,9 @@ const handleExport = () => {
     '货物名称': r.cargo, '货物数量': r.quantity, '运费': r.freight,
     '承运车辆': r.vehicle || '', '承运司机': r.driver || '',
     '承运数量': r.carry_quantity || 0, '接单编号': r.receive_no || '',
-    '运单来源': r.source || '', '创建时间': r.create_time || '',
+    '运单来源': r.source || '',
+    '发起人': r.creator || '',
+    '创建时间': r.create_time || '',
     '拒单原因': r.reject_reason || '', '拒单补充说明': r.reject_note || '',
     '拒单司机': r.reject_by || '', '拒单时间': r.reject_time || '',
     '累计被拒': r.reject_count || 0,
@@ -964,6 +1036,21 @@ const handleDelete = async (row) => {
   }
   try {
     await ElMessageBox.confirm('确定删除运单 ' + row.waybill_no + ' 吗？', '提示', { type: 'warning' })
+    /* ⭐ 常驻任务：列表里这一行是组主，删它必须连带整组趟次，
+       否则「头没了、趟次还在」，司机端还会看到这个组（用户 2026-10-18 报的 bug） */
+    if (row.is_recurring && row.recurring_group_no) {
+      const { error: e2 } = await supabase
+        .from('waybills')
+        .delete()
+        .eq('recurring_group_no', row.recurring_group_no)
+      if (e2) {
+        ElMessage.error('删除失败：' + e2.message)
+        return
+      }
+      ElMessage.success('已删除这个常驻任务（含全部趟次）')
+      await fetchData()
+      return
+    }
     let q = supabase.from('waybills').delete().eq('id', row.id)
 if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
 if (needOrgFilter.value && myOrgName.value) {
@@ -1830,4 +1917,39 @@ html, body {
   background: linear-gradient(135deg, #c8102e, #a00d24) !important;
   border-color: #c8102e !important;
 }
+
+.fee-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  line-height: 1.2;
+}
+
+.fee-total {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -.2px;
+}
+
+.fee-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #FEF3C7;
+  color: #B45309;
+  white-space: nowrap;
+}
+
+.fee-badge.is-mine {
+  background: #FEF2F2;
+  color: #c8102e;
+  font-weight: 600;
+}
+
+.fee-none {
+  color: #CBD5E1;
+}
+
 </style>

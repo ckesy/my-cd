@@ -1,11 +1,71 @@
 <template>
-  <div class="fullmap">
+  <div class="fullmap" :class="{ 'is-fs': focusFullscreen, 'is-focus': !!focusMode }">
     <div class="map-stage">
       <div id="map-container" class="map-container"></div>
 
       <svg ref="rangingSvgRef" class="ranging-svg" xmlns="http://www.w3.org/2000/svg"></svg>
 
-      <div class="top-bar">
+      <!-- ⭐ 沉浸态路线层（独立 SVG，不受地图滤镜影响） -->
+      <svg v-if="focusMode" ref="focusSvgRef" class="focus-svg" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="focusLineGrad" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0%" stop-color="#4338CA" />
+            <stop offset="55%" stop-color="#6366F1" />
+            <stop offset="100%" stop-color="#22D3EE" />
+          </linearGradient>
+          <filter id="focusGlow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="7" result="b" />
+            <feMerge>
+              <feMergeNode in="b" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <template v-if="focusSvgD">
+          <path :d="focusSvgD" fill="none" stroke="#4F46E5" stroke-width="18" stroke-linecap="round"
+            stroke-linejoin="round" opacity=".26" filter="url(#focusGlow)" />
+          <path :d="focusSvgD" fill="none" stroke="url(#focusLineGrad)" stroke-width="6" stroke-linecap="round"
+            stroke-linejoin="round" pathLength="100" :style="{ strokeDasharray: (focusGrow * 100) + ' 100' }" />
+          <path :d="focusSvgD" fill="none" stroke="#41548A" stroke-width="6" stroke-linecap="round"
+            stroke-linejoin="round" pathLength="100" :style="{ strokeDasharray: focusPct + ' 100' }" />
+          <path :d="focusSvgD" fill="none" stroke="#DFF9FF" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" class="focus-flow" opacity=".92" />
+        </template>
+
+        <template v-if="focusStartXY">
+          <g :transform="`translate(${focusStartXY.x} ${focusStartXY.y})`">
+            <circle r="8" fill="#0B1220" stroke="#818CF8" stroke-width="2.5" />
+            <circle r="2.8" fill="#A5B4FC" />
+            <text x="0" y="22" text-anchor="middle" fill="#C7D2FE" font-size="10.5"
+              font-weight="700">起点 · {{ focusMode.task.pickup || '--' }}</text>
+          </g>
+        </template>
+        <template v-if="focusEndXY">
+          <g :transform="`translate(${focusEndXY.x} ${focusEndXY.y})`">
+            <circle r="10" fill="#0B1220" stroke="#22D3EE" stroke-width="2.8" />
+            <circle r="3.6" fill="#67E8F9" />
+            <text x="0" y="-18" text-anchor="middle" fill="#A5F3FC" font-size="10.5"
+              font-weight="700">终点 · {{ focusMode.task.delivery || '--' }}</text>
+          </g>
+        </template>
+
+        <!-- 车辆 -->
+        <g :transform="`translate(${focusVehXY.x} ${focusVehXY.y})`">
+          <circle r="13" fill="#22D3EE" opacity=".2" class="fv-pulse-svg" />
+          <circle r="9" fill="rgba(34,211,238,.16)" stroke="rgba(103,232,249,.8)" stroke-width="1.2" />
+          <circle r="4.4" fill="#E0F2FE" />
+          <circle r="2.2" fill="#0EA5E9" />
+          <text y="-19" text-anchor="middle" fill="#E0F2FE" font-size="11"
+            font-weight="800">{{ focusMode.vehicle.plate }}</text>
+        </g>
+
+        <!-- 流光 -->
+        <circle v-if="focusCometVisible" :cx="focusCometXY.x" :cy="focusCometXY.y" r="4.6" fill="#F0FDFF"
+          filter="url(#focusGlow)" />
+      </svg>
+
+      <div v-if="!focusMode" class="top-bar">
         <div class="left-group">
           <div class="stats-pills">
             <div class="stat-pill" :class="{ active: statusFilter === 'all' }" @click="setStatusFilter('all')">
@@ -84,82 +144,194 @@
       </transition>
 
       <!-- 左侧悬浮面板 -->
-      <div class="floating-sidebar" :class="{ collapsed: isListCollapsed }"
-        :style="{ width: isListCollapsed ? '44px' : listWidth + 'px' }">
-        <div class="sidebar-content" :class="{ 'is-hidden': isListCollapsed }">
+      <div class="fm-dock" :class="{ 'is-collapsed': isListCollapsed }" :style="{ width: listWidth + 'px' }">
+        <div class="dock-panel" :class="{ collapsed: isListCollapsed }">
 
-          <div class="sidebar-filter">
-            <el-select v-model="selectedOrg" placeholder="请选择组织机构" size="small" style="width: 100%;" clearable>
-              <el-option label="全部车队" value=""></el-option>
-              <el-option v-for="org in orgOptions" :key="org" :label="org" :value="org"></el-option>
-            </el-select>
-            <el-select v-model="selectedStatus" placeholder="请选择车辆状态" size="small" style="width: 100%; margin-top: 8px;"
-              clearable>
-              <el-option v-for="s in statusOptions" :key="s" :label="s" :value="s"></el-option>
-            </el-select>
-            <div class="search-row">
-              <el-input v-model="searchKeyword" placeholder="车牌/昵称/车架" size="small" clearable>
+          <div class="side-filter">
+            <div class="f-row">
+              <el-select v-model="selectedOrg" placeholder="全部车队" size="small" clearable class="f-org">
+                <el-option label="全部车队" value="" />
+                <el-option v-for="org in orgOptions" :key="org" :label="org" :value="org" />
+              </el-select>
+              <el-select v-model="selectedStatus" placeholder="车况" size="small" clearable class="f-status">
+                <el-option v-for="s in statusOptions" :key="s" :label="s" :value="s" />
+              </el-select>
+            </div>
+            <div class="f-row">
+              <el-input v-model="searchKeyword" placeholder="车牌/昵称/车架" size="small" clearable class="f-kw">
                 <template #prefix><el-icon><Search /></el-icon></template>
               </el-input>
+              <button class="f-btn primary" @click="handleSearch">搜索</button>
+              <button class="f-btn" @click="resetAll">重置</button>
             </div>
-            <div class="filter-buttons">
-              <el-button size="small" class="btn-reset" @click="resetAll">
-                <el-icon><RefreshRight /></el-icon> 重置
-              </el-button>
-              <el-button size="small" type="primary" class="btn-search" @click="handleSearch">
-                <el-icon><Search /></el-icon> 搜索
-              </el-button>
+            <div class="task-chips">
+              <button v-for="c in taskChips" :key="c.key" class="tchip" :class="{ on: taskFilter === c.key }"
+                @click="setTaskFilter(c.key)">
+                {{ c.label }}<b v-if="c.count">{{ c.count }}</b>
+              </button>
             </div>
           </div>
 
           <div class="sidebar-list-header">
-            <el-icon class="list-icon"><Van /></el-icon>
+            <span class="hdot"></span>
             <span class="header-title">{{ rootNodeName }}</span>
-            <span class="list-count">({{ visibleVehicleCount }})</span>
-            <div class="collapse-btn" @click.stop="toggleList" title="收起">
-              <el-icon class="collapse-icon"><ArrowLeft /></el-icon>
+            <span class="list-count">{{ visibleVehicleCount }}</span>
+            <div v-if="waybillLoading" class="bill-loading"></div>
+            <div class="collapse-all" :class="{ off: !allExpanded }" :title="allExpanded ? '全部收起' : '全部展开'"
+              @click.stop="toggleAllOrgs">
+              <el-icon>
+                <Fold v-if="allExpanded" />
+                <Expand v-else />
+              </el-icon>
             </div>
           </div>
 
-          <div class="sidebar-tree" v-loading="treeLoading" element-loading-text="加载中…">
-            <el-tree v-if="displayTreeData.length > 0" ref="orgTreeRef" :data="displayTreeData" node-key="key"
-              :props="{ children: 'children', label: 'label' }" :default-expand-all="true" :expand-on-click-node="false"
-              highlight-current :indent="0" class="org-tree">
-              <template #default="{ data }">
-                <!-- 车辆节点 -->
-                <div v-if="data.type === 'vehicle'" class="tree-node tree-node-vehicle"
-                  :class="{ active: isVehicleHighlighted(data.plate), 'no-loc': !data.hasLocation }"
-                  :style="{ paddingLeft: (data.level || 0) * 18 + 'px' }" @click.stop="highlightVehicle(data.plate)">
-                  <span class="vehicle-plate">{{ data.label }}</span>
-                  <span class="vehicle-status-tag" :class="data.status">{{ data.status }}</span>
-                </div>
+          <div class="sidebar-tree" v-loading="treeLoading || loadingVehicles" element-loading-text="加载车辆中…">
+            <transition-group v-if="flatRows.length" name="rowfade" tag="div" class="row-list">
+              <div v-for="(row, idx) in flatRows" :key="row.key" class="row-item"
+                :class="{ 'no-guide': row.depth === 0 }"
+                :style="{ '--d': row.depth, animationDelay: Math.min(idx, 14) * 0.02 + 's' }">
 
-                <!-- 组织节点 -->
-                <div v-else class="tree-node tree-node-org" :class="'type-' + data.type"
-                  :style="{ paddingLeft: (data.level || 0) * 18 + 'px' }">
-                  <span class="org-label">{{ data.label }}</span>
-                  <span class="org-count" :class="{ empty: data.vehicleCount === 0 }">
-                    ({{ data.vehicleCount }})
+                <!-- 机构 -->
+                <div v-if="row.type === 'org'" class="trow"
+                  :class="['lv' + row.level, { open: row.open, empty: !row.count }]" @click="toggleOrg(row.key)">
+                  <span class="caret">▸</span>
+                  <span class="lvmark" :class="'l' + row.level"></span>
+                  <span class="tname">{{ row.name }}</span>
+                  <span class="tcount">{{ row.count }}</span>
+                  <span v-if="row.taskCount" class="ttask">{{ row.taskCount }} 单</span>
+                  <span v-if="row.count" class="tmix">
+                    <i class="m-run" :style="{ width: row.mix.run + '%' }"></i>
+                    <i class="m-stop" :style="{ width: row.mix.stop + '%' }"></i>
+                    <i class="m-off" :style="{ width: row.mix.off + '%' }"></i>
                   </span>
                 </div>
-              </template>
-            </el-tree>
 
-            <div v-if="visibleVehicleCount === 0" class="list-empty">
+                <!-- 车辆 -->
+                <div v-else-if="row.type === 'vehicle'" class="vrow" :class="[
+                  { two: !!row.task, 'has-task': !!row.task, active: highlightedPlate === row.vehicle.plate, noloc: !row.vehicle.hasLocation },
+                  row.task ? 'tone-' + taskTone(row.task) : 'tone-none',
+                ]" @click="focusVehicle(row.vehicle)">
+                  <div class="vr1">
+                    <span class="vdot" :class="row.vehicle.status"></span>
+                    <span class="vplate">{{ row.vehicle.plate }}</span>
+                    <span v-if="row.task" class="tbadge" :class="taskTone(row.task)">{{ taskLabel(row.task) }}</span>
+                    <span v-else class="tbadge idle">空闲</span>
+                    <span v-if="row.task && row.progress && row.progress.ready" class="vpct">
+                      {{ Math.round(row.progress.pct) }}%
+                    </span>
+                    <span v-else class="vstat" :class="row.vehicle.status">{{ row.vehicle.status }}</span>
+                  </div>
+                  <div v-if="row.task" class="vr2">
+                    <span class="vroute">{{ shortPlace(row.task.pickup) }} → {{ shortPlace(row.task.delivery) }}</span>
+                    <span class="vbar"><i :style="{ width: (row.progress && row.progress.ready ? row.progress.pct : 0) + '%' }"></i></span>
+                    <span class="veta">{{ rowMeta(row) }}</span>
+                  </div>
+                </div>
+
+                <!-- 还有更多车辆 -->
+                <div v-else class="more-row" :style="{ paddingLeft: (row.depth * 12 + 19) + 'px' }"
+                  @click="expandVehicles(row.expandKey)">
+                  <span class="more-ic">+</span>
+                  还有 {{ row.rest }} 台车
+                </div>
+              </div>
+            </transition-group>
+
+            <div v-if="!flatRows.length && !loadingVehicles" class="list-empty">
               <el-icon><Search /></el-icon>
               <span>无匹配车辆</span>
             </div>
           </div>
         </div>
 
-        <div class="sidebar-collapsed" :class="{ 'is-visible': isListCollapsed }">
-          <div class="collapse-btn-vertical" @click.stop="toggleList" title="展开">
-            <el-icon class="collapse-icon"><ArrowRight /></el-icon>
+        <!-- 右边缘把手：收起 / 展开整个列表 -->
+        <button class="dock-handle" :class="{ collapsed: isListCollapsed }" @click.stop="toggleList"
+          :title="isListCollapsed ? '展开列表' : '收起列表'">
+          <svg v-if="!isListCollapsed" viewBox="0 0 24 24" width="13" height="13" fill="none"
+            stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 5 8 12 15 19" />
+          </svg>
+          <svg v-else viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+            stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 5 16 12 9 19" />
+          </svg>
+        </button><div class="resizer" v-show="!isListCollapsed" @mousedown="startResize"></div>
+      </div>
+
+      <!-- ⭐ 沉浸式物流概览（C1） -->
+      <transition name="focusfade">
+        <div v-if="focusMode" class="focus-layer">
+          <!-- 顶部 -->
+          <div class="focus-top">
+            <button class="fbtn back" @click="exitFocus">← 返回全图</button>
+            <div class="fplate">
+              <span class="live"></span>
+              <span>{{ focusMode.vehicle.plate }} · {{ taskLabel(focusMode.task) }}</span>
+            </div>
+
+            <div class="focus-metrics">
+              <div class="fmetric accent">
+                <span class="k">预计送达</span>
+                <span class="v">{{ focusEta }}</span>
+              </div>
+              <div class="fmetric">
+                <span class="k">剩余里程</span>
+                <span class="v">{{ Math.round(focusRemainKm) }}<small>km</small></span>
+              </div>
+              <div class="fmetric">
+                <span class="k">剩余时间</span>
+                <span class="v">{{ focusRemainText }}</span>
+              </div>
+              <button class="fbtn icon" :class="{ on: focusFullscreen }" @click="toggleFocusFullscreen"
+                :title="focusFullscreen ? '退出全屏' : '全屏'">
+                <svg v-if="!focusFullscreen" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+                </svg>
+                <svg v-else viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+                </svg>
+                <span class="fbtn-txt">{{ focusFullscreen ? '退出全屏' : '全屏' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 右侧节点轴 -->
+          <div class="focus-side">
+            <div class="fs-title">任务进度</div>
+            <div class="fs-timeline">
+              <div v-for="(n, i) in focusNodes" :key="n.label" class="fs-node" :class="{ on: n.on, done: n.done }"
+                :style="{ animationDelay: 0.15 + i * 0.06 + 's' }">
+                <span class="fs-dot"></span>
+                <span class="fs-label">{{ n.label }}</span>
+                <span class="fs-time">{{ n.time || '' }}</span>
+              </div>
+            </div>
+            <div v-if="focusMode.task.is_recurring" class="fs-tip">
+              常驻任务 · 今日第 {{ focusMode.task.trip_seq || 1 }} 次
+            </div>
+          </div>
+
+          <!-- 底部进度带 -->
+          <div class="focus-bottom">
+            <div class="fb-row">
+              <span><b>{{ focusMode.task.pickup || '--' }}</b> {{ focusStartText }}</span>
+              <span>已行 <b>{{ Math.round(focusTraveledKm) }}</b> / 计划 <b>{{ focusPlanKm || '--' }}</b> km</span>
+              <span><b>{{ focusMode.task.delivery || '--' }}</b> 预计 {{ focusEta }}</span>
+            </div>
+            <div class="fb-track">
+              <div class="fb-fill" :style="{ width: focusPct + '%' }"></div>
+              <div class="fb-knob" :style="{ left: focusPct + '%' }"></div>
+            </div>
+            <div class="fb-row sub">
+              <span>{{ focusSpeedText }}</span>
+              <span>进度 {{ Math.round(focusPct) }}% · 剩余 {{ Math.round(focusRemainKm) }} km · 预计 {{ focusEta }} 送达</span>
+            </div>
           </div>
         </div>
-
-        <div class="resizer" v-show="!isListCollapsed" @mousedown="startResize"></div>
-      </div>
+      </transition>
 
       <transition name="fade">
         <div v-if="!isMapReady || loadingVehicles" class="map-loading-overlay">
@@ -194,16 +366,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, onActivated, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, onActivated, onDeactivated, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Van, Refresh, Search, RefreshRight,
   ArrowLeft, ArrowRight, WarningFilled,
-  Brush, Aim, Guide, Position,
+  Brush, Aim, Guide, Position, Fold, Expand,
 } from '@element-plus/icons-vue'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import { supabase } from '@/utils/supabase'
 import dayjs from 'dayjs'
+import { loadVehicleTrip, computeProgress, traveledMetersSince } from '@/utils/waybillProgress'
 
 const AMAP_KEY = '273f5c474604b71906674aac159b8f45'
 const DONGFENG_API_URL = 'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com/dongfeng-lostlocation'
@@ -464,6 +637,196 @@ const needOrgFilter = computed(() => {
 })
 
 // ============================================================
+// ⭐ 运单任务联动（车辆 × 任务）
+// ============================================================
+const ACTIVE_STATUS = ['待接单', '待重新指派', '待装车', '装车中', '装车完成', '已发车', '已到达']
+const STATUS_WEIGHT = {
+  '待接单': 1, '待重新指派': 1, '待装车': 2, '装车中': 2,
+  '装车完成': 3, '已发车': 4, '已到达': 5,
+}
+
+const waybillLoading = ref(false)
+const taskByPlate = ref({})
+const progressByPlate = ref({})
+const taskFilter = ref('all')
+
+const normStatus = (s) => {
+  if (s === '装车中') return '待装车'
+  if (s === '待重新指派') return '待接单'
+  return s || '--'
+}
+
+const taskLabel = (t) => normStatus(t && t.status)
+const taskTone = (t) => {
+  const s = normStatus(t && t.status)
+  if (s === '已发车') return 'run'
+  if (s === '已到达') return 'done'
+  if (s === '待装车' || s === '装车完成') return 'load'
+  return 'wait'
+}
+
+const parseAssignments = (rec) => {
+  let arr = rec && rec.assignments
+  if (typeof arr === 'string') {
+    try { arr = JSON.parse(arr) } catch { arr = [] }
+  }
+  return Array.isArray(arr) ? arr : []
+}
+
+/** 运单 → 车牌集合（多指派时 waybills.vehicle 会退化成「多种 / N辆」，必须走 assignments） */
+const platesOfWaybill = (rec) => {
+  const set = new Set()
+  parseAssignments(rec).forEach(a => {
+    const method = a && (a.method || a.assignMethod)
+    if (method !== 'vehicle') return
+    ;(a.items || []).forEach(i => {
+      const t = String((i && i.target) || '').trim()
+      if (t) set.add(t)
+    })
+  })
+  const v = String((rec && rec.vehicle) || '').trim()
+  if (!set.size && v && v !== '--' && v !== '多种' && !/辆$/.test(v) && !/人$/.test(v)) set.add(v)
+  return [...set]
+}
+
+const loadWaybills = async () => {
+  waybillLoading.value = true
+  try {
+    let q = supabase.from('waybills')
+      .select('id,waybill_no,status,pickup,delivery,pickup_time,plan_time,vehicle,driver,assignments,' +
+        'accept_time,depart_time,arrive_time,finish_time,create_time,plan_distance,plan_duration,' +
+        'pickup_lng,pickup_lat,delivery_lng,delivery_lat,is_recurring,recurring_group_no,trip_seq,transport_mode,owner_account')
+      .in('status', ACTIVE_STATUS)
+      .order('create_time', { ascending: false })
+      .limit(400)
+    if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
+    const { data, error } = await q
+    if (error) throw error
+
+    const map = {}
+    ;(data || []).forEach(rec => {
+      platesOfWaybill(rec).forEach(plate => {
+        const cur = map[plate]
+        if (!cur || (STATUS_WEIGHT[rec.status] || 0) > (STATUS_WEIGHT[cur.status] || 0)) map[plate] = rec
+      })
+    })
+    taskByPlate.value = map
+  } catch (e) {
+    console.warn('[FullMap] 运单加载失败：', e)
+    taskByPlate.value = {}
+  } finally {
+    waybillLoading.value = false
+  }
+}
+
+const progressPending = new Set()
+const ensureProgress = async (plate, task, force = false) => {
+  if (!plate || !task) return null
+  const cached = progressByPlate.value[plate]
+  if (!force && cached && Date.now() - cached.ts < 25000) return cached
+  if (progressPending.has(plate)) return cached || null
+
+  progressPending.add(plate)
+  try {
+    const rec = { ...task, vehicle: plate }
+    const res = await loadVehicleTrip(rec, {
+      since: task.depart_time || task.accept_time || task.create_time,
+    })
+    // ⭐ 轨迹拉不到（超时 / 无数据）时保留上一次的好数据，不要算成「已行 0」
+    if (res.error && !(res.points && res.points.length)) return cached || null
+    const sinceIso = task.depart_time || task.accept_time
+    const traveled = res.points && res.points.length && sinceIso
+      ? traveledMetersSince(res.points, sinceIso)
+      : 0
+    const p = computeProgress({
+      traveledMeters: traveled,
+      planDistance: task.plan_distance,
+      planDuration: task.plan_duration,
+      lastReportAt: res.current && res.current.reportAt,
+    })
+    const value = {
+      ...p,
+      pct: p.ready ? Math.round(p.doneRatio * 100) : 0,
+      ts: Date.now(),
+      current: res.current || null,
+      error: res.error || '',
+    }
+    progressByPlate.value = { ...progressByPlate.value, [plate]: value }
+    return value
+  } catch (e) {
+    console.warn('[FullMap] 进度计算失败：', plate, e)
+    return null
+  } finally {
+    progressPending.delete(plate)
+  }
+}
+
+/** 后台补进度：只给「已发车 / 已到达」的车算，并发 2，最多 8 台 */
+const prefetchProgress = async () => {
+  const targets = Object.entries(taskByPlate.value)
+    .filter(([plate, t]) => ['已发车', '已到达'].includes(t.status) && vehicles.value.some(v => v.plate === plate))
+    .slice(0, 8)
+  for (let i = 0; i < targets.length; i += 2) {
+    // eslint-disable-next-line no-await-in-loop
+    await Promise.all(targets.slice(i, i + 2).map(([p, t]) => ensureProgress(p, t)))
+  }
+}
+
+/** 地点名压缩：去掉括号备注、超长截断 */
+const shortPlace = (name) => {
+  const s = String(name || '').trim()
+  if (!s || s === '未指定') return '未指定'
+  const cut = s.replace(/[（(].*?[)）]/g, '')
+  return cut.length > 6 ? cut.slice(0, 6) + '…' : cut
+}
+
+const rowMeta = (row) => {
+  const p = row.progress
+  if (p && p.ready) {
+    if (p.stale) return '定位停更'
+    return p.remainKm < 1 ? '即将到达' : `剩 ${Math.round(p.remainKm)}km`
+  }
+  const t = row.task
+  if (t && t.plan_time) return dayjs(t.plan_time).format('MM-DD HH:mm')
+  return '待发车'
+}
+
+const taskOf = (v) => taskByPlate.value[v.plate] || null
+
+/** 业务过滤（任务 chip 之前的那一层） */
+const preTaskVehicles = computed(() => {
+  return vehicles.value.filter(v => {
+    if (statusFilter.value !== 'all' && v.status !== statusFilter.value) return false
+    if (selectedOrg.value && (v.org || v.customer_name || '') !== selectedOrg.value) return false
+    if (selectedStatus.value && v.status !== selectedStatus.value) return false
+    if (searchKeyword.value) {
+      const kw = searchKeyword.value.trim().toLowerCase()
+      const hay = `${v.plate || ''} ${v.nickname || ''} ${v.vin || ''}`.toLowerCase()
+      if (!hay.includes(kw)) return false
+    }
+    return true
+  })
+})
+
+const taskChips = computed(() => {
+  const list = preTaskVehicles.value
+  const withTask = list.filter(v => taskOf(v))
+  const transit = withTask.filter(v => ['已发车', '已到达'].includes(taskOf(v).status))
+  const loadingT = withTask.filter(v => ['待接单', '待装车', '装车完成'].includes(taskOf(v).status))
+  return [
+    { key: 'all', label: '全部', count: list.length },
+    { key: 'task', label: '有任务', count: withTask.length },
+    { key: 'transit', label: '在途', count: transit.length },
+    { key: 'loading', label: '待装', count: loadingT.length },
+    { key: 'idle', label: '空闲', count: list.length - withTask.length },
+  ]
+})
+
+const setTaskFilter = (key) => {
+  taskFilter.value = taskFilter.value === key ? 'all' : key
+}
+
+// ============================================================
 // 加载车辆
 // ============================================================
 const loadVehicles = async (forceRefresh = false) => {
@@ -661,7 +1024,7 @@ const initMap = async () => {
     AMap = await AMapLoader.load({
       key: AMAP_KEY,
       version: '2.0',
-      plugins: ['AMap.Geocoder', 'AMap.TileLayer.Satellite', 'AMap.TileLayer.RoadNet'],
+      plugins: ['AMap.Geocoder', 'AMap.TileLayer.Satellite', 'AMap.TileLayer.RoadNet', 'AMap.Driving'],
     })
     map = new AMap.Map('map-container', {
       zoom: 5, center: [107, 33],
@@ -677,7 +1040,9 @@ const initMap = async () => {
     })
     map.on('click', onMapClick)
     map.on('mapmove', updateAllSvgLines)
+    map.on('mapmove', onFocusMapMove)
     map.on('zoomchange', updateAllSvgLines)
+    map.on('zoomchange', onFocusMapMove)
     addMarkers()
     isMapReady.value = true
     updateMarkersVisibility()
@@ -1143,11 +1508,22 @@ const addMarkers = () => {
     plateSpan.textContent = v.plate
     container.appendChild(iconWrap)
     container.appendChild(plateSpan)
+
+    // ⭐ 有任务的车，标记下面挂一枚任务徽标
+    const vTask = taskByPlate.value[v.plate]
+    if (vTask) {
+      const badge = document.createElement('span')
+      badge.className = 'marker-task ' + taskTone(vTask)
+      badge.textContent = taskLabel(vTask)
+      container.appendChild(badge)
+    }
+    container.classList.toggle('has-task', !!vTask)
+
     const marker = new AMap.Marker({
       position: [v.lng, v.lat],
       content: container,
       offset: new AMap.Pixel(-19, -19),
-      zIndex: 1,
+      zIndex: vTask ? 6 : 1,
       extData: { plate: v.plate },
     })
     marker.on('click', () => {
@@ -1184,6 +1560,12 @@ const highlightMarker = (marker) => {
   if (c) c.classList.add('hovered')
 }
 
+const fmtEta = (p) => {
+  if (!p || !p.ready) return '--:--'
+  if (p.stale) return '定位停更'
+  return dayjs(p.etaMs).format('HH:mm')
+}
+
 const openPopup = (vehicle, marker) => {
   highlightedPlate.value = vehicle.plate
   highlightMarker(marker)
@@ -1193,19 +1575,72 @@ const openPopup = (vehicle, marker) => {
   let dayOffsetText = ''
   if (vehicle.dayOffset === 1) dayOffsetText = '📅 昨天的数据'
   else if (vehicle.dayOffset === 2) dayOffsetText = '📅 前天的数据'
+
+  const task = taskByPlate.value[vehicle.plate] || null
+  const p = progressByPlate.value[vehicle.plate] || null
+  const pct = p && p.ready ? Math.round(p.doneRatio * 100) : 0
+  const tone = task ? taskTone(task) : ''
+
+  /* ⭐ 有任务才渲染任务区 + 主按钮；没任务保持原样 */
+  const taskBlock = task ? `
+      <div class="amap-popup-task">
+        <div class="apt-route">
+          <span class="apt-place">${task.pickup || '--'}</span>
+          <span class="apt-arrow">→</span>
+          <span class="apt-place">${task.delivery || '--'}</span>
+        </div>
+        <div class="apt-bar">
+          <span class="apt-badge ${tone}">${taskLabel(task)}</span>
+          <span class="apt-track"><i style="width:${pct}%"></i></span>
+          <b class="apt-pct">${p ? pct + '%' : '--'}</b>
+        </div>
+        <div class="apt-meta">
+          <span>剩 <b>${p && p.ready ? Math.round(p.remainKm) : '--'}</b> km</span>
+          <span>预计 <b>${fmtEta(p)}</b> 送达</span>
+          <span>已行 ${p && p.ready ? Math.round(p.traveledKm) : '--'} km</span>
+        </div>
+        <button class="apt-go" data-action="focus">查看物流概览 →</button>
+      </div>` : ''
+
+  const infoBlock = task ? `
+      <div class="amap-popup-grid">
+        <div class="pg-item"><span>机构</span><b title="${vehicle.org || ''}">${vehicle.org || '--'}</b></div>
+        <div class="pg-item"><span>司机</span><b>${vehicle.driver || '--'}</b></div>
+        <div class="pg-item"><span>燃料</span><b>${vehicle.fuel_type || '--'}</b></div>
+        <div class="pg-item"><span>方向</span><b>${(vehicle.direction ?? 0)}°</b></div>
+        <div class="pg-item"><span>ACC</span><b>${vehicle.accStatus || '--'}</b></div>
+        <div class="pg-item"><span>上报</span><b class="mono">${(vehicle.reportTime || '--').slice(11)}</b></div>
+      </div>` : `
+      <div class="amap-popup-info">
+        <div class="amap-popup-row"><span class="amap-popup-label">所属机构</span><span class="amap-popup-value">${vehicle.org || '--'}</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">司机</span><span class="amap-popup-value">${vehicle.driver || '--'}</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">燃料类型</span><span class="amap-popup-value">${vehicle.fuel_type || '--'}</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">行驶方向</span><span class="amap-popup-value">${(vehicle.direction ?? 0)}°</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">ACC状态</span><span class="amap-popup-value">${vehicle.accStatus || '--'}</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">上报时间</span><span class="amap-popup-value mono">${vehicle.reportTime || '--'}</span></div>
+        <div class="amap-popup-row"><span class="amap-popup-label">当前位置</span><span class="amap-popup-value mono">${vehicle.location || '--'}</span></div>
+      </div>`
+
+  const actionsBlock = task ? `
+      <div class="amap-popup-actions compact">
+        <button class="amap-popup-iconbtn" data-action="track" title="实时跟踪">◎</button>
+        <button class="amap-popup-iconbtn" data-action="playback" title="轨迹回放">↺</button>
+      </div>` : `
+      <div class="amap-popup-actions">
+        <button class="amap-popup-btn" data-action="track">实时跟踪</button>
+        <button class="amap-popup-btn" data-action="playback">轨迹回放</button>
+      </div>`
+
   const html = `
-    <div class="amap-custom-popup ${statusClass}">
+    <div class="amap-custom-popup ${statusClass} ${task ? 'has-task' : 'no-task'}">
       <div class="amap-popup-accent"></div>
       <div class="amap-popup-close">×</div>
       <div class="amap-popup-header">
         <span class="amap-popup-plate">${vehicle.plate || '--'}</span>
         <span class="amap-popup-status ${statusClass}">${vehicle.status}</span>
+        <span class="amap-popup-vin-inline">VIN …${String(vehicle.vin || '').slice(-7) || '--'}</span>
       </div>
       ${dayOffsetText ? `<div class="amap-popup-dayoffset">${dayOffsetText}</div>` : ''}
-      <div class="amap-popup-vin">
-        <span class="vin-label">VIN</span>
-        <span class="vin-value">${vehicle.vin || '--'}</span>
-      </div>
       <div class="amap-popup-metrics">
         <div class="metric-card">
           <span class="metric-label">当前速度</span>
@@ -1216,20 +1651,10 @@ const openPopup = (vehicle, marker) => {
           <span class="metric-value">${(vehicle.altitude ?? 0).toFixed(1)}<small>m</small></span>
         </div>
       </div>
+      ${taskBlock}
       <div class="amap-popup-divider"></div>
-      <div class="amap-popup-info">
-        <div class="amap-popup-row"><span class="amap-popup-label">所属机构</span><span class="amap-popup-value">${vehicle.org || '--'}</span></div>
-        <div class="amap-popup-row"><span class="amap-popup-label">司机</span><span class="amap-popup-value">${vehicle.driver || '--'}</span></div>
-        <div class="amap-popup-row"><span class="amap-popup-label">燃料类型</span><span class="amap-popup-value">${vehicle.fuel_type || '--'}</span></div>
-        <div class="amap-popup-row"><span class="amap-popup-label">行驶方向</span><span class="amap-popup-value">${(vehicle.direction ?? 0)}°</span></div>
-        <div class="amap-popup-row"><span class="amap-popup-label">ACC状态</span><span class="amap-popup-value">${vehicle.accStatus || '--'}</span></div>
-        <div class="amap-popup-row"><span class="amap-popup-label">上报时间</span><span class="amap-popup-value mono">${vehicle.reportTime || '--'}</span></div>
-        <div class="amap-popup-row"><span class="amap-popup-label">当前位置</span><span class="amap-popup-value mono">${vehicle.location || '--'}</span></div>
-      </div>
-      <div class="amap-popup-actions">
-        <button class="amap-popup-btn" data-action="track">实时跟踪</button>
-        <button class="amap-popup-btn" data-action="playback">轨迹回放</button>
-      </div>
+      ${infoBlock}
+      ${actionsBlock}
     </div>
   `
   infoWindow.setContent(html)
@@ -1237,13 +1662,30 @@ const openPopup = (vehicle, marker) => {
   setTimeout(() => {
     const closeBtn = document.querySelector('.amap-popup-close')
     if (closeBtn) closeBtn.onclick = closePopup
-    document.querySelectorAll('.amap-popup-btn').forEach(btn => {
+    const goBtn = document.querySelector('.apt-go')
+    if (goBtn) {
+      goBtn.onclick = (e) => {
+        e.stopPropagation()
+        enterFocus(vehicle, task)
+      }
+    }
+    document.querySelectorAll('.amap-popup-btn, .amap-popup-iconbtn').forEach(btn => {
       btn.onclick = () => {
         const action = btn.getAttribute('data-action')
         ElMessage.info(action === 'track' ? '实时跟踪功能开发中' : '轨迹回放功能开发中')
       }
     })
-  }, 50)
+  }, 30)
+
+  // 第一次打开时补算进度，算完再刷一次卡片
+  if (task && !p) {
+    ensureProgress(vehicle.plate, task).then(v => {
+      if (v && highlightedPlate.value === vehicle.plate) {
+        const m = markerMap.get(vehicle.plate)
+        if (m) openPopup(vehicle, m)
+      }
+    })
+  }
 }
 
 const closePopup = () => {
@@ -1292,93 +1734,262 @@ const orgTreeRef = ref(null)
 const treeLoading = ref(false)
 
 const filteredVehicles = computed(() => {
-  return vehicles.value.filter(v => {
-    if (statusFilter.value !== 'all' && v.status !== statusFilter.value) return false
-    if (selectedOrg.value) {
-      const org = v.org || v.customer_name || ''
-      if (org !== selectedOrg.value) return false
-    }
-    if (selectedStatus.value && v.status !== selectedStatus.value) return false
-    if (searchKeyword.value) {
-      const kw = searchKeyword.value.trim().toLowerCase()
-      const haystack = `${v.plate || ''} ${v.nickname || ''} ${v.vin || ''}`.toLowerCase()
-      if (!haystack.includes(kw)) return false
-    }
+  return preTaskVehicles.value.filter(v => {
+    const t = taskOf(v)
+    if (taskFilter.value === 'task') return !!t
+    if (taskFilter.value === 'transit') return !!t && ['已发车', '已到达'].includes(t.status)
+    if (taskFilter.value === 'loading') return !!t && ['待接单', '待装车', '装车完成'].includes(t.status)
+    if (taskFilter.value === 'idle') return !t
     return true
   })
 })
 
 const visibleVehicleCount = computed(() => filteredVehicles.value.length)
 
-const buildVehicleNode = (v, level = 0) => ({
-  key: 'vehicle-' + (v.id || v.plate),
-  type: 'vehicle',
-  label: v.plate || '--',
-  plate: v.plate,
-  status: v.status,
-  hasLocation: v.hasLocation,
-  vehicle: v,
-  level,
+// ============================================================
+// ⭐ 组织树：用 parent_id 真建树（根 → 二级 → 三级 → 车辆）
+// ============================================================
+const expandedOrgs = ref(new Set())
+const expandedVehicles = ref(new Set())
+const VEH_PAGE = 6
+const TREE_KEY = 'fullmap_tree_expanded'
+let treeInited = false
+
+const orgChildrenMap = computed(() => {
+  const m = new Map()
+  organizations.value.forEach(o => {
+    const pid = o.parent_id == null ? '__root__' : String(o.parent_id)
+    if (!m.has(pid)) m.set(pid, [])
+    m.get(pid).push(o)
+  })
+  return m
 })
 
-const displayTreeData = computed(() => {
-  const list = filteredVehicles.value
-  const orgs = organizations.value
+const rootOrgs = computed(() => {
+  const list = organizations.value
+  if (!list.length) return []
+  let roots = list.filter(o => o.is_root === true || Number(o.level) === 1 || !o.parent_id)
+  if (!roots.length) {
+    const ids = new Set(list.map(o => String(o.id)))
+    roots = list.filter(o => !o.parent_id || !ids.has(String(o.parent_id)))
+  }
+  return roots.slice().sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh-CN'))
+})
 
-  const orgVehiclesMap = {}
-  const rootLevelVehicles = []
-  const unassigned = []
-
-  list.forEach(v => {
-    const orgName = v.org || v.customer_name || ''
-    if (!orgName) {
-      unassigned.push(v)
-    } else if (orgName === rootNodeName) {
-      rootLevelVehicles.push(v)
-    } else {
-      if (!orgVehiclesMap[orgName]) orgVehiclesMap[orgName] = []
-      orgVehiclesMap[orgName].push(v)
-    }
+const vehiclesByOrgName = computed(() => {
+  const m = new Map()
+  filteredVehicles.value.forEach(v => {
+    const name = String(v.org || v.customer_name || '').trim() || '未分配机构'
+    if (!m.has(name)) m.set(name, [])
+    m.get(name).push(v)
   })
+  return m
+})
 
-  const buildOrgChildren = (parentId, level = 0) => {
-    const childOrgs = orgs.filter(o => o.parent_id === parentId)
-    const nodes = []
-    let total = 0
-    childOrgs.forEach(o => {
-      const sub = buildOrgChildren(o.id, level + 1)
-      const ownVehicles = sortByStatusPriority(orgVehiclesMap[o.name] || [])
-      const vehicleNodes = ownVehicles.map(v => buildVehicleNode(v, level))
-      const count = sub.total + vehicleNodes.length
-      total += count
-      if (count > 0) {
-        nodes.push({
-          key: 'org-' + o.id,
-          type: 'org',
-          label: o.name,
-          vehicleCount: count,
-          level,
-          children: [...sub.nodes, ...vehicleNodes],
-        })
-      }
-    })
-    return { nodes, total }
+/** 车辆排序：有任务优先 → 任务状态靠前 → 车牌 */
+const sortVehicles = (list) => list.slice().sort((a, b) => {
+  const ta = taskOf(a)
+  const tb = taskOf(b)
+  if (!!tb !== !!ta) return tb ? 1 : -1
+  if (ta && tb) {
+    const w = (STATUS_WEIGHT[tb.status] || 0) - (STATUS_WEIGHT[ta.status] || 0)
+    if (w) return w
+  }
+  return String(a.plate || '').localeCompare(String(b.plate || ''), 'zh-CN')
+})
+
+const buildNode = (org, depth) => {
+  const kids = (orgChildrenMap.value.get(String(org.id)) || [])
+    .slice()
+    .sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh-CN'))
+    .map(k => buildNode(k, depth + 1))
+
+  const direct = sortVehicles(vehiclesByOrgName.value.get(org.name) || [])
+  let count = direct.length
+  let taskCount = direct.filter(v => taskOf(v)).length
+  const mix = { run: 0, stop: 0, off: 0 }
+  direct.forEach(v => {
+    if (v.status === '行驶') mix.run++
+    else if (v.status === '静止') mix.stop++
+    else mix.off++
+  })
+  kids.forEach(k => {
+    count += k.count
+    taskCount += k.taskCount
+    mix.run += k.mix.run
+    mix.stop += k.mix.stop
+    mix.off += k.mix.off
+  })
+  const total = Math.max(1, count)
+  return {
+    key: 'org:' + org.id,
+    id: org.id,
+    name: org.name,
+    level: Number(org.level) || (depth + 1),
+    depth,
+    children: kids,
+    vehicles: direct,
+    count,
+    taskCount,
+    mix: {
+      run: (mix.run / total) * 100,
+      stop: (mix.stop / total) * 100,
+      off: (mix.off / total) * 100,
+    },
+  }
+}
+
+const orgTree = computed(() => rootOrgs.value.map(o => buildNode(o, 0)))
+
+const flatRows = computed(() => {
+  const rows = []
+  const searching = !!searchKeyword.value.trim()
+
+  const pushVehicles = (node, depth) => {
+    const all = node.vehicles
+    if (!all.length) return
+    const expandKey = 'veh:' + node.key
+    const showAll = searching || expandedVehicles.value.has(expandKey)
+    const shown = showAll ? all : all.slice(0, VEH_PAGE)
+    shown.forEach(v => rows.push({
+      type: 'vehicle',
+      key: 'v:' + v.plate,
+      depth,
+      vehicle: v,
+      task: taskOf(v),
+      progress: progressByPlate.value[v.plate] || null,
+    }))
+    if (shown.length < all.length) {
+      rows.push({
+        type: 'more', key: 'more:' + node.key, depth, expandKey,
+        rest: all.length - shown.length,
+      })
+    }
   }
 
-  const root = buildOrgChildren(null, 1)
+  const walk = (node) => {
+    const open = searching ? true : expandedOrgs.value.has(node.key)
+    rows.push({
+      type: 'org', key: node.key, name: node.name, level: node.level, depth: node.depth,
+      count: node.count, taskCount: node.taskCount, mix: node.mix, open,
+    })
+    if (!open) return
+    // ⭐ 机构优先：先把子机构铺完，再放本机构直属车辆，
+    //    否则一个机构几十台车会把下面的机构全顶走
+    node.children.forEach(walk)
+    pushVehicles(node, node.depth + 1)
+  }
 
-  const rootVehicleNodes = sortByStatusPriority(rootLevelVehicles).map(v => buildVehicleNode(v, 0))
-  const unassignedNodes = sortByStatusPriority(unassigned).map(v => buildVehicleNode(v, 0))
+  if (orgTree.value.length) {
+    orgTree.value.forEach(walk)
+    const un = sortVehicles(vehiclesByOrgName.value.get('未分配机构') || [])
+    if (un.length) {
+      const key = 'org:__none__'
+      const open = searching || expandedOrgs.value.has(key)
+      rows.push({
+        type: 'org', key, name: '未分配机构', level: 1, depth: 0,
+        count: un.length, taskCount: un.filter(v => taskOf(v)).length,
+        mix: { run: 0, stop: 0, off: 100 }, open,
+      })
+      if (open) pushVehicles({ vehicles: un, key: key }, 1)
+    }
+    return rows
+  }
 
-  return [{
-    key: 'root',
-    type: 'root',
-    label: rootNodeName,
-    vehicleCount: list.length,
-    level: 0,
-    children: [...root.nodes, ...unassignedNodes, ...rootVehicleNodes],
-  }]
+  // 兜底：没有机构数据时，按车辆上的 org 名字拍平
+  const names = [...vehiclesByOrgName.value.keys()].filter(n => n !== '未分配机构')
+  names.sort((a, b) => a.localeCompare(b, 'zh-CN'))
+  names.forEach(name => {
+    const list = sortVehicles(vehiclesByOrgName.value.get(name))
+    const key = 'flat:' + name
+    const open = searching || expandedOrgs.value.has(key)
+    rows.push({
+      type: 'org', key, name, level: 1, depth: 0, count: list.length,
+      taskCount: list.filter(v => taskOf(v)).length, mix: { run: 0, stop: 0, off: 100 }, open,
+    })
+    if (open) pushVehicles({ vehicles: list, key }, 1)
+  })
+  return rows
 })
+
+const allOrgKeys = computed(() => {
+  const keys = []
+  const walk = (n) => { keys.push(n.key); n.children.forEach(walk) }
+  orgTree.value.forEach(walk)
+  return keys
+})
+
+const allExpanded = computed(() => {
+  const keys = allOrgKeys.value
+  if (!keys.length) return false
+  return keys.every(k => expandedOrgs.value.has(k))
+})
+
+const saveExpanded = () => {
+  try { sessionStorage.setItem(TREE_KEY, JSON.stringify([...expandedOrgs.value])) } catch (e) { }
+}
+
+const toggleOrg = (key) => {
+  const s = new Set(expandedOrgs.value)
+  if (s.has(key)) s.delete(key)
+  else s.add(key)
+  expandedOrgs.value = s
+  saveExpanded()
+}
+
+const expandVehicles = (key) => {
+  const next = new Set(expandedVehicles.value)
+  next.add(key)
+  expandedVehicles.value = next
+}
+
+const toggleAllOrgs = () => {
+  const keys = allOrgKeys.value
+  if (!keys.length) return
+  expandedOrgs.value = allExpanded.value ? new Set() : new Set(keys)
+  saveExpanded()
+}
+
+/** 默认展开：有车且层级 <= 2 的机构（三级折叠） */
+const initTreeExpanded = () => {
+  if (treeInited || !organizations.value.length) return
+  treeInited = true
+
+  try {
+    const saved = sessionStorage.getItem(TREE_KEY)
+    if (saved) {
+      const arr = JSON.parse(saved)
+      if (Array.isArray(arr) && arr.length) {
+        expandedOrgs.value = new Set(arr)
+        return
+      }
+    }
+  } catch (e) { }
+
+  const nameCount = new Map()
+  vehicles.value.forEach(v => {
+    const n = String(v.org || v.customer_name || '').trim()
+    if (n) nameCount.set(n, (nameCount.get(n) || 0) + 1)
+  })
+  const countOf = (o) => (nameCount.get(o.name) || 0) +
+    (orgChildrenMap.value.get(String(o.id)) || []).reduce((sum, c) => sum + countOf(c), 0)
+
+  const set = new Set()
+  const walk = (o, depth) => {
+    if (countOf(o) > 0 && depth <= 1) set.add('org:' + o.id)
+    ;(orgChildrenMap.value.get(String(o.id)) || []).forEach(k => walk(k, depth + 1))
+  }
+  rootOrgs.value.forEach(o => walk(o, 0))
+  expandedOrgs.value = set
+}
+
+watch([organizations, () => vehicles.value.length], () => { initTreeExpanded() })
+
+/** 点击车辆：定位到地图并弹出卡片 */
+const focusVehicle = (vehicle) => {
+  if (!vehicle) return
+  highlightVehicle(vehicle.plate)
+}
 
 const highlightVehicle = (plate) => {
   const vehicle = vehicles.value.find(v => v.plate === plate)
@@ -1408,19 +2019,292 @@ const isVehicleHighlighted = (plate) => {
   return highlightedPlate.value === plate || selectedPlates.value.includes(plate)
 }
 
+// ============================================================
+// ⭐⭐ 沉浸式物流概览（C1）：靛青蓝 + 单车主线 + HUD
+// ============================================================
+const focusMode = ref(null)
+const focusFullscreen = ref(false)
+const focusProgress = ref(null)
+
+const focusPct = computed(() => {
+  const p = focusProgress.value
+  return p && p.ready ? Math.round(p.doneRatio * 100) : 0
+})
+const focusRemainKm = computed(() => (focusProgress.value && focusProgress.value.ready ? focusProgress.value.remainKm : 0))
+const focusTraveledKm = computed(() => (focusProgress.value && focusProgress.value.ready ? focusProgress.value.traveledKm : 0))
+const focusPlanKm = computed(() => (focusMode.value && focusMode.value.task.plan_distance) || 0)
+const focusEta = computed(() => fmtEta(focusProgress.value))
+const focusRemainText = computed(() => {
+  const p = focusProgress.value
+  if (!p || !p.ready) return '--'
+  if (p.stale) return '停更'
+  const m = Math.max(0, Math.round(p.remainMinutes))
+  return m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}m` : `${m}m`
+})
+const focusStartText = computed(() => {
+  const t = focusMode.value && focusMode.value.task
+  const dt = t && (t.depart_time || t.pickup_time)
+  return dt ? dayjs(dt).format('MM-DD HH:mm') + ' 发车' : '待发车'
+})
+const focusSpeedText = computed(() => {
+  const v = focusMode.value && focusMode.value.vehicle
+  const cur = focusProgress.value && focusProgress.value.current
+  const speed = cur ? cur.speed : (v ? v.speed : 0)
+  const time = cur && cur.reportTime
+    ? dayjs(cur.reportTime).format('HH:mm:ss')
+    : (v && v.reportTime ? String(v.reportTime).slice(11) : '--')
+  return `定位 ${time} 上报 · ${Math.round(speed || 0)} km/h`
+})
+const focusNodes = computed(() => {
+  const t = (focusMode.value && focusMode.value.task) || {}
+  const s = normStatus(t.status)
+  const reached = { '待接单': 0, '待装车': 0, '装车完成': 0, '已发车': 1, '已到达': 2, '已完成': 3 }[s] ?? 0
+  const nodes = [
+    { label: '接单', time: t.accept_time },
+    { label: '已发车', time: t.depart_time },
+    { label: '确认到达', time: t.arrive_time },
+    { label: '完成运单', time: t.finish_time },
+  ]
+  return nodes.map((n, i) => ({
+    label: n.label,
+    time: n.time ? dayjs(n.time).format('MM-DD HH:mm') : '',
+    on: i === reached,
+    done: i < reached,
+  }))
+})
+
+const focusSvgRef = ref(null)
+const focusSvgD = ref('')
+const focusGrow = ref(0)
+const focusStartXY = ref(null)
+const focusEndXY = ref(null)
+const focusVehXY = ref({ x: -999, y: -999 })
+const focusCometXY = ref({ x: -999, y: -999 })
+const focusCometVisible = ref(false)
+
+let focusPath = []
+let focusPts = []
+let focusCometRaf = null
+let focusGrowRaf = null
+
+const stopFocusAnim = () => {
+  if (focusCometRaf) { cancelAnimationFrame(focusCometRaf); focusCometRaf = null }
+  if (focusGrowRaf) { cancelAnimationFrame(focusGrowRaf); focusGrowRaf = null }
+  focusCometVisible.value = false
+}
+
+/** 经纬度 → 容器像素 */
+const toContainerXY = (pt) => {
+  const p = map.lngLatToContainer(new AMap.LngLat(Number(pt[0]), Number(pt[1])))
+  return { x: p.getX(), y: p.getY() }
+}
+
+/** 地图移动/缩放后重算整条线的像素坐标 */
+const rebuildFocusSvg = () => {
+  if (!map || !AMap || !focusPath.length) return
+  const pts = focusPath.map(toContainerXY)
+  focusPts = pts
+  focusSvgD.value = pts.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+  focusStartXY.value = pts[0]
+  focusEndXY.value = pts[pts.length - 1]
+  updateFocusVeh()
+}
+
+const pointAtRatio = (ratio) => {
+  if (!focusPts.length) return { x: -999, y: -999 }
+  const r = Math.min(1, Math.max(0, ratio))
+  const f = r * (focusPts.length - 1)
+  const i = Math.floor(f)
+  const a = focusPts[i]
+  const b = focusPts[Math.min(focusPts.length - 1, i + 1)] || a
+  const k = f - i
+  return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k }
+}
+
+const updateFocusVeh = () => {
+  focusVehXY.value = pointAtRatio(focusPct.value / 100)
+}
+
+/** 流光：从当前位置跑到终点，循环 */
+const startFocusComet = () => {
+  if (focusCometRaf) cancelAnimationFrame(focusCometRaf)
+  focusCometVisible.value = true
+  const from = Math.min(0.97, focusPct.value / 100)
+  const t0 = performance.now()
+  const loop = (now) => {
+    const k = ((now - t0) % 5200) / 5200
+    focusCometXY.value = pointAtRatio(from + (1 - from) * k)
+    focusCometRaf = requestAnimationFrame(loop)
+  }
+  focusCometRaf = requestAnimationFrame(loop)
+}
+
+/** 路线「生长」动画 */
+const animateFocusGrow = (duration = 950) => {
+  if (focusGrowRaf) cancelAnimationFrame(focusGrowRaf)
+  const t0 = performance.now()
+  focusGrow.value = 0
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / duration)
+    focusGrow.value = 1 - Math.pow(1 - k, 2)
+    if (k < 1) focusGrowRaf = requestAnimationFrame(step)
+    else focusGrowRaf = null
+  }
+  focusGrowRaf = requestAnimationFrame(step)
+}
+
+const fetchDrivingPath = (from, to) => new Promise((resolve) => {
+  try {
+    const driving = new AMap.Driving({ policy: AMap.DrivingPolicy.LEAST_TIME })
+    const timer = setTimeout(() => resolve(null), 8000)
+    driving.search(new AMap.LngLat(from[0], from[1]), new AMap.LngLat(to[0], to[1]), (status, result) => {
+      clearTimeout(timer)
+      if (status === 'complete' && result && result.routes && result.routes.length) {
+        const path = []
+        ;(result.routes[0].steps || []).forEach(s => (s.path || []).forEach(pt => path.push([pt.lng, pt.lat])))
+        resolve(path.length > 1 ? path : null)
+      } else {
+        resolve(null)
+      }
+    })
+  } catch (e) { resolve(null) }
+})
+
+const drawFocusRoute = async (vehicle, task) => {
+  stopFocusAnim()
+  focusPath = []
+  focusPts = []
+  focusSvgD.value = ''
+  focusGrow.value = 0
+  focusStartXY.value = null
+  focusEndXY.value = null
+  focusVehXY.value = { x: -999, y: -999 }
+
+  const from = task.pickup_lng && task.pickup_lat ? [Number(task.pickup_lng), Number(task.pickup_lat)] : null
+  const to = task.delivery_lng && task.delivery_lat ? [Number(task.delivery_lng), Number(task.delivery_lat)] : null
+
+  let path = from && to ? await fetchDrivingPath(from, to) : null
+  if (!path) {
+    if (from && to) path = [from, to]
+    else if (vehicle.lng) path = [[vehicle.lng, vehicle.lat], [vehicle.lng, vehicle.lat]]
+    else return
+  }
+  focusPath = path
+
+  await nextTick()
+  rebuildFocusSvg()
+
+  // 相机包住整条线（用一条不可见折线做 setFitView，给 HUD 留出空间）
+  try {
+    const fitter = new AMap.Polyline({ path, strokeOpacity: 0, strokeWeight: 1, bubble: true })
+    map.add(fitter)
+    map.setFitView([fitter], false, [100, 110, 130, 100])
+    setTimeout(() => { try { map.remove(fitter) } catch (e) { } }, 900)
+  } catch (e) { }
+
+  setTimeout(() => {
+    rebuildFocusSvg()
+    animateFocusGrow()
+    startFocusComet()
+  }, 240)
+
+  setTimeout(() => { if (focusMode.value) rebuildFocusSvg() }, 760)
+}
+
+const enterFocus = async (vehicle, task) => {
+  if (!map || !AMap) {
+    ElMessage.warning('地图还没准备好，请稍后重试')
+    return
+  }
+  if (!task) {
+    ElMessage.info('该车暂无进行中的运单')
+    return
+  }
+  closePopup()
+  focusMode.value = { vehicle, task }
+  focusProgress.value = progressByPlate.value[vehicle.plate] || null
+  isListCollapsed.value = true
+  markerMap.forEach(m => {
+    setMarkerVisible(m, false)
+  })
+
+  await nextTick()
+  await drawFocusRoute(vehicle, task)
+
+  const p = await ensureProgress(vehicle.plate, task, true)
+  // 刷新失败时别把已有的好数据覆盖掉
+  if (p && (p.ready || !focusProgress.value || !focusProgress.value.ready)) {
+    focusProgress.value = p
+    nextTick(() => {
+      updateFocusVeh()
+      startFocusComet()
+    })
+  }
+}
+
+const clearFocusState = () => {
+  stopFocusAnim()
+  focusPath = []
+  focusPts = []
+  focusSvgD.value = ''
+}
+
+const exitFocus = () => {
+  clearFocusState()
+  if (focusFullscreen.value) focusFullscreen.value = false
+  focusMode.value = null
+  focusProgress.value = null
+  markerMap.forEach(m => {
+    setMarkerVisible(m, true)
+  })
+  updateMarkersVisibility()
+  isListCollapsed.value = false
+  nextTick(() => {
+    setTimeout(() => {
+      if (map && markers.length) map.setFitView(markers, false, [120, 80, 80, 80])
+    }, 90)
+  })
+}
+
+const toggleFocusFullscreen = () => {
+  focusFullscreen.value = !focusFullscreen.value
+  setTimeout(() => { try { map && map.resize() } catch (e) { } }, 80)
+  setTimeout(() => { try { map && map.resize() } catch (e) { } }, 340)
+}
+
+const onEscFocus = (e) => {
+  if (e.key === 'Escape' && focusMode.value) {
+    if (focusFullscreen.value) focusFullscreen.value = false
+    else exitFocus()
+  }
+}
+
+/** 地图拖动 / 缩放时重算路线 */
+const onFocusMapMove = () => {
+  if (focusMode.value) rebuildFocusSvg()
+}
+
+
+const setMarkerVisible = (m, visible) => {
+  if (!m) return
+  try {
+    if (visible) { if (m.show) m.show(); else if (m.setVisible) m.setVisible(true) }
+    else { if (m.hide) m.hide(); else if (m.setVisible) m.setVisible(false) }
+  } catch (e) { }
+}
+
 const updateMarkersVisibility = () => {
   if (!map) return
   const visiblePlates = new Set(filteredVehicles.value.filter(v => v.hasLocation).map(v => v.plate))
   markerMap.forEach((marker, plate) => {
-    const shouldVisible = visiblePlates.has(plate)
-    if (typeof marker.setVisible === 'function') marker.setVisible(shouldVisible)
+    setMarkerVisible(marker, visiblePlates.has(plate))
   })
   if (highlightedPlate.value && !visiblePlates.has(highlightedPlate.value)) {
     closePopup()
   }
 }
 
-watch([selectedOrg, selectedStatus, searchKeyword, selectedPlates, statusFilter], () => {
+watch([selectedOrg, selectedStatus, searchKeyword, selectedPlates, statusFilter, taskFilter], () => {
   updateMarkersVisibility()
 }, { deep: true })
 
@@ -1462,14 +2346,38 @@ const startResize = (e) => {
 
 onMounted(async () => {
   await nextTick()
-  if (isCustomer) {
-    await loadMyCustomerId()
-    await loadMyOrgInfo()
-  }
-  await loadVehicles(true)
-  await initMap()
   document.body.style.overflow = 'hidden'
   document.documentElement.style.overflow = 'hidden'
+  window.addEventListener('keydown', onEscFocus)
+
+  // ⭐ 面板先挂出来：地图初始化 与 车辆/运单加载 **并行**，谁先好谁先渲染
+  const mapTask = initMap()
+
+  const dataTask = (async () => {
+    if (isCustomer) {
+      await loadMyCustomerId()
+      await loadMyOrgInfo()
+    }
+    await loadVehicles(true)
+    await loadWaybills()
+  })()
+
+  // 任何一边失败都不影响另一边（地图挂了下拉列表照样能用）
+  await Promise.all([mapTask.catch(() => { }), dataTask.catch(() => { })])
+
+  // 数据到齐后补一次标记（initMap 那次可能还没有车）
+  if (isMapReady.value) {
+    addMarkers()
+    updateMarkersVisibility()
+  }
+  prefetchProgress()
+})
+
+onDeactivated(() => {
+  // ⭐ keep-alive 下切走不会走 onBeforeUnmount，必须在这里把 body 滚动还回去，
+  //    否则别的页面（尤其独立路由的运单详情）会被锁住滚不动
+  document.body.style.overflow = ''
+  document.documentElement.style.overflow = ''
 })
 
 onActivated(async () => {
@@ -1479,15 +2387,20 @@ onActivated(async () => {
   }
   await loadVehicles(true)
   await loadOrganizations()
+  await loadWaybills()
   if (isMapReady.value) {
     addMarkers()
     updateMarkersVisibility()
   }
+  document.body.style.overflow = 'hidden'
+  document.documentElement.style.overflow = 'hidden'
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onEscFocus)
   document.body.style.overflow = ''
   document.documentElement.style.overflow = ''
+  clearFocusState()
   if (rafId) {
     cancelAnimationFrame(rafId)
     rafId = null
@@ -1513,8 +2426,6 @@ onBeforeUnmount(() => {
 .fullmap {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  height: 100vh;
-  height: 100dvh;
   width: 100%;
   overflow: hidden;
   padding: 12px;
@@ -1680,50 +2591,66 @@ onBeforeUnmount(() => {
 .summary-slide-enter-from, .summary-slide-leave-to { opacity: 0; transform: translateX(-50%) translateY(20px); }
 
 /* 悬浮左侧面板 */
-.floating-sidebar {
+/* ⭐ 左侧面板：整块滑出（方案 3）+ 右边缘把手 */
+.fm-dock {
   position: absolute;
   top: 16px;
   left: 16px;
+  bottom: 16px;
   z-index: 60;
-  height: calc(100% - 32px);
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
-  overflow: hidden;
-  transition:
-    width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
-    height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    border-radius 0.3s;
-  min-width: 44px;
-  will-change: width, height;
-}
-.floating-sidebar.collapsed {
-  height: 56px;
-  border-radius: 999px;
 }
 
-.sidebar-content {
+.dock-panel {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
   overflow: hidden;
-  transition:
-    opacity 0.24s cubic-bezier(0.4, 0, 0.2, 1),
-    visibility 0s linear 0.24s;
-  will-change: opacity;
-  visibility: visible;
-  opacity: 1;
+  transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
 }
-.sidebar-content.is-hidden {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition:
-    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    visibility 0s linear 0s;
+
+.dock-panel.collapsed {
+  /* 整块滑出，只留右边缘把手 */
+  transform: translateX(-100%);
+}
+
+.dock-handle {
+  position: absolute;
+  left: calc(100% - 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 66px;
+  padding: 0 0 0 4px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 0 12px 12px 0;
+  background: #C8102E;
+  color: #FFFFFF;
+  cursor: pointer;
+  z-index: 3;
+  box-shadow: 2px 6px 16px rgba(200, 16, 46, 0.30);
+  transition: left 0.26s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.dock-handle:hover {
+  background: #A00D24;
+  box-shadow: 2px 8px 20px rgba(200, 16, 46, 0.42);
+}
+
+.dock-handle:active {
+  transform: translateY(-50%) scale(0.96);
+}
+
+.dock-handle.collapsed {
+  left: -16px;
+  border-radius: 12px;
+  padding: 0;
 }
 
 /* 筛选栏 */
@@ -1771,6 +2698,20 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 .list-count { color: #c8102e; font-weight: 700; font-size: 12px; font-family: 'Courier New', monospace; flex-shrink: 0; }
+
+.hdot {
+  width: 7px; height: 7px; border-radius: 2px; background: #C8102E; flex: 0 0 auto;
+}
+
+.collapse-all {
+  width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center;
+  color: #94A3B8; cursor: pointer; flex: 0 0 auto;
+  transition: background .18s, color .18s;
+}
+
+.collapse-all:hover { background: #FEF2F2; color: #C8102E; }
+.collapse-all.off { color: #CBD5E1; }
+
 .collapse-btn {
   width: 24px; height: 24px;
   display: flex; align-items: center; justify-content: center;
@@ -2008,7 +2949,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 200;
+  z-index: 50;
 }
 .loading-card {
   background: #ffffff;
@@ -2080,6 +3021,908 @@ onBeforeUnmount(() => {
   .top-bar { left: 12px; right: 12px; top: 12px; gap: 8px; }
   .map-controls { display: none; }
   .stats-pills { overflow-x: auto; }
+}
+
+/* ============================================================
+   ⭐ 左侧面板：筛选区压缩 + 任务 chip + 组织分组 + 双行卡片
+   ============================================================ */
+.side-filter {
+  padding: 8px 10px 7px;
+  border-bottom: 1px solid rgba(226, 232, 240, .7);
+  flex-shrink: 0;
+}
+
+.f-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.f-row + .f-row { margin-top: 6px; }
+
+.f-org { flex: 1; min-width: 0; }
+.f-status { width: 88px; flex: 0 0 auto; }
+.f-kw { flex: 1; min-width: 0; }
+
+.side-filter :deep(.el-select__wrapper),
+.side-filter :deep(.el-input__wrapper) {
+  border-radius: 8px !important;
+  background: #F8FAFC !important;
+  box-shadow: 0 0 0 1px #E2E8F0 inset !important;
+  min-height: 28px;
+  transition: box-shadow .22s, background .22s;
+}
+
+.side-filter :deep(.el-select__wrapper:hover),
+.side-filter :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px #FCA5A5 inset !important;
+}
+
+.side-filter :deep(.el-select__wrapper.is-focused),
+.side-filter :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px #C8102E inset, 0 0 0 3px rgba(200, 16, 46, .10) !important;
+}
+
+.f-btn {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  background: #fff;
+  color: #475569;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  flex: 0 0 auto;
+  transition: all .22s cubic-bezier(.34, 1.2, .64, 1);
+}
+
+.f-btn:hover {
+  color: #C8102E;
+  border-color: #FCA5A5;
+  background: #FEF2F2;
+  transform: translateY(-1px);
+}
+
+.f-btn:active { transform: translateY(0) scale(.97); }
+
+.f-btn.primary {
+  background: linear-gradient(135deg, #C8102E, #A00D24);
+  border-color: #C8102E;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(200, 16, 46, .25);
+}
+
+.f-btn.primary:hover { filter: brightness(1.05); color: #fff; }
+
+.task-chips {
+  display: flex;
+  gap: 5px;
+  margin-top: 7px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  padding-bottom: 1px;
+}
+
+.task-chips::-webkit-scrollbar { display: none; }
+
+.tchip {
+  flex: 0 0 auto;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid #E2E8F0;
+  background: #fff;
+  color: #64748B;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all .22s cubic-bezier(.34, 1.2, .64, 1);
+}
+
+.tchip b {
+  font-size: 10px;
+  font-weight: 800;
+  color: #94A3B8;
+}
+
+.tchip:hover {
+  border-color: #C7D2FE;
+  color: #4F46E5;
+  transform: translateY(-1px);
+}
+
+.tchip.on {
+  background: #EEF2FF;
+  border-color: #C7D2FE;
+  color: #3730A3;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, .12);
+}
+
+.tchip.on b { color: #4F46E5; }
+
+.bill-loading {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid #E2E8F0;
+  border-top-color: #C8102E;
+  animation: billSpin .8s linear infinite;
+  margin-left: 2px;
+}
+
+@keyframes billSpin { to { transform: rotate(360deg); } }
+
+/* 组织分组 */
+.org-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  margin: 3px 4px 1px;
+  padding-right: 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  color: #334155;
+  font-size: 11.5px;
+  font-weight: 800;
+  position: relative;
+  transition: background .2s;
+}
+
+.org-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: #E2E8F0;
+  transition: background .2s;
+}
+
+.org-row:hover { background: #F8FAFC; }
+.org-row:hover::before { background: #CBD5E1; }
+
+.org-chev {
+  font-size: 10px;
+  color: #CBD5E1;
+  transition: transform .3s cubic-bezier(.34, 1.4, .64, 1), color .2s;
+  flex: 0 0 auto;
+}
+
+.org-chev.open { transform: rotate(90deg); color: #94A3B8; }
+
+.org-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.org-n {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94A3B8;
+  flex: 0 0 auto;
+}
+
+.org-task {
+  font-size: 9px;
+  font-weight: 800;
+  color: #4F46E5;
+  background: #EEF2FF;
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex: 0 0 auto;
+  animation: taskPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes taskPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+  50% { box-shadow: 0 0 0 3px rgba(79, 70, 229, .10); }
+}
+
+.org-mix {
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  display: flex;
+  background: #EEF2F7;
+  flex: 0 0 auto;
+}
+
+.org-mix i { display: block; height: 100%; transition: width .5s ease; }
+.m-run { background: #22C55E; }
+.m-stop { background: #F59E0B; }
+.m-off { background: #CBD5E1; }
+
+/* 车辆行 */
+/* ⭐ 组织树：层级缩进 + 引导线 */
+.trow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding-right: 8px;
+  padding-left: calc(var(--d, 0) * 12px + 6px);
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background .18s;
+}
+
+.trow:hover { background: #F8FAFC; }
+
+.trow.lv1 { font-size: 12px; font-weight: 800; color: #0F172A; }
+.trow.lv2 { font-size: 11.5px; font-weight: 700; color: #334155; }
+.trow.lv3 { font-size: 11px; font-weight: 600; color: #475569; }
+.trow.empty { opacity: .5; }
+
+.caret {
+  width: 10px;
+  font-size: 9px;
+  color: #CBD5E1;
+  text-align: center;
+  flex: 0 0 auto;
+  transition: transform .26s cubic-bezier(.34, 1.4, .64, 1), color .2s;
+}
+
+.trow.open .caret { transform: rotate(90deg); color: #94A3B8; }
+
+.lvmark { flex: 0 0 auto; border-radius: 3px; }
+.lvmark.l1 { width: 9px; height: 9px; background: linear-gradient(135deg, #818CF8, #4338CA); box-shadow: 0 0 0 2px rgba(99, 102, 241, .12); }
+.lvmark.l2 { width: 7px; height: 7px; background: #A5B4FC; }
+.lvmark.l3 { width: 5px; height: 5px; border-radius: 50%; background: #CBD5E1; }
+
+.tname {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tcount { font-size: 9.5px; color: #94A3B8; font-weight: 700; flex: 0 0 auto; }
+
+.ttask {
+  font-size: 9px;
+  font-weight: 800;
+  color: #4F46E5;
+  background: #EEF2FF;
+  border-radius: 4px;
+  padding: 1px 4px;
+  flex: 0 0 auto;
+}
+
+.tmix {
+  width: 26px;
+  height: 3.5px;
+  border-radius: 2px;
+  overflow: hidden;
+  display: flex;
+  background: #EEF2F7;
+  flex: 0 0 auto;
+}
+
+.tmix i { display: block; height: 100%; transition: width .45s ease; }
+
+/* 每行自己画祖先竖线 + 一条横线 */
+.row-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: calc(var(--d, 0) * 12px);
+  background-image: repeating-linear-gradient(to right, #C9D4E2 0 1px, transparent 1px 12px);
+  background-position: 5px 0;
+  pointer-events: none;
+}
+
+.row-item::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--d, 0) * 12px - 7px);
+  top: 50%;
+  width: 9px;
+  height: 1px;
+  background: #C9D4E2;
+  pointer-events: none;
+}
+
+.row-item.no-guide::before,
+.row-item.no-guide::after { display: none; }
+
+/* 「还有 N 台车」折叠行 */
+.more-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  margin: 1px 0;
+  padding-right: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #94A3B8;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color .18s, background .18s;
+}
+
+.more-row:hover { color: #4F46E5; background: #F5F7FF; }
+
+.more-ic {
+  width: 13px;
+  height: 13px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: #EEF2FF;
+  color: #4F46E5;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.row-list { padding: 2px 0 10px; }
+
+.row-item { position: relative; animation: rowIn .34s cubic-bezier(.22, 1, .36, 1) backwards; }
+
+@keyframes rowIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.rowfade-move { transition: transform .3s cubic-bezier(.22, 1, .36, 1); }
+.rowfade-leave-active { display: none; }
+
+.vrow {
+  margin: 1px 0;
+  padding: 5px 8px 5px calc(var(--d, 0) * 12px + 19px);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .18s, box-shadow .2s, transform .18s;
+  position: relative;
+}
+
+.vrow:hover {
+  background: #F8FAFC;
+  transform: translateX(2px);
+}
+
+.vrow.active {
+  background: #EEF2FF;
+  box-shadow: 0 0 0 1px #C7D2FE inset;
+}
+
+.vrow.noloc { opacity: .55; }
+
+/* ⭐ 有任务的车：左侧状态色竖条（在途/待装/已到达），空闲车不加 */
+.vrow.has-task::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--d, 0) * 12px + 12px);
+  top: 7px;
+  bottom: 7px;
+  width: 3px;
+  border-radius: 2px;
+  background: #94A3B8;
+  transition: background .2s;
+}
+
+.vrow.tone-run::after { background: #4F46E5; }
+.vrow.tone-load::after { background: #D97706; }
+.vrow.tone-done::after { background: #16A34A; }
+
+.vrow.has-task .vplate { color: #0B1220; }
+
+.vrow.has-task {
+  background: linear-gradient(90deg, rgba(79, 70, 229, .028), rgba(79, 70, 229, 0) 82%);
+}
+
+.vrow.has-task:hover {
+  background: #F7F8FF;
+}
+
+/* 选中的行优先显示选中底色 */
+.vrow.active.has-task,
+.vrow.active.has-task:hover {
+  background: #EEF2FF;
+}
+
+.vr1 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.vr2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 10px;
+  color: #64748B;
+  min-width: 0;
+}
+
+.vdot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.vdot.行驶 { background: #22C55E; box-shadow: 0 0 0 2.5px rgba(34, 197, 94, .16); }
+.vdot.静止 { background: #F59E0B; box-shadow: 0 0 0 2.5px rgba(245, 158, 11, .16); }
+.vdot.离线 { background: #CBD5E1; }
+
+.vplate {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: .1px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.tbadge {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.tbadge.run { color: #3730A3; background: #EEF2FF; }
+.tbadge.load { color: #92400E; background: #FEF3C7; }
+.tbadge.done { color: #166534; background: #DCFCE7; }
+.tbadge.wait { color: #475569; background: #E2E8F0; }
+.tbadge.idle { color: #94A3B8; background: #F1F5F9; }
+
+.vpct {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 800;
+  color: #4F46E5;
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+
+.vstat {
+  margin-left: auto;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+
+.vstat.行驶 { color: #166534; background: #DCFCE7; }
+.vstat.静止 { color: #475569; background: #E2E8F0; }
+.vstat.离线 { color: #94A3B8; background: #F1F5F9; }
+
+.vroute {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vbar {
+  width: 36px;
+  height: 3px;
+  border-radius: 2px;
+  background: #EEF2F7;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.vbar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #6366F1, #22D3EE);
+  transition: width .6s cubic-bezier(.22, 1, .36, 1);
+}
+
+.veta {
+  font-size: 9.5px;
+  color: #94A3B8;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* ============================================================
+   ⭐ 沉浸式物流概览 HUD
+   ============================================================ */
+.focusfade-enter-active,
+.focusfade-leave-active { transition: opacity .3s ease; }
+
+.focusfade-enter-from,
+.focusfade-leave-to { opacity: 0; }
+
+.focus-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 90;
+}
+
+.focus-layer > * { pointer-events: auto; }
+
+.focus-top {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  animation: hudIn .46s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes hudIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.fbtn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(129, 140, 248, .38);
+  background: rgba(15, 24, 44, .78);
+  color: #DBE4FF;
+  font-size: 11.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all .22s cubic-bezier(.34, 1.2, .64, 1);
+  flex: 0 0 auto;
+}
+
+.fbtn:hover {
+  background: rgba(35, 52, 90, .92);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .3);
+}
+
+.fbtn:active { transform: scale(.97); }
+
+.fbtn.icon { padding: 0 10px; }
+
+.fbtn.icon.on {
+  border-color: rgba(34, 211, 238, .6);
+  color: #A5F3FC;
+}
+
+.fbtn-txt { font-size: 11px; }
+
+.fplate {
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 9px;
+  background: rgba(15, 24, 44, .78);
+  border: 1px solid rgba(129, 140, 248, .3);
+  color: #E8EEFF;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  flex: 0 0 auto;
+}
+
+.fplate .live {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22D3EE;
+  animation: livePulse 1.6s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(34, 211, 238, .18); }
+  50% { box-shadow: 0 0 0 6px rgba(34, 211, 238, .04); }
+}
+
+.focus-metrics {
+  margin-left: auto;
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+}
+
+.fmetric {
+  min-width: 92px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(15, 24, 44, .8);
+  border: 1px solid rgba(129, 140, 248, .28);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: metricIn .5s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.fmetric:nth-child(2) { animation-delay: .06s; }
+.fmetric:nth-child(3) { animation-delay: .12s; }
+
+@keyframes metricIn {
+  from { opacity: 0; transform: translateY(-6px) scale(.96); }
+  to { opacity: 1; transform: none; }
+}
+
+.fmetric .k {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  color: #8EA3C8;
+  letter-spacing: .4px;
+}
+
+.fmetric .v {
+  display: block;
+  font-size: 17px;
+  font-weight: 800;
+  color: #F8FAFC;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  letter-spacing: .2px;
+  transition: color .3s;
+}
+
+.fmetric .v small {
+  font-size: 10px;
+  color: #A9BBD8;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.fmetric.accent .v {
+  color: #67E8F9;
+  text-shadow: 0 0 18px rgba(34, 211, 238, .5);
+}
+
+.focus-side {
+  position: absolute;
+  right: 16px;
+  top: 104px;
+  width: 188px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: rgba(15, 24, 44, .8);
+  border: 1px solid rgba(129, 140, 248, .28);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: hudIn .5s cubic-bezier(.22, 1, .36, 1) .12s both;
+}
+
+.fs-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: #8EA3C8;
+  letter-spacing: .6px;
+  margin-bottom: 8px;
+}
+
+.fs-timeline { position: relative; padding-left: 13px; }
+
+.fs-timeline::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: rgba(99, 102, 241, .3);
+}
+
+.fs-node {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 10.5px;
+  color: #7C8DB0;
+}
+
+.fs-dot {
+  position: absolute;
+  left: -13px;
+  top: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #33415C;
+  border: 1px solid rgba(129, 140, 248, .4);
+  transition: all .3s;
+}
+
+.fs-node.done .fs-dot { background: #6366F1; border-color: #818CF8; }
+.fs-node.done .fs-label { color: #A9BBD8; }
+
+.fs-node.on .fs-dot {
+  background: #22D3EE;
+  border-color: #67E8F9;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, .18), 0 0 12px rgba(34, 211, 238, .8);
+  animation: nodePulse 2s ease-in-out infinite;
+}
+
+@keyframes nodePulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(34, 211, 238, .16), 0 0 12px rgba(34, 211, 238, .7); }
+  50% { box-shadow: 0 0 0 6px rgba(34, 211, 238, .06), 0 0 18px rgba(34, 211, 238, .95); }
+}
+
+.fs-node.on .fs-label { color: #E8EEFF; font-weight: 800; }
+
+.fs-label { flex: 1; min-width: 0; }
+
+.fs-time {
+  font-size: 9px;
+  color: #5F7398;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-tip {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(99, 102, 241, .22);
+  font-size: 9.5px;
+  color: #5F7398;
+}
+
+.focus-bottom {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 14px;
+  padding: 11px 16px 13px;
+  border-radius: 13px;
+  background: rgba(15, 24, 44, .93);
+  border: 1px solid rgba(129, 140, 248, .28);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: hudIn .5s cubic-bezier(.22, 1, .36, 1) .18s both;
+}
+
+.fb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  color: #A9BBD8;
+}
+
+.fb-row b { color: #E8EEFF; font-weight: 800; }
+
+.fb-row.sub { font-size: 10px; color: #6B7F9F; }
+
+.fb-track {
+  position: relative;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(99, 102, 241, .2);
+  margin: 9px 0 7px;
+}
+
+.fb-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #4338CA, #22D3EE);
+  box-shadow: 0 0 14px rgba(34, 211, 238, .5);
+  transition: width .9s cubic-bezier(.22, 1, .36, 1);
+}
+
+.fb-knob {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: #E0F2FE;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, .35), 0 0 18px rgba(34, 211, 238, .85);
+  transition: left .9s cubic-bezier(.22, 1, .36, 1);
+}
+
+/* ⭐ 全屏态 */
+.fullmap.is-fs {
+  z-index: 2000;
+  padding: 8px;
+  background: #0B1220;
+}
+
+.fullmap.is-fs .map-stage { border-radius: 10px; }
+
+/* ⭐ 沉浸态：靛青蓝底图（CSS 滤镜，稳定不依赖地图样式服务） */
+.map-stage { isolation: isolate; }
+
+.fullmap.is-focus .fm-dock { display: none; }
+
+.fullmap.is-focus #map-container {
+  filter: invert(1) hue-rotate(188deg) saturate(.5) brightness(.95) contrast(1.02);
+  transition: filter .9s cubic-bezier(.4, 0, .2, 1);
+}
+
+.map-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  background: rgba(28, 48, 92, .42);
+  mix-blend-mode: screen;
+  transition: opacity .9s cubic-bezier(.4, 0, .2, 1);
+}
+
+.fullmap.is-focus .map-stage::after { opacity: 1; }
+
+/* 路线层 */
+.focus-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  animation: focusSvgIn .35s ease both;
+}
+
+@keyframes focusSvgIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.focus-flow {
+  stroke-dasharray: 3 14;
+  animation: focusFlow 1.6s linear infinite;
+}
+
+@keyframes focusFlow {
+  to { stroke-dashoffset: -34; }
+}
+
+.fv-pulse-svg {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: fvPulseSvg 2.4s ease-out infinite;
+}
+
+@keyframes fvPulseSvg {
+  0% { transform: scale(.7); opacity: .7; }
+  70% { transform: scale(2.6); opacity: 0; }
+  100% { transform: scale(2.6); opacity: 0; }
 }
 </style>
 
@@ -2343,5 +4186,297 @@ onBeforeUnmount(() => {
   0% { opacity: 0; transform: scale(0.4) rotate(-8deg); }
   60% { transform: scale(1.15) rotate(2deg); }
   100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+/* ============================================================
+   ⭐ 车辆标记上的任务徽标
+   ============================================================ */
+.custom-marker .marker-task {
+  display: block;
+  margin: 1px auto 0;
+  width: fit-content;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 13px;
+  white-space: nowrap;
+  animation: taskBadgeIn .4s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+
+@keyframes taskBadgeIn {
+  from { opacity: 0; transform: translateY(-4px) scale(.8); }
+  to { opacity: 1; transform: none; }
+}
+
+.custom-marker .marker-task.run { color: #fff; background: rgba(79, 70, 229, .92); }
+.custom-marker .marker-task.load { color: #78350F; background: rgba(253, 230, 138, .95); }
+.custom-marker .marker-task.done { color: #fff; background: rgba(22, 163, 74, .92); }
+.custom-marker .marker-task.wait { color: #fff; background: rgba(100, 116, 139, .92); }
+
+/* ============================================================
+   ⭐ 气泡内：任务区（只有有任务的车才有）
+   ============================================================ */
+.amap-custom-popup.has-task { max-width: 300px; }
+
+.amap-popup-vin-inline {
+  margin-left: auto;
+  font-size: 9px;
+  color: #B6C2D2;
+  font-weight: 600;
+  letter-spacing: .2px;
+  white-space: nowrap;
+}
+
+.amap-popup-task {
+  margin-top: 10px;
+  padding: 10px 11px 11px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #FBFCFF, #F6F8FF);
+  border: 1px solid #E8ECFB;
+  animation: taskBlockIn .36s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes taskBlockIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.apt-route {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #0F172A;
+  min-width: 0;
+}
+
+.apt-place {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.apt-arrow { color: #A5B4FC; flex: 0 0 auto; }
+
+.apt-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+}
+
+.apt-badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+
+.apt-badge.run { color: #3730A3; background: #EEF2FF; }
+.apt-badge.load { color: #92400E; background: #FEF3C7; }
+.apt-badge.done { color: #166534; background: #DCFCE7; }
+.apt-badge.wait { color: #475569; background: #E2E8F0; }
+
+.apt-track {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: #E8ECFB;
+  overflow: hidden;
+}
+
+.apt-track i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #6366F1, #22D3EE);
+  transition: width .8s cubic-bezier(.22, 1, .36, 1);
+}
+
+.apt-pct {
+  font-size: 10px;
+  font-weight: 800;
+  color: #4F46E5;
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+
+.apt-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 10px;
+  color: #64748B;
+}
+
+.apt-meta b { color: #334155; font-weight: 800; }
+
+.apt-go {
+  width: 100%;
+  margin-top: 9px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4F46E5, #3730A3);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: .3px;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 8px 18px rgba(79, 70, 229, .28);
+  transition: all .22s cubic-bezier(.34, 1.2, .64, 1);
+}
+
+.apt-go:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(79, 70, 229, .38);
+}
+
+.apt-go:active { transform: scale(.98); }
+
+.amap-popup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 12px;
+  padding-top: 2px;
+}
+
+.pg-item {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  font-size: 10px;
+}
+
+.pg-item span { color: #94A3B8; flex: 0 0 auto; }
+
+.pg-item b {
+  color: #334155;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.amap-popup-actions.compact {
+  gap: 6px;
+  padding-top: 8px;
+}
+
+.amap-popup-iconbtn {
+  width: 28px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid #E2E8F0;
+  background: #fff;
+  color: #64748B;
+  font-size: 13px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all .2s;
+}
+
+.amap-popup-iconbtn:hover {
+  color: #C8102E;
+  border-color: #FCA5A5;
+  background: #FEF2F2;
+}
+
+/* ============================================================
+   ⭐ 沉浸态：地图上的车辆 / 起终点 / 流光
+   ============================================================ */
+.focus-vehicle {
+  position: relative;
+  width: 18px;
+  height: 18px;
+}
+
+.fv-pulse {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: rgba(34, 211, 238, .55);
+  animation: fvPulse 2.2s ease-out infinite;
+}
+
+@keyframes fvPulse {
+  0% { transform: scale(.6); opacity: .85; }
+  70% { transform: scale(3.4); opacity: 0; }
+  100% { transform: scale(3.4); opacity: 0; }
+}
+
+.fv-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(103, 232, 249, .85);
+  box-shadow: 0 0 14px rgba(34, 211, 238, .9);
+}
+
+.fv-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: #E0F2FE;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, .55);
+}
+
+.fv-name {
+  position: absolute;
+  left: 50%;
+  top: -20px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 800;
+  color: #E0F2FE;
+  white-space: nowrap;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .8);
+}
+
+.focus-endpoint {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2.5px solid var(--c, #818CF8);
+  background: #0B1220;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--c, #818CF8) 60%, transparent);
+  animation: endIn .5s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+
+@keyframes endIn {
+  from { opacity: 0; transform: scale(.3); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.focus-comet {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #F0FDFF;
+  box-shadow: 0 0 10px 3px rgba(103, 232, 249, .9), 0 0 26px 8px rgba(34, 211, 238, .55);
+}
+
+/* ⭐ 全屏：去掉外壳的 transform，position:fixed 才相对视口 */
+.content-wrapper:has(.fullmap.is-fs) {
+  transform: none !important;
+  animation: none !important;
+  overflow: visible !important;
 }
 </style>

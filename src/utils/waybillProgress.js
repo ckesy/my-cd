@@ -45,7 +45,13 @@ const currentUser = (() => {
    ============================================================ */
 export const parseTimeMs = (raw) => {
   if (!raw) return 0
-  const ms = new Date(String(raw).trim().replace(/-/g, '/')).getTime()
+  const str = String(raw).trim()
+  /* ⭐ 先按标准格式解析：云函数写的是带 T 的 ISO（2026-10-18T19:00:22.687+08:00），
+     直接 replace(/-/g,'/') 会变成 2026/10/18T… 解析失败 → 返回 0，
+     于是常驻「历次完成情况」的时间全变 --、「周期视图」也算不出范围（用户 2026-10-18 报的 bug）。 */
+  const iso = Date.parse(str)
+  if (!isNaN(iso)) return iso
+  const ms = new Date(str.replace(/-/g, '/')).getTime()
   return isNaN(ms) ? 0 : ms
 }
 

@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>全图监控 · 组织树与收起交互方案</title>
+  <style>
+    :root {
+      --red: #c8102e;
+      --ink: #0f172a;
+      --ink-2: #1f2937;
+      --muted: #64748b;
+      --muted-2: #94a3b8;
+      --line: #e8edf4;
+      --bg: #f5f7fa;
+      --indigo: #4f46e5;
+      --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue',
+        'PingFang SC', 'HarmonyOS Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0; padding: 30px 24px 72px; background: var(--bg); font-family: var(--font);
+      color: var(--ink-2); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    }
+
+    .wrap { max-width: 1180px; margin: 0 auto; }
+
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+    .page-head h1 { margin: 0 0 8px; font-size: 24px; font-weight: 800; color: var(--ink); letter-spacing: .2px; }
+    .page-head p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.7; max-width: 680px; }
+    .tags { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .tag { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; border: 1px solid #c7d2fe; background: #eef2ff; color: #3730a3; }
+
+    section { margin-bottom: 38px; }
+    .sec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .sec-num {
+      width: 26px; height: 26px; border-radius: 8px; flex: 0 0 auto; color: #fff; font-size: 13px; font-weight: 800;
+      display: grid; place-items: center; background: linear-gradient(135deg, var(--indigo), #3730a3);
+      box-shadow: 0 6px 14px rgba(79, 70, 229, .28);
+    }
+    .sec-head h2 { margin: 0; font-size: 17px; font-weight: 800; color: var(--ink); }
+    .sec-desc { font-size: 12.5px; color: var(--muted); margin: 0 0 16px 36px; line-height: 1.75; }
+    .sec-desc b { color: var(--ink-2); }
+
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: 0 1px 2px rgba(15,23,42,.03), 0 12px 32px rgba(15,23,42,.04); }
+
+    /* ---------- 诊断 ---------- */
+    .diag { display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: start; }
+    .diag-list { display: flex; flex-direction: column; gap: 12px; }
+    .diag-item { display: flex; gap: 10px; }
+    .diag-num {
+      width: 20px; height: 20px; border-radius: 50%; background: #fee2e2; color: #b91c1c;
+      font-size: 11px; font-weight: 800; display: grid; place-items: center; flex: 0 0 auto; margin-top: 1px;
+    }
+    .diag-item h4 { margin: 0 0 3px; font-size: 13px; font-weight: 800; color: var(--ink); }
+    .diag-item p { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.7; }
+    .diag-item code { font-size: 11.5px; background: #f1f5f9; padding: 1px 4px; border-radius: 4px; color: #334155; }
+
+    /* ---------- 面板还原 ---------- */
+    .panel-mock {
+      width: 268px; background: #fff; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 8px 26px rgba(15, 23, 42, .10), 0 0 0 1px var(--line);
+      font-size: 12px; display: flex; flex-direction: column;
+    }
+    .pm-head {
+      display: flex; align-items: center; gap: 6px; padding: 9px 10px 8px; border-bottom: 1px solid #f1f5f9;
+      color: #475569; font-weight: 700; font-size: 11.5px;
+    }
+    .pm-head .cnt { color: #94a3b8; font-weight: 600; font-size: 11px; }
+    .pm-head .x { margin-left: auto; color: #cbd5e1; font-size: 12px; }
+    .pm-body { padding: 4px 4px 10px; }
+
+    /* 现在的样子：平铺 + 小缩进 */
+    .flat-row { display: flex; align-items: center; gap: 5px; height: 26px; padding: 0 6px; border-radius: 6px; color: #334155; }
+    .flat-row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; font-size: 11px; }
+    .flat-row .c { color: #94a3b8; font-size: 10px; font-weight: 700; }
+    .flat-row .tk { font-size: 9px; font-weight: 800; color: #4f46e5; background: #eef2ff; border-radius: 4px; padding: 1px 4px; }
+    .flat-veh { display: flex; align-items: center; gap: 5px; height: 26px; padding: 0 6px; border-radius: 6px; }
+    .flat-veh .p { font-size: 11px; font-weight: 800; color: #0f172a; }
+    .flat-veh .b { font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 4px; color: #3730a3; background: #eef2ff; }
+    .flat-veh .s { margin-left: auto; font-size: 9px; color: #94a3b8; font-weight: 700; }
+    .anno {
+      position: absolute; width: 17px; height: 17px; border-radius: 50%; background: #c8102e; color: #fff;
+      font-size: 10px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 0 0 3px rgba(200,16,46,.15); z-index: 5;
+    }
+    .mock-wrap { position: relative; }
+
+    /* ---------- 树 ---------- */
+    .tree { padding: 2px 0 6px; }
+    .tnode { position: relative; }
+    .trow {
+      position: relative; display: flex; align-items: center; gap: 5px; height: 28px; padding-right: 8px;
+      border-radius: 7px; cursor: pointer; transition: background .18s;
+    }
+    .trow:hover { background: #f8fafc; }
+    .trow .caret { font-size: 9px; color: #cbd5e1; transition: transform .28s cubic-bezier(.34,1.4,.64,1); flex: 0 0 auto; width: 10px; text-align: center; }
+    .trow.open .caret { transform: rotate(90deg); color: #94a3b8; }
+    .trow .ic { width: 14px; text-align: center; font-size: 11px; flex: 0 0 auto; opacity: .9; }
+    .trow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .trow .meta { font-size: 9.5px; color: #94a3b8; font-weight: 700; flex: 0 0 auto; }
+    .trow .tk { font-size: 9px; font-weight: 800; color: #4f46e5; background: #eef2ff; border-radius: 4px; padding: 1px 4px; flex: 0 0 auto; }
+    .trow .mix { width: 26px; height: 3.5px; border-radius: 2px; overflow: hidden; display: flex; background: #eef2f7; flex: 0 0 auto; }
+    .trow .mix i { height: 100%; display: block; }
+
+    .lvmark { flex: 0 0 auto; border-radius: 3px; }
+    .lvmark.l1 { width: 10px; height: 10px; background: linear-gradient(135deg, #818cf8, #4338ca); box-shadow: 0 0 0 2px rgba(99,102,241,.14); }
+    .lvmark.l2 { width: 8px; height: 8px; background: #a5b4fc; }
+    .lvmark.l3 { width: 6px; height: 6px; border-radius: 50%; background: #cbd5e1; }
+    .hdot { width: 7px; height: 7px; border-radius: 2px; background: #c8102e; display: inline-block; margin-right: 5px; }
+
+    .lv1 > .trow { font-size: 12px; font-weight: 800; color: #0f172a; }
+    .lv2 > .trow { font-size: 11.5px; font-weight: 700; color: #334155; }
+    .lv3 > .trow { font-size: 11px; font-weight: 600; color: #475569; }
+
+    .tkids { position: relative; margin-left: 13px; padding-left: 9px; }
+    .tkids::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 12px; width: 1px; background: #e3e9f1;
+    }
+    .tkids > .tnode > .trow::before,
+    .tkids > .veh::before {
+      content: ''; position: absolute; left: -9px; top: 50%; width: 9px; height: 1px; background: #e3e9f1;
+    }
+    .veh { position: relative; display: flex; align-items: center; gap: 5px; height: 26px; padding: 0 8px 0 0; border-radius: 6px; }
+    .veh:hover { background: #f8fafc; }
+    .veh .dot { width: 5px; height: 5px; border-radius: 50%; flex: 0 0 auto; }
+    .dot.g { background: #22c55e; } .dot.a { background: #f59e0b; } .dot.s { background: #cbd5e1; }
+    .veh .p { font-size: 11px; font-weight: 800; color: #0f172a; }
+    .veh .b { font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 4px; }
+    .b.run { color: #3730a3; background: #eef2ff; } .b.load { color: #92400e; background: #fef3c7; }
+    .b.idle { color: #94a3b8; background: #f1f5f9; } .b.done { color: #166534; background: #dcfce7; }
+    .veh .pct { margin-left: auto; font-size: 9.5px; font-weight: 800; color: #4f46e5; }
+    .veh2 { padding: 4px 8px 4px 0; }
+    .veh2 .l2 { display: flex; align-items: center; gap: 5px; margin-top: 2px; font-size: 9.5px; color: #64748b; }
+    .veh2 .bar { width: 30px; height: 3px; border-radius: 2px; background: #eef2f7; overflow: hidden; }
+    .veh2 .bar i { display: block; height: 100%; background: linear-gradient(90deg, #6366f1, #22d3ee); }
+    .empty-org > .trow { opacity: .55; }
+
+    /* 方案卡 */
+    .opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .opt { background: #fff; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+    .opt.pick { border-color: #c7d2fe; box-shadow: 0 0 0 3px rgba(99,102,241,.1), 0 12px 30px rgba(79,70,229,.1); }
+    .opt-head { padding: 13px 15px 8px; display: flex; align-items: flex-start; gap: 8px; }
+    .opt-tag { font-size: 10.5px; font-weight: 800; color: #fff; background: #94a3b8; border-radius: 6px; padding: 3px 7px; flex: 0 0 auto; }
+    .opt.pick .opt-tag { background: linear-gradient(135deg, var(--indigo), #3730a3); }
+    .opt-head h4 { margin: 0; font-size: 13px; font-weight: 800; color: var(--ink); line-height: 1.5; }
+    .opt-body { padding: 0 15px 12px; }
+    .opt-body p { margin: 8px 0 0; font-size: 12px; color: var(--muted); line-height: 1.7; }
+    .opt-foot { padding: 9px 15px 13px; border-top: 1px dashed var(--line); display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip { font-size: 11px; color: var(--muted); background: #f8fafc; border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; }
+    .chip.good { color: #166534; background: #f0fdf4; border-color: #bbf7d0; }
+    .chip.warn { color: #9a3412; background: #fff7ed; border-color: #fed7aa; }
+    .chip.blue { color: #3730a3; background: #eef2ff; border-color: #c7d2fe; }
+
+    /* 按钮位置 */
+    .btn-layout { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .bl { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+    .bl.pick { border-color: #c7d2fe; box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+    .bl h4 { margin: 0 0 4px; font-size: 13px; font-weight: 800; color: var(--ink); }
+    .bl p { margin: 0 0 10px; font-size: 12px; color: var(--muted); line-height: 1.65; }
+    .bl-stage { position: relative; height: 190px; background: #eef2f6; border-radius: 10px; overflow: hidden; }
+    .bl-panel { position: absolute; left: 10px; top: 10px; bottom: 10px; width: 200px; background: #fff; border-radius: 10px; box-shadow: 0 6px 18px rgba(15,23,42,.1); }
+    .bl-panel .h { height: 30px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; padding: 0 10px; font-size: 10.5px; color: #94a3b8; font-weight: 700; }
+    .bl-panel .r { height: 22px; margin: 4px 8px; border-radius: 5px; background: #f8fafc; }
+    .pin-pos {
+      position: absolute; display: grid; place-items: center; font-size: 10px; font-weight: 800; color: #fff;
+      background: #c8102e; border-radius: 6px; box-shadow: 0 0 0 3px rgba(200,16,46,.16);
+    }
+    .pin-num { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #c8102e; color: #fff; font-size: 9.5px; font-weight: 800; display: grid; place-items: center; }
+
+    /* 动画 demo */
+    .anim-stage { position: relative; height: 300px; background: #eef2f6; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+    .demo-panel {
+      position: absolute; left: 12px; top: 12px; bottom: 12px; width: 268px; background: #fff; border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(15,23,42,.12); overflow: hidden; will-change: width, transform;
+    }
+    .dp-head { display: flex; align-items: center; gap: 6px; padding: 9px 10px; border-bottom: 1px solid #f1f5f9; font-size: 11.5px; font-weight: 700; color: #475569; white-space: nowrap; overflow: hidden; transition: opacity .18s ease .14s; }
+    .demo-panel.is-collapsed .dp-head { opacity: 0; transition: opacity .12s ease; }
+    .dp-body { padding: 4px; }
+    .dp-row { height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 8px; border-radius: 6px; font-size: 11px; color: #334155; }
+    .dp-row .p { font-weight: 800; font-size: 10.5px; color: #0f172a; }
+    .dp-row .b { font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 4px; color: #3730a3; background: #eef2ff; margin-left: auto; }
+    .dp-handle {
+      position: absolute; right: 0; top: 0; bottom: 0; width: 44px; display: grid; place-items: center;
+      color: #94a3b8; font-size: 15px; opacity: 0; transition: opacity .2s;
+    }
+
+    .anim-ctl { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .anim-ctl button {
+      border: 1px solid var(--line); background: #fff; border-radius: 9px; padding: 8px 12px; cursor: pointer;
+      font-family: inherit; font-size: 12px; font-weight: 700; color: #475569; transition: all .2s;
+    }
+    .anim-ctl button:hover { border-color: #c7d2fe; color: #3730a3; }
+    .anim-ctl button.on { background: #eef2ff; border-color: #c7d2fe; color: #3730a3; }
+    .timing { display: flex; gap: 2px; margin-top: 10px; height: 26px; font-size: 9.5px; }
+    .timing .seg { display: grid; place-items: center; border-radius: 5px; color: #fff; white-space: nowrap; overflow: hidden; }
+    .timing .s1 { background: #94a3b8; }
+    .timing .s2 { background: #6366f1; }
+    .timing .s3 { background: #22d3ee; color: #083344; }
+
+    table.cmp { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; border-radius: 12px; overflow: hidden; margin-top: 16px; }
+    table.cmp th, table.cmp td { padding: 9px 11px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+    table.cmp th { background: #f8fafc; font-weight: 800; color: var(--ink); font-size: 11.5px; }
+    table.cmp td:first-child { font-weight: 700; color: var(--ink-2); width: 150px; }
+    table.cmp tr:last-child td { border-bottom: none; }
+    .ok { color: #15803d; font-weight: 700; }
+    .mid { color: #b45309; font-weight: 700; }
+    .no { color: #b91c1c; font-weight: 700; }
+
+    .note { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 12px 14px; font-size: 12.5px; color: #92400e; line-height: 1.75; margin-top: 14px; }
+    .note.blue { background: #eef2ff; border-color: #c7d2fe; color: #3730a3; }
+    ul.plain { margin: 8px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--muted); line-height: 1.85; }
+    ul.plain b { color: var(--ink-2); }
+    .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    @media (max-width: 1080px) {
+      .opts, .btn-layout { grid-template-columns: 1fr; }
+      .diag { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="page-head">
+      <div>
+        <h1>全图监控 · 组织树与收起交互</h1>
+        <p>针对三个问题出方案：① 层次不直观；② 机构顺序不对（应该根机构在最上）；③ 收起按钮位置 + 收起动画太生硬。</p>
+      </div>
+      <div class="tags">
+        <span class="tag">先看方案，不动代码</span>
+      </div>
+    </div>
+
+    <!-- ============ 1 诊断 ============ -->
+    <section>
+      <div class="sec-head"><span class="sec-num">1</span><h2>现在为什么看着乱</h2></div>
+      <p class="sec-desc">不是样式问题，是<b>上一版根本没建树</b>：按「机构名」把车拍平后加了几像素缩进，层级关系只存在于缩进里。</p>
+
+      <div class="card">
+        <div class="diag">
+          <div class="mock-wrap">
+            <div class="panel-mock">
+              <div class="pm-head"><span class="hdot"></span>全部组织 <span class="cnt">8</span><span class="x">‹</span></div>
+              <div class="pm-body">
+                <div class="flat-row" style="padding-left:10px"><span class="nm">山西卡友新能源运输有限…</span><span class="c">4</span><span class="tk">4 单</span></div>
+                <div class="flat-veh" style="padding-left:10px"><span class="p">晋K05851D</span><span class="b">在途</span><span class="s">47%</span></div>
+                <div class="flat-veh" style="padding-left:10px"><span class="p">晋K02347D</span><span class="b">已到达</span><span class="s">100%</span></div>
+                <div class="flat-row" style="padding-left:10px"><span class="nm">晋中分公司</span><span class="c">3</span></div>
+                <div class="flat-veh" style="padding-left:10px"><span class="p">晋K06200D</span><span class="b">待装车</span><span class="s">2%</span></div>
+                <div class="flat-row" style="padding-left:24px"><span class="nm">榆次车队</span><span class="c">2</span></div>
+                <div class="flat-veh" style="padding-left:24px"><span class="p">晋K03115D</span><span class="b">空闲</span></div>
+                <div class="flat-veh" style="padding-left:24px"><span class="p">晋K02901D</span><span class="b">空闲</span></div>
+                <div class="flat-row" style="padding-left:10px"><span class="nm">未分配机构</span><span class="c">1</span></div>
+                <div class="flat-veh" style="padding-left:10px"><span class="p">晋K07012D</span><span class="b">空闲</span></div>
+              </div>
+            </div>
+            <div class="anno" style="left:274px;top:10px">3</div>
+            <div class="anno" style="left:274px;top:112px">1</div>
+            <div class="anno" style="left:274px;top:198px">2</div>
+          </div>
+
+          <div class="diag-list">
+            <div class="diag-item">
+              <span class="diag-num">1</span>
+              <div>
+                <h4>二级机构跟一级"平级"排在一起</h4>
+                <p>「晋中分公司」和「山西卡友…」是父子关系，但只靠 14px 缩进区分，视觉上像兄弟。
+                  中间层没车时，这一级甚至直接不出现，树就断了。</p>
+              </div>
+            </div>
+            <div class="diag-item">
+              <span class="diag-num">2</span>
+              <div>
+                <h4>没有"谁包含谁"的视觉线索</h4>
+                <p>缺引导线、缺层级符号，眼睛只能靠缩进猜。行高一样、字重一样，扫起来没有主次。</p>
+              </div>
+            </div>
+            <div class="diag-item">
+              <span class="diag-num">3</span>
+              <div>
+                <h4>收起按钮语义不清</h4>
+                <p>顶部这个 <code>‹</code> 到底是收整个面板，还是收当前机构？现在点它整块面板消失，
+                  而大多数人以为它只收当前分支。</p>
+              </div>
+            </div>
+            <div class="diag-item" style="margin-top:2px">
+              <div style="font-size:12.5px;color:#64748b;line-height:1.75;background:#f8fafc;border-radius:10px;padding:10px 12px">
+                <b style="color:#0f172a">根因：</b>数据里 <code>organizations</code> 有
+                <code>id / parent_id / level / is_root</code> 完整父子关系，
+                我上一版只用了 <code>level</code> 做缩进、按名字分组，<b>没用 parent_id 建树</b>。
+                所以「先一级、再二级三级」这个顺序天然就不成立。
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 2 层次方案 ============ -->
+    <section>
+      <div class="sec-head"><span class="sec-num">2</span><h2>层次怎么表达</h2><span class="sub"></span></div>
+      <p class="sec-desc">三种做法，都保证「根机构在最上 → 二级 → 三级 → 车辆」。左边一列全部按 268px 真实宽度画的。</p>
+
+      <div class="opts">
+        <!-- A -->
+        <div class="opt pick">
+          <div class="opt-head"><span class="opt-tag">A</span><h4>缩进 + 引导线（经典树，推荐）</h4></div>
+          <div class="opt-body">
+            <div class="panel-mock" style="width:100%;box-shadow:none;border:1px solid #eef2f7">
+              <div class="pm-head"><span class="hdot"></span>全部组织 <span class="cnt">12 台</span><span class="x">⌃</span></div>
+              <div class="pm-body tree">
+                <div class="tnode lv1">
+                  <div class="trow open"><span class="caret">▸</span><span class="lvmark l1"></span>
+                    <span class="nm">山西卡友新能源运输有限公司</span><span class="meta">12</span><span class="tk">4 单</span>
+                    <span class="mix"><i style="width:50%;background:#22c55e"></i><i style="width:33%;background:#f59e0b"></i><i style="width:17%;background:#cbd5e1"></i></span>
+                  </div>
+                  <div class="tkids">
+                    <div class="veh"><span class="dot g"></span><span class="p">晋K05851D</span><span class="b run">在途</span><span class="pct">47%</span></div>
+                    <div class="tnode lv2">
+                      <div class="trow open"><span class="caret">▸</span><span class="lvmark l2"></span>
+                        <span class="nm">晋中分公司</span><span class="meta">5</span><span class="tk">2 单</span>
+                      </div>
+                      <div class="tkids">
+                        <div class="tnode lv3">
+                          <div class="trow open"><span class="caret">▸</span><span class="lvmark l3"></span>
+                            <span class="nm">榆次车队</span><span class="meta">2</span>
+                          </div>
+                          <div class="tkids">
+                            <div class="veh"><span class="dot a"></span><span class="p">晋K06200D</span><span class="b load">待装</span><span class="pct">2%</span></div>
+                            <div class="veh"><span class="dot s"></span><span class="p">晋K03115D</span><span class="b idle">空闲</span></div>
+                          </div>
+                        </div>
+                        <div class="veh"><span class="dot g"></span><span class="p">晋K05897D</span><span class="b run">在途</span><span class="pct">88%</span></div>
+                      </div>
+                    </div>
+                    <div class="tnode lv2 empty-org">
+                      <div class="trow"><span class="caret">▸</span><span class="lvmark l2"></span>
+                        <span class="nm">运城分公司</span><span class="meta">0</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p>每层一条竖引导线 + 短横线，节点用层级标记区分（L1 实心 / L2 浅色 / L3 圆点，真机上换回 Element Plus 的 OfficeBuilding / Folder / Document）；车辆挂在所属机构下面。
+              空机构也保留（淡显 0），保证"一级 → 二级 → 三级"链不断。</p>
+          </div>
+          <div class="opt-foot"><span class="chip blue">推荐</span><span class="chip good">层次最清楚</span><span class="chip">宽度占用可控</span></div>
+        </div>
+
+        <!-- B -->
+        <div class="opt">
+          <div class="opt-head"><span class="opt-tag">B</span><h4>一级机构分块（卡片式）</h4></div>
+          <div class="opt-body">
+            <div class="panel-mock" style="width:100%;box-shadow:none;border:1px solid #eef2f7">
+              <div class="pm-head"><span class="hdot"></span>全部组织 <span class="cnt">12 台</span><span class="x">⌃</span></div>
+              <div class="pm-body">
+                <div style="border:1px solid #eef2f7;border-radius:9px;padding:6px 4px;margin-bottom:8px">
+                  <div class="trow" style="height:26px"><span class="lvmark l1"></span><span class="nm" style="font-weight:800;color:#0f172a">山西卡友新能源运输…</span><span class="meta">12</span></div>
+                  <div style="padding-left:16px">
+                    <div class="veh" style="height:24px"><span class="dot g"></span><span class="p">晋K05851D</span><span class="b run">在途</span></div>
+                    <div class="trow" style="height:24px;padding-left:6px"><span class="lvmark l2"></span><span class="nm" style="font-weight:700">晋中分公司</span><span class="meta">5</span></div>
+                    <div class="veh" style="height:24px;padding-left:14px"><span class="dot a"></span><span class="p">晋K06200D</span><span class="b load">待装</span></div>
+                  </div>
+                </div>
+                <div style="border:1px solid #eef2f7;border-radius:9px;padding:6px 4px">
+                  <div class="trow" style="height:26px"><span class="lvmark l1"></span><span class="nm" style="font-weight:800;color:#0f172a">山西长城物流</span><span class="meta">6</span></div>
+                  <div style="padding-left:16px">
+                    <div class="veh" style="height:24px"><span class="dot s"></span><span class="p">晋K01156D</span><span class="b idle">空闲</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p>每个一级机构一张浅底卡片，二级在卡片内缩进。层次很强，但每多一层就多一圈内边距，
+              260px 宽下三级机构的名字基本只剩 4 个字。</p>
+          </div>
+          <div class="opt-foot"><span class="chip good">层次感强</span><span class="chip warn">宽度吃紧</span><span class="chip warn">高度更占</span></div>
+        </div>
+
+        <!-- C -->
+        <div class="opt">
+          <div class="opt-head"><span class="opt-tag">C</span><h4>逐级钻取（面包屑）</h4></div>
+          <div class="opt-body">
+            <div class="panel-mock" style="width:100%;box-shadow:none;border:1px solid #eef2f7">
+              <div class="pm-head" style="gap:4px">‹ <span style="color:#0f172a">山西卡友…</span>
+                <span style="color:#cbd5e1">/</span><span style="color:#475569">晋中分公司</span>
+                <span class="cnt" style="margin-left:auto">5</span></div>
+              <div class="pm-body">
+                <div class="trow"><span class="caret">▸</span><span class="lvmark l3"></span><span class="nm">榆次车队</span><span class="meta">2</span><span style="color:#cbd5e1;font-size:10px">›</span></div>
+                <div class="veh"><span class="dot g"></span><span class="p">晋K05897D</span><span class="b run">在途</span><span class="pct">88%</span></div>
+                <div class="veh"><span class="dot g"></span><span class="p">晋K05851D</span><span class="b run">在途</span><span class="pct">47%</span></div>
+                <div class="veh"><span class="dot s"></span><span class="p">晋K03115D</span><span class="b idle">空闲</span></div>
+              </div>
+            </div>
+            <p>一次只看一层，点机构钻进去，面包屑返回。列表永远只有一屏、最清爽，
+              但"一眼看完整个车队"这件事做不到了。</p>
+          </div>
+          <div class="opt-foot"><span class="chip good">最省空间</span><span class="chip warn">多一次点击</span></div>
+        </div>
+      </div>
+
+      <table class="cmp">
+        <tr><th>维度</th><th>A 缩进 + 引导线</th><th>B 分块卡片</th><th>C 逐级钻取</th></tr>
+        <tr><td>层次清晰度</td><td class="ok">高（线 + 图标 + 字重三重要素）</td><td class="ok">高（块状分隔）</td><td class="mid">单层清楚，全局不可见</td></tr>
+        <tr><td>260px 下的可用宽度</td><td class="ok">够（每层 12px）</td><td class="mid">紧（每层 16px + 卡片内边距）</td><td class="ok">最宽</td></tr>
+        <tr><td>一屏看到多少车</td><td class="ok">约 8–10 台</td><td class="mid">约 6 台</td><td class="mid">取决于当前层</td></tr>
+        <tr><td>能不能"一眼扫全局"</td><td class="ok">能</td><td class="ok">能</td><td class="no">不能</td></tr>
+        <tr><td>开发量</td><td>1.5 天（建树 + 渲染 + 折叠动画）</td><td>2 天</td><td>2.5 天（多一套层级状态）</td></tr>
+      </table>
+    </section>
+
+    <!-- ============ 3 按钮位置 ============ -->
+    <section>
+      <div class="sec-head"><span class="sec-num">3</span><h2>「收起整个列表」放哪</h2></div>
+      <p class="sec-desc">现在这个位置（列表头右上角）改成 <b>折叠当前根机构</b>，语义就对上了：头部管分支，边缘管整个面板。</p>
+
+      <div class="btn-layout">
+        <div class="bl pick">
+          <h4>① 面板右边缘的竖向内嵌把手 <span class="chip blue" style="margin-left:6px">推荐</span></h4>
+          <p>贴在面板右侧外沿、垂直居中，36×56 圆角胶囊，中间一个 ‹。hover 时向右微移 2px 并加深。
+            位置固定、随时可点，不占列表空间。</p>
+          <div class="bl-stage">
+            <div class="bl-panel">
+              <div class="h"><span class="hdot"></span>全部组织</div>
+              <div class="r"></div><div class="r"></div><div class="r" style="width:70%"></div>
+            </div>
+            <div class="pin-pos" style="left:206px;top:80px;width:14px;height:44px;border-radius:0 8px 8px 0">‹</div>
+            <div class="pin-num" style="left:196px;top:56px">1</div>
+          </div>
+        </div>
+
+        <div class="bl">
+          <h4>② 列表头左侧（‹ 放到标题前）</h4>
+          <p>把 ‹ 挪到「全部组织」前面，和标题一起读作"收起这一列"。但和树节点的折叠箭头挨着，容易混淆。</p>
+          <div class="bl-stage">
+            <div class="bl-panel">
+              <div class="h" style="gap:4px"><span style="color:#c8102e;font-weight:800">‹</span> 全部组织</div>
+              <div class="r"></div><div class="r"></div><div class="r" style="width:70%"></div>
+            </div>
+            <div class="pin-num" style="left:14px;top:44px">2</div>
+          </div>
+        </div>
+
+        <div class="bl">
+          <h4>③ 底部悬浮圆形按钮</h4>
+          <p>面板左下角一个圆钮 + 「收起列表」文字，首次进来有一条呼吸提示。最显眼，但会压住最后一行。</p>
+          <div class="bl-stage">
+            <div class="bl-panel">
+              <div class="h"><span class="hdot"></span>全部组织</div>
+              <div class="r"></div><div class="r"></div><div class="r" style="width:70%"></div>
+            </div>
+            <div class="pin-pos" style="left:22px;top:150px;width:88px;height:24px;border-radius:999px;font-size:9px">‹ 收起列表</div>
+            <div class="pin-num" style="left:118px;top:150px">3</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note blue">
+        <b>为什么推荐 ①：</b>它跟"面板边界"这个物理概念绑定——边缘上的把手，点它当然是收面板；
+        列表头部的箭头，指的是这一棵树。位置即语义，不用教。
+        顺带：头部右侧保留一个 <b>⌃/⌄（全部折叠/展开）</b> 图标，只折叠根机构下的分支。
+      </div>
+    </section>
+
+    <!-- ============ 4 动画 ============ -->
+    <section>
+      <div class="sec-head"><span class="sec-num">4</span><h2>收起动画</h2></div>
+      <p class="sec-desc">现在生硬是因为：<b>宽度在 400ms 里整体收缩，内容却一直满格显示被硬切</b>，而且用了带 1.56 回弹的贝塞尔，边缘会"弹"一下。
+        柔和的要点是 <b>分两拍：先让内容淡出，再收宽度</b>；展开反过来，<b>先铺开再淡入</b>。</p>
+
+      <div class="card">
+        <div class="anim-stage">
+          <div class="demo-panel" id="demoPanel">
+            <div class="dp-head"><span class="hdot"></span>全部组织 · 12 台</div>
+            <div class="dp-body">
+              <div class="dp-row"><span class="p">晋K05851D</span><span class="b">在途</span></div>
+              <div class="dp-row"><span class="p">晋K06200D</span><span class="b">待装</span></div>
+              <div class="dp-row"><span class="p">晋K05897D</span><span class="b">在途</span></div>
+              <div class="dp-row"><span class="p">晋K03115D</span><span class="b">空闲</span></div>
+              <div class="dp-row"><span class="p">晋K02901D</span><span class="b">空闲</span></div>
+            </div>
+            <div class="dp-handle">‹</div>
+          </div>
+        </div>
+
+        <div class="anim-ctl">
+          <button data-anim="1" class="on">方案 1 · 两拍式（推荐）</button>
+          <button data-anim="2">方案 2 · 胶囊收拢</button>
+          <button data-anim="3">方案 3 · 整块滑出</button>
+          <button id="playBtn" style="margin-left:auto;background:#c8102e;border-color:#c8102e;color:#fff">▶ 播放</button>
+        </div>
+
+        <div class="timing" id="timingBar">
+          <div class="seg s1" style="flex:12">内容淡出 120ms</div>
+          <div class="seg s2" style="flex:30">面板收缩 300ms</div>
+          <div class="seg s3" style="flex:18">把手淡入 180ms</div>
+        </div>
+      </div>
+
+      <div class="cols2" style="margin-top:16px">
+        <div class="card">
+          <h4 style="margin:0 0 8px;font-size:13px;color:var(--ink)">三套参数的差别</h4>
+          <ul class="plain">
+            <li><b>方案 1（推荐）</b>：淡出 120ms → 宽度 260→44 用 <code>300ms cubic-bezier(.4,0,.2,1)</code> → 把手延迟 180ms 淡入。
+              展开：宽度 <code>320ms cubic-bezier(.22,1,.36,1)</code> → 内容延迟 140ms 淡入 + 8px 右移归位。</li>
+            <li><b>方案 2</b>：宽度 + <code>border-radius 12→999px</code> + 阴影收拢，像一条抽屉滑进去；收完变成一个胶囊。
+              手感俏皮，但和"列表"的语义略偏。</li>
+            <li><b>方案 3</b>：整块 <code>translateX(-100%)</code> 滑出（保持 260 宽），右边缘留 12px；
+              最快最干脆，但会有"整块飞走"的错觉。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4 style="margin:0 0 8px;font-size:13px;color:var(--ink)">别用这些</h4>
+          <ul class="plain">
+            <li><b>不要</b> <code>cubic-bezier(.34,1.56,.64,1)</code>（带回弹）——宽度回弹会让面板边缘"蹦"一下。</li>
+            <li><b>不要</b> 用 <code>display:none</code> / <code>visibility</code> 切内容 —— 会闪一下。</li>
+            <li><b>不要</b>同时改 width 和 height（现在两个都在动，观感更乱）。</li>
+            <li><b>折叠分支</b>（根机构、二级机构）用 <b>max-height + opacity + 每行 14ms 级联延迟</b>，别整块闪现。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5 落地 ============ -->
+    <section>
+      <div class="sec-head"><span class="sec-num">5</span><h2>落地清单</h2></div>
+      <div class="cols2">
+        <div class="card">
+          <h4 style="margin:0 0 8px;font-size:13px;color:var(--ink)">数据结构（这次必须真建树）</h4>
+          <ul class="plain">
+            <li>用 <code>organizations</code> 的 <code>parent_id</code> 建 childrenMap，<code>is_root/level===1</code> 或 <code>!parent_id</code> 定为根。</li>
+            <li>根节点<b>永远排第一</b>，子节点按 <code>name</code> 排序；无车的中间层保留（淡显）保证链完整。</li>
+            <li>车辆按 <code>vehicles.org === 机构名</code> 挂到对应节点；挂不上的进「未分配」。</li>
+            <li>机构台数 / 任务数<b>递归汇总</b>（和 OrgManage 里 <code>recursiveVehicleMap</code> 一个口径）。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4 style="margin:0 0 8px;font-size:13px;color:var(--ink)">交互细节</h4>
+          <ul class="plain">
+            <li><b>默认展开</b>：根 + 二级展开，三级折叠（避免一进来就是瀑布）。</li>
+            <li><b>搜索联动</b>：命中车辆时，自动展开它的所有祖先节点；搜索词清空后恢复原展开状态。</li>
+            <li><b>记住展开状态</b>：存 sessionStorage，刷新/返回不重置。</li>
+            <li><b>根机构折叠</b>：头部 ⌃/⌄ 一键全收/全展（只对分支，不动面板）。</li>
+            <li><b>收起面板</b>：右边缘把手，键盘 <code>[</code> 也能收。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note">
+        <b>需要你拍板两点：</b>
+        ① 层次用 <b>A（缩进 + 引导线）</b> 还是 <b>B（分块卡片）</b>？我选 A，260px 下更耐看。
+        ② 收起把手放<b>右边缘</b>（①）还是<b>底部圆钮</b>（③）？我选 ①。
+        另外确认一下：空机构（0 台车）要不要显示？我建议显示但淡显，否则层级会断。
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      const panel = document.getElementById('demoPanel');
+      const bar = document.getElementById('timingBar');
+      const btns = [...document.querySelectorAll('[data-anim]')];
+      const playBtn = document.getElementById('playBtn');
+      let variant = '1';
+      let collapsed = false;
+
+      const TIMINGS = {
+        '1': [['内容淡出 120ms', 12, 's1'], ['面板收缩 300ms', 30, 's2'], ['把手淡入 180ms', 18, 's3']],
+        '2': [['圆角 240ms', 24, 's3'], ['宽度 320ms', 32, 's2'], ['胶囊态 120ms', 12, 's1']],
+        '3': [['整体滑出 260ms', 26, 's2'], ['把手淡入 140ms', 14, 's3']],
+      };
+
+      function renderTiming(v) {
+        bar.innerHTML = TIMINGS[v].map(([t, w, cls]) => `<div class="seg ${cls}" style="flex:${w}">${t}</div>`).join('');
+      }
+
+      function applyVariant(v) {
+        panel.style.transition = 'none';
+        panel.style.width = '';
+        panel.style.transform = '';
+        panel.style.borderRadius = '';
+        panel.style.opacity = '';
+        panel.querySelector('.dp-body').style.transition = 'none';
+        panel.querySelector('.dp-body').style.opacity = '';
+        panel.querySelector('.dp-handle').style.transition = 'none';
+        panel.querySelector('.dp-handle').style.opacity = '';
+        // 强制回流后再设新规则
+        void panel.offsetWidth;
+        panel.style.transition = '';
+        panel.querySelector('.dp-body').style.transition = '';
+        panel.querySelector('.dp-handle').style.transition = '';
+        collapsed = false;
+        renderTiming(v);
+      }
+
+      btns.forEach(b => b.addEventListener('click', () => {
+        btns.forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        variant = b.dataset.anim;
+        applyVariant(variant);
+      }));
+
+      playBtn.addEventListener('click', () => {
+        collapsed = !collapsed;
+        panel.classList.toggle('is-collapsed', collapsed);
+        const body = panel.querySelector('.dp-body');
+        const handle = panel.querySelector('.dp-handle');
+
+        if (variant === '1') {
+          if (collapsed) {
+            body.style.transition = 'opacity .12s ease';
+            body.style.opacity = '0';
+            panel.style.transition = 'width .3s cubic-bezier(.4,0,.2,1) .07s';
+            panel.style.width = '44px';
+            handle.style.transition = 'opacity .18s ease .18s';
+            handle.style.opacity = '1';
+          } else {
+            panel.style.transition = 'width .32s cubic-bezier(.22,1,.36,1)';
+            panel.style.width = '268px';
+            handle.style.transition = 'opacity .12s ease';
+            handle.style.opacity = '0';
+            body.style.transition = 'opacity .18s ease .14s';
+            body.style.opacity = '1';
+          }
+        } else if (variant === '2') {
+          if (collapsed) {
+            body.style.transition = 'opacity .14s ease';
+            body.style.opacity = '0';
+            panel.style.transition = 'width .32s cubic-bezier(.4,0,.2,1), border-radius .24s ease';
+            panel.style.width = '44px';
+            panel.style.borderRadius = '999px';
+            handle.style.transition = 'opacity .2s ease .2s';
+            handle.style.opacity = '1';
+          } else {
+            panel.style.transition = 'width .34s cubic-bezier(.22,1,.36,1), border-radius .28s ease';
+            panel.style.width = '268px';
+            panel.style.borderRadius = '12px';
+            handle.style.transition = 'opacity .12s';
+            handle.style.opacity = '0';
+            body.style.transition = 'opacity .2s ease .16s';
+            body.style.opacity = '1';
+          }
+        } else {
+          if (collapsed) {
+            panel.style.transition = 'transform .26s cubic-bezier(.4,0,.2,1)';
+            panel.style.transform = 'translateX(calc(-100% + 12px))';
+            handle.style.transition = 'opacity .14s ease .12s';
+            handle.style.opacity = '1';
+            handle.style.transform = 'translateX(12px)';
+          } else {
+            panel.style.transition = 'transform .3s cubic-bezier(.22,1,.36,1)';
+            panel.style.transform = 'translateX(0)';
+            handle.style.transition = 'opacity .12s';
+            handle.style.opacity = '0';
+            handle.style.transform = '';
+          }
+        }
+      });
+    })();
+  </script>
+</body>
+
+</html>

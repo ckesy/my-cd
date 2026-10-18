@@ -96,18 +96,42 @@
                   <el-icon><Close /></el-icon>
                 </button>
               </div>
+
             </div>
 
-            <el-button
-              v-if="tasks.length > 1"
-              type="danger"
-              plain
-              size="small"
-              class="del-task-btn"
-              @click="removeTask(task.id)"
-            >
-              删除任务
-            </el-button>
+            <!-- ⭐ 右侧操作区：从客户档案填充（右对齐）+ 删除任务 -->
+            <div class="task-header-right">
+              <button
+                v-if="!hasCustomerFill(task)"
+                type="button"
+                class="customer-fill-btn"
+                @click="openCustomerFill(task)"
+              >
+                <el-icon><User /></el-icon>
+                <span>从客户档案填充</span>
+              </button>
+
+              <div v-else class="customer-fill-badge" :title="customerFillLabel(task)">
+                <button type="button" class="cf-badge-main" @click="openCustomerFill(task)">
+                  <el-icon><CircleCheckFilled /></el-icon>
+                  <span>已带入客户联系人</span>
+                </button>
+                <button type="button" class="cf-badge-clear" title="清除客户关联" @click.stop="clearCustomerFill(task)">
+                  <el-icon><Close /></el-icon>
+                </button>
+              </div>
+
+              <el-button
+                v-if="tasks.length > 1"
+                type="danger"
+                plain
+                size="small"
+                class="del-task-btn"
+                @click="removeTask(task.id)"
+              >
+                删除任务
+              </el-button>
+            </div>
           </div>
 
           <!-- 起 -->
@@ -260,32 +284,31 @@
         <div v-for="(item, index) in form.cargoList" :key="item.id" class="cargo-row"
           :style="{ backgroundColor: getTaskColor(item.taskId) }">
           <el-row :gutter="12" align="middle" style="flex-wrap: nowrap;">
-            <el-col :span="5" style="white-space: nowrap;">
+            <el-col :span="cargoSpans.name" style="white-space: nowrap;">
               <el-form-item :label="`*货物${index + 1}`" label-width="80px">
                 <el-input v-model="item.name" placeholder="请输入货物名称" @input="triggerDistribute" />
               </el-form-item>
             </el-col>
-            <el-col :span="3" style="white-space: nowrap;">
-              <el-form-item label="数量" label-width="50px">
-                <el-input-number v-model="item.quantity" :min="0" controls-position="right" style="width:100%;" @change="triggerDistribute" />
+            <el-col :span="cargoSpans.qty" style="white-space: nowrap;">
+              <el-form-item label="数量" label-width="44px">
+                <el-input-number v-model="item.quantity" :min="0" :controls="false" style="width:100%;"
+                  @change="onCargoQuantityChange(item)" />
               </el-form-item>
             </el-col>
-            <el-col :span="2" style="white-space: nowrap;">
+            <el-col :span="cargoSpans.unit" style="white-space: nowrap;">
               <el-form-item label="单位" label-width="40px">
-                <el-select v-model="item.unit" placeholder="单位" style="width:100%;">
-                  <el-option label="吨" value="吨" />
-                  <el-option label="件" value="件" />
-                  <el-option label="方" value="方" />
-                </el-select>
+                <UnitSelect v-model="item.unit" mode="compact" placeholder="单位" :show-common="false"
+                  style="width:100%;" />
               </el-form-item>
             </el-col>
-            <el-col :span="3" style="white-space: nowrap;">
-              <el-form-item label="运费" label-width="50px">
-                <el-input-number v-model="item.freight" :min="0" :precision="2" :step="1" controls-position="right"
-                  style="width:100%;" placeholder="0.00" @focus="$event.target.select()" @change="triggerDistribute" />
+            <el-col :span="cargoSpans.freight" style="white-space: nowrap;">
+              <el-form-item label="运费" label-width="44px">
+                <el-input-number v-model="item.freight" :min="0" :precision="2" :controls="false"
+                  style="width:100%;" placeholder="0.00" @focus="$event.target.select()"
+                  @change="onCargoFreightChange(item)" />
               </el-form-item>
             </el-col>
-            <el-col v-if="tasks.length > 1" :span="6" style="white-space: nowrap;">
+            <el-col v-if="tasks.length > 1" :span="cargoSpans.task" style="white-space: nowrap;">
               <el-form-item label="绑定任务" label-width="70px" required>
                 <el-select v-model="item.taskId" placeholder="选择任务" style="width:100%; min-width:200px;" @change="triggerDistribute">
                   <el-option v-for="t in tasks" :key="t.id"
@@ -293,7 +316,23 @@
                 </el-select>
               </el-form-item>
             </el-col>
-            <el-col :span="tasks.length > 1 ? 5 : 11" class="cargo-actions">
+            <el-col :span="cargoSpans.actions" class="cargo-actions">
+              <!-- ⭐ 从货物档案填充计费规则：带出货物名称 / 单位 / 单价 -->
+              <button v-if="!item.ruleName" type="button" class="cargo-fill-btn" @click="openCargoFill(index)">
+                <el-icon><Box /></el-icon>
+                <span>从货物档案填充</span>
+              </button>
+              <div v-else class="customer-fill-badge cargo-rule-badge"
+                :title="`${item.ruleName}｜含税 ${formatMoney(item.priceTax)} ${priceUnitShort(item.priceUnit)}，${freightFormula(item.priceUnit)}`">
+                <button type="button" class="cf-badge-main" @click="openCargoFill(index)">
+                  <el-icon><CircleCheckFilled /></el-icon>
+                  <span>{{ item.ruleName }}</span>
+                </button>
+                <button type="button" class="cf-badge-clear" title="清除计费规则" @click.stop="clearCargoRule(item)">
+                  <el-icon><Close /></el-icon>
+                </button>
+              </div>
+
               <el-button v-if="!(tasks.length === 1 && form.cargoList.length === 1)" type="danger" plain size="small"
                 @click="removeCargo(index)">删除</el-button>
             </el-col>
@@ -491,6 +530,184 @@
       </template>
     </el-dialog>
 
+    <!-- ===== 从客户档案填充弹窗 ===== -->
+    <el-dialog v-model="customerFillVisible" title="从客户档案填充" width="660px" top="10vh" append-to-body
+      destroy-on-close :close-on-click-modal="false" class="customer-fill-dialog">
+      <div class="cf-intro">
+        <el-icon>
+          <InfoFilled />
+        </el-icon>
+        <span>
+          选客户 → 选联系人，自动填入发货 / 收货联系电话。同一角色只有一个联系人时自动选中；
+          标记为「唯一」的联系人，装货、卸货两端通用。
+        </span>
+      </div>
+
+      <div class="cf-grid">
+        <!-- 装货 -->
+        <section class="cf-side">
+          <div class="cf-side-head">
+            <span class="cf-dot pickup">起</span>
+            <span>装货</span>
+            <span class="cf-side-sub">发货联系电话</span>
+          </div>
+          <el-form label-width="62px" size="default" class="cf-form">
+            <el-form-item label="客户">
+              <el-select v-model="customerFill.pickupCustomerId" placeholder="请选择客户（可不选）" clearable filterable
+                popper-class="archive-select-popper" @change="onFillCustomerChange('pickup')">
+                <el-option v-for="c in archiveCustomers" :key="c.id" :label="c.name" :value="c.id">
+                  <span class="archive-opt">{{ c.name }}</span>
+                  <span v-if="c.manager" class="archive-opt-sub">{{ c.manager }}</span>
+                </el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="联系人">
+              <el-select v-model="customerFill.pickupContactId" placeholder="请选择联系人" clearable
+                :disabled="!customerFill.pickupCustomerId" popper-class="archive-select-popper"
+                @change="onFillContactChange('pickup')">
+                <el-option v-for="c in fillPickupContacts" :key="c.id" :label="c.name" :value="c.id">
+                  <span class="archive-opt">
+                    {{ c.name }}
+                    <em v-if="isUniqueContact(c)" class="uniq-tag">唯一</em>
+                  </span>
+                  <span class="archive-opt-sub">{{ c.phone }}</span>
+                </el-option>
+                <template #empty>
+                  <div class="contact-empty-tip">该客户暂无装货联系人</div>
+                </template>
+              </el-select>
+            </el-form-item>
+            <div class="cf-phone">
+              <span class="cf-phone-lbl">将填入</span>
+              <span class="cf-phone-val" :class="{ empty: !fillPickupPhone }">
+                {{ fillPickupPhone || '未选联系人' }}
+              </span>
+            </div>
+          </el-form>
+        </section>
+
+        <!-- 卸货 -->
+        <section class="cf-side">
+          <div class="cf-side-head">
+            <span class="cf-dot delivery">终</span>
+            <span>卸货</span>
+            <span class="cf-side-sub">收货联系电话</span>
+          </div>
+          <el-form label-width="62px" size="default" class="cf-form">
+            <el-form-item label="客户">
+              <el-select v-model="customerFill.deliveryCustomerId" placeholder="请选择客户（可不选）" clearable filterable
+                popper-class="archive-select-popper" @change="onFillCustomerChange('delivery')">
+                <el-option v-for="c in archiveCustomers" :key="c.id" :label="c.name" :value="c.id">
+                  <span class="archive-opt">{{ c.name }}</span>
+                  <span v-if="c.manager" class="archive-opt-sub">{{ c.manager }}</span>
+                </el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="联系人">
+              <el-select v-model="customerFill.deliveryContactId" placeholder="请选择联系人" clearable
+                :disabled="!customerFill.deliveryCustomerId" popper-class="archive-select-popper"
+                @change="onFillContactChange('delivery')">
+                <el-option v-for="c in fillDeliveryContacts" :key="c.id" :label="c.name" :value="c.id">
+                  <span class="archive-opt">
+                    {{ c.name }}
+                    <em v-if="isUniqueContact(c)" class="uniq-tag">唯一</em>
+                  </span>
+                  <span class="archive-opt-sub">{{ c.phone }}</span>
+                </el-option>
+                <template #empty>
+                  <div class="contact-empty-tip">该客户暂无卸货联系人</div>
+                </template>
+              </el-select>
+            </el-form-item>
+            <div class="cf-phone">
+              <span class="cf-phone-lbl">将填入</span>
+              <span class="cf-phone-val" :class="{ empty: !fillDeliveryPhone }">
+                {{ fillDeliveryPhone || '未选联系人' }}
+              </span>
+            </div>
+          </el-form>
+        </section>
+      </div>
+
+      <template #footer>
+        <el-button @click="customerFillVisible = false">取消</el-button>
+        <el-button type="primary" style="background-color:#c8102e; border-color:#c8102e;"
+          @click="confirmCustomerFill">确认带入</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- ===== 从货物档案填充计费规则 ===== -->
+    <el-dialog v-model="cargoFillVisible" title="从货物档案填充计费规则" width="580px" top="12vh" append-to-body
+      destroy-on-close :close-on-click-modal="false" class="cargo-fill-dialog">
+      <div class="cf-intro">
+        <el-icon>
+          <InfoFilled />
+        </el-icon>
+        <span>
+          选货物 → 选计费规则，自动带出货物名称、单位和含税单价；之后改数量会按「数量 × 含税单价」重算运费，
+          运费也可以手动改（手动改过就不再自动覆盖）。
+        </span>
+      </div>
+
+      <el-form label-width="86px" size="default" class="cf-form">
+        <el-form-item label="货物">
+          <el-select v-model="cargoFill.cargoId" placeholder="请选择货物" clearable filterable
+            popper-class="archive-select-popper" @change="onCargoFillCargoChange">
+            <el-option v-for="c in cargoArchives" :key="c.id" :label="c.name" :value="c.id">
+              <span class="archive-opt">{{ c.name }}</span>
+              <span class="archive-opt-sub">{{ c.unit || '--' }}</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="计费规则">
+          <el-select v-model="cargoFill.ruleId" placeholder="请选择计费规则" clearable :disabled="!cargoFill.cargoId"
+            popper-class="archive-select-popper">
+            <el-option v-for="r in cargoFillRules" :key="r.id" :label="r.name" :value="r.id">
+              <span class="archive-opt">{{ r.name }}</span>
+              <span class="archive-opt-sub">{{ formatMoney(r.price_tax) }} {{ priceUnitShort(r.price_unit) }}</span>
+            </el-option>
+            <template #empty>
+              <div class="contact-empty-tip">该货物暂无计费规则</div>
+            </template>
+          </el-select>
+        </el-form-item>
+      </el-form>
+
+      <div class="cargo-fill-preview">
+        <div class="cfp-item">
+          <span class="cfp-lbl">货物名称</span>
+          <span class="cfp-val">{{ cargoFillCargo?.name || '--' }}</span>
+        </div>
+        <div class="cfp-item">
+          <span class="cfp-lbl">单位</span>
+          <span class="cfp-val">{{ cargoFillCargo?.unit || '--' }}</span>
+        </div>
+        <div class="cfp-item">
+          <span class="cfp-lbl">含税单价</span>
+          <span class="cfp-val strong">{{ formatMoney(cargoFillRule?.price_tax) }}<small> {{ priceUnitShort(cargoFillRule?.price_unit) }}</small></span>
+        </div>
+        <div class="cfp-item">
+          <span class="cfp-lbl">计价方式</span>
+          <span class="cfp-val">{{ freightFormula(cargoFillRule?.price_unit) }}</span>
+        </div>
+        <div class="cfp-item">
+          <span class="cfp-lbl">当前数量</span>
+          <span class="cfp-val">{{ cargoFillItem?.quantity ?? '--' }}</span>
+        </div>
+        <div class="cfp-item wide">
+          <span class="cfp-lbl">预估运费</span>
+          <span class="cfp-val price">{{ estimateFreight }}</span>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="cargoFillVisible = false">取消</el-button>
+        <el-button type="primary" style="background-color:#c8102e; border-color:#c8102e;"
+          @click="confirmCargoFill">确认带入</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 新建围栏弹窗 -->
     <AddEleFenceDialog
       v-model="showFenceDialog"
@@ -680,10 +897,14 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   Plus, ArrowRight, ArrowDown, InfoFilled, Search,
-  Guide, Edit, Close, Files,
+  Guide, Edit, Close, Files, User, CircleCheckFilled, Box,
 } from '@element-plus/icons-vue'
 import { supabase } from '@/utils/supabase'
 import dayjs from 'dayjs'
+import UnitSelect from '@/components/UnitSelect.vue'
+import {
+  DEFAULT_UNIT, DEFAULT_PRICE_UNIT, calcFreight, freightFormula, priceUnitShort, unitFull,
+} from '@/utils/units'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import { parseLngLat } from '@/utils/waybillProgress'
 import AddEleFenceDialog from '@/components/AddEleFenceDialog.vue'
@@ -1097,7 +1318,11 @@ const form = reactive({
   // 是否要求装卸货地打卡，仅「详细」模式生效
   checkInRequired: true,
   cargoList: [
-    { id: nextCargoId++, name: '', quantity: null, unit: '吨', freight: 0.00, taskId: 1 }
+    {
+      id: nextCargoId++, name: '', quantity: null, unit: DEFAULT_UNIT, freight: 0.00, taskId: 1,
+      // ⭐ 货物档案计费规则（选填）
+      ruleId: '', ruleName: '', priceUnit: DEFAULT_PRICE_UNIT, priceTax: null, priceNoTax: null, autoFreight: true,
+    }
   ],
 })
 
@@ -1227,6 +1452,10 @@ const OPTIONAL_NEW_COLUMNS = [
   'transport_mode', 'check_in_required',
   'plan_distance', 'plan_duration',
   'pickup_lng', 'pickup_lat', 'delivery_lng', 'delivery_lat', 'trip_seq',
+  'customer_archive_id', 'customer_archive_name',
+  'pickup_contact_name', 'pickup_contact_phone',
+  'delivery_contact_name', 'delivery_contact_phone',
+  'cargo_rule_name', 'cargo_price_tax', 'cargo_price_unit',
 ]
 
 const stripNewFields = (list) =>
@@ -1321,6 +1550,347 @@ const triggerDistribute = () => {
   distributeTimer = setTimeout(() => { distributeTotals() }, 100)
 }
 
+/* ============================================================
+   ⭐ 档案管理 → 客户档案：选客户 → 自动带入联系人电话
+   ------------------------------------------------------------
+   规则（和客户档案页的约定一致）：
+     · 联系人角色 = 装货 → 带入「发货联系电话」
+     · 联系人角色 = 卸货 → 带入「收货联系电话」
+     · 联系人角色 = 唯一 → 两端都带入，并把客户同步到另一端
+     · 同角色只有 1 个联系人 → 自动带入；多个 → 由用户自己选
+   客户档案表不存在时整段静默降级，不影响发运单
+   ============================================================ */
+const archiveCustomers = ref([])
+const archiveContacts = ref([])
+
+/* 货物档案 + 计费规则 */
+const cargoArchives = ref([])
+const cargoRuleList = ref([])
+
+const loadArchiveData = async () => {
+  /* 客户档案 */
+  try {
+    let cq = supabase.from('customer_archives').select('id, name, manager, status').order('name', { ascending: true })
+    if (isCustomer) cq = cq.eq('owner_account', myAccount)
+    const { data: cs, error } = await cq
+    if (error) throw error
+    archiveCustomers.value = (cs || []).filter(c => Number(c.status ?? 1) === 1)
+
+    if (archiveCustomers.value.length) {
+      const { data: ct, error: cerr } = await supabase
+        .from('customer_contacts')
+        .select('id, archive_id, name, phone, roles, person_type')
+        .in('archive_id', archiveCustomers.value.map(c => c.id))
+        .order('created_at', { ascending: true })
+      if (cerr) throw cerr
+      archiveContacts.value = ct || []
+    }
+  } catch (e) {
+    console.warn('[运单] 客户档案不可用（多半是没执行 sql/2026-10-18_customer_archive.sql）:', e?.message || e)
+    archiveCustomers.value = []
+    archiveContacts.value = []
+  }
+
+  /* 货物档案 + 计费规则 */
+  try {
+    let gq = supabase.from('cargo_archives').select('id, name, unit, status').order('name', { ascending: true })
+    if (isCustomer) gq = gq.eq('owner_account', myAccount)
+    const { data: gs, error } = await gq
+    if (error) throw error
+    cargoArchives.value = (gs || []).filter(c => Number(c.status ?? 1) === 1)
+
+    if (cargoArchives.value.length) {
+      const { data: rs, error: rerr } = await supabase
+        .from('cargo_rules')
+        .select('id, cargo_id, name, price_tax, price_no_tax, updated_at')
+        .in('cargo_id', cargoArchives.value.map(c => c.id))
+        .order('updated_at', { ascending: false })
+      if (rerr) throw rerr
+      cargoRuleList.value = rs || []
+    }
+  } catch (e) {
+    console.warn('[运单] 货物档案不可用（多半是没执行 sql/2026-10-18_cargo_archive.sql）:', e?.message || e)
+    cargoArchives.value = []
+    cargoRuleList.value = []
+  }
+}
+
+const rolesArray = (roles) => String(roles || '').split(',').map(s => s.trim()).filter(Boolean)
+
+/* 某客户下能当「装货 / 卸货」用的联系人 */
+const contactPool = (customerId, side) => {
+  if (!customerId) return []
+  return archiveContacts.value.filter(c => {
+    if (c.archive_id !== customerId) return false
+    const rs = rolesArray(c.roles)
+    if (rs.includes('唯一')) return true
+    return rs.includes(side === 'pickup' ? '装货' : '卸货')
+  })
+}
+
+const isUniqueContact = (contact) => rolesArray(contact?.roles).includes('唯一')
+
+const customerNameOf = (id) => archiveCustomers.value.find(c => c.id === id)?.name || ''
+
+/* ---------- 「从客户档案填充」弹窗 ---------- */
+const customerFillVisible = ref(false)
+const customerFillTaskId = ref(null)
+const customerFill = reactive({
+  pickupCustomerId: '',
+  pickupContactId: '',
+  deliveryCustomerId: '',
+  deliveryContactId: '',
+})
+
+const fillTask = computed(() => tasks.value.find(t => t.id === customerFillTaskId.value) || null)
+const contactById = (id) => archiveContacts.value.find(c => c.id === id) || null
+const fillPickupContacts = computed(() => contactPool(customerFill.pickupCustomerId, 'pickup'))
+const fillDeliveryContacts = computed(() => contactPool(customerFill.deliveryCustomerId, 'delivery'))
+const fillPickupPhone = computed(() => contactById(customerFill.pickupContactId)?.phone || '')
+const fillDeliveryPhone = computed(() => contactById(customerFill.deliveryContactId)?.phone || '')
+
+const hasCustomerFill = (task) => !!(task?.pickupCustomerId || task?.deliveryCustomerId)
+
+/* 任务头上只显示「有没有带」，不显示客户名（行里要干净） */
+const customerFillLabel = (task) => {
+  if (!task) return ''
+  const lines = []
+  const push = (sideLabel, cid, contactId) => {
+    const c = customerNameOf(cid)
+    if (!c) return
+    const contact = contactById(contactId)
+    lines.push(`${sideLabel}：${c}${contact ? ' · ' + contact.name : ''}`)
+  }
+  push('装货', task.pickupCustomerId, task.pickupContactId)
+  push('卸货', task.deliveryCustomerId, task.deliveryContactId)
+  return lines.join('\n') + '\n（点击可修改）'
+}
+
+const openCustomerFill = (task) => {
+  if (!task) return
+  if (!archiveCustomers.value.length) {
+    ElMessage.info('客户档案里还没有客户，可到「档案管理 → 客户档案」新增')
+    return
+  }
+  customerFillTaskId.value = task.id
+  customerFill.pickupCustomerId = task.pickupCustomerId || ''
+  customerFill.pickupContactId = task.pickupContactId || ''
+  customerFill.deliveryCustomerId = task.deliveryCustomerId || ''
+  customerFill.deliveryContactId = task.deliveryContactId || ''
+  autoPickContact('pickup')
+  autoPickContact('delivery')
+  customerFillVisible.value = true
+}
+
+/* 同角色只有一个联系人就自动选中 */
+const autoPickContact = (side) => {
+  const pool = side === 'pickup' ? fillPickupContacts.value : fillDeliveryContacts.value
+  const curKey = side === 'pickup' ? 'pickupContactId' : 'deliveryContactId'
+  if (pool.length === 1) {
+    customerFill[curKey] = pool[0].id
+    return
+  }
+  if (customerFill[curKey] && !pool.some(c => c.id === customerFill[curKey])) {
+    customerFill[curKey] = ''
+  }
+}
+
+/* 「唯一」联系人：另一端还空着就一起带上 */
+const mirrorIfUnique = (side) => {
+  const contactKey = side === 'pickup' ? 'pickupContactId' : 'deliveryContactId'
+  const customerKey = side === 'pickup' ? 'pickupCustomerId' : 'deliveryCustomerId'
+  const otherContactKey = side === 'pickup' ? 'deliveryContactId' : 'pickupContactId'
+  const otherCustomerKey = side === 'pickup' ? 'deliveryCustomerId' : 'pickupCustomerId'
+
+  const contact = contactById(customerFill[contactKey])
+  if (!contact || !isUniqueContact(contact)) return
+  if (customerFill[otherContactKey]) return      // 另一端已经选过，尊重用户选择
+  customerFill[otherCustomerKey] = customerFill[customerKey]
+  customerFill[otherContactKey] = contact.id
+}
+
+const onFillCustomerChange = (side) => {
+  const contactKey = side === 'pickup' ? 'pickupContactId' : 'deliveryContactId'
+  customerFill[contactKey] = ''
+  autoPickContact(side)
+  mirrorIfUnique(side)
+}
+
+const onFillContactChange = (side) => {
+  mirrorIfUnique(side)
+}
+
+const confirmCustomerFill = () => {
+  const task = fillTask.value
+  if (!task) return
+
+  const pc = contactById(customerFill.pickupContactId)
+  const dc = contactById(customerFill.deliveryContactId)
+
+  task.pickupCustomerId = customerFill.pickupCustomerId || ''
+  task.pickupCustomerName = customerNameOf(task.pickupCustomerId)
+  task.pickupContactId = pc?.id || ''
+  task.pickupContactName = pc?.name || ''
+  if (pc?.phone) task.senderPhone = pc.phone
+
+  task.deliveryCustomerId = customerFill.deliveryCustomerId || ''
+  task.deliveryCustomerName = customerNameOf(task.deliveryCustomerId)
+  task.deliveryContactId = dc?.id || ''
+  task.deliveryContactName = dc?.name || ''
+  if (dc?.phone) task.receiverPhone = dc.phone
+
+  markDirty()
+  customerFillVisible.value = false
+
+  const names = [pc?.name, dc?.name].filter(Boolean)
+  if (names.length) {
+    ElMessage.success(`已带入联系人「${[...new Set(names)].join('、')}」的联系电话`)
+  } else if (!task.pickupCustomerId && !task.deliveryCustomerId) {
+    ElMessage.info('已清除客户关联，联系电话保留可手动改')
+  } else {
+    ElMessage.warning('该客户还没有对应角色的联系人，电话未带入，可手动填写')
+  }
+}
+
+const clearCustomerFill = (task) => {
+  if (!task) return
+  task.pickupCustomerId = ''
+  task.pickupCustomerName = ''
+  task.pickupContactId = ''
+  task.pickupContactName = ''
+  task.deliveryCustomerId = ''
+  task.deliveryCustomerName = ''
+  task.deliveryContactId = ''
+  task.deliveryContactName = ''
+  markDirty()
+  ElMessage.info('已清除客户关联，联系电话保留可手动改')
+}
+
+/* ============================================================
+   ⭐ 货物档案 → 计费规则：带出名称 / 单位 / 含税单价，按数量算运费
+   ============================================================ */
+const cargoFillVisible = ref(false)
+const cargoFillIndex = ref(-1)
+const cargoFill = reactive({ cargoId: '', ruleId: '' })
+
+const cargoFillItem = computed(() => (cargoFillIndex.value >= 0 ? form.cargoList[cargoFillIndex.value] : null))
+const cargoFillCargo = computed(() => cargoArchives.value.find(c => c.id === cargoFill.cargoId) || null)
+const cargoFillRules = computed(() => cargoRuleList.value.filter(r => r.cargo_id === cargoFill.cargoId))
+const cargoFillRule = computed(() => cargoFillRules.value.find(r => r.id === cargoFill.ruleId) || null)
+
+const formatMoney = (v) => (v === null || v === undefined || v === '' ? '--' : Number(v).toFixed(2))
+
+const estimateFreight = computed(() => {
+  const item = cargoFillItem.value
+  const rule = cargoFillRule.value
+  if (!item || !rule) return '--'
+  const next = calcFreight({
+    priceUnit: rule.price_unit,
+    price: rule.price_tax,
+    quantity: item.quantity,
+    distance: taskDistanceOf(item),
+  })
+  return next === null ? '--' : `¥${next.toFixed(2)}`
+})
+
+const autoPickCargoRule = () => {
+  const list = cargoFillRules.value
+  if (list.length === 1) { cargoFill.ruleId = list[0].id; return }
+  if (cargoFill.ruleId && !list.some(r => r.id === cargoFill.ruleId)) cargoFill.ruleId = ''
+}
+
+const openCargoFill = (index) => {
+  if (!cargoArchives.value.length) {
+    ElMessage.info('货物档案里还没有货物，可到「档案管理 → 货物档案」新增')
+    return
+  }
+  const item = form.cargoList[index]
+  if (!item) return
+  cargoFillIndex.value = index
+  const rule = cargoRuleList.value.find(r => r.id === item.ruleId)
+  cargoFill.cargoId = rule?.cargo_id || ''
+  cargoFill.ruleId = item.ruleId || ''
+  if (cargoFill.cargoId) autoPickCargoRule()
+  cargoFillVisible.value = true
+}
+
+const onCargoFillCargoChange = () => {
+  cargoFill.ruleId = ''
+  autoPickCargoRule()
+}
+
+/* 该货物行所属任务的规划里程（来自「从路线填充」，没有就是 0） */
+const taskDistanceOf = (item) => {
+  const t = tasks.value.find(x => x.id === item?.taskId)
+  return Number(t?.planInfo?.distance) || 0
+}
+
+/* 运费按计价单位算：数量×单价 / 里程×单价 / 取单价 / 手填
+   （手动改过运费就不再自动覆盖） */
+const recalcCargoFreight = (item) => {
+  if (!item || !item.ruleId || item.autoFreight === false) return
+  const next = calcFreight({
+    priceUnit: item.priceUnit,
+    price: item.priceTax,
+    quantity: item.quantity,
+    distance: taskDistanceOf(item),
+  })
+  if (next === null) return
+  item.freight = next
+  triggerDistribute()
+}
+
+const onCargoQuantityChange = (item) => {
+  recalcCargoFreight(item)
+  triggerDistribute()
+}
+
+const onCargoFreightChange = (item) => {
+  item.autoFreight = false
+  triggerDistribute()
+}
+
+const confirmCargoFill = () => {
+  const item = cargoFillItem.value
+  const cargo = cargoFillCargo.value
+  const rule = cargoFillRule.value
+  if (!item || !cargo || !rule) {
+    ElMessage.warning('请选择货物和计费规则')
+    return
+  }
+  item.name = cargo.name
+  if (cargo.unit) item.unit = cargo.unit
+  item.ruleId = rule.id
+  item.ruleName = rule.name
+  item.priceUnit = rule.price_unit || DEFAULT_PRICE_UNIT
+  item.priceTax = rule.price_tax === null || rule.price_tax === undefined ? null : Number(rule.price_tax)
+  item.priceNoTax = rule.price_no_tax === null || rule.price_no_tax === undefined ? null : Number(rule.price_no_tax)
+  item.autoFreight = true
+  recalcCargoFreight(item)
+
+  const qty = Number(item.quantity) || 0
+  const dist = taskDistanceOf(item)
+  const formula = freightFormula(item.priceUnit)
+  markDirty()
+  cargoFillVisible.value = false
+  ElMessage.success(
+    formula === '需人工填写'
+      ? `已带入「${rule.name}」，该规则按${priceUnitShort(item.priceUnit)}计价，运费请手动填写`
+      : `已带入「${rule.name}」，运费按「${formula}」自动计算${qty || dist ? '' : '，填好数量后生效'}`
+  )
+}
+
+const clearCargoRule = (item) => {
+  item.ruleId = ''
+  item.ruleName = ''
+  item.priceUnit = DEFAULT_PRICE_UNIT
+  item.priceTax = null
+  item.priceNoTax = null
+  item.autoFreight = true
+  markDirty()
+  ElMessage.info('已清除计费规则，货物名称和单位保留')
+}
+
 const tasks = ref([
   {
     id: nextTaskId++,
@@ -1329,9 +1899,15 @@ const tasks = ref([
     pickupLocation: '',
     pickupTime: '',
     senderPhone: '',
+    pickupCustomerId: '',
+    pickupContactId: '',
+    pickupContactName: '',
     deliveryLocation: '',
     deliveryTime: '',
     receiverPhone: '',
+    deliveryCustomerId: '',
+    deliveryContactId: '',
+    deliveryContactName: '',
     routeId: null,
     routeName: '',
     planIdx: null,
@@ -1340,6 +1916,19 @@ const tasks = ref([
     planInfo: null,
   }
 ])
+
+/* ⭐ 货物行列宽：单任务时把右侧操作列收窄，把空间让给「货物名称 / 运费」，
+   避免窄屏下输入框被压成只剩两个箭头 */
+const cargoSpans = computed(() => {
+  if (tasks.value.length > 1) {
+    return { name: 4, qty: 3, unit: 3, freight: 3, task: 6, actions: 5 }
+  }
+  const needDelete = !(tasks.value.length === 1 && form.cargoList.length === 1)
+  if (needDelete) {
+    return { name: 6, qty: 4, unit: 4, freight: 4, actions: 6 }
+  }
+  return { name: 7, qty: 4, unit: 4, freight: 4, actions: 5 }
+})
 
 const getTaskIndex = (taskId) => tasks.value.findIndex(t => t.id === taskId)
 const getTaskColor = (taskId) => {
@@ -1375,7 +1964,10 @@ const applyCloneData = (cloneData) => {
         taskId: tasks.value[0]?.id || 1
       }))
     } else {
-      form.cargoList = [{ id: nextCargoId++, name: '', quantity: null, unit: '吨', freight: 0.00, taskId: tasks.value[0]?.id || 1 }]
+      form.cargoList = [{
+        id: nextCargoId++, name: '', quantity: null, unit: DEFAULT_UNIT, freight: 0.00, taskId: tasks.value[0]?.id || 1,
+        ruleId: '', ruleName: '', priceUnit: DEFAULT_PRICE_UNIT, priceTax: null, priceNoTax: null, autoFreight: true,
+      }]
     }
 
     if (cloneData.assignList && cloneData.assignList.length > 0) {
@@ -1436,6 +2028,7 @@ onMounted(async () => {
 
   await loadFenceList()
   await loadDriverList()
+  await loadArchiveData()
 
   const cloneData = history.state?.cloneData
   if (cloneData) {
@@ -1468,9 +2061,15 @@ const addTask = () => {
     pickupLocation: '',
     pickupTime: '',
     senderPhone: '',
+    pickupCustomerId: '',
+    pickupContactId: '',
+    pickupContactName: '',
     deliveryLocation: '',
     deliveryTime: '',
     receiverPhone: '',
+    deliveryCustomerId: '',
+    deliveryContactId: '',
+    deliveryContactName: '',
     routeId: null,
     routeName: '',
     planIdx: null,
@@ -1525,7 +2124,10 @@ const removeItem = (assignIndex, itemIndex) => {
 }
 const addCargo = () => {
   const firstTaskId = tasks.value[0]?.id || 1
-  form.cargoList.push({ id: nextCargoId++, name: '', quantity: null, unit: '吨', freight: 0.00, taskId: firstTaskId })
+  form.cargoList.push({
+    id: nextCargoId++, name: '', quantity: null, unit: DEFAULT_UNIT, freight: 0.00, taskId: firstTaskId,
+    ruleId: '', ruleName: '', priceUnit: DEFAULT_PRICE_UNIT, priceTax: null, priceNoTax: null, autoFreight: true,
+  })
   markDirty()
   triggerDistribute()
 }
@@ -1665,6 +2267,10 @@ const doPublish = async () => {
         pickup_time: task.pickupTime || null,
         plan_time: task.deliveryTime || null,
         cargo: taskCargos.map(c => c.name || '未命名').join('、') || '无',
+        // ⭐ 货物档案计费规则（选填，用于对账追溯）
+        cargo_rule_name: taskCargos.map(c => c.ruleName).filter(Boolean)[0] || null,
+        cargo_price_tax: taskCargos.find(c => c.priceTax !== null && c.priceTax !== undefined)?.priceTax ?? null,
+        cargo_price_unit: taskCargos.find(c => c.priceTax !== null && c.priceTax !== undefined)?.priceUnit || null,
         quantity: taskCargos.reduce((sum, c) => sum + (c.quantity || 0), 0),
         freight: totalFreight,
         remaining: 0,
@@ -1677,6 +2283,18 @@ const doPublish = async () => {
         driver: '',
         carry_quantity: 0,
         owner_account: isAdmin ? null : myAccount,
+        // ⭐ 客户档案关联（选填）：客户 + 装货/卸货联系人电话
+        customer_archive_id: task.pickupCustomerId || task.deliveryCustomerId || null,
+        customer_archive_name:
+          task.pickupCustomerName ||
+          customerNameOf(task.pickupCustomerId) ||
+          task.deliveryCustomerName ||
+          customerNameOf(task.deliveryCustomerId) ||
+          null,
+        pickup_contact_name: task.pickupContactName || null,
+        pickup_contact_phone: task.senderPhone || null,
+        delivery_contact_name: task.deliveryContactName || null,
+        delivery_contact_phone: task.receiverPhone || null,
         // ⭐ 运输节点模式：决定司机端要上报几步
         transport_mode: form.transportMode || '极简',
         // 打卡只在「详细」模式下有意义
@@ -1808,6 +2426,13 @@ const publishAndClone = async () => {
         deliveryLocation: t.deliveryLocation,
         deliveryTime: t.deliveryTime,
         receiverPhone: t.receiverPhone,
+        // ⭐ 客户档案关联一并带走
+        pickupCustomerId: t.pickupCustomerId || '',
+        pickupContactId: t.pickupContactId || '',
+        pickupContactName: t.pickupContactName || '',
+        deliveryCustomerId: t.deliveryCustomerId || '',
+        deliveryContactId: t.deliveryContactId || '',
+        deliveryContactName: t.deliveryContactName || '',
         routeId: t.routeId,
         routeName: t.routeName,
         planIdx: t.planIdx,
@@ -1823,7 +2448,14 @@ const publishAndClone = async () => {
         quantity: c.quantity,
         unit: c.unit,
         freight: c.freight,
-        taskId: c.taskId
+        taskId: c.taskId,
+        // ⭐ 计费规则一并带走，续建时还能按数量自动算运费
+        ruleId: c.ruleId || '',
+        ruleName: c.ruleName || '',
+        priceUnit: c.priceUnit || DEFAULT_PRICE_UNIT,
+        priceTax: c.priceTax ?? null,
+        priceNoTax: c.priceNoTax ?? null,
+        autoFreight: c.autoFreight !== false,
       })),
       assignList: assignList.value.map(a => ({
         assignMethod: a.assignMethod,
@@ -2017,6 +2649,14 @@ defineExpose({ isDirty })
 .task-name-input :deep(.el-input__inner) {
   font-size: 13px;
 }
+.task-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .del-task-btn {
   flex-shrink: 0;
 }
@@ -2051,6 +2691,105 @@ defineExpose({ isDirty })
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 .route-fill-btn .el-icon { font-size: 13px; }
+
+/* ============================================================
+   ⭐ 从客户档案填充（任务头按钮 / 已带徽章）
+   ============================================================ */
+.customer-fill-btn,
+.cargo-fill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 14px;
+  background: #FFFFFF;
+  border: 1.5px dashed #FCA5A5;
+  border-radius: 20px;
+  color: #c8102e;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-family: inherit;
+  white-space: nowrap;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.customer-fill-btn:hover,
+.cargo-fill-btn:hover {
+  background: linear-gradient(135deg, #FEF2F2, #FEE2E2);
+  border-color: #c8102e;
+  border-style: solid;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.2);
+}
+
+.customer-fill-btn .el-icon,
+.cargo-fill-btn .el-icon {
+  font-size: 13px;
+}
+
+.customer-fill-badge {
+  display: inline-flex;
+  align-items: stretch;
+  height: 24px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #FFFFFF;
+  border: 1.5px solid #FECACA;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  flex-shrink: 0;
+}
+
+.customer-fill-badge:hover {
+  border-color: #c8102e;
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.15);
+}
+
+.cf-badge-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: none;
+  background: #FEF2F2;
+  color: #c8102e;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.cf-badge-main .el-icon {
+  font-size: 13px;
+}
+
+.cf-badge-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  border: none;
+  border-left: 1px solid #FECACA;
+  background: #FFFFFF;
+  color: #F87171;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.cf-badge-clear:hover {
+  background: #FEE2E2;
+  color: #B91C1C;
+}
+
+.cf-badge-clear .el-icon {
+  font-size: 12px;
+}
 
 /* ============================================================
    ⭐ 已应用路线徽章
@@ -2345,7 +3084,21 @@ defineExpose({ isDirty })
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  gap: 8px;
   height: 100%;
+  min-width: 0;
+}
+
+/* 计费规则徽章：规则名太长就省略 */
+.cargo-rule-badge {
+  max-width: 250px;
+}
+
+.cargo-rule-badge .cf-badge-main span {
+  max-width: 176px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .assign-card {
@@ -3136,5 +3889,226 @@ defineExpose({ isDirty })
   background: #FEF2F2;
   border-left: 3px solid #c8102e;
   border-radius: 6px;
+}
+/* ===== 客户档案下拉（选项渲染在 body，必须全局） ===== */
+.archive-select-popper .el-select-dropdown__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.archive-opt {
+  font-size: 13px;
+  color: #1E293B;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-opt-sub {
+  font-size: 11.5px;
+  color: #94A3B8;
+  flex: 0 0 auto;
+}
+
+.archive-select-popper .el-select-dropdown__item.is-selected .archive-opt,
+.archive-select-popper .el-select-dropdown__item.is-selected .archive-opt-sub {
+  color: #c8102e;
+}
+
+.contact-empty-tip {
+  padding: 14px 12px;
+  font-size: 12.5px;
+  color: #94A3B8;
+  text-align: center;
+}
+/* ===== 从客户档案填充弹窗 ===== */
+.customer-fill-dialog .el-dialog__body {
+  padding-top: 12px;
+}
+
+.customer-fill-dialog .cf-intro,
+.cargo-fill-dialog .cf-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 11px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  background: #FEF2F2;
+  border: 1px solid #FEE2E2;
+  color: #9F1239;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.customer-fill-dialog .cf-intro .el-icon,
+.cargo-fill-dialog .cf-intro .el-icon {
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
+.customer-fill-dialog .cf-intro span,
+.cargo-fill-dialog .cf-intro span {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.customer-fill-dialog .cf-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.customer-fill-dialog .cf-side {
+  padding: 12px 12px 4px;
+  border: 1px solid #EEF2F7;
+  border-radius: 10px;
+  background: #FCFDFF;
+}
+
+.customer-fill-dialog .cf-side-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.customer-fill-dialog .cf-side-sub {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: #94A3B8;
+}
+
+.customer-fill-dialog .cf-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #fff;
+  flex: 0 0 auto;
+}
+
+.customer-fill-dialog .cf-dot.pickup {
+  background: linear-gradient(135deg, #c8102e, #a00d24);
+}
+
+.customer-fill-dialog .cf-dot.delivery {
+  background: linear-gradient(135deg, #475569, #1E293B);
+}
+
+.customer-fill-dialog .cf-form .el-form-item,
+.cargo-fill-dialog .cf-form .el-form-item {
+  margin-bottom: 14px;
+}
+
+.customer-fill-dialog .cf-form .el-form-item__label,
+.cargo-fill-dialog .cf-form .el-form-item__label {
+  font-size: 12.5px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.customer-fill-dialog .cf-phone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px 62px;
+  font-size: 12px;
+}
+
+.customer-fill-dialog .cf-phone-lbl {
+  color: #94A3B8;
+}
+
+.customer-fill-dialog .cf-phone-val {
+  font-weight: 700;
+  color: #c8102e;
+  letter-spacing: 0.3px;
+}
+
+.customer-fill-dialog .cf-phone-val.empty {
+  font-weight: 400;
+  color: #CBD5E1;
+  letter-spacing: 0;
+}
+
+.cargo-fill-dialog .cargo-fill-preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #F8FAFC;
+  border: 1px solid #EEF2F7;
+}
+
+.cargo-fill-dialog .cfp-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cargo-fill-dialog .cfp-item.wide {
+  grid-column: 1 / -1;
+}
+
+.cargo-fill-dialog .cfp-lbl {
+  font-size: 11.5px;
+  color: #94A3B8;
+}
+
+.cargo-fill-dialog .cfp-val {
+  font-size: 13px;
+  color: #1E293B;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cargo-fill-dialog .cfp-val.strong {
+  color: #0F172A;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cargo-fill-dialog .cfp-val.strong small {
+  font-weight: 400;
+  color: #94A3B8;
+}
+
+.cargo-fill-dialog .cfp-val.price {
+  color: #c8102e;
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.customer-fill-dialog .uniq-tag {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #FEF2F2;
+  color: #c8102e;
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 15px;
+}
+
+.customer-fill-dialog .archive-select-popper {
+  min-width: 220px;
 }
 </style>

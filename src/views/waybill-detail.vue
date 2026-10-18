@@ -6,17 +6,60 @@
       <el-button type="danger" plain size="small" @click="router.push('/waybill')">返回列表</el-button>
     </div>
 
-    <!-- ===== ⭐ 标签页切换 ===== -->
-    <div class="detail-tabs">
-      <button class="detail-tab" :class="{ active: activeTab === 'info' }" @click="switchTab('info')">
-        运单信息
-      </button>
-      <button class="detail-tab" :class="{ active: activeTab === 'logistics' }" @click="switchTab('logistics')">
-        物流状态
-        <em class="detail-tab-dot" v-if="activeRecord"></em>
-      </button>
-      <span class="detail-tabs-hint" v-if="waybillNo">运单号 {{ waybillNo }}</span>
-    </div>
+    <div class="detail-body">
+      <!-- ===== 左侧常驻摘要（切 tab 不消失） ===== -->
+      <aside class="detail-aside">
+        <div class="as-card">
+          <div class="as-top">
+            <span class="as-no">{{ waybillNo || '—' }}</span>
+            <span class="as-status" :style="statusStyle(asideStatus)">{{ asideStatus }}</span>
+          </div>
+          <div class="as-route">
+            <span>{{ (activeRecord && activeRecord.pickup) || '—' }}</span>
+            <i>→</i>
+            <span>{{ (activeRecord && activeRecord.delivery) || '—' }}</span>
+          </div>
+          <div class="as-sub">{{ asideCargo }}</div>
+        </div>
+
+        <div class="as-card">
+          <div class="as-row"><span>车辆 / 司机</span><b>{{ asideVehicle }}</b></div>
+          <div class="as-row"><span>计划装货</span><b>{{ fmtTime(activeRecord && activeRecord.pickup_time) }}</b></div>
+          <div class="as-row"><span>计划到达</span><b>{{ fmtTime(activeRecord && activeRecord.plan_time) }}</b></div>
+        </div>
+
+        <div class="as-fee" @click="switchTab('fee')">
+          <div class="as-fee-top">
+            <span>本单费用</span>
+            <span>{{ feeReports.length }} 笔上报</span>
+          </div>
+          <div class="as-fee-v">¥{{ money(feeSummary.total) }}</div>
+          <div class="as-fee-r">
+            <span>待审 {{ feePendingTotal }}</span>
+            <span>已通过 {{ feeSummary.approved }}</span>
+            <span>已打款 ¥{{ money(feeSummary.paid) }}</span>
+          </div>
+        </div>
+
+        <div class="as-hint">审批完一笔，这里的数字会跟着刷新；点费用卡直接跳到费用情况。</div>
+      </aside>
+
+      <div class="detail-main">
+        <!-- ===== ⭐ 标签页切换 ===== -->
+        <div class="detail-tabs">
+          <button class="detail-tab" :class="{ active: activeTab === 'info' }" @click="switchTab('info')">
+            运单信息
+          </button>
+          <button class="detail-tab" :class="{ active: activeTab === 'logistics' }" @click="switchTab('logistics')">
+            物流状态
+            <em class="detail-tab-dot" v-if="activeRecord"></em>
+          </button>
+          <button class="detail-tab" :class="{ active: activeTab === 'fee' }" @click="switchTab('fee')">
+            费用情况
+            <em class="detail-tab-dot" v-if="feePendingCount"></em>
+          </button>
+          <span class="detail-tabs-hint" v-if="waybillNo">运单号 {{ waybillNo }}</span>
+        </div>
 
     <!-- ============================================================
          标签页 1：运单信息
@@ -148,6 +191,10 @@
               <span class="field-label">发货联系电话：</span>
               <el-input v-model="task.senderPhone" placeholder="请输入联系电话" style="flex:1; min-width:100px;" disabled />
             </div>
+            <div v-if="task.pickupCustomer" class="field-item">
+              <span class="field-label">装货客户：</span>
+              <el-input v-model="task.pickupCustomer" style="flex:1; min-width:100px;" disabled />
+            </div>
           </div>
         </div>
 
@@ -170,6 +217,10 @@
             <div class="field-item">
               <span class="field-label">收货联系电话：</span>
               <el-input v-model="task.receiverPhone" placeholder="请输入联系电话" style="flex:1; min-width:100px;" disabled />
+            </div>
+            <div v-if="task.deliveryCustomer" class="field-item">
+              <span class="field-label">卸货客户：</span>
+              <el-input v-model="task.deliveryCustomer" style="flex:1; min-width:100px;" disabled />
             </div>
           </div>
         </div>
@@ -204,11 +255,7 @@
           </el-col>
           <el-col :span="2" style="white-space: nowrap;">
             <el-form-item label="单位" label-width="40px">
-              <el-select v-model="item.unit" placeholder="单位" style="width:100%;" disabled>
-                <el-option label="吨" value="吨" />
-                <el-option label="件" value="件" />
-                <el-option label="方" value="方" />
-              </el-select>
+              <el-input :model-value="unitFull(item.unit)" :title="unitFull(item.unit)" disabled />
             </el-form-item>
           </el-col>
           <el-col :span="3" style="white-space: nowrap;">
@@ -731,6 +778,198 @@
       </template>
     </div>
 
+
+    <!-- ===== ⭐ 标签页 3：费用情况（上报列表 + 就地审批） ===== -->
+    <div v-show="activeTab === 'fee'" class="fee-panel">
+      <div class="fee-strip">
+        <div class="fee-stat">
+          <span>本单费用</span>
+          <b>¥{{ money(feeSummary.total) }}</b>
+        </div>
+        <div class="fee-stat">
+          <span>待我审批</span>
+          <b class="is-warn">{{ feePendingCount }}</b>
+        </div>
+        <div class="fee-stat">
+          <span>已通过</span>
+          <b class="is-ok">{{ feeSummary.approved }}</b>
+        </div>
+        <div class="fee-stat">
+          <span>已打款</span>
+          <b>¥{{ money(feeSummary.paid) }}</b>
+        </div>
+        <div class="fee-strip-right">
+          <el-tag v-if="feeApprovalEnabled" size="small" type="success" effect="plain">费用审批已开启</el-tag>
+          <el-tag v-else size="small" type="info" effect="plain">本单免审</el-tag>
+          <el-select v-model="feeFilter" size="small" style="width: 118px">
+            <el-option label="全部" value="all" />
+            <el-option label="待我审批" value="mine" />
+            <el-option label="审核中" value="审核中" />
+            <el-option label="已通过" value="已通过" />
+            <el-option label="已驳回" value="已驳回" />
+          </el-select>
+          <el-button size="small" plain :loading="feeLoading" @click="loadFeeReports">刷新</el-button>
+        </div>
+      </div>
+
+      <el-alert
+        v-if="feeError"
+        type="warning"
+        :closable="false"
+        show-icon
+        class="fee-alert"
+        title="上报数据读不到（reports 表可能还没初始化）"
+        :description="feeError"
+      />
+
+      <div v-loading="feeLoading" class="fee-list">
+        <div v-if="!feeLoading && !filteredReports.length" class="fee-empty">
+          <div class="fee-empty-ic">
+            <el-icon><Tickets /></el-icon>
+          </div>
+          <p>本单还没有上报记录</p>
+          <span>司机在小程序「上报」里提交费用后，会出现在这里</span>
+        </div>
+
+        <div
+          v-for="r in filteredReports"
+          :key="r.id"
+          class="fee-report"
+          :class="{ open: expandedFee === r.id }"
+        >
+          <div class="fr-head" @click="toggleFee(r)">
+            <span class="fr-type" :class="'t-' + (r.type || 'expense')">{{ typeShort(r.type) }}</span>
+            <div class="fr-main">
+              <div class="fr-title">
+                <b>{{ typeLabel(r.type) }}</b>
+                <span v-if="hasAmount(r.type)" class="fr-amount">¥{{ money(r.amount) }}</span>
+                <el-tag v-if="r.reject_count" size="small" type="danger" effect="plain">
+                  驳回过 {{ r.reject_count }} 次
+                </el-tag>
+              </div>
+              <div class="fr-meta">
+                {{ r.driver_name || r.plate || '—' }} · {{ fmtTime(r.create_time) }} ·
+                <template v-if="Number(r.current_level) > 0">第 {{ r.current_level }} 级审批中</template>
+                <template v-else>免审</template>
+              </div>
+            </div>
+            <el-tag size="small" effect="light" :type="statusTagType(r.status)">{{ r.status }}</el-tag>
+            <el-icon class="fr-arrow" :class="{ up: expandedFee === r.id }"><ArrowDown /></el-icon>
+          </div>
+
+          <div v-show="expandedFee === r.id" class="fr-body">
+            <div class="fr-cols">
+              <div class="fr-col">
+                <div class="fr-col-title">明细</div>
+                <div v-if="reportItems(r).length" class="fr-items">
+                  <div v-for="(it, i) in reportItems(r)" :key="i" class="fr-item">
+                    <span>{{ it.name || it.type || '费用' }}</span>
+                    <b>¥{{ money(it.amount) }}</b>
+                  </div>
+                </div>
+                <div v-else-if="r.type === 'expense'" class="fr-none">无明细</div>
+                <div v-else class="fr-extra">
+                  <template v-if="r.type === 'weigh'">
+                    毛重 {{ r.payload?.gross ?? '—' }} kg · 皮重 {{ r.payload?.tare ?? '—' }} kg ·
+                    <text class="fr-net">净重 {{ r.payload?.net ?? '—' }} kg</text>
+                  </template>
+                  <template v-else-if="r.type === 'receipt'">
+                    回单号 {{ r.payload?.receipt_no || '—' }} · {{ r.payload?.receipt_date || '—' }}
+                  </template>
+                  <template v-else-if="r.type === 'overtime'">
+                    {{ r.payload?.overtime_type || '超时' }} ·
+                    <text class="fr-net">超 {{ r.payload?.duration_min || 0 }} 分钟</text> ·
+                    原因 {{ r.payload?.reason || '—' }}
+                  </template>
+                  <template v-else>—</template>
+                </div>
+                <div v-if="reportImages(r).length" class="fr-imgs">
+                  <template v-for="(img, i) in reportImages(r)" :key="i">
+                    <el-image
+                      v-if="imageUrls[img.fileID]"
+                      :src="imageUrls[img.fileID]"
+                      :preview-src-list="reportImageUrls(r)"
+                      :initial-index="i"
+                      fit="cover"
+                      class="fr-thumb"
+                      preview-teleported
+                    />
+                    <span v-else class="fr-img">凭证 {{ i + 1 }}</span>
+                  </template>
+                </div>
+                <div v-if="r.payload && r.payload.note" class="fr-note">{{ r.payload.note }}</div>
+              </div>
+
+              <div class="fr-col">
+                <div class="fr-col-title">审批链</div>
+                <div class="fr-chain">
+                  <div v-for="(st, i) in (r.flow || [])" :key="i" class="fr-step" :class="stepClass(st)">
+                    <span class="fr-dot"></span>
+                    <div>
+                      <b>{{ st.level }} 级 · {{ st.name || roleLabel(st.role) }}</b>
+                      <em>{{ stepText(st) }}</em>
+                    </div>
+                  </div>
+                  <div v-if="!r.flow || !r.flow.length" class="fr-step done">
+                    <span class="fr-dot"></span>
+                    <div><b>免审</b><em>提交即通过</em></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="canApprove(r)" class="fr-actions">
+              <span class="fr-hint">驳回必选理由，会原文回给司机</span>
+              <el-button size="small" @click="openReject(r)">驳回</el-button>
+              <el-button size="small" :disabled="Number(r.current_level) < 2" @click="escalateReport(r)">
+                送老板
+              </el-button>
+              <el-button size="small" type="primary" :loading="actingId === r.id" @click="approveReport(r)">
+                通过{{ hasAmount(r.type) ? ' · ¥' + money(r.amount) : '' }}
+              </el-button>
+            </div>
+            <div v-else-if="r.reject_reason" class="fr-actions">
+              <span class="fr-reject">驳回理由：{{ r.reject_reason }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+      </div>
+    </div>
+
+    <!-- ===== ⭐ 驳回上报 ===== -->
+    <el-dialog v-model="rejectVisible" title="驳回这笔上报" width="460px" append-to-body>
+      <div class="rj-tip">驳回后司机可在小程序里补齐材料重新提交，不会新建一条。</div>
+      <div class="rj-chips">
+        <button
+          v-for="s in REJECT_REASONS"
+          :key="s"
+          type="button"
+          class="rj-chip"
+          :class="{ on: rejectReason === s }"
+          @click="rejectReason = s"
+        >
+          {{ s }}
+        </button>
+      </div>
+      <el-input
+        v-model="rejectNote"
+        type="textarea"
+        :rows="3"
+        maxlength="100"
+        show-word-limit
+        placeholder="补一句说明（选填），例如「停车费那笔没有票据，请补拍」"
+      />
+      <template #footer>
+        <el-button @click="rejectVisible = false">取消</el-button>
+        <el-button type="danger" :loading="actingId === rejectTarget?.id" @click="confirmReject">
+          确认驳回
+        </el-button>
+      </template>
+    </el-dialog>
+
     <!-- ===== ⭐ 临时关闭装卸货地打卡 ===== -->
     <el-dialog v-model="checkInOffDialogVisible" title="临时关闭装卸货地打卡" width="460px">
       <div class="co-tip">
@@ -757,8 +996,9 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { WarningFilled, Refresh } from '@element-plus/icons-vue'
-import { supabase } from '@/utils/supabase'
+import { WarningFilled, Refresh, ArrowDown, Tickets } from '@element-plus/icons-vue'
+import app, { supabase } from '@/utils/supabase'
+import { unitFull } from '@/utils/units'
 import dayjs from 'dayjs'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import WaybillProgressBar from '@/components/WaybillProgressBar.vue'
@@ -1839,8 +2079,310 @@ const refreshProgressForRunningTrips = async () => {
   }
 }
 
+/* ============================================================
+   ⭐ 标签页 3：费用情况（上报列表 + 就地审批）
+   数据来源：reports（按 waybill_no）
+   审批口径：flow[current_level-1] 的 approver_id 是否等于当前登录人
+   ============================================================ */
+const feeReports = ref([])
+const feeLoading = ref(false)
+const feeFilter = ref('all')
+const feeError = ref('')
+const feeApprovalEnabled = ref(true)
+const expandedFee = ref(null)
+const actingId = ref(null)
+
+const rejectVisible = ref(false)
+const rejectTarget = ref(null)
+const rejectReason = ref('缺凭证照片')
+const rejectNote = ref('')
+const REJECT_REASONS = ['缺凭证照片', '金额与票据不符', '运单号不符', '重复上报', '超过规定期限', '其它']
+
+const TYPE_LABEL = {
+  expense: '费用上报', weigh: '磅单上报', subsidy: '补贴申请', violation: '违章上报',
+  overtime: '超时报备', receipt: '回单上报', loan: '借款申请', cardfix: '补卡申请',
+}
+const TYPE_SHORT = {
+  expense: '费', weigh: '磅', subsidy: '补', violation: '违',
+  overtime: '超', receipt: '回', loan: '借', cardfix: '卡',
+}
+const MONEY_TYPES = ['expense', 'subsidy', 'loan', 'violation']
+
+const typeLabel = (t) => TYPE_LABEL[t] || '上报'
+const typeShort = (t) => TYPE_SHORT[t] || '报'
+const hasAmount = (t) => MONEY_TYPES.includes(t)
+const money = (v) => Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const roleLabel = (r) => ({ creator: '发单人', finance: '财务', owner: '主账号' }[r] || '审批人')
+
+const isMasterUser = isAdmin || !isSubAccount
+
+const reportItems = (r) => {
+  const p = r?.payload || {}
+  const list = p.items || p.detail || p.expenses || []
+  return Array.isArray(list) ? list : []
+}
+const reportImages = (r) => (Array.isArray(r?.images) ? r.images : [])
+
+/* ⭐ fileID → 临时链接（失败就保留文字占位，不影响主流程） */
+const imageUrls = ref({})
+const reportImageUrls = (r) =>
+  reportImages(r).map((img) => imageUrls.value[img.fileID]).filter(Boolean)
+
+async function loadImageUrls(list) {
+  const ids = []
+  ;(list || []).forEach((r) => {
+    reportImages(r).forEach((img) => {
+      if (img && img.fileID && !imageUrls.value[img.fileID]) ids.push(img.fileID)
+    })
+  })
+  if (!ids.length) return
+  try {
+    const res = await app.getTempFileURL({ fileList: ids })
+    const map = { ...imageUrls.value }
+    ;(res.fileList || []).forEach((f) => {
+      if (f.tempFileURL) map[f.fileID] = f.tempFileURL
+    })
+    imageUrls.value = map
+  } catch (e) {
+    console.warn('[费用情况] 凭证临时链接获取失败（仍显示文字占位）', e)
+  }
+}
+
+const statusTagType = (st) => {
+  if (st === '已通过' || st === '已打款') return 'success'
+  if (st === '已驳回') return 'danger'
+  if (st === '待打款') return 'primary'
+  if (st === '草稿' || st === '已撤回') return 'info'
+  return 'warning'
+}
+
+const currentStep = (r) => {
+  const lv = Number(r?.current_level) || 0
+  if (!lv) return null
+  return (r.flow || [])[lv - 1] || null
+}
+
+const canApprove = (r) => {
+  if (!r || r.status !== '审核中') return false
+  const st = currentStep(r)
+  if (!st) return false
+  if (st.approver_id && Number(st.approver_id) === Number(currentUser.id)) return true
+  // 主账号节点没指定具体人时，由主账号兜底
+  return st.role === 'owner' && isMasterUser
+}
+
+const stepClass = (st) => {
+  if (!st) return ''
+  if (st.status === '已通过') return 'done'
+  if (st.status === '待处理') return 'cur'
+  if (st.status === '已跳过') return 'skip'
+  return ''
+}
+const stepText = (st) => {
+  if (!st) return ''
+  if (st.status === '已通过') return `${fmtTime(st.acted_at)} 通过`
+  if (st.status === '已跳过') return '免审跳过'
+  if (st.status === '已驳回') return `${fmtTime(st.acted_at)} 驳回`
+  return '待处理'
+}
+
+const feeSummary = computed(() => {
+  let total = 0
+  let paid = 0
+  let approved = 0
+  feeReports.value.forEach((r) => {
+    const amt = Number(r.amount) || 0
+    if (hasAmount(r.type)) total += amt
+    if (['已通过', '待打款', '已打款'].includes(r.status)) approved += 1
+    if (r.status === '已打款') paid += amt
+  })
+  return { total, paid, approved }
+})
+
+const feePendingCount = computed(() => feeReports.value.filter((r) => canApprove(r)).length)
+const feePendingTotal = computed(() => feeReports.value.filter((r) => r.status === '审核中').length)
+
+/* ===== 左侧摘要 ===== */
+const asideStatus = computed(
+  () => (activeRecord.value && activeRecord.value.status) || (mainRecord.value && mainRecord.value.status) || '—'
+)
+const asideCargo = computed(() => {
+  const m = mainRecord.value || {}
+  const first = (form.cargoList && form.cargoList[0]) || {}
+  const name = m.cargo || first.name || ''
+  const qty = m.quantity || first.quantity || ''
+  return [name, qty].filter(Boolean).join(' · ') || '—'
+})
+const asideVehicle = computed(() => {
+  const m = mainRecord.value || {}
+  const a = (assignList.value || [])[0] || {}
+  const v = m.vehicle || (a.method === 'vehicle' ? a.target : '')
+  const d = m.driver || (a.method === 'driver' ? a.target : '')
+  if (v || d) return [v, d].filter(Boolean).join(' · ')
+  return a.target || '—'
+})
+
+const filteredReports = computed(() => {
+  const list = feeReports.value
+  if (feeFilter.value === 'all') return list
+  if (feeFilter.value === 'mine') return list.filter((r) => canApprove(r))
+  return list.filter((r) => r.status === feeFilter.value)
+})
+
+const toggleFee = (r) => {
+  expandedFee.value = expandedFee.value === r.id ? null : r.id
+}
+
+const openReject = (r) => {
+  rejectTarget.value = r
+  rejectReason.value = '缺凭证照片'
+  rejectNote.value = ''
+  rejectVisible.value = true
+}
+
+async function loadFeeReports() {
+  if (!waybillNo.value) return
+  feeLoading.value = true
+  feeError.value = ''
+  try {
+    const { data, error } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('waybill_no', waybillNo.value)
+      .order('create_time', { ascending: false })
+    if (error) throw error
+    feeReports.value = Array.isArray(data) ? data : []
+    if (mainRecord.value && mainRecord.value.fee_approval === 'off') feeApprovalEnabled.value = false
+    if (!feeReports.value.length && expandedFee.value) expandedFee.value = null
+    loadImageUrls(feeReports.value)
+  } catch (e) {
+    console.warn('[费用情况] 读取上报失败', e)
+    feeError.value = e?.message || String(e)
+    feeReports.value = []
+  } finally {
+    feeLoading.value = false
+  }
+}
+
+async function writeFlow(r, mutate, action, comment) {
+  actingId.value = r.id
+  try {
+    const flow = JSON.parse(JSON.stringify(r.flow || []))
+    const level = Number(r.current_level) || 1
+    const idx = Math.max(0, level - 1)
+    mutate(flow, idx)
+
+    const nextIdx = flow.findIndex((st, i) => i > idx && st.status === '待处理')
+    const status = nextIdx === -1 ? '已通过' : '审核中'
+    const nextLevel = nextIdx === -1 ? 0 : Number(flow[nextIdx].level) || nextIdx + 1
+
+    const { error } = await supabase
+      .from('reports')
+      .update({
+        flow,
+        status,
+        current_level: nextLevel,
+        update_time: new Date().toISOString(),
+      })
+      .eq('id', r.id)
+    if (error) throw error
+
+    try {
+      await supabase.from('report_approval_logs').insert({
+        report_id: r.id,
+        level,
+        actor_id: currentUser.id,
+        actor_name: currentUser.name || currentUser.account,
+        action,
+        comment: comment || '',
+      })
+    } catch (logErr) {
+      console.warn('[费用情况] 审批日志写入失败（不影响主流程）', logErr)
+    }
+
+    Object.assign(r, { flow, status, current_level: nextLevel })
+    ElMessage.success(status === '已通过' ? '已通过，流程结束' : `已通过，转第 ${nextLevel} 级`)
+  } catch (e) {
+    console.error('[费用情况] 审批失败', e)
+    ElMessage.error('操作失败：' + (e?.message || '未知错误'))
+  } finally {
+    actingId.value = null
+  }
+}
+
+const approveReport = (r) => writeFlow(r, (flow, idx) => {
+  if (!flow[idx]) return
+  flow[idx].status = '已通过'
+  flow[idx].acted_at = new Date().toISOString()
+  flow[idx].name = currentUser.name || currentUser.account || flow[idx].name
+}, 'approve')
+
+const escalateReport = (r) => writeFlow(r, (flow, idx) => {
+  if (flow[idx]) {
+    flow[idx].status = '已通过'
+    flow[idx].acted_at = new Date().toISOString()
+  }
+  if (!flow.some((st) => Number(st.level) === 3)) {
+    flow.push({
+      level: 3,
+      role: 'owner',
+      approver_id: null,
+      name: currentUser.masterName || '主账号',
+      status: '待处理',
+    })
+  }
+}, 'escalate', '要求老板终审')
+
+const confirmReject = async () => {
+  const r = rejectTarget.value
+  if (!r) return
+  const text = rejectNote.value.trim()
+  const reason = text ? `${rejectReason.value}：${text}` : rejectReason.value
+  actingId.value = r.id
+  try {
+    const { error } = await supabase
+      .from('reports')
+      .update({
+        status: '已驳回',
+        reject_reason: reason,
+        reject_count: (Number(r.reject_count) || 0) + 1,
+        update_time: new Date().toISOString(),
+      })
+      .eq('id', r.id)
+    if (error) throw error
+
+    try {
+      await supabase.from('report_approval_logs').insert({
+        report_id: r.id,
+        level: Number(r.current_level) || 1,
+        actor_id: currentUser.id,
+        actor_name: currentUser.name || currentUser.account,
+        action: 'reject',
+        comment: reason,
+      })
+    } catch (logErr) {
+      console.warn('[费用情况] 驳回日志写入失败', logErr)
+    }
+
+    r.status = '已驳回'
+    r.reject_reason = reason
+    r.reject_count = (Number(r.reject_count) || 0) + 1
+    rejectVisible.value = false
+    ElMessage.success('已驳回，司机可在小程序补齐后重提')
+  } catch (e) {
+    console.error('[费用情况] 驳回失败', e)
+    ElMessage.error('驳回失败：' + (e?.message || '未知错误'))
+  } finally {
+    actingId.value = null
+  }
+}
+
 const switchTab = (tab) => {
   activeTab.value = tab
+  if (tab === 'fee') {
+    if (!feeReports.value.length) loadFeeReports()
+    return
+  }
   if (tab !== 'logistics') return
   nextTick(() => drawLogisticsMap({ force: true }))
 }
@@ -1999,6 +2541,8 @@ const loadWaybill = async () => {
     // ⭐ 物流状态标签页：主体运单 + 其常驻任务下的全部运输记录
     waybillNo.value = data.waybill_no || String(no)
     mainRecord.value = data
+    // ⭐ 预取上报：让「费用情况」tab 的红点一进来就有数（失败也只影响该 tab）
+    loadFeeReports()
 
     const taskId = 1
     tasks.value = [{
@@ -2007,10 +2551,16 @@ const loadWaybill = async () => {
       color: taskColors[0],
       pickupLocation: data.pickup || '',
       pickupTime: data.pickup_time || '',
-      senderPhone: '',
+      senderPhone: data.pickup_contact_phone || '',
+      pickupCustomer: data.customer_archive_name
+        ? `${data.customer_archive_name}${data.pickup_contact_name ? ' · ' + data.pickup_contact_name : ''}`
+        : '',
       deliveryLocation: data.delivery || '',
       deliveryTime: data.plan_time || '',
-      receiverPhone: '',
+      receiverPhone: data.delivery_contact_phone || '',
+      deliveryCustomer: data.customer_archive_name
+        ? `${data.customer_archive_name}${data.delivery_contact_name ? ' · ' + data.delivery_contact_name : ''}`
+        : '',
     }]
 
     // 货物列表
@@ -2125,22 +2675,27 @@ const createSameWaybill = () => {
 onMounted(async () => {
   if (isCustomer && isSubAccount) await loadMyOrgInfo()
   loadWaybill()
+  // ⭐ 深链：/waybill/detail?waybill_no=xxx&tab=fee
+  const tabQ = String(route.query.tab || '')
+  if (['info', 'logistics', 'fee'].includes(tabQ)) switchTab(tabQ)
 })
 </script>
 
 <style scoped>
 /* ===== 页面容器 =====
-   ⚠️ 这里**不要**再写 height:100% + overflow-y:auto。
-   外层 Dashboard 的 .main-content 已经是滚动容器；两层套在一起时，
-   内层高度被锁死在「一屏」，内容一变高（例如多了「司机已拒单」提示条）
-   就再也拖不动了 —— 交给外层统一滚。 */
+   ⚠️ 这个页面是**独立路由**（/waybill/detail，不在 Dashboard 里），
+   外层没有 .main-content 那种滚动容器；页面自己必须滚，
+   否则内容一超一屏就拖不动（运单信息 / 物流状态两个 tab 都会卡住）。 */
 .waybill-detail {
-  height: auto;
-  min-height: 100%;
-  overflow: visible;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px 20px 40px;
   box-sizing: border-box;
   background: #f8fafc;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ===== 页面头部 ===== */
@@ -3344,4 +3899,537 @@ onMounted(async () => {
   border-radius: 50%;
   flex-shrink: 0;
 }
+
+/* ============================================================
+   ⭐ 费用情况
+   ============================================================ */
+.fee-panel {
+  background: #F8FAFC;
+  border: 1px solid #E9EEF5;
+  border-radius: 10px;
+  padding: 12px 14px 16px;
+}
+
+.fee-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid #E9EEF5;
+  border-radius: 9px;
+  padding: 9px 12px;
+  margin-bottom: 10px;
+}
+
+.fee-stat {
+  min-width: 108px;
+  padding-right: 12px;
+  border-right: 1px solid #F1F5F9;
+}
+
+.fee-stat:last-of-type {
+  border-right: none;
+}
+
+.fee-stat span {
+  display: block;
+  font-size: 10.5px;
+  color: #94A3B8;
+  margin-bottom: 1px;
+}
+
+.fee-stat b {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -.3px;
+}
+
+.fee-stat b.is-warn { color: #B45309; }
+.fee-stat b.is-ok { color: #15803D; }
+
+.fee-strip-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fee-alert {
+  margin-bottom: 10px;
+}
+
+.fee-list {
+  min-height: 160px;
+}
+
+.fee-empty {
+  background: #fff;
+  border: 1px dashed #DDE5EF;
+  border-radius: 10px;
+  padding: 42px 20px;
+  text-align: center;
+}
+
+.fee-empty-ic {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #FEF2F2;
+  color: #c8102e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+  font-size: 21px;
+}
+
+.fee-empty p {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.fee-empty span {
+  font-size: 11.5px;
+  color: #94A3B8;
+}
+
+.fee-report {
+  background: #fff;
+  border: 1px solid #E9EEF5;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  transition: border-color .18s, box-shadow .18s;
+}
+
+.fee-report.open {
+  border-color: #F6DDE2;
+  box-shadow: 0 0 0 3px rgba(200, 16, 46, .04);
+}
+
+.fr-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.fr-type {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: #FEF2F2;
+  color: #c8102e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.fr-type.t-weigh { background: #EFF6FF; color: #1D4ED8; }
+.fr-type.t-overtime { background: #FEF3C7; color: #B45309; }
+.fr-type.t-receipt { background: #EFF6FF; color: #1D4ED8; }
+.fr-type.t-cardfix { background: #F1F5F9; color: #64748B; }
+.fr-type.t-violation { background: #FEE2E2; color: #B91C1C; }
+
+.fr-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.fr-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fr-title b {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.fr-amount {
+  font-size: 13px;
+  font-weight: 700;
+  color: #c8102e;
+  letter-spacing: -.2px;
+}
+
+.fr-meta {
+  font-size: 10.5px;
+  color: #94A3B8;
+  margin-top: 2px;
+}
+
+.fr-arrow {
+  color: #CBD5E1;
+  font-size: 13px;
+  transition: transform .2s;
+}
+
+.fr-arrow.up {
+  transform: rotate(180deg);
+}
+
+.fr-body {
+  border-top: 1px solid #F1F5F9;
+  background: #FCFDFF;
+  padding: 11px 12px;
+}
+
+.fr-cols {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 16px;
+}
+
+.fr-col-title {
+  font-size: 10px;
+  color: #94A3B8;
+  margin-bottom: 6px;
+}
+
+.fr-items {
+  border: 1px solid #EDF1F7;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.fr-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 9px;
+  font-size: 11.5px;
+  color: #475569;
+  border-bottom: 1px solid #F4F7FA;
+}
+
+.fr-item:last-child { border-bottom: none; }
+.fr-item b { color: #0F172A; }
+
+.fr-none {
+  font-size: 11.5px;
+  color: #94A3B8;
+}
+
+.fr-imgs {
+  display: flex;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.fr-img {
+  font-size: 10px;
+  color: #475569;
+  background: #EEF2F7;
+  border-radius: 5px;
+  padding: 3px 8px;
+}
+
+.fr-note {
+  margin-top: 7px;
+  font-size: 11px;
+  color: #94A3B8;
+  line-height: 1.6;
+}
+
+/* 审批链 */
+.fr-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.fr-step {
+  display: flex;
+  gap: 7px;
+  position: relative;
+}
+
+.fr-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid #CBD5E1;
+  background: #fff;
+  margin-top: 3px;
+}
+
+.fr-step.done .fr-dot { border-color: #22C55E; background: #22C55E; }
+.fr-step.cur .fr-dot { border-color: #c8102e; background: #c8102e; box-shadow: 0 0 0 3px rgba(200, 16, 46, .12); }
+.fr-step.skip .fr-dot { border-color: #CBD5E1; }
+
+.fr-step b {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.fr-step em {
+  display: block;
+  font-style: normal;
+  font-size: 10px;
+  color: #94A3B8;
+  margin-top: 1px;
+}
+
+.fr-step.cur b { color: #c8102e; }
+
+.fr-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.fr-hint {
+  margin-right: auto;
+  font-size: 10.5px;
+  color: #94A3B8;
+}
+
+.fr-reject {
+  font-size: 11px;
+  color: #B91C1C;
+}
+
+/* 驳回弹窗 */
+.rj-tip {
+  font-size: 12px;
+  color: #64748B;
+  line-height: 1.7;
+  margin-bottom: 10px;
+}
+
+.rj-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.rj-chip {
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  color: #475569;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .16s;
+}
+
+.rj-chip:hover { border-color: #F3C6CF; color: #c8102e; }
+.rj-chip.on { background: #FEF2F2; border-color: #FBD5DB; color: #c8102e; font-weight: 600; }
+
+@media (max-width: 1100px) {
+  .fr-cols { grid-template-columns: 1fr; gap: 12px; }
+}
+
+
+.fr-extra {
+  font-size: 11.5px;
+  color: #475569;
+  line-height: 1.8;
+}
+.fr-net { color: #c8102e; font-weight: 700; }
+
+
+/* ============================================================
+   ⭐ 左摘要 + 右标签
+   ============================================================ */
+.detail-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.detail-aside {
+  flex: 0 0 300px;
+  width: 300px;
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.as-card {
+  background: #fff;
+  border: 1px solid #e9eef5;
+  border-radius: 12px;
+  padding: 13px 14px;
+}
+
+.as-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.as-no {
+  font-size: 11px;
+  color: #64748b;
+  letter-spacing: 0.3px;
+  font-family: var(--font-num);
+}
+
+.as-status {
+  font-size: 10.5px;
+  border-radius: 5px;
+  padding: 2px 8px;
+  flex: 0 0 auto;
+}
+
+.as-route {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: #0f172a;
+  margin: 7px 0 4px;
+  line-height: 1.3;
+}
+
+.as-route i {
+  font-style: normal;
+  color: #c8102e;
+  font-size: 14px;
+}
+
+.as-sub {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.as-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11.5px;
+  padding: 5px 0;
+  border-bottom: 1px solid #f4f7fa;
+}
+
+.as-row:last-child {
+  border-bottom: none;
+}
+
+.as-row span {
+  color: #94a3b8;
+  flex: 0 0 auto;
+}
+
+.as-row b {
+  font-weight: 600;
+  color: #334155;
+  text-align: right;
+  word-break: break-all;
+}
+
+.as-fee {
+  background: linear-gradient(135deg, #fff6f7, #fff);
+  border: 1px solid #f6e3e7;
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: transform 0.16s, box-shadow 0.16s;
+}
+
+.as-fee:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(200, 16, 46, 0.08);
+}
+
+.as-fee-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+
+.as-fee-v {
+  font-size: 24px;
+  font-weight: 700;
+  color: #c8102e;
+  letter-spacing: -0.6px;
+  margin: 2px 0 4px;
+  font-family: var(--font-num);
+}
+
+.as-fee-r {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  color: #64748b;
+}
+
+.as-hint {
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.7;
+  padding: 0 2px;
+}
+
+@media (max-width: 1100px) {
+  .detail-body {
+    flex-direction: column;
+  }
+
+  .detail-aside {
+    position: static;
+    width: 100%;
+    flex: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .detail-aside > * {
+    flex: 1 1 240px;
+  }
+
+  .as-hint {
+    display: none;
+  }
+}
+
+
+.fr-thumb {
+  width: 72px;
+  height: 54px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #eef2f7;
+  cursor: zoom-in;
+}
+
 </style>

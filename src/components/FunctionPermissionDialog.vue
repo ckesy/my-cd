@@ -1,6 +1,8 @@
 <template>
+    <!-- ⭐ append-to-body：脱离 .content-wrapper 的 transform 包含块，
+         否则 fixed 定位会相对内容区，弹窗一高就把整页顶出滚动条 -->
     <el-dialog :model-value="modelValue" width="900px" top="8vh" destroy-on-close :close-on-click-modal="false"
-        class="perm-dialog" @update:model-value="$emit('update:modelValue', $event)">
+        append-to-body class="perm-dialog" @update:model-value="$emit('update:modelValue', $event)">
         <template #header>
             <div class="pd-header">
                 <div class="pd-header-left">
@@ -89,8 +91,8 @@
                             <button v-for="(item, idx) in activeModule.items" :key="item.key + '-' + idx" type="button"
                                 class="pd-func-item" :class="{
                                     on: isSelected(item.key),
-                                    disabled: activeModule.disabled,
-                                }" :style="{ animationDelay: (idx * 0.05) + 's' }" :disabled="activeModule.disabled"
+                                    disabled: isItemDisabled(item),
+                                }" :style="{ animationDelay: (idx * 0.05) + 's' }" :disabled="isItemDisabled(item)"
                                 @click="toggleItem(item.key)">
                                 <span class="pd-func-check">
                                     <svg viewBox="0 0 24 24" class="pd-check-svg">
@@ -100,7 +102,7 @@
                                 </span>
                                 <span class="pd-func-name">{{ item.name }}</span>
                                 <span class="pd-func-key">{{ item.key }}</span>
-                                <span v-if="activeModule.disabled" class="pd-func-lock">
+                                <span v-if="isItemDisabled(item)" class="pd-func-lock">
                                     <el-icon>
                                         <Lock />
                                     </el-icon>
@@ -123,7 +125,7 @@
                     <el-icon>
                         <InfoFilled />
                     </el-icon>
-                    <span>勾选后该角色登录时可见对应菜单（系统管理不可配置）</span>
+                    <span>勾选后该角色登录时可见对应菜单（系统管理、费用审批设置不可配置）</span>
                 </div>
                 <div class="pd-footer-btns">
                     <el-button @click="$emit('update:modelValue', false)">取消</el-button>
@@ -137,8 +139,8 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import {
-    HomeFilled, Van, Location, DataLine, Tickets, User, Setting,
-    Lock, Select, InfoFilled, StarFilled,
+    HomeFilled, Van, Location, DataLine, Tickets, User, Setting, FolderOpened,
+    Lock, Select, InfoFilled, StarFilled, Wallet,
 } from '@element-plus/icons-vue'
 import { PERMISSION_MODULES } from '@/config/permissions'
 
@@ -153,7 +155,7 @@ const emit = defineEmits(['update:modelValue', 'confirm'])
 
 // 图标映射
 const ICON_MAP = {
-    HomeFilled, Van, Location, DataLine, Tickets, User, Setting,
+    HomeFilled, Van, Location, DataLine, Tickets, User, Setting, FolderOpened, Wallet,
 }
 const getIcon = (name) => ICON_MAP[name] || Setting
 
@@ -172,13 +174,19 @@ const modules = computed(() => {
         }))
 })
 
-// 所有禁用模块的 key 集合（用于过滤）
+// ⭐ 单项是否禁用：模块整体禁用，或该项标记 adminOnly（如「费用审批设置」）
+const isItemDisabled = (item) => {
+    const mod = activeModule.value
+    return !!(mod && mod.disabled) || item?.adminOnly === true
+}
+
+// 所有禁用项的 key 集合（模块级 + 单项级）
 const disabledKeys = computed(() => {
     const set = new Set()
     modules.value.forEach(m => {
-        if (m.disabled) {
-            m.items.forEach(i => set.add(i.key))
-        }
+        m.items.forEach(i => {
+            if (m.disabled || i.adminOnly === true) set.add(i.key)
+        })
     })
     return set
 })
@@ -196,7 +204,7 @@ const selectedKeys = ref([])
 const totalCount = computed(() =>
     modules.value
         .filter(m => !m.disabled)
-        .reduce((sum, m) => sum + m.items.length, 0)
+        .reduce((sum, m) => sum + m.items.filter(i => i.adminOnly !== true).length, 0)
 )
 
 // 是否全选（只看可选模块）
@@ -209,12 +217,13 @@ const isSelected = (key) => selectedKeys.value.includes(key)
 // 模块已选数（禁用模块不计）
 const getModuleCount = (mod) => {
     if (mod.disabled) return 0
-    return mod.items.filter(i => isSelected(i.key)).length
+    return mod.items.filter(i => i.adminOnly !== true && isSelected(i.key)).length
 }
 
 const isModuleAllSelected = (mod) => {
     if (mod.disabled || !mod.items.length) return false
-    return mod.items.every(i => isSelected(i.key))
+    const usable = mod.items.filter(i => i.adminOnly !== true)
+    return usable.length > 0 && usable.every(i => isSelected(i.key))
 }
 
 // 点击模块导航
@@ -246,13 +255,11 @@ const toggleItem = (key) => {
 const toggleModuleAll = (mod) => {
     if (mod.disabled) return
     const allSel = isModuleAllSelected(mod)
+    const keys = mod.items.filter(i => i.adminOnly !== true).map(i => i.key)
     if (allSel) {
-        const keys = mod.items.map(i => i.key)
         selectedKeys.value = selectedKeys.value.filter(k => !keys.includes(k))
     } else {
-        const keys = mod.items.map(i => i.key)
-        const merged = new Set([...selectedKeys.value, ...keys])
-        selectedKeys.value = Array.from(merged)
+        selectedKeys.value = Array.from(new Set([...selectedKeys.value, ...keys]))
     }
 }
 
@@ -264,7 +271,7 @@ const toggleAll = () => {
         const all = new Set()
         modules.value.forEach(m => {
             if (m.disabled) return
-            m.items.forEach(i => all.add(i.key))
+            m.items.forEach(i => { if (i.adminOnly !== true) all.add(i.key) })
         })
         selectedKeys.value = Array.from(all)
     }
@@ -993,5 +1000,38 @@ const handleConfirm = () => {
 .pd-footer-btns .btn-primary:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 24px rgba(200, 16, 46, 0.45);
+}
+</style>
+
+<style>
+/* ============================================================
+   ⭐ 功能配置弹窗：整体锁在视口内，页面上不会出现滚动
+   （弹窗根元素就是 .el-dialog.perm-dialog，append-to-body 后脱离 scoped 作用域）
+   ============================================================ */
+.el-dialog.perm-dialog {
+    display: flex;
+    flex-direction: column;
+    /* top="8vh" 由组件内联给出 */
+    max-height: calc(100vh - 8vh - 16px);
+    margin-bottom: 0;
+}
+
+.el-dialog.perm-dialog>.el-dialog__header,
+.el-dialog.perm-dialog>.el-dialog__footer {
+    flex: 0 0 auto;
+}
+
+.el-dialog.perm-dialog>.el-dialog__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 看板常规 480 高；矮屏时压缩（左右两块内部各自滚动） */
+.el-dialog.perm-dialog .pd-body {
+    flex: 0 1 480px;
+    min-height: 220px;
 }
 </style>

@@ -106,7 +106,13 @@
             <span><i class="c-planned"></i>未开始</span>
           </div>
         </template>
-        <div class="rtg-none" v-else>该常驻任务没有可展示的周期范围</div>
+        <div class="rtg-none" v-else>
+          {{
+            (task && task.recurring_type === "count")
+              ? "这是「按次数」常驻任务，没有周期范围 —— 进度看上面的历次完成情况"
+              : "该常驻任务没有可展示的周期范围（有效期未填）"
+          }}
+        </div>
       </template>
 
       <!-- ---- 当天明细 ---- -->
