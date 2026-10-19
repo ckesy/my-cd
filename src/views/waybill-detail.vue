@@ -37,7 +37,7 @@
           <div class="as-fee-r">
             <span>待审 {{ feePendingTotal }}</span>
             <span>已通过 {{ feeSummary.approved }}</span>
-            <span>已打款 ¥{{ money(feeSummary.paid) }}</span>
+            <span>已付款 ¥{{ money(feeSummary.paid) }}</span>
           </div>
         </div>
 
@@ -795,7 +795,7 @@
           <b class="is-ok">{{ feeSummary.approved }}</b>
         </div>
         <div class="fee-stat">
-          <span>已打款</span>
+          <span>已付款</span>
           <b>¥{{ money(feeSummary.paid) }}</b>
         </div>
         <div class="fee-strip-right">
@@ -918,6 +918,23 @@
               </div>
             </div>
 
+            <div v-if="r.reject_reason" class="fr-rejectbar">
+              <span class="fr-reject-k">{{ r.status === '已驳回' ? '驳回理由' : '上次驳回' }}</span>
+              <span class="fr-reject-t">{{ r.reject_reason }}</span>
+              <span v-if="r.reject_count" class="fr-reject-n">第 {{ r.reject_count }} 次</span>
+            </div>
+            <div v-if="r.status === '已打款' && r.paid_at" class="fr-paid">
+              <span class="fr-paid-k">已付款</span>
+              <span>{{ fmtTime(r.paid_at) }}</span>
+              <span class="fr-paid-by">{{ r.paid_by || '--' }}</span>
+              <span v-if="r.payment && r.payment.method" class="fr-paid-method">{{ r.payment.method }}</span>
+              <span v-if="r.payment && r.payment.serial" class="fr-paid-serial">流水 {{ r.payment.serial }}</span>
+              <span
+                v-if="voucherCount(r)"
+                class="fr-paid-voucher"
+                @click="openVouchers(r)"
+              >凭据 {{ voucherCount(r) }} 个 ›</span>
+            </div>
             <div v-if="canApprove(r)" class="fr-actions">
               <span class="fr-hint">驳回必选理由，会原文回给司机</span>
               <el-button size="small" @click="openReject(r)">驳回</el-button>
@@ -928,8 +945,16 @@
                 通过{{ hasAmount(r.type) ? ' · ¥' + money(r.amount) : '' }}
               </el-button>
             </div>
-            <div v-else-if="r.reject_reason" class="fr-actions">
-              <span class="fr-reject">驳回理由：{{ r.reject_reason }}</span>
+            <div v-else-if="canPay(r)" class="fr-actions">
+              <span class="fr-hint">审批已通过，登记付款后这笔费用就闭环了</span>
+              <el-button size="small" type="primary" plain @click="openPay(r)">
+                登记付款{{ hasAmount(r.type) ? ' · ¥' + money(r.amount) : '' }}
+              </el-button>
+            </div>
+            <div v-else-if="r.status === '已打款'" class="fr-actions">
+              <span class="fr-hint">这笔已登记付款{{ r.payment && r.payment.revoked_at ? '（曾被撤销过一次）' : '' }}</span>
+              <el-button v-if="voucherCount(r)" size="small" plain @click="openVouchers(r)">查看凭据</el-button>
+              <el-button v-if="canRevoke(r)" size="small" type="danger" plain @click="openRevoke(r)">撤销付款</el-button>
             </div>
           </div>
         </div>
@@ -970,6 +995,11 @@
       </template>
     </el-dialog>
 
+    <!-- ===== ⭐ 登记付款 / 撤销付款 / 凭据（共用组件） ===== -->
+    <PaymentDialog v-model="payVisible" :targets="payTargets" mode="pay" @done="onPayDone" />
+    <PaymentDialog v-model="revokeVisible" :targets="revokeTargets" mode="revoke" @done="onRevokeDone" />
+    <PaymentVouchers v-model="voucherVisible" :images="voucherImages" :title="voucherTitle" />
+
     <!-- ===== ⭐ 临时关闭装卸货地打卡 ===== -->
     <el-dialog v-model="checkInOffDialogVisible" title="临时关闭装卸货地打卡" width="460px">
       <div class="co-tip">
@@ -999,6 +1029,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { WarningFilled, Refresh, ArrowDown, Tickets } from '@element-plus/icons-vue'
 import app, { supabase } from '@/utils/supabase'
 import { unitFull } from '@/utils/units'
+import { isPayer } from '@/utils/feeTodo'
+import { moduleFlags, ensureModuleFlags } from '@/utils/modules'
+import PaymentDialog from '@/components/PaymentDialog.vue'
+import PaymentVouchers from '@/components/PaymentVouchers.vue'
 import dayjs from 'dayjs'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import WaybillProgressBar from '@/components/WaybillProgressBar.vue'
@@ -1552,6 +1586,12 @@ const setRecurringStatus = async (next) => {
     if (mainRecord.value) mainRecord.value.recurring_status = next
     records.value = records.value.map((r) => ({ ...r, recurring_status: next }))
     ElMessage.success('已' + label + '该常驻任务')
+
+    /* ⭐ 常驻结束：整组只推一次订阅消息（司机逐趟完成时不推） */
+    if (next === '已结束') {
+      app.callFunction({ name: 'wx-notify', data: { action: 'recurring_end', group_no: groupNo } })
+        .catch((e) => console.warn('[常驻结束提醒] 发送失败（不阻断）', e))
+    }
   } catch (e) {
     console.error('常驻任务状态更新失败：', e)
     ElMessage.error(label + '失败：' + (e.message || '未知错误'))
@@ -2377,6 +2417,51 @@ const confirmReject = async () => {
   }
 }
 
+/* ============================================================
+   ⭐ 登记付款 / 撤销付款 / 凭据
+   弹窗抽到 components/PaymentDialog.vue（和「费用管理 → 付款登记」共用一套逻辑）
+   ============================================================ */
+const payVisible = ref(false)
+const payTargets = ref([])
+const revokeVisible = ref(false)
+const revokeTargets = ref([])
+const voucherVisible = ref(false)
+const voucherImages = ref([])
+const voucherTitle = ref('付款凭据')
+
+const canPay = (r) => {
+  if (!r || !['已通过', '待打款'].includes(r.status)) return false
+  if (!hasAmount(r.type)) return false
+  return isPayer(currentUser) && moduleFlags.payout
+}
+
+const canRevoke = (r) => !!r && r.status === '已打款' && isPayer(currentUser) && moduleFlags.payout
+const voucherCount = (r) => (Array.isArray(r?.payment?.images) ? r.payment.images.length : 0)
+
+const openPay = (r) => {
+  if (!moduleFlags.payout) return ElMessage.warning('付款登记未开通，请先在费用审批设置里打开')
+  if (!canPay(r)) return ElMessage.warning('只有主账号或财务可以登记付款')
+  payTargets.value = [r]
+  payVisible.value = true
+}
+
+const openRevoke = (r) => {
+  if (!canRevoke(r)) return ElMessage.warning('只有主账号或财务可以撤销付款')
+  revokeTargets.value = [r]
+  revokeVisible.value = true
+}
+
+const openVouchers = (r) => {
+  const imgs = Array.isArray(r?.payment?.images) ? r.payment.images : []
+  if (!imgs.length) return
+  voucherImages.value = imgs
+  voucherTitle.value = `付款凭据 · ${r.waybill_no || r.report_no || ''}`
+  voucherVisible.value = true
+}
+
+const onPayDone = async () => { await loadFeeReports() }
+const onRevokeDone = async () => { await loadFeeReports() }
+
 const switchTab = (tab) => {
   activeTab.value = tab
   if (tab === 'fee') {
@@ -2674,6 +2759,8 @@ const createSameWaybill = () => {
 
 onMounted(async () => {
   if (isCustomer && isSubAccount) await loadMyOrgInfo()
+  /* ⭐ 付款登记是可配置模块：先确认开关，避免直接深链进来看到禁用入口 */
+  ensureModuleFlags(currentUser)
   loadWaybill()
   // ⭐ 深链：/waybill/detail?waybill_no=xxx&tab=fee
   const tabQ = String(route.query.tab || '')
@@ -4206,6 +4293,94 @@ onMounted(async () => {
 .fr-reject {
   font-size: 11px;
   color: #B91C1C;
+}
+
+/* 驳回理由条：重提后也保留，审批人复核时能看到上一次为什么被退回 */
+.fr-rejectbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 10px 0 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #FEF2F2;
+  border: 1px solid #FBD5DB;
+}
+.fr-reject-k {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: #B91C1C;
+  background: #FEE2E2;
+  border-radius: 4px;
+  padding: 1px 6px;
+  line-height: 1.7;
+}
+.fr-reject-t {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  color: #9F1239;
+  line-height: 1.7;
+  word-break: break-all;
+}
+.fr-reject-n {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  color: #B45309;
+}
+
+/* 已打款信息条 */
+.fr-paid {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  font-size: 11.5px;
+  color: #15803D;
+}
+.fr-paid-k {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: #15803D;
+  background: #DCFCE7;
+  border-radius: 4px;
+  padding: 1px 6px;
+  line-height: 1.7;
+}
+.fr-paid-by {
+  color: #166534;
+}
+
+/* 已付款信息条里的补充字段 */
+.fr-paid-method {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  color: #15803D;
+  background: #DCFCE7;
+  border-radius: 4px;
+  padding: 1px 6px;
+  line-height: 1.7;
+}
+.fr-paid-serial {
+  font-size: 10.5px;
+  color: #166534;
+  font-family: var(--num-font, monospace);
+}
+.fr-paid-voucher {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: #c8102e;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fr-paid-voucher:hover {
+  text-decoration: underline;
 }
 
 /* 驳回弹窗 */

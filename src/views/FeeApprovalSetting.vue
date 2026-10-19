@@ -230,6 +230,33 @@
             </div>
           </div>
         </section>
+
+        <!-- ④ 功能模块 -->
+        <section class="fc-card">
+          <header class="fc-card-head">
+            <b>④ 功能模块</b>
+            <span>按客户开关；关掉之后界面完全看不到，不是灰掉</span>
+          </header>
+
+          <div class="fc-module">
+            <div class="fc-module-main">
+              <b>付款登记</b>
+              <em>审批通过后登记付款、上传付款凭据、撤销付款。关掉后菜单、运单详情的入口和顶栏待办数字都会消失。</em>
+            </div>
+            <el-switch
+              v-model="payoutEnabled"
+              :loading="moduleSaving"
+              active-text="已开通"
+              inactive-text="未开通"
+              @change="onTogglePayout"
+            />
+          </div>
+
+          <div v-if="moduleFailed" class="fc-module-warn">
+            读不到 <code>tenant_modules</code>，当前按「已开通」降级显示。请先执行
+            <code>db_migration_modules_payment.sql</code>。
+          </div>
+        </section>
       </div>
 
       <!-- 右列 -->
@@ -296,6 +323,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import { supabase } from '@/utils/supabase'
+import { MODULE_PAYOUT, moduleFlags, ensureModuleFlags, setModuleFlag } from '@/utils/modules'
 
 /* ============================================================
    当前用户
@@ -350,6 +378,43 @@ const DEFAULTS = {
   require_owner: false,
   updated_by: '',
   updated_at: '',
+}
+
+/* ============================================================
+   功能模块（客户级开关）
+   目前只有「付款登记」；以后加模块就往 tenant_modules 加 key。
+   ============================================================ */
+const payoutEnabled = ref(false)
+const moduleSaving = ref(false)
+const moduleFailed = computed(() => moduleFlags.failed)
+
+async function onTogglePayout(val) {
+  if (!isMaster.value) {
+    payoutEnabled.value = !val
+    ElMessage.error('仅主账号可修改模块开关')
+    return
+  }
+  moduleSaving.value = true
+  try {
+    await setModuleFlag(MODULE_PAYOUT, val, currentUser)
+    ElMessage.success(
+      val
+        ? '已开通「付款登记」'
+        : '已关闭「付款登记」：菜单、运单入口与顶栏待办会立即消失'
+    )
+  } catch (e) {
+    payoutEnabled.value = !val
+    console.error('[功能模块] 保存失败', e)
+    ElMessage.error(
+      '保存失败：' +
+      ((e && e.message) || '') +
+      (String((e && e.message) || '').includes('tenant_modules')
+        ? '（请先执行 db_migration_modules_payment.sql）'
+        : '')
+    )
+  } finally {
+    moduleSaving.value = false
+  }
 }
 
 const config = reactive({ ...DEFAULTS })
@@ -573,6 +638,8 @@ onMounted(async () => {
   if (!isMaster.value) return
   await loadUsers()
   await loadConfig()
+  await ensureModuleFlags(currentUser, { force: true })
+  payoutEnabled.value = moduleFlags.payout === true
 })
 </script>
 
@@ -728,6 +795,47 @@ onMounted(async () => {
 .fc-card-head span {
   font-size: 11.5px;
   color: var(--text-placeholder);
+}
+
+/* ===== 功能模块开关 ===== */
+.fc-module {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-base);
+  border-radius: 10px;
+  background: #FAFBFC;
+}
+
+.fc-module-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.fc-module-main b {
+  display: block;
+  font-size: 13px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.fc-module-main em {
+  font-style: normal;
+  font-size: 11.5px;
+  color: var(--text-placeholder);
+  line-height: 1.7;
+}
+
+.fc-module-warn {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  font-size: 11.5px;
+  color: #92400E;
+  line-height: 1.7;
 }
 
 /* ===== 模式卡 ===== */

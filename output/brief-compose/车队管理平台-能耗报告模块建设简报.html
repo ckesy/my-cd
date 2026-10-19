@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="docx-page-size" content="A4">
+<title>车队管理平台 · 能耗报告模块建设简报</title>
+</head>
+<body>
+
+<h1 style="font-family:'SimHei','黑体',sans-serif;font-size:20pt;font-weight:bold;text-align:center;margin:0 0 6pt 0;color:#0f2e29;">车队管理平台 · 能耗报告模块建设简报</h1>
+
+<p style="font-family:'SimSun','宋体',serif;font-size:10.5pt;color:#666666;text-align:center;margin:0 0 18pt 0;">2026 年 10 月 · 运营管理</p>
+
+<h2 style="font-family:'SimHei','黑体',sans-serif;font-size:14pt;font-weight:bold;color:#0f6e56;margin:14pt 0 6pt 0;">一、建设背景</h2>
+
+<p style="font-family:'SimSun','宋体',serif;font-size:12pt;line-height:1.75;margin:0 0 8pt 0;text-indent:24pt;">车队能耗数据此前只能按车逐台翻看，缺少任务化的报告入口与统一口径。本期在运营管理下新建“能耗报告”模块，把取数、成报、查阅串成一条链路，待接口接入即可承载真实数据。</p>
+
+<h2 style="font-family:'SimHei','黑体',sans-serif;font-size:14pt;font-weight:bold;color:#0f6e56;margin:14pt 0 6pt 0;">二、本期完成</h2>
+
+<p style="font-family:'SimSun','宋体',serif;font-size:12pt;line-height:1.75;margin:0 0 6pt 0;"><b>1. 报告任务化。</b>新增 energy_report_tasks 表，一个任务一行，报告数据整包存 JSON；已内置 11 条演示任务，覆盖单车、车队、对比三类。</p>
+
+<p style="font-family:'SimSun','宋体',serif;font-size:12pt;line-height:1.75;margin:0 0 6pt 0;"><b>2. 任务列表。</b>支持按名称、燃料、类型、状态、日期、创建人、账号归属筛选；含新建、勾选导出、服务端排序与表格全屏，版式与综合报表统一。</p>
+
+<p style="font-family:'SimSun','宋体',serif;font-size:12pt;line-height:1.75;margin:0 0 6pt 0;"><b>3. 新建任务。</b>先选燃料类型，任务类型随之联动；编号按“时间戳 + 4 位随机”生成；提交先落“待生成”，不预设取数成功。</p>
+
+<p style="font-family:'SimSun','宋体',serif;font-size:12pt;line-height:1.75;margin:0 0 8pt 0;"><b>4. 报告详情。</b>车队报告按设计稿实现：统计层为 5 个主指标、车辆档案/行驶/能耗三列明细与分路段电耗；分析层为日里程与电耗、运营强度 U 形、路段构成、电耗分布、驾驶行为、六维评分、电耗贡献帕累托，并给出六条洞察。</p>
+
+<h2 style="font-family:'SimHei','黑体',sans-serif;font-size:14pt;font-weight:bold;color:#0f6e56;margin:14pt 0 6pt 0;">三、技术与口径</h2>
+
+<p style="font-family:'SimSun','宋体',serif;font-size:12pt;line-height:1.75;margin:0 0 8pt 0;text-indent:24pt;">前端为 Vue3 + Element Plus；图表用手写 SVG，与设计稿同一套视觉；排序走服务端，避免“只排当前页”；列宽按实测像素反推，窄屏不截断。口径统一为电量 MWh、里程 km、电耗 kWh/100km；演示集为 24 台纯电车、9 月、26.3 万公里、341.5 MWh、百公里 130.0。</p>
+
+<h2 style="font-family:'SimHei','黑体',sans-serif;font-size:14pt;font-weight:bold;color:#0f6e56;margin:14pt 0 6pt 0;">四、下一步</h2>
+
+<p style="font-family:'SimSun','宋体',serif;font-size:12pt;line-height:1.75;margin:0 0 6pt 0;">一是接入东风取数接口，打通“提交—取数—出报告”；二是补齐单车分析与车辆对比两类报告；三是结论改由规则引擎生成（阈值、对比、分布、趋势四类规则），并保留数据依据便于复核。</p>
+
+</body>
+</html>

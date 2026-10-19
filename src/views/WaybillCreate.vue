@@ -899,7 +899,7 @@ import {
   Plus, ArrowRight, ArrowDown, InfoFilled, Search,
   Guide, Edit, Close, Files, User, CircleCheckFilled, Box,
 } from '@element-plus/icons-vue'
-import { supabase } from '@/utils/supabase'
+import app, { supabase } from '@/utils/supabase'
 import dayjs from 'dayjs'
 import UnitSelect from '@/components/UnitSelect.vue'
 import {
@@ -2398,6 +2398,19 @@ const doPublish = async () => {
     if (error) throw error
 
     ElMessage.success(`运单发布成功！共生成 ${waybillList.length} 条运单`)
+
+    /* ⭐ 派单提醒：直接指派了司机的运单，调云函数发订阅消息（没配模板会自动跳过）。
+       fire-and-forget，失败不影响发布结果。 */
+    try {
+      const nos = (Array.isArray(data) ? data : []).map((r) => r.waybill_no).filter(Boolean).slice(0, 10)
+      nos.forEach((no) => {
+        app.callFunction({ name: 'wx-notify', data: { action: 'assigned', waybill_no: no } })
+          .catch((e) => console.warn('[派单提醒] 发送失败（不阻断）', no, e))
+      })
+    } catch (e) {
+      console.warn('[派单提醒] 触发异常（不阻断）', e)
+    }
+
     isDirty.value = false
     return true
   } catch (err) {

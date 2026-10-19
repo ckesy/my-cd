@@ -44,6 +44,11 @@ const routes = [
     component: () => import('../views/Dashboard.vue'),
   },
   {
+    path: '/fee/payout',
+    name: 'FeePayout',
+    component: () => import('../views/Dashboard.vue'),
+  },
+  {
     path: '/waybill/detail',
     name: 'WaybillDetail',
     component: WaybillDetail,
@@ -114,6 +119,13 @@ const routes = [
       {
         path: 'energy',
         name: 'OperationEnergy',
+        component: () => import('../views/Dashboard.vue'),
+        meta: { title: '能耗报告' }
+      },
+      {
+        // ⭐ 报告详情（挂在同一个外壳里，左侧菜单不变）
+        path: 'energy/report',
+        name: 'EnergyReportDetail',
         component: () => import('../views/Dashboard.vue'),
         meta: { title: '能耗报告' }
       },

@@ -41,6 +41,13 @@
         <el-input v-model="searchForm.plate" placeholder="车牌号码" clearable style="width: 130px" />
         <el-input v-model="searchForm.driver" placeholder="司机姓名" clearable style="width: 120px" />
 
+        <!-- ⭐ 待我审批：只看当前审批节点是我的上报（按运单汇总） -->
+        <button class="mine-chip" :class="{ on: onlyMine }" @click="toggleMine">
+          <el-icon><Bell /></el-icon>
+          <span>待我审批</span>
+          <span class="mine-n" :class="{ zero: !myPendingCount }">{{ myPendingCount }}</span>
+        </button>
+
         <div class="search-btns">
           <el-button type="primary" class="btn-primary" @click="handleSearch">
             <el-icon><Search /></el-icon> 搜索
@@ -50,6 +57,13 @@
           </el-button>
         </div>
       </div>
+    </div>
+
+    <!-- ⭐ 待我审批筛选态：明确「现在看到的是子集」+ 一键清除 -->
+    <div v-if="onlyMine" class="mine-bar fade-up">
+      <span class="mine-bar-ic"><el-icon><Bell /></el-icon></span>
+      <span class="mine-bar-t">只看<b>待我审批</b>的运单 · 共 {{ myPendingCount }} 笔上报</span>
+      <span class="mine-bar-x" @click="toggleMine">清除筛选</span>
     </div>
 
     <!-- 表格卡片 -->
@@ -145,17 +159,22 @@
           <!-- 表格 -->
           <div class="table-wrap">
             <el-table
+              ref="tableRef"
               :data="tableData"
               border
               stripe
               :size="tableSize"
               row-key="waybill_no"
+              :expand-row-keys="expandedKeys"
               :row-class-name="getRowClassName"
               @expand-change="handleExpandChange"
               height="100%"
               class="custom-table"
             >
-              <el-table-column type="expand" width="46">
+              <!-- ⭐ 展开列只作为「明细挂载点」保留（1px 且被 CSS 隐藏）。
+                   原来的 46px 独立列里只有一个方框箭头，白占一列还挡在编号和状态之间；
+                   触发按钮已挪进「运单编号 / 任务名称」单元格（见 .leg-toggle）。 -->
+              <el-table-column type="expand" width="1">
                 <template #default="{ row }">
                   <div v-if="getTotalItems(row.assignments) > 1" class="expand-content">
                     <!-- ⭐ 一单多司机/多车（分车承运）：每趟各自的份额与进度。
@@ -204,13 +223,27 @@
                   :min-width="col.minWidth" :align="col.align" :fixed="col.fixed || false" show-overflow-tooltip>
                   <template #default="{ row }">
                     <div class="waybill-no-cell">
-                      <div class="waybill-no">
-                        {{ row.waybill_no }}
+                      <!-- ⭐ 任务名称是主信息（用户 2026-10-19 拍板：名称比运单编号重要） -->
+                      <div class="task-title">
+                        {{ row.task_name || '未命名任务' }}
                         <!-- ⭐ 常驻任务：高辨识度徽标，并在整行左侧加色条 -->
                         <span v-if="row.is_recurring" class="recurring-badge"
                           :title="recurringTooltip(row)">常驻</span>
+                        <!-- ⭐ 分车承运 · 展开入口（只有多趟的行才有）
+                             挪进首行行尾：首列视线起点、不额外吃列宽，信息量比裸箭头大 -->
+                        <button
+                          v-if="getTotalItems(row.assignments) > 1"
+                          class="leg-toggle"
+                          :class="{ open: isExpanded(row) }"
+                          :title="isExpanded(row) ? '收起分车明细' : `展开 ${legSummary(row).total} 趟分车明细`"
+                          @click.stop="toggleLegs(row)"
+                        >
+                          <span class="leg-toggle-text">{{ legSummary(row).total }} 趟</span>
+                          <el-icon class="leg-toggle-icon"><ArrowDown /></el-icon>
+                        </button>
                       </div>
-                      <div class="task-name">{{ row.task_name || '未命名任务' }}</div>
+                      <!-- 运单编号降为副信息 -->
+                      <div class="waybill-no">{{ row.waybill_no }}</div>
                     </div>
                   </template>
                 </el-table-column>
@@ -303,7 +336,7 @@
                   <template #default="{ row }">
                     <div v-if="feeOf(row)" class="fee-cell">
                       <span class="fee-total">¥{{ feeOf(row).total.toFixed(2) }}</span>
-                      <span v-if="feeOf(row).mine" class="fee-badge is-mine">待我审 {{ feeOf(row).mine }}</span>
+                      <span v-if="feeOf(row).mine" class="fee-badge is-mine" title="只看待我审批的运单" @click="showMine">待我审 {{ feeOf(row).mine }}</span>
                       <span v-else-if="feeOf(row).pending" class="fee-badge">待审 {{ feeOf(row).pending }}</span>
                     </div>
                     <span v-else class="fee-none">—</span>
@@ -361,7 +394,7 @@
               layout="sizes, prev, pager, next, jumper"
               :total="total"
               :page-size="pageSize"
-              :page-sizes="[10, 20, 50, 100]"
+              :page-sizes="PAGE_SIZE_OPTIONS"
               v-model:current-page="currentPage"
               @size-change="handleSizeChange"
               @current-change="handleCurrentChange"
@@ -381,18 +414,20 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Search, Refresh, Download, Plus, Delete, View, Van,
   Operation, Setting, FullScreen, Close,
-  Grid, Rank, DArrowLeft, DArrowRight,
+  Grid, Rank, DArrowLeft, DArrowRight, Bell, ArrowDown,
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import { supabase } from '@/utils/supabase'
+import { canApproveReport as canApproveReportShared } from '@/utils/feeTodo'
 
 const router = useRouter()
+const route = useRoute()
 
 // ============================================================
 // 数据隔离
@@ -454,6 +489,12 @@ const stats = ref([
 
 const setActive = (index) => {
   stats.value.forEach((item, i) => { item.active = i === index })
+  /* 点了状态胶囊就退出「待我审批」，两个条件不叠加 */
+  if (onlyMine.value) {
+    onlyMine.value = false
+    router.replace({ path: '/waybill', query: {} })
+  }
+  currentPage.value = 1
   fetchData()
 }
 
@@ -475,7 +516,9 @@ const dateRange = ref([])
 // ============================================================
 const tableData = ref([])
 const total = ref(0)
-const pageSize = ref(10)
+/* ⭐ 默认每页 20 条；可选 20 / 30 / 50（用户 2026-10-19 拍板） */
+const PAGE_SIZE_OPTIONS = [20, 30, 50]
+const pageSize = ref(20)
 const currentPage = ref(1)
 
 // ============================================================
@@ -490,7 +533,7 @@ const handleDensityChange = (cmd) => { tableSize.value = cmd }
 const columnPopoverVisible = ref(false)
 
 const DEFAULT_COLUMNS = [
-  { prop: 'waybillNo', label: '运单编号 / 任务名称', visible: true, fixed: 'left', minWidth: 220, align: 'center' },
+  { prop: 'waybillNo', label: '任务名称 / 运单编号', visible: true, fixed: 'left', minWidth: 220, align: 'center' },
   { prop: 'status', label: '物流状态', visible: true, fixed: false, minWidth: 110, align: 'center' },
   { prop: 'pickup', label: '装货地', visible: true, fixed: false, minWidth: 110, align: 'center' },
   { prop: 'delivery', label: '卸货地', visible: true, fixed: false, minWidth: 110, align: 'center' },
@@ -767,7 +810,18 @@ const displayStatus = (row) => {
   return row.status
 }
 
-const handleExpandChange = (row, expandedRows) => { /* 保留 */ }
+/* ⭐ 分车承运展开：按钮挪进编号行尾后，展开状态改由这里托管。
+   Element 的 expand-change 在「点按钮 / 点行内其他入口」两种情况下都会触发，
+   所以箭头方向永远和实际展开状态一致。 */
+const tableRef = ref(null)
+const expandedKeys = ref([])
+const isExpanded = (row) => !!row && expandedKeys.value.includes(row.waybill_no)
+const toggleLegs = (row) => {
+  if (tableRef.value) tableRef.value.toggleRowExpansion(row)
+}
+const handleExpandChange = (row, expandedRows) => {
+  expandedKeys.value = (expandedRows || []).map((r) => r.waybill_no)
+}
 
 // ============================================================
 // ⭐⭐ 数据隔离（含 org）
@@ -785,10 +839,71 @@ const applyIsolation = (query) => {
   return query
 }
 // ============================================================
+// ⭐ 待我审批
+//   取「审核中」的上报 → 按 flow/current_level 判断当前节点是不是我
+//   → 拿 waybill_no 在**查询层**过滤（分页与 total 才准）
+// ============================================================
+const onlyMine = ref(route.query.mine === '1')
+const myPendingCount = ref(0)
+
+const fetchPendingMine = async () => {
+  let q = supabase
+    .from('reports')
+    .select('id,waybill_no,type,amount,status,current_level,flow')
+    .eq('status', '审核中')
+  if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
+
+  const { data, error } = await q
+  if (error) throw error
+
+  const hit = (data || []).filter(canApproveReport)
+  myPendingCount.value = hit.length
+  return [...new Set(hit.map((r) => r.waybill_no).filter(Boolean))]
+}
+
+const toggleMine = async () => {
+  onlyMine.value = !onlyMine.value
+  /* 待我审批与状态胶囊互斥：开了就回到「全部」，免得两个条件交叉出空表 */
+  if (onlyMine.value) stats.value.forEach((it, i) => { it.active = i === 0 })
+  currentPage.value = 1
+  /* 地址栏跟着变，从顶栏铃铛点进来 / 直接分享链接都能直达筛选态 */
+  router.replace({ path: '/waybill', query: onlyMine.value ? { mine: '1' } : {} })
+  await fetchData()
+}
+
+const showMine = () => { if (!onlyMine.value) toggleMine() }
+
+/* 顶栏「待我审批」跳过来时（可能已经在本页）同步筛选态 */
+watch(() => route.query.mine, (v) => {
+  const on = v === '1'
+  if (on === onlyMine.value) return
+  onlyMine.value = on
+  if (on) stats.value.forEach((it, i) => { it.active = i === 0 })
+  currentPage.value = 1
+  fetchData()
+})
+
+// ============================================================
 // 数据获取
 // ============================================================
 const fetchData = async () => {
   try {
+    /* 待我审批命中哪些运单（顺带刷新胶囊上的数字） */
+    let mineNos = null
+    try {
+      mineNos = await fetchPendingMine()
+    } catch (e) {
+      console.warn('[运单列表] 待审批数读取失败', e)
+    }
+
+    if (onlyMine.value && (!mineNos || !mineNos.length)) {
+      tableData.value = []
+      total.value = 0
+      feeMap.value = {}
+      updateStats()
+      return
+    }
+
     let query = supabase
       .from('waybills')
       .select('*', { count: 'exact' })
@@ -796,6 +911,9 @@ const fetchData = async () => {
       .range((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value - 1)
 
     query = applyIsolation(query)
+
+    /* 待我审批：只留命中的运单 */
+    if (onlyMine.value && mineNos) query = query.in('waybill_no', mineNos)
 
     /* ⭐ 常驻任务：列表里一个组只留「组主」（trip_seq=1），
        司机每接一趟都会新建趟次行，不该每趟多出一条运单 —— 趟次进度进详情「物流状态」。
@@ -914,16 +1032,8 @@ const feeOf = (row) => feeMap.value[row.waybill_no] || null
 const meInfo = (() => {
   try { return JSON.parse(localStorage.getItem('currentUser') || '{}') } catch { return {} }
 })()
-const meIsMaster = meInfo.role === 'admin' || (meInfo.role === 'customer' && !meInfo.isSubAccount)
 
-const canApproveReport = (r) => {
-  if (!r || r.status !== '审核中') return false
-  const flow = Array.isArray(r.flow) ? r.flow : []
-  const step = flow[(Number(r.current_level) || 0) - 1]
-  if (!step) return false
-  if (step.approver_id && Number(step.approver_id) === Number(meInfo.id)) return true
-  return step.role === 'owner' && meIsMaster
-}
+const canApproveReport = (r) => canApproveReportShared(r, meInfo)
 
 const loadFeeSummary = async (rows) => {
   const nos = (rows || []).map((r) => r.waybill_no).filter(Boolean)
@@ -1084,6 +1194,10 @@ onBeforeUnmount(() => {
    页面布局
    ============================================================ */
 .waybill-page {
+  /* ⭐ 表格里的数字（运单号 / 时间 / 运费）统一用系统无衬线 + 等宽数字。
+     原来用 Courier New，笔画太细，13px 下屏幕上看不清。 */
+  --num-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue',
+    'PingFang SC', 'HarmonyOS Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', Arial, sans-serif;
   padding: 6px 16px 16px;
   background-color: #F8FAFC;
   height: calc(100vh - 101px);
@@ -1174,6 +1288,89 @@ onBeforeUnmount(() => {
 }
 .stat-pill.active .stat-count {
   background: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+
+/* ⭐ 待我审批：琥珀色，和「状态胶囊」区分开 */
+.mine-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid #FDE68A;
+  background: linear-gradient(90deg, #FFFBEB, #FEF9F3);
+  color: #92400E;
+  font-size: 12.5px;
+}
+.mine-bar-ic {
+  display: inline-flex;
+  color: #D97706;
+}
+.mine-bar-t b {
+  color: #B45309;
+  margin: 0 2px;
+}
+.mine-bar-x {
+  margin-left: auto;
+  color: #B45309;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+.mine-bar-x:hover {
+  background: #FEF3C7;
+}
+.mine-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 18px;
+  border: 1px solid #FCD34D;
+  background: #FFFBEB;
+  color: #B45309;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.mine-chip:hover {
+  background: #FEF3C7;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(180, 83, 9, 0.12);
+}
+.mine-chip.on {
+  background: linear-gradient(135deg, #D97706, #B45309);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(180, 83, 9, 0.3);
+}
+.mine-n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: #c8102e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  line-height: 1;
+}
+.mine-n.zero {
+  background: rgba(100, 116, 139, 0.14);
+  color: #64748B;
+}
+.mine-chip.on .mine-n {
+  background: rgba(255, 255, 255, 0.26);
   color: #fff;
 }
 
@@ -1389,10 +1586,10 @@ onBeforeUnmount(() => {
   background: #FAFBFC;
 }
 
-/* 运单编号 cell */
+/* 运单编号 cell：整列居中（编号 + 任务名称一起居中） */
 .waybill-no-cell {
-  text-align: left;
-  padding-left: 8px;
+  text-align: center;
+  padding-left: 0;
 }
 
 /* ⭐ 状态 cell：待重新指派时附带拒单原因 */
@@ -1416,26 +1613,86 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 .waybill-no {
-  font-weight: 700;
-  color: #0F172A;
-  font-family: 'Courier New', monospace;
-  font-size: 13px;
-}
-.task-name {
+  /* 运单编号已降为副信息：小一号、灰色、等宽数字（上下行对得齐，但不再抢视线） */
+  font-family: var(--num-font);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
   font-size: 11.5px;
-  color: #64748B;
-  margin-top: 2px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  color: #94A3B8;
+  line-height: 1.3;
+  margin-top: 1px;
+}
+/* 任务名称 = 主信息（用户 2026-10-19：名称比编号重要，主副对调） */
+.task-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0F172A;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ⭐ 分车承运 · 展开入口（替代原来独占 46px 一列的方框箭头）
+   形态：任务名称行尾的小胶囊「N 趟 ▾」，信息量 > 裸箭头，且完全不额外占列宽。
+   状态：默认淡红描边 → 悬停加深 → 展开时填品牌红、箭头翻转。 */
+.leg-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0 4px 0 6px;
+  border: 1px solid #FCA5A5;
+  border-radius: 9px;
+  background: #FEF2F2;
+  color: #B91C1C;
+  font-family: var(--num-font);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 16px;
+  letter-spacing: 0.2px;
+  vertical-align: middle;
+  cursor: pointer;
+  transition: background .16s, color .16s, border-color .16s, box-shadow .16s;
+}
+.leg-toggle:hover {
+  background: #FEE2E2;
+  border-color: #EF4444;
+  color: #991B1B;
+  box-shadow: 0 1px 5px rgba(200, 16, 46, .18);
+}
+.leg-toggle .leg-toggle-icon {
+  font-size: 10px;
+  transition: transform .2s ease;
+}
+.leg-toggle.open {
+  background: #c8102e;
+  border-color: #c8102e;
+  color: #fff;
+  box-shadow: 0 1px 5px rgba(200, 16, 46, .28);
+}
+.leg-toggle.open .leg-toggle-icon {
+  transform: rotate(180deg);
 }
 
 .time-text {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 12px;
+  /* 与运单编号同一字体栈，数字等宽 → 两行时间上下对得齐 */
+  font-family: var(--num-font);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  font-size: 12.5px;
+  letter-spacing: 0.2px;
   color: #475569;
 }
 .freight-text {
   color: #c8102e;
   font-weight: 700;
-  font-family: 'Courier New', monospace;
+  font-family: var(--num-font);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 .count-badge {
   display: inline-block;
@@ -1559,8 +1816,16 @@ onBeforeUnmount(() => {
   font-size: 12.5px;
   text-align: center;
 }
-:deep(.el-table__row:not(.has-multiple-assign) .el-table__expand-icon) {
-  visibility: hidden;
+/* ⭐ 展开列已瘦身成 1px 的「挂载点」：只把里面那个方框箭头藏掉，
+   ⚠️ 千万不能对 td 用 display:none —— 那会让该行后面的 td 整体左移一格，
+      和外层 fixed 列（运单编号）错位，状态列直接被盖住。
+   触发按钮在「运单编号」单元格里（.leg-toggle）。 */
+:deep(.custom-table .el-table__cell.el-table__expand-column .el-table__expand-icon) {
+  display: none;
+}
+:deep(.custom-table .el-table__cell.el-table__expand-column) {
+  padding: 0;
+  border-right: none;
 }
 
 /* ============================================================
@@ -1946,6 +2211,13 @@ html, body {
   background: #FEF2F2;
   color: #c8102e;
   font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.fee-badge.is-mine:hover {
+  background: #FEE2E2;
+  box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.12);
 }
 
 .fee-none {

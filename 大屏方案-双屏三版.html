@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>车队运营大屏 · 双屏三方案</title>
+<style>
+  :root{
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+            "HarmonyOS Sans SC", "Source Han Sans SC", "Microsoft YaHei", Arial, sans-serif;
+    --mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#06080C;color:#DCE6F2;font-family:var(--font);
+    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  body{padding-bottom:40px}
+
+  /* ================= 顶部工具栏 ================= */
+  .tb{position:sticky;top:0;z-index:99;height:64px;display:flex;align-items:center;gap:20px;
+    padding:0 22px;background:rgba(10,13,18,.94);border-bottom:1px solid rgba(255,255,255,.07);
+    backdrop-filter:blur(14px)}
+  .tb-l{display:flex;align-items:center;gap:11px;flex:0 0 auto}
+  .logo{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:800;letter-spacing:.5px;color:#fff;
+    background:linear-gradient(135deg,#FF3355,#B00D22);box-shadow:0 6px 18px rgba(255,51,85,.35)}
+  .tb-l b{display:block;font-size:14px;letter-spacing:.3px}
+  .tb-l span{display:block;font-size:11px;color:#6C7F95;margin-top:1px}
+  .tb-c{flex:1;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+  .seg{display:inline-flex;background:#0F131A;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:3px;gap:2px}
+  .seg button{border:0;background:transparent;font-family:inherit;font-size:12.5px;font-weight:600;
+    color:#8B9CB0;padding:7px 14px;border-radius:7px;cursor:pointer;white-space:nowrap;transition:.2s}
+  .seg button:hover{color:#DCE6F2}
+  .seg button.on{background:linear-gradient(135deg,#FF3355,#C2102B);color:#fff;
+    box-shadow:0 4px 12px rgba(255,51,85,.3)}
+  .seg2 button.on{background:linear-gradient(135deg,#1F8FD8,#0B5E96);box-shadow:0 4px 12px rgba(31,143,216,.3)}
+  .tb-r{flex:0 0 auto;text-align:right;font-size:11px;color:#6C7F95;line-height:1.5;font-variant-numeric:tabular-nums}
+  .tb-r b{color:#B9C7D6;font-weight:600}
+
+  /* ================= 舞台 ================= */
+  .stagewrap{position:relative;width:100%;overflow:hidden}
+  .stage{position:absolute;top:14px;left:0;width:1920px;height:1080px;transform-origin:top left}
+  .screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
+  .screen.on{display:flex}
+
+  /* ================= 通用：A 方案（指挥中心） ================= */
+  .a{background:#050A14;color:#DCE9F9;font-family:var(--font)}
+  .a::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(1000px 520px at 50% -6%, rgba(22,78,150,.30), transparent 72%),
+      radial-gradient(760px 420px at 50% 104%, rgba(130,10,34,.20), transparent 72%),
+      linear-gradient(180deg,#050A14 0%,#04070D 100%)}
+  .a::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
+    background-image:
+      linear-gradient(rgba(96,158,226,.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(96,158,226,.055) 1px, transparent 1px);
+    background-size:60px 60px;
+    -webkit-mask-image:radial-gradient(ellipse at 50% 40%, #000 25%, transparent 78%);
+    mask-image:radial-gradient(ellipse at 50% 40%, #000 25%, transparent 78%)}
+  .a-head{position:relative;z-index:3;flex:0 0 86px;height:86px;display:flex;align-items:center;
+    padding:0 26px;border-bottom:1px solid rgba(90,150,220,.13)}
+  .a-head::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,45,75,.55) 50%,transparent)}
+  .a-hl{display:flex;flex-direction:column;gap:3px;min-width:230px}
+  .a-clock{font-family:var(--mono);font-size:24px;font-weight:700;color:#F2F8FF;letter-spacing:1.5px;
+    text-shadow:0 0 18px rgba(70,170,255,.35)}
+  .a-clock small{font-size:11.5px;font-weight:500;color:#6E88A6;letter-spacing:.5px;margin-left:8px}
+  .a-hc{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}
+  .a-title{font-size:29px;font-weight:800;letter-spacing:11px;text-indent:11px;
+    background:linear-gradient(180deg,#FFFFFF 25%,#9EC4E8 100%);-webkit-background-clip:text;
+    background-clip:text;color:transparent;filter:drop-shadow(0 0 22px rgba(80,180,255,.28))}
+  .a-sub{margin-top:5px;font-size:10px;letter-spacing:3.2px;color:#5A7695}
+  .a-hc::after{content:"";position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);
+    width:460px;height:2px;
+    background:linear-gradient(90deg,transparent,rgba(255,45,75,.85),transparent);
+    box-shadow:0 0 12px rgba(255,45,75,.5)}
+  .a-hr{margin-left:auto;display:flex;gap:9px}
+  .a-chip{display:flex;align-items:center;gap:7px;height:30px;padding:0 12px;font-size:11.5px;
+    color:#9DB6D2;border:1px solid rgba(90,150,220,.22);background:rgba(10,22,40,.6);border-radius:3px}
+  .a-chip i{width:6px;height:6px;border-radius:50%;background:#2BE08A;box-shadow:0 0 8px #2BE08A}
+  .a-chip i.cy{background:#33D6FF;box-shadow:0 0 8px #33D6FF}
+  .a-chip i.rd{background:#FF3355;box-shadow:0 0 8px #FF3355}
+
+  .a-body{position:relative;z-index:2;flex:1;min-height:0;display:grid;
+    grid-template-columns:412px 1fr 412px;gap:14px;padding:14px 16px}
+  .a-col{display:flex;flex-direction:column;gap:12px;min-height:0}
+  .p{position:relative;display:flex;flex-direction:column;min-height:0;padding:13px 15px;
+    background:linear-gradient(160deg,rgba(12,24,42,.82),rgba(7,14,26,.72));
+    border:1px solid rgba(84,144,214,.16);
+    box-shadow:inset 0 0 34px rgba(28,90,170,.07)}
+  .p::before,.p::after{content:"";position:absolute;width:11px;height:11px;border:1px solid rgba(255,45,75,.65);pointer-events:none}
+  .p::before{left:-1px;top:-1px;border-right:0;border-bottom:0}
+  .p::after{right:-1px;bottom:-1px;border-left:0;border-top:0}
+  .p-h{flex:0 0 auto;display:flex;align-items:center;gap:9px;margin-bottom:11px}
+  .p-h i{width:3px;height:14px;background:linear-gradient(180deg,#FF6B81,#FF1F3D);
+    box-shadow:0 0 10px rgba(255,45,75,.85)}
+  .p-h b{font-size:14.5px;font-weight:700;letter-spacing:1.4px;color:#EAF4FF}
+  .p-h em{font-style:normal;margin-left:auto;font-size:9.5px;letter-spacing:1.6px;color:#4E6885}
+  .bn{font-family:var(--mono);font-weight:700;color:#fff;line-height:1;letter-spacing:-1.2px;
+    text-shadow:0 0 22px rgba(51,214,255,.26)}
+  .unit{font-size:11.5px;color:#6E88A6;margin-left:4px;letter-spacing:0}
+  .delta{font-size:10.5px;font-family:var(--mono)}
+  .delta.up{color:#2BE08A}
+  .delta.down{color:#FF6B81}
+  .kv{display:flex;flex-direction:column;gap:4px}
+  .kv b{font-family:var(--mono);font-size:24px;color:#fff;line-height:1;letter-spacing:-.5px}
+  .kv span{font-size:11px;color:#7089A6}
+
+  /* 环形 */
+  .ring{position:relative;width:146px;height:146px;border-radius:50%;flex:0 0 auto;
+    background:conic-gradient(from -90deg,#33D6FF 0 calc(var(--p) * 1%),rgba(255,255,255,.055) 0)}
+  .ring::after{content:"";position:absolute;inset:15px;border-radius:50%;background:#07101C;
+    box-shadow:inset 0 0 26px rgba(51,214,255,.16)}
+  .ring .rv{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:3px}
+  .ring .rv b{font-family:var(--mono);font-size:34px;font-weight:700;color:#fff;line-height:1;letter-spacing:-1px}
+  .ring .rv span{font-size:10.5px;color:#6E88A6;letter-spacing:.5px}
+
+  /* 4 宫格小指标 */
+  .mini4{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:14px;
+    background:rgba(90,150,220,.14);border:1px solid rgba(90,150,220,.14)}
+  .mini4>div{background:rgba(8,17,30,.9);padding:10px 8px;text-align:center}
+  .mini4 b{display:block;font-family:var(--mono);font-size:21px;font-weight:700;line-height:1;color:#EAF4FF}
+  .mini4 span{display:block;font-size:10.5px;color:#6E88A6;margin-top:5px}
+  .cy{color:#33D6FF !important}.wt{color:#C9D8E8 !important}.dm{color:#6B7F94 !important}.rd{color:#FF4D66 !important}
+  .am{color:#FFB020 !important}
+
+  /* 日/周/月 */
+  .a-tabs{display:inline-flex;gap:3px;background:rgba(255,255,255,.045);padding:3px;border-radius:2px}
+  .a-tabs span{font-size:11px;padding:4px 12px;color:#7C93AC;cursor:default;border-radius:1px}
+  .a-tabs span.on{background:linear-gradient(135deg,rgba(255,45,75,.9),rgba(190,10,40,.9));
+    color:#fff;font-weight:700;box-shadow:0 0 14px rgba(255,45,75,.4)}
+
+  .spark{width:100%;height:86px;display:block;margin:4px 0 2px}
+  .axis7{display:flex;justify-content:space-between;font-size:10px;color:#5E7895;
+    font-family:var(--mono);padding:0 2px}
+
+  /* 横向条 */
+  .rowbar{display:grid;grid-template-columns:78px 1fr 54px;align-items:center;gap:9px;margin-bottom:9px}
+  .rowbar .lb{font-size:11.5px;color:#9DB4CC;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rowbar .tk{position:relative;height:9px;background:rgba(255,255,255,.05);overflow:hidden}
+  .rowbar .tk i{position:absolute;left:0;top:0;bottom:0;min-width:5px;
+    background:linear-gradient(90deg,rgba(51,214,255,.35),#33D6FF);box-shadow:0 0 10px rgba(51,214,255,.5)}
+  .rowbar .tk i.r{background:linear-gradient(90deg,rgba(255,45,75,.3),#FF3355);box-shadow:0 0 10px rgba(255,45,75,.5)}
+  .rowbar .vl{text-align:right;font-family:var(--mono);font-size:11.5px;color:#C8DAEE}
+
+  /* 列表 */
+  .list{flex:1;min-height:0;display:flex;flex-direction:column;gap:7px;overflow:hidden}
+  .li{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:9px;
+    padding:7px 9px;background:rgba(255,255,255,.022);border-left:2px solid rgba(51,214,255,.45)}
+  .li .t{font-family:var(--mono);font-size:10.5px;color:#5E7895}
+  .li .m{font-size:11.5px;color:#B7CBE0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .li .m b{color:#EAF4FF;font-weight:700;margin-right:5px}
+  .li .tag{font-size:10px;padding:2px 6px;border:1px solid rgba(51,214,255,.35);color:#6FE0FF}
+  .li .tag.r{border-color:rgba(255,45,75,.45);color:#FF7A8E}
+  .li .tag.g{border-color:rgba(43,224,138,.4);color:#5CEBA4}
+
+  /* 地图 */
+  .a-map{position:relative;flex:1;min-height:0;overflow:hidden;border:1px solid rgba(84,144,214,.2);
+    background-color:#04070F;
+    background-image:
+      linear-gradient(rgba(96,158,226,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(96,158,226,.05) 1px, transparent 1px);
+    background-size:52px 52px}
+  .map-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .a-map::after{content:"";position:absolute;left:0;right:0;top:0;height:120px;pointer-events:none;
+    background:linear-gradient(180deg,rgba(5,10,20,.85),transparent)}
+  .a-mkpi{position:absolute;z-index:4;top:11px;left:11px;right:11px;display:flex;gap:9px}
+  .a-mkpi>div{flex:1;padding:8px 12px;background:rgba(6,14,26,.74);
+    border:1px solid rgba(84,144,214,.22);backdrop-filter:blur(8px)}
+  .a-mkpi b{display:block;font-family:var(--mono);font-size:22px;font-weight:700;color:#fff;line-height:1.1;letter-spacing:-.5px}
+  .a-mkpi span{display:block;font-size:10.5px;color:#6E88A6;margin-top:3px;letter-spacing:.5px}
+  .a-mlegend{position:absolute;z-index:4;left:12px;bottom:11px;display:flex;gap:14px;
+    padding:7px 12px;background:rgba(6,14,26,.74);border:1px solid rgba(84,144,214,.18);font-size:10.5px;color:#8AA4C0}
+  .a-mlegend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  .a-mtime{position:absolute;z-index:4;right:12px;bottom:11px;display:flex;align-items:center;gap:8px;
+    padding:7px 12px;background:rgba(6,14,26,.74);border:1px solid rgba(84,144,214,.18);
+    font-size:10.5px;color:#7E97B4}
+  .a-mtime b{font-family:var(--mono);color:#33D6FF;font-weight:600}
+
+  .a-chart{flex:0 0 172px}
+  .chart-wrap{flex:1;min-height:0;display:flex;flex-direction:column}
+  .chart-box{flex:1;min-height:0;position:relative}
+  .chart-box svg{position:absolute;inset:0;width:100%;height:100%}
+  .chart-lg{display:flex;gap:16px;font-size:10.5px;color:#7E97B4;margin-bottom:6px}
+  .chart-lg i{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle}
+
+  /* 图例 */
+  .lg-list{display:flex;flex-direction:column;gap:8px;font-size:11.5px;color:#9DB4CC}
+  .lg-list .it{display:flex;align-items:center;gap:8px}
+  .lg-list .it i{width:8px;height:8px;flex:0 0 auto}
+  .lg-list .it b{margin-left:auto;font-family:var(--mono);color:#DCE9F9;font-weight:600}
+  .donut{position:relative;width:132px;height:132px;border-radius:50%;flex:0 0 auto;
+    background:conic-gradient(#FF3355 0 46%,#FF8A3D 46% 63%,#FFC53D 63% 72%,#33D6FF 72% 80%,
+      #4D8BFF 80% 94%,#5E7895 94% 100%)}
+  .donut::after{content:"";position:absolute;inset:26px;border-radius:50%;background:#08111E}
+  .donut .dv{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .donut .dv b{font-family:var(--mono);font-size:19px;color:#fff;line-height:1}
+  .donut .dv span{font-size:9.5px;color:#6E88A6;margin-top:3px}
+
+  /* ================= B 方案（驾驶舱） ================= */
+  .b{background:#07080B;color:#EDF1F7;font-family:var(--font)}
+  .b::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(255,51,85,.16), transparent 65%),
+      radial-gradient(900px 500px at 85% 105%, rgba(255,176,32,.08), transparent 70%),
+      linear-gradient(180deg,#0A0C11,#06070A)}
+  .b-head{position:relative;z-index:3;flex:0 0 76px;display:flex;align-items:center;gap:16px;padding:0 30px}
+  .b-brand{display:flex;align-items:center;gap:10px}
+  .b-brand .dot{width:9px;height:9px;border-radius:50%;background:#FF3355;box-shadow:0 0 14px #FF3355}
+  .b-brand b{font-size:15px;letter-spacing:2px;font-weight:700}
+  .b-brand span{font-size:11px;color:#6F7B8C;letter-spacing:1.5px}
+  .b-nav{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .b-pill{height:28px;padding:0 13px;display:flex;align-items:center;gap:6px;border-radius:999px;
+    font-size:11px;color:#9AA6B6;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07)}
+  .b-pill.on{color:#fff;background:linear-gradient(135deg,rgba(255,51,85,.9),rgba(170,10,40,.9));
+    border-color:transparent;box-shadow:0 6px 18px rgba(255,51,85,.3)}
+  .b-clock{font-family:var(--mono);font-size:17px;color:#E7EDF5;letter-spacing:1px;margin-left:6px}
+
+  .b-body{position:relative;z-index:2;flex:1;min-height:0;display:flex;flex-direction:column;gap:16px;padding:0 30px 22px}
+  .b-kpis{flex:0 0 148px;display:grid;grid-template-columns:repeat(6,1fr);
+    border-radius:20px;overflow:hidden;
+    background:linear-gradient(160deg,rgba(255,255,255,.065),rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.09);backdrop-filter:blur(18px);
+    box-shadow:0 24px 60px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08)}
+  .b-kpi{position:relative;padding:20px 24px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+  .b-kpi+.b-kpi::before{content:"";position:absolute;left:0;top:24px;bottom:24px;width:1px;
+    background:linear-gradient(180deg,transparent,rgba(255,255,255,.12),transparent)}
+  .b-kpi .lb{font-size:11.5px;color:#7E8B9C;letter-spacing:1px}
+  .b-kpi .vl{font-family:var(--mono);font-size:42px;font-weight:700;line-height:1;letter-spacing:-2px;color:#fff}
+  .b-kpi .vl small{font-size:12px;font-weight:500;color:#7E8B9C;letter-spacing:0;margin-left:5px}
+  .b-kpi .sub{font-size:10.5px;color:#6C7789;font-family:var(--mono)}
+  .b-kpi .sub b{color:#2BE08A;font-weight:600}
+  .b-kpi.hot .vl{background:linear-gradient(135deg,#FF6B81,#FF3355);-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+
+  .b-main{flex:1;min-height:0;display:grid;grid-template-columns:1.62fr 1fr;gap:16px}
+  .b-card{position:relative;display:flex;flex-direction:column;min-height:0;padding:16px 18px;
+    border-radius:20px;background:linear-gradient(165deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
+    border:1px solid rgba(255,255,255,.085);backdrop-filter:blur(18px);
+    box-shadow:0 18px 44px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.07)}
+  .b-ch{flex:0 0 auto;display:flex;align-items:center;gap:9px;margin-bottom:12px}
+  .b-ch b{font-size:13.5px;font-weight:700;letter-spacing:.6px}
+  .b-ch em{font-style:normal;font-size:10px;color:#6C7789;letter-spacing:1.2px}
+  .b-ch .rt{margin-left:auto;font-size:10.5px;color:#6C7789}
+  .b-map{flex:1;min-height:0;position:relative;border-radius:14px;overflow:hidden;
+    background-color:#04060B;
+    background-image:linear-gradient(rgba(120,170,230,.05) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(120,170,230,.05) 1px,transparent 1px);
+    background-size:56px 56px;border:1px solid rgba(255,255,255,.06)}
+  .b-map .map-svg{filter:saturate(1.15) brightness(1.06)}
+  .b-side{display:flex;flex-direction:column;gap:16px;min-height:0}
+  .b-side .b-card{flex:1}
+  .b-float{position:absolute;z-index:4;left:14px;top:14px;display:flex;gap:8px}
+  .b-float span{height:26px;padding:0 11px;display:flex;align-items:center;border-radius:999px;
+    font-size:10.5px;color:#C7D2DF;background:rgba(8,10,14,.72);border:1px solid rgba(255,255,255,.1);
+    backdrop-filter:blur(10px)}
+  .b-float span.on{color:#fff;background:rgba(255,51,85,.22);border-color:rgba(255,51,85,.55)}
+  .b-legend{position:absolute;z-index:4;left:14px;bottom:14px;display:flex;gap:14px;
+    padding:7px 12px;border-radius:999px;background:rgba(8,10,14,.72);border:1px solid rgba(255,255,255,.1);
+    font-size:10.5px;color:#9AA6B6;backdrop-filter:blur(10px)}
+  .b-legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
+
+  .b-bars{flex:1;min-height:0;display:flex;align-items:flex-end;gap:10px;padding-top:6px}
+  .b-bars .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+  .b-bars .col i{display:block;width:100%;max-width:26px;border-radius:6px 6px 2px 2px;
+    background:linear-gradient(180deg,#FF3355,rgba(255,51,85,.12));box-shadow:0 0 16px rgba(255,51,85,.25)}
+  .b-bars .col i.c{background:linear-gradient(180deg,#33D6FF,rgba(51,214,255,.1));box-shadow:0 0 16px rgba(51,214,255,.2)}
+  .b-bars .col span{font-size:9.5px;color:#6C7789;font-family:var(--mono)}
+
+  .b-rank{display:flex;flex-direction:column;gap:11px}
+  .b-rank .r{display:grid;grid-template-columns:20px 1fr 62px;align-items:center;gap:10px}
+  .b-rank .r .no{font-family:var(--mono);font-size:11px;color:#5E6A7C}
+  .b-rank .r .nm{font-size:11.5px;color:#C7D2DF;display:flex;align-items:center;gap:8px}
+  .b-rank .r .nm i{height:4px;border-radius:2px;background:linear-gradient(90deg,#FF3355,#FF8A3D);display:block}
+  .b-rank .r .vv{font-family:var(--mono);font-size:11.5px;color:#EDF1F7;text-align:right}
+
+  .b-bottom{flex:0 0 196px;display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+  .b-foot{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#5E6A7C;
+    margin-top:10px;font-family:var(--mono)}
+
+  /* ================= C 方案（蜂巢磁贴） ================= */
+  .c{background:#0A0C0E;color:#D9E2E8;font-family:var(--font)}
+  .c::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(900px 460px at 50% 0%, rgba(215,38,61,.12), transparent 70%),
+      linear-gradient(180deg,#0C0F12,#080A0C)}
+  .c::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.6;
+    background-image:linear-gradient(rgba(150,170,185,.045) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(150,170,185,.045) 1px,transparent 1px);
+    background-size:32px 32px}
+  .c-head{position:relative;z-index:3;flex:0 0 70px;display:flex;align-items:center;gap:14px;
+    padding:0 20px;border-bottom:1px solid rgba(215,38,61,.28)}
+  .c-mark{width:30px;height:30px;background:#D7263D;display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:800;color:#fff;clip-path:polygon(0 0,100% 0,100% 70%,70% 100%,0 100%)}
+  .c-tt{font-size:17px;font-weight:800;letter-spacing:3px}
+  .c-tt span{color:#D7263D}
+  .c-st{font-size:10px;letter-spacing:2px;color:#6B7A85;margin-left:6px}
+  .c-head .rt{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:10.5px;color:#7A8A95}
+  .c-head .rt b{font-family:var(--mono);color:#D9E2E8;font-size:13px;letter-spacing:.5px}
+  .c-grid{position:relative;z-index:2;flex:1;min-height:0;display:grid;
+    grid-template-columns:repeat(12,1fr);grid-template-rows:128px 1fr 1fr 158px;
+    gap:10px;padding:12px 16px 14px}
+  .tile{position:relative;display:flex;flex-direction:column;min-height:0;padding:12px 14px;
+    background:linear-gradient(160deg,#111519,#0C0F12);
+    border:1px solid rgba(215,38,61,.22);
+    clip-path:polygon(0 0,calc(100% - 13px) 0,100% 13px,100% 100%,13px 100%,0 calc(100% - 13px))}
+  .tile::before{content:"";position:absolute;left:0;top:0;width:38px;height:2px;background:#D7263D}
+  .tile .no{position:absolute;right:12px;top:9px;font-family:var(--mono);font-size:9.5px;color:#4A5862;letter-spacing:1px}
+  .tile>*{flex-shrink:0}
+  .tile>*{flex-shrink:0}
+  .t-h{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;letter-spacing:1px;color:#C9D5DD}
+  .t-h i{width:5px;height:5px;background:#D7263D;transform:rotate(45deg)}
+  .t-h em{font-style:normal;margin-left:auto;font-size:9px;color:#4F5E68;letter-spacing:1.2px}
+  .t-val{font-family:var(--mono);font-size:38px;font-weight:700;line-height:1;color:#F2F6F8;letter-spacing:-1.5px;margin-top:auto}
+  .t-val small{font-size:11px;color:#6B7A85;margin-left:5px;letter-spacing:0}
+  .t-sub{font-size:10.5px;color:#6B7A85;margin-top:5px;font-family:var(--mono)}
+  .t-sub b{color:#D7263D;font-weight:600}
+  .c-map{grid-column:1/7;grid-row:2/4;position:relative;overflow:hidden;padding:0;
+    border:1px solid rgba(215,38,61,.3);background:#07090B;
+    clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))}
+  .c-map .map-svg{filter:grayscale(.25) contrast(1.05)}
+  .c-map .ov{position:absolute;z-index:3;left:14px;top:13px;display:flex;flex-direction:column;gap:6px}
+  .c-map .ov b{font-size:12px;letter-spacing:1.5px;color:#E6EDF2}
+  .c-map .ov span{font-size:10px;color:#6B7A85;font-family:var(--mono)}
+  .c-map .lg{position:absolute;z-index:3;left:14px;bottom:12px;display:flex;gap:12px;font-size:10px;color:#82919B}
+  .c-map .lg i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle}
+  .c-split{display:flex;gap:10px;margin-top:auto}
+  .c-split>div{flex:1}
+  .c-split b{display:block;font-family:var(--mono);font-size:22px;line-height:1;color:#EDF2F5}
+  .c-split span{display:block;font-size:10px;color:#6B7A85;margin-top:4px}
+  .c-bars{display:flex;flex:0 0 auto;align-items:flex-end;gap:8px;height:58px;margin-top:auto}
+  .c-bars i{display:block}
+  .cbars{display:block;width:100%;height:70px;margin-top:auto}
+  .c-bars i{flex:1;background:linear-gradient(180deg,#D7263D,rgba(215,38,61,.15));
+    box-shadow:0 0 12px rgba(215,38,61,.25)}
+  .c-bars i.c{background:linear-gradient(180deg,#4E7C8E,rgba(78,124,142,.12));box-shadow:none}
+  .c-list{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:6px;overflow:hidden;margin-top:8px}
+  .c-li{display:grid;grid-template-columns:42px 1fr auto;gap:8px;align-items:center;
+    padding:5px 7px;border-left:2px solid rgba(215,38,61,.55);background:rgba(255,255,255,.02)}
+  .c-li .t{font-family:var(--mono);font-size:9.5px;color:#5C6A74}
+  .c-li .m{font-size:11px;color:#B9C6CF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .c-li .m b{color:#EDF2F5;margin-right:4px}
+  .c-li .s{font-size:9.5px;color:#7A8A95}
+  .c-kpi{display:flex;flex:1 1 auto;flex-direction:column;justify-content:space-evenly;gap:4px;margin-top:8px}
+  .c-kpi .r{display:flex;align-items:baseline;justify-content:space-between;font-size:11px;color:#82919B}
+  .c-kpi .r b{font-family:var(--mono);font-size:16px;color:#EDF2F5;letter-spacing:-.5px}
+  .c-kpi .r b.hot{color:#FF4A63}
+
+  /* ================= 说明文档 ================= */
+  .doc{display:none;max-width:1240px;margin:0 auto;padding:34px 24px 80px}
+  .doc.on{display:block}
+  .doc h1{font-size:26px;letter-spacing:.5px;margin:0 0 8px}
+  .doc .lead{color:#8B9CB0;font-size:13.5px;line-height:1.75;margin:0 0 26px;max-width:860px}
+  .doc h2{font-size:16px;margin:34px 0 12px;display:flex;align-items:center;gap:9px}
+  .doc h2::before{content:"";width:4px;height:15px;background:#FF3355;border-radius:2px}
+  .cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .dc{border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:18px;
+    background:linear-gradient(165deg,rgba(255,255,255,.05),rgba(255,255,255,.015))}
+  .dc .tag{display:inline-block;font-size:10px;letter-spacing:1.5px;color:#FF8095;
+    border:1px solid rgba(255,51,85,.35);padding:3px 8px;border-radius:999px;margin-bottom:10px}
+  .dc h3{margin:0 0 6px;font-size:15px}
+  .dc p{margin:0;font-size:12.5px;color:#93A3B6;line-height:1.7}
+  .dc ul{margin:10px 0 0;padding-left:16px;font-size:12px;color:#93A3B6;line-height:1.9}
+  .dc .fit{margin-top:12px;padding-top:10px;border-top:1px dashed rgba(255,255,255,.1);font-size:11.5px;color:#6F8095}
+  table.tb2{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.tb2 th,table.tb2 td{padding:10px 12px;text-align:left;border-bottom:1px solid rgba(255,255,255,.07);vertical-align:top}
+  table.tb2 th{color:#8B9CB0;font-weight:600;font-size:11.5px;letter-spacing:.5px;background:rgba(255,255,255,.03)}
+  table.tb2 td{color:#B9C7D6}
+  table.tb2 code{font-family:var(--mono);font-size:11.5px;color:#7FE0FF;background:rgba(51,214,255,.08);
+    padding:1px 5px;border-radius:4px}
+  .note{border-left:3px solid #FFB020;background:rgba(255,176,32,.07);padding:12px 14px;border-radius:0 10px 10px 0;
+    font-size:12.5px;color:#D9C39A;line-height:1.8;margin:14px 0}
+  .note b{color:#FFD08A}
+  @media (max-width:900px){.cards3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ============ 共享 SVG 资源 ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gRed" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FF8A9B"/><stop offset="55%" stop-color="#FF3355"/>
+      <stop offset="100%" stop-color="#FF1F3D"/>
+    </linearGradient>
+    <linearGradient id="gAreaCyan" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#33D6FF" stop-opacity=".42"/>
+      <stop offset="100%" stop-color="#33D6FF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="gAreaRed" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF3355" stop-opacity=".35"/>
+      <stop offset="100%" stop-color="#FF3355" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="gBarCyan" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7FE8FF"/><stop offset="100%" stop-color="#0E6E8C" stop-opacity=".55"/>
+    </linearGradient>
+    <linearGradient id="gBarRed" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF6B81"/><stop offset="100%" stop-color="#8C1024" stop-opacity=".6"/>
+    </linearGradient>
+    <filter id="fRed" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="4.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="fCyan" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="7.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#FF3355"/>
+    </marker>
+
+    <!-- 底图（同一张山西路网示意图，落地时换成高德暗色底图） -->
+    <symbol id="basemap" viewBox="0 0 1000 780">
+      <rect width="1000" height="780" fill="#04070F"/>
+      <!-- 面：城市区块 -->
+      <g fill="#0A1524" opacity=".85">
+        <path d="M360 250 L520 235 L560 330 L470 372 L372 340 Z"/>
+        <path d="M545 395 L650 380 L700 470 L610 512 L540 460 Z"/>
+        <path d="M250 330 L345 340 L352 430 L262 452 Z"/>
+        <path d="M330 520 L440 505 L470 610 L360 640 Z"/>
+      </g>
+      <!-- 水系 -->
+      <path d="M-20 452 C 180 402 300 486 520 452 S 800 396 1020 438"
+        fill="none" stroke="#0B2C46" stroke-width="20" opacity=".9"/>
+      <path d="M-20 452 C 180 402 300 486 520 452 S 800 396 1020 438"
+        fill="none" stroke="#2E8FC0" stroke-width="1.6" opacity=".45"/>
+      <!-- 道路辉光 -->
+      <g fill="none" stroke="#2C5D8C" stroke-width="9" opacity=".1">
+        <path d="M-20 250 C 150 220 260 300 420 300 S 700 250 1020 300"/>
+        <path d="M120 -20 C 160 180 220 340 200 800"/>
+        <path d="M420 -20 C 430 160 470 330 500 520 S 520 700 540 800"/>
+        <path d="M720 -20 C 700 200 660 380 700 560 S 730 700 760 800"/>
+        <path d="M-20 520 C 180 480 380 560 560 540 S 820 470 1020 520"/>
+        <path d="M-20 680 C 200 640 420 700 640 660 S 860 620 1020 650"/>
+      </g>
+      <!-- 道路 -->
+      <g fill="none" stroke="#6FA3D0" stroke-width="1.8" opacity=".2">
+        <path d="M-20 250 C 150 220 260 300 420 300 S 700 250 1020 300"/>
+        <path d="M120 -20 C 160 180 220 340 200 800"/>
+        <path d="M420 -20 C 430 160 470 330 500 520 S 520 700 540 800"/>
+        <path d="M720 -20 C 700 200 660 380 700 560 S 730 700 760 800"/>
+        <path d="M-20 520 C 180 480 380 560 560 540 S 820 470 1020 520"/>
+        <path d="M-20 680 C 200 640 420 700 640 660 S 860 620 1020 650"/>
+        <path d="M-20 360 C 240 340 420 400 640 370 S 880 330 1020 350"/>
+        <path d="M840 -20 C 820 200 860 400 840 620 S 850 720 870 800"/>
+      </g>
+      <!-- 次干道 -->
+      <g fill="none" stroke="#6FA3D0" stroke-width="1" opacity=".1">
+        <path d="M260 -20 C 300 200 340 400 300 800"/>
+        <path d="M580 -20 C 560 200 600 420 580 800"/>
+        <path d="M-20 180 C 200 200 400 160 620 190 S 880 220 1020 190"/>
+        <path d="M-20 600 C 240 580 460 620 700 590 S 900 560 1020 580"/>
+      </g>
+      <!-- 城市 -->
+      <g font-family="-apple-system, PingFang SC, sans-serif" font-size="11" fill="#5F7A99">
+        <g><circle cx="480" cy="340" r="3.2" fill="#8FB6DA"/><text x="480" y="326" text-anchor="middle" font-size="12" fill="#A8C4DF">太原</text></g>
+        <g><circle cx="540" cy="392" r="2.4" fill="#6F92B4"/><text x="552" y="396">晋中</text></g>
+        <g><circle cx="300" cy="360" r="2.4" fill="#6F92B4"/><text x="288" y="355" text-anchor="end">吕梁</text></g>
+        <g><circle cx="620" cy="482" r="2.4" fill="#6F92B4"/><text x="632" y="486">长治</text></g>
+        <g><circle cx="480" cy="92" r="2.4" fill="#6F92B4"/><text x="480" y="78" text-anchor="middle">大同</text></g>
+        <g><circle cx="420" cy="210" r="2.2" fill="#5C7D9C"/><text x="432" y="214">忻州</text></g>
+        <g><circle cx="620" cy="300" r="2.2" fill="#5C7D9C"/><text x="632" y="304">阳泉</text></g>
+        <g><circle cx="400" cy="560" r="2.2" fill="#5C7D9C"/><text x="388" y="565" text-anchor="end">临汾</text></g>
+        <g><circle cx="380" cy="700" r="2.2" fill="#5C7D9C"/><text x="392" y="704">运城</text></g>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ============ 工具栏 ============ -->
+<div class="tb">
+  <div class="tb-l">
+    <span class="logo">DF</span>
+    <div><b>车队运营大屏</b><span>双屏 · 三方案设计稿</span></div>
+  </div>
+  <div class="tb-c">
+    <div class="seg" id="segScheme">
+      <button class="on" data-scheme="A">方案 A · 指挥中心</button>
+      <button data-scheme="B">方案 B · 驾驶舱</button>
+      <button data-scheme="C">方案 C · 蜂巢磁贴</button>
+      <button data-scheme="D">对比与落地</button>
+    </div>
+    <div class="seg seg2" id="segPage">
+      <button class="on" data-page="1">① 车辆 · 定位 · 能耗</button>
+      <button data-page="2">② 运单 · 费用</button>
+    </div>
+  </div>
+  <div class="tb-r">1920 × 1080 · 自适应<br><b id="scaleTxt">100%</b></div>
+</div>
+
+<div class="stagewrap" id="stagewrap">
+<div class="stage" id="stage">
+
+<!-- ============================================================
+     A1 · 指挥中心 · 车辆 / 定位 / 能耗
+     ============================================================ -->
+<div class="screen a on" id="a1">
+  <div class="a-head">
+    <div class="a-hl">
+      <div class="a-clock">10:26:41<small>2026-10-19 周一</small></div>
+      <div class="a-chip" style="margin-top:4px"><i></i>数据链路正常 · 30s 刷新</div>
+    </div>
+    <div class="a-hc">
+      <div class="a-title">车队运营指挥中心</div>
+      <div class="a-sub">FLEET OPERATION COMMAND CENTER</div>
+    </div>
+    <div class="a-hr">
+      <div class="a-chip"><i class="cy"></i>在线 96 / 128</div>
+      <div class="a-chip"><i class="rd"></i>告警 6</div>
+    </div>
+  </div>
+
+  <div class="a-body">
+    <!-- 左栏 -->
+    <div class="a-col">
+      <section class="p" style="flex:0 0 276px">
+        <div class="p-h"><i></i><b>车辆总览</b><em>FLEET OVERVIEW</em></div>
+        <div style="display:flex;align-items:center;gap:18px">
+          <div class="ring" style="--p:75">
+            <div class="rv"><b>75%</b><span>在线率</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="kv"><b>128</b><span>车辆总数</span></div>
+            <div class="kv"><b class="cy">96</b><span>在线车辆</span></div>
+          </div>
+        </div>
+        <div class="mini4">
+          <div><b class="cy">63</b><span>行驶中</span></div>
+          <div><b class="wt">33</b><span>静止</span></div>
+          <div><b class="dm">32</b><span>离线</span></div>
+          <div><b class="rd">42</b><span>任务中</span></div>
+        </div>
+      </section>
+
+      <section class="p" style="flex:1">
+        <div class="p-h"><i></i><b>里程与电耗</b>
+          <em style="margin-left:auto;color:#4E6885">DAY / WEEK / MONTH</em>
+        </div>
+        <div class="a-tabs" style="margin-bottom:14px">
+          <span class="on">今日</span><span>本周</span><span>本月</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <div class="bn" style="font-size:34px">8,642<span class="unit">km</span></div>
+            <div style="display:flex;align-items:center;gap:7px;margin-top:7px">
+              <span class="delta up">▲ 6.4%</span><span style="font-size:10px;color:#5E7895">较昨日</span>
+            </div>
+          </div>
+          <div>
+            <div class="bn" style="font-size:34px">11,978<span class="unit">kWh</span></div>
+            <div style="display:flex;align-items:center;gap:7px;margin-top:7px">
+              <span class="delta up">▲ 5.1%</span><span style="font-size:10px;color:#5E7895">较昨日</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:12px 0 2px;font-size:11px;color:#7089A6">
+          百公里电耗 <b style="font-family:var(--mono);font-size:15px;color:#33D6FF">138.6</b> kWh/100km
+          <span style="margin-left:auto;font-size:10px;color:#2BE08A;border:1px solid rgba(43,224,138,.35);padding:1px 6px">优于均值 4.2%</span>
+        </div>
+        <svg class="spark" viewBox="0 0 340 86" preserveAspectRatio="none">
+          <path d="M0 64 L48 56 L96 60 L144 44 L192 49 L240 32 L288 36 L340 22 L340 86 L0 86 Z" fill="url(#gAreaCyan)"/>
+          <path d="M0 64 L48 56 L96 60 L144 44 L192 49 L240 32 L288 36 L340 22"
+            fill="none" stroke="#33D6FF" stroke-width="2"/>
+          <circle cx="340" cy="22" r="3" fill="#7FE8FF"/>
+        </svg>
+        <div class="axis7" style="margin-bottom:12px">
+          <span>10-13</span><span>10-14</span><span>10-15</span><span>10-16</span>
+          <span>10-17</span><span>10-18</span><span>今日</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(90,150,220,.14);
+          border:1px solid rgba(90,150,220,.14);margin-top:auto">
+          <div style="background:rgba(8,17,30,.9);padding:9px 6px;text-align:center">
+            <b style="display:block;font-family:var(--mono);font-size:17px;color:#EAF4FF">78.4%</b>
+            <span style="font-size:10px;color:#6E88A6">出勤率</span>
+          </div>
+          <div style="background:rgba(8,17,30,.9);padding:9px 6px;text-align:center">
+            <b style="display:block;font-family:var(--mono);font-size:17px;color:#EAF4FF">12.6%</b>
+            <span style="font-size:10px;color:#6E88A6">空驶率</span>
+          </div>
+          <div style="background:rgba(8,17,30,.9);padding:9px 6px;text-align:center">
+            <b style="display:block;font-family:var(--mono);font-size:17px;color:#EAF4FF">46.2</b>
+            <span style="font-size:10px;color:#6E88A6">均速 km/h</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="p" style="flex:0 0 208px">
+        <div class="p-h"><i></i><b>车辆构成</b><em>COMPOSITION</em></div>
+        <div style="font-size:10px;color:#5E7895;letter-spacing:1px;margin-bottom:8px">按燃料类型</div>
+        <div class="rowbar"><span class="lb">纯电动</span><span class="tk"><i style="width:100%"></i></span><span class="vl">86</span></div>
+        <div class="rowbar"><span class="lb">燃气车</span><span class="tk"><i style="width:28%"></i></span><span class="vl">24</span></div>
+        <div class="rowbar"><span class="lb">燃油车</span><span class="tk"><i class="r" style="width:21%"></i></span><span class="vl">18</span></div>
+        <div style="font-size:10px;color:#5E7895;letter-spacing:1px;margin:8px 0 7px">按车型</div>
+        <div style="display:flex;gap:12px;font-size:11.5px;color:#9DB4CC">
+          <span>牵引车 <b style="font-family:var(--mono);color:#EAF4FF">74</b></span>
+          <span>自卸车 <b style="font-family:var(--mono);color:#EAF4FF">32</b></span>
+          <span>厢式 <b style="font-family:var(--mono);color:#EAF4FF">22</b></span>
+        </div>
+      </section>
+    </div>
+
+    <!-- 中栏：地图 -->
+    <div class="a-col" style="gap:12px">
+      <div class="a-map">
+        <svg class="map-svg" viewBox="0 0 1000 780" preserveAspectRatio="xMidYMid slice">
+          <use href="#basemap" width="1000" height="780"/>
+          <!-- 任务曲线 -->
+          <path d="M500 350 Q 566 404 618 472" fill="none" stroke="url(#gRed)" stroke-width="2.6"
+            filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+          <path d="M500 350 Q 566 404 618 472" fill="none" stroke="#FFD6DD" stroke-width="1.1"
+            stroke-dasharray="6 14" class="flow"/>
+          <path d="M330 368 Q 300 540 380 694" fill="none" stroke="url(#gRed)" stroke-width="2.6"
+            filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+          <path d="M330 368 Q 300 540 380 694" fill="none" stroke="#FFD6DD" stroke-width="1.1"
+            stroke-dasharray="6 14" class="flow"/>
+          <path d="M560 302 Q 520 180 480 96" fill="none" stroke="url(#gRed)" stroke-width="2.6"
+            filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+          <path d="M560 302 Q 520 180 480 96" fill="none" stroke="#FFD6DD" stroke-width="1.1"
+            stroke-dasharray="6 14" class="flow"/>
+
+          <!-- 终点 -->
+          <g transform="translate(618 472)">
+            <circle r="13" fill="rgba(255,45,75,.14)"/>
+            <path d="M0 -7 L7 0 L0 7 L-7 0 Z" fill="#FF3355"/>
+            <text y="24" text-anchor="middle" font-size="10.5" fill="#FF9BAA">长治 · 卸货</text>
+          </g>
+          <g transform="translate(380 694)">
+            <circle r="13" fill="rgba(255,45,75,.14)"/>
+            <path d="M0 -7 L7 0 L0 7 L-7 0 Z" fill="#FF3355"/>
+            <text y="-16" text-anchor="middle" font-size="10.5" fill="#FF9BAA">运城 · 卸货</text>
+          </g>
+          <g transform="translate(480 96)">
+            <circle r="13" fill="rgba(255,45,75,.14)"/>
+            <path d="M0 -7 L7 0 L0 7 L-7 0 Z" fill="#FF3355"/>
+            <text y="24" text-anchor="middle" font-size="10.5" fill="#FF9BAA">大同 · 卸货</text>
+          </g>
+
+          <!-- 车辆 -->
+          <g transform="translate(500 350)">
+            <circle r="16" class="vp r"/>
+            <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+            <circle r="3" fill="#FFD6DD"/>
+            <text y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋A·D8821</text>
+          </g>
+          <g transform="translate(330 368)">
+            <circle r="16" class="vp r"/>
+            <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+            <circle r="3" fill="#FFD6DD"/>
+            <text y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋K·1H003</text>
+          </g>
+          <g transform="translate(560 302)">
+            <circle r="16" class="vp r"/>
+            <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+            <circle r="3" fill="#FFD6DD"/>
+            <text y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋J·D5566</text>
+          </g>
+          <g transform="translate(700 420)">
+            <circle r="13" class="vp"/>
+            <circle r="6.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/>
+            <circle r="2.4" fill="#7FE8FF"/>
+            <text y="-18" text-anchor="middle" font-size="10" fill="#9FD8EA">晋A·D9012</text>
+          </g>
+          <g transform="translate(250 522)">
+            <circle r="13" class="vp"/>
+            <circle r="6.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/>
+            <circle r="2.4" fill="#7FE8FF"/>
+            <text y="-18" text-anchor="middle" font-size="10" fill="#9FD8EA">晋K·1H001</text>
+          </g>
+          <g transform="translate(452 604)">
+            <circle r="13" class="vp"/>
+            <circle r="6.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/>
+            <circle r="2.4" fill="#7FE8FF"/>
+            <text y="-18" text-anchor="middle" font-size="10" fill="#9FD8EA">晋A·D6633</text>
+          </g>
+        </svg>
+
+        <div class="a-mkpi">
+          <div><b>42</b><span>任务中车辆</span></div>
+          <div><b>63</b><span>行驶中</span></div>
+          <div><b>8,642</b><span>今日里程 km</span></div>
+          <div><b>46.2</b><span>平均车速 km/h</span></div>
+        </div>
+        <div class="a-mlegend">
+          <span><i style="background:#FF3355"></i>有任务车辆</span>
+          <span><i style="background:#33D6FF"></i>空闲车辆</span>
+          <span><i style="background:#6B7F94"></i>离线</span>
+        </div>
+        <div class="a-mtime">定位更新 <b>3s</b> 前 · 高德暗色底图</div>
+      </div>
+
+      <section class="p a-chart">
+        <div class="p-h"><i></i><b>近 7 日里程 / 电耗</b>
+          <div class="chart-lg" style="margin:0 0 0 auto">
+            <span><i style="background:#33D6FF"></i>里程</span>
+            <span><i style="background:#FF3355"></i>电耗</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-box">
+            <svg viewBox="0 0 1000 110" preserveAspectRatio="none">
+              <g stroke="rgba(120,170,220,.10)" stroke-width="1">
+                <line x1="0" y1="28" x2="1000" y2="28"/>
+                <line x1="0" y1="58" x2="1000" y2="58"/>
+                <line x1="0" y1="88" x2="1000" y2="88"/>
+              </g>
+              <g>
+                <rect x="34" y="46" width="52" height="64" fill="url(#gBarCyan)"/>
+                <rect x="176" y="52" width="52" height="58" fill="url(#gBarCyan)"/>
+                <rect x="318" y="42" width="52" height="68" fill="url(#gBarCyan)"/>
+                <rect x="460" y="58" width="52" height="52" fill="url(#gBarCyan)"/>
+                <rect x="602" y="38" width="52" height="72" fill="url(#gBarCyan)"/>
+                <rect x="744" y="50" width="52" height="60" fill="url(#gBarCyan)"/>
+                <rect x="886" y="26" width="52" height="84" fill="url(#gBarCyan)"/>
+              </g>
+              <polyline points="60,58 202,64 344,52 486,68 628,44 770,56 912,32"
+                fill="none" stroke="#FF3355" stroke-width="2.2"/>
+              <g fill="#FF8A9B">
+                <circle cx="60" cy="58" r="2.6"/><circle cx="202" cy="64" r="2.6"/>
+                <circle cx="344" cy="52" r="2.6"/><circle cx="486" cy="68" r="2.6"/>
+                <circle cx="628" cy="44" r="2.6"/><circle cx="770" cy="56" r="2.6"/>
+                <circle cx="912" cy="32" r="3.4" fill="#FF3355"/>
+              </g>
+            </svg>
+          </div>
+          <div class="axis7" style="padding:0 24px">
+            <span>10-13</span><span>10-14</span><span>10-15</span><span>10-16</span>
+            <span>10-17</span><span>10-18</span><span>今日</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 右栏 -->
+    <div class="a-col">
+      <section class="p" style="flex:1">
+        <div class="p-h"><i></i><b>实时动态</b><em>LIVE FEED</em></div>
+        <div class="list">
+          <div class="li"><span class="t">10:24</span><span class="m"><b>晋K·1H001</b>太原 → 晋中 · 已发车</span><span class="tag g">发车</span></div>
+          <div class="li"><span class="t">10:22</span><span class="m"><b>晋A·D8821</b>装车完成 · 3 车货物</span><span class="tag">装车</span></div>
+          <div class="li"><span class="t">10:19</span><span class="m"><b>晋J·D5566</b>进入围栏「吕梁装货区」</span><span class="tag">围栏</span></div>
+          <div class="li"><span class="t">10:15</span><span class="m"><b>晋K·1H003</b>超速 78 km/h · 限速 70</span><span class="tag r">超速</span></div>
+          <div class="li"><span class="t">10:08</span><span class="m"><b>晋A·D9012</b>到达长治 · 等待卸货</span><span class="tag g">到达</span></div>
+          <div class="li"><span class="t">10:02</span><span class="m"><b>晋A·D6633</b>停留超 30 分钟 · 运城北</span><span class="tag r">停留</span></div>
+          <div class="li"><span class="t">09:58</span><span class="m"><b>晋K·1H001</b>定位恢复 · 信号正常</span><span class="tag">定位</span></div>
+        </div>
+      </section>
+
+      <section class="p" style="flex:0 0 300px">
+        <div class="p-h"><i></i><b>能耗 TOP5</b><em>kWh/100km</em></div>
+        <div class="rowbar"><span class="lb">晋A·D8821</span><span class="tk"><i class="r" style="width:100%"></i></span><span class="vl">168.4</span></div>
+        <div class="rowbar"><span class="lb">晋K·1H003</span><span class="tk"><i class="r" style="width:94%"></i></span><span class="vl">162.7</span></div>
+        <div class="rowbar"><span class="lb">晋A·D9012</span><span class="tk"><i class="r" style="width:88%"></i></span><span class="vl">159.2</span></div>
+        <div class="rowbar"><span class="lb">晋J·D5566</span><span class="tk"><i class="r" style="width:82%"></i></span><span class="vl">154.8</span></div>
+        <div class="rowbar" style="margin-bottom:0"><span class="lb">晋K·1H001</span><span class="tk"><i class="r" style="width:76%"></i></span><span class="vl">151.3</span></div>
+        <div style="margin-top:14px;padding-top:10px;border-top:1px dashed rgba(90,150,220,.2);
+          display:flex;justify-content:space-between;font-size:10.5px;color:#6E88A6">
+          <span>车队均值 138.6</span><span style="color:#FFB020">高于均值 3 辆</span>
+        </div>
+      </section>
+
+      <section class="p" style="flex:0 0 216px">
+        <div class="p-h"><i></i><b>告警与围栏</b><em>ALERTS</em></div>
+        <div class="mini4" style="margin-top:0">
+          <div><b class="rd">3</b><span>超速</span></div>
+          <div><b class="am">2</b><span>停留</span></div>
+          <div><b class="cy">1</b><span>围栏</span></div>
+          <div><b class="wt">0</b><span>故障</span></div>
+        </div>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;font-size:11px;color:#9DB4CC">
+          <div style="display:flex;gap:8px"><span style="color:#FF7A8E">10:15</span><span>晋K·1H003 超速 78 km/h</span></div>
+          <div style="display:flex;gap:8px"><span style="color:#FFB020">10:02</span><span>晋A·D6633 停留 32 分钟</span></div>
+          <div style="display:flex;gap:8px"><span style="color:#6FE0FF">09:41</span><span>晋J·D5566 驶出围栏未报备</span></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     A2 · 指挥中心 · 运单 / 费用
+     ============================================================ -->
+<div class="screen a" id="a2">
+  <div class="a-head">
+    <div class="a-hl">
+      <div class="a-clock">10:26:41<small>2026-10-19 周一</small></div>
+      <div class="a-chip" style="margin-top:4px"><i></i>运单与费用 · 实时汇总</div>
+    </div>
+    <div class="a-hc">
+      <div class="a-title">运单与费用监控</div>
+      <div class="a-sub">WAYBILL &amp; COST MONITORING</div>
+    </div>
+    <div class="a-hr">
+      <div class="a-chip"><i class="cy"></i>在途 42 单</div>
+      <div class="a-chip"><i class="rd"></i>待办 20 笔</div>
+    </div>
+  </div>
+
+  <div class="a-body">
+    <div class="a-col">
+      <section class="p" style="flex:1">
+        <div class="p-h"><i></i><b>运单状态分布</b><em>WAYBILL STATUS</em></div>
+        <div class="rowbar"><span class="lb">待接单</span><span class="tk"><i class="r" style="width:4%"></i></span><span class="vl">6</span></div>
+        <div class="rowbar"><span class="lb">装车中</span><span class="tk"><i class="r" style="width:9%"></i></span><span class="vl">12</span></div>
+        <div class="rowbar"><span class="lb">已发车</span><span class="tk"><i style="width:30%"></i></span><span class="vl">42</span></div>
+        <div class="rowbar"><span class="lb">已到达</span><span class="tk"><i style="width:20%"></i></span><span class="vl">28</span></div>
+        <div class="rowbar"><span class="lb">已完成</span><span class="tk"><i style="width:100%"></i></span><span class="vl">138</span></div>
+        <div class="rowbar" style="margin-bottom:0"><span class="lb">异常</span><span class="tk"><i class="r" style="width:2%"></i></span><span class="vl">3</span></div>
+        <div style="margin-top:auto;padding-top:14px;border-top:1px dashed rgba(90,150,220,.2);
+          display:flex;justify-content:space-between;font-size:11px;color:#6E88A6">
+          <span>今日新增 <b style="color:#EAF4FF;font-family:var(--mono)">186</b></span>
+          <span>本月累计 <b style="color:#EAF4FF;font-family:var(--mono)">4,286</b></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10.5px;color:#5E7895;margin-top:8px">
+          <span>取消 2</span><span>改派 1</span><span>平均响应 6 min</span>
+        </div>
+      </section>
+
+      <section class="p" style="flex:0 0 300px">
+        <div class="p-h"><i></i><b>今日完成情况</b><em>COMPLETION</em></div>
+        <div style="display:flex;align-items:center;gap:18px">
+          <div class="ring" style="--p:74;width:132px;height:132px">
+            <div class="rv"><b style="font-size:28px">74.2%</b><span>完成率</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:13px;font-size:11px;color:#8AA4C0">
+            <div><span style="color:#6E88A6">准时率</span> <b style="font-family:var(--mono);font-size:17px;color:#2BE08A">96.4%</b></div>
+            <div><span style="color:#6E88A6">平均在途</span> <b style="font-family:var(--mono);font-size:17px;color:#EAF4FF">3h42m</b></div>
+            <div><span style="color:#6E88A6">异常单</span> <b style="font-family:var(--mono);font-size:17px;color:#FF4D66">3</b></div>
+          </div>
+        </div>
+        <div style="display:flex;height:9px;gap:2px;margin-top:16px">
+          <i style="flex:138;background:linear-gradient(90deg,#1D8FB8,#33D6FF)"></i>
+          <i style="flex:45;background:linear-gradient(90deg,#C98A18,#FFB020)"></i>
+          <i style="flex:3;background:#FF3355"></i>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:9px;font-size:10.5px;color:#7E97B4">
+          <span><i style="display:inline-block;width:7px;height:7px;background:#33D6FF;margin-right:5px"></i>已完成 138</span>
+          <span><i style="display:inline-block;width:7px;height:7px;background:#FFB020;margin-right:5px"></i>在途 45</span>
+          <span><i style="display:inline-block;width:7px;height:7px;background:#FF3355;margin-right:5px"></i>异常 3</span>
+        </div>
+      </section>
+
+      <section class="p" style="flex:0 0 236px">
+        <div class="p-h"><i></i><b>客户运费 TOP5</b><em>THIS MONTH</em></div>
+        <div class="rowbar"><span class="lb">山西焦煤</span><span class="tk"><i style="width:100%"></i></span><span class="vl">284.6万</span></div>
+        <div class="rowbar"><span class="lb">晋能控股</span><span class="tk"><i style="width:70%"></i></span><span class="vl">198.2万</span></div>
+        <div class="rowbar"><span class="lb">太钢不锈</span><span class="tk"><i style="width:50%"></i></span><span class="vl">143.7万</span></div>
+        <div class="rowbar"><span class="lb">潞安化工</span><span class="tk"><i style="width:35%"></i></span><span class="vl">98.6万</span></div>
+        <div class="rowbar" style="margin-bottom:0"><span class="lb">华阳新材</span><span class="tk"><i style="width:26%"></i></span><span class="vl">74.3万</span></div>
+      </section>
+    </div>
+
+    <div class="a-col">
+      <div class="a-map">
+        <svg class="map-svg" viewBox="0 0 1000 780" preserveAspectRatio="xMidYMid slice">
+          <use href="#basemap" width="1000" height="780"/>
+          <path d="M470 340 Q 560 380 622 470" fill="none" stroke="url(#gRed)" stroke-width="2.6"
+            filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+          <path d="M470 340 Q 560 380 622 470" fill="none" stroke="#FFD6DD" stroke-width="1.1"
+            stroke-dasharray="6 14" class="flow"/>
+          <path d="M300 366 Q 330 520 392 690" fill="none" stroke="url(#gRed)" stroke-width="2.6"
+            filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+          <path d="M300 366 Q 330 520 392 690" fill="none" stroke="#FFD6DD" stroke-width="1.1"
+            stroke-dasharray="6 14" class="flow"/>
+          <path d="M560 300 Q 600 200 700 148" fill="none" stroke="url(#gRed)" stroke-width="2.6"
+            filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+          <path d="M560 300 Q 600 200 700 148" fill="none" stroke="#FFD6DD" stroke-width="1.1"
+            stroke-dasharray="6 14" class="flow"/>
+          <path d="M520 400 Q 560 440 610 500" fill="none" stroke="url(#gRed)" stroke-width="2.2"
+            filter="url(#fRed)" marker-end="url(#arrowRed)" opacity=".8"/>
+
+          <g transform="translate(622 470)">
+            <circle r="13" fill="rgba(255,45,75,.14)"/>
+            <path d="M0 -7 L7 0 L0 7 L-7 0 Z" fill="#FF3355"/>
+            <text y="24" text-anchor="middle" font-size="10.5" fill="#FF9BAA">长治 · 卸货</text>
+          </g>
+          <g transform="translate(392 690)">
+            <circle r="13" fill="rgba(255,45,75,.14)"/>
+            <path d="M0 -7 L7 0 L0 7 L-7 0 Z" fill="#FF3355"/>
+            <text y="-16" text-anchor="middle" font-size="10.5" fill="#FF9BAA">运城 · 卸货</text>
+          </g>
+          <g transform="translate(700 148)">
+            <circle r="13" fill="rgba(255,45,75,.14)"/>
+            <path d="M0 -7 L7 0 L0 7 L-7 0 Z" fill="#FF3355"/>
+            <text y="-16" text-anchor="middle" font-size="10.5" fill="#FF9BAA">大同 · 卸货</text>
+          </g>
+
+          <g transform="translate(470 340)">
+            <circle r="16" class="vp r"/>
+            <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+            <circle r="3" fill="#FFD6DD"/>
+            <text y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋A·D8821</text>
+          </g>
+          <g transform="translate(300 366)">
+            <circle r="16" class="vp r"/>
+            <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+            <circle r="3" fill="#FFD6DD"/>
+            <text y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋K·1H003</text>
+          </g>
+          <g transform="translate(560 300)">
+            <circle r="16" class="vp r"/>
+            <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+            <circle r="3" fill="#FFD6DD"/>
+            <text y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋J·D5566</text>
+          </g>
+          <g transform="translate(520 400)">
+            <circle r="16" class="vp r"/>
+            <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+            <circle r="3" fill="#FFD6DD"/>
+            <text y="24" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFE3E8">晋A·D6633</text>
+          </g>
+        </svg>
+        <div class="a-mkpi">
+          <div><b>186</b><span>今日新增运单</span></div>
+          <div><b>42</b><span>在途运单</span></div>
+          <div><b>96.4%</b><span>准时率</span></div>
+          <div><b>52.4</b><span>在途均速 km/h</span></div>
+        </div>
+        <div class="a-mlegend">
+          <span><i style="background:#FF3355"></i>在途运单路线</span>
+          <span><i style="background:#33D6FF"></i>空闲车辆</span>
+          <span>共 4 条任务线</span>
+        </div>
+        <div class="a-mtime">运单轨迹更新 <b>12s</b> 前</div>
+      </div>
+
+      <section class="p a-chart">
+        <div class="p-h"><i></i><b>近 7 日运单量 / 运费</b>
+          <div class="chart-lg" style="margin:0 0 0 auto">
+            <span><i style="background:#33D6FF"></i>运单量</span>
+            <span><i style="background:#FF3355"></i>运费</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-box">
+            <svg viewBox="0 0 1000 110" preserveAspectRatio="none">
+              <g stroke="rgba(120,170,220,.10)" stroke-width="1">
+                <line x1="0" y1="28" x2="1000" y2="28"/>
+                <line x1="0" y1="58" x2="1000" y2="58"/>
+                <line x1="0" y1="88" x2="1000" y2="88"/>
+              </g>
+              <g>
+                <rect x="34" y="52" width="52" height="58" fill="url(#gBarCyan)"/>
+                <rect x="176" y="44" width="52" height="66" fill="url(#gBarCyan)"/>
+                <rect x="318" y="58" width="52" height="52" fill="url(#gBarCyan)"/>
+                <rect x="460" y="40" width="52" height="70" fill="url(#gBarCyan)"/>
+                <rect x="602" y="34" width="52" height="76" fill="url(#gBarCyan)"/>
+                <rect x="744" y="46" width="52" height="64" fill="url(#gBarCyan)"/>
+                <rect x="886" y="24" width="52" height="86" fill="url(#gBarCyan)"/>
+              </g>
+              <polyline points="60,62 202,54 344,70 486,50 628,42 770,56 912,30"
+                fill="none" stroke="#FF3355" stroke-width="2.2"/>
+              <g fill="#FF8A9B">
+                <circle cx="60" cy="62" r="2.6"/><circle cx="202" cy="54" r="2.6"/>
+                <circle cx="344" cy="70" r="2.6"/><circle cx="486" cy="50" r="2.6"/>
+                <circle cx="628" cy="42" r="2.6"/><circle cx="770" cy="56" r="2.6"/>
+                <circle cx="912" cy="30" r="3.4" fill="#FF3355"/>
+              </g>
+            </svg>
+          </div>
+          <div class="axis7" style="padding:0 24px">
+            <span>10-13</span><span>10-14</span><span>10-15</span><span>10-16</span>
+            <span>10-17</span><span>10-18</span><span>今日</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="a-col">
+      <section class="p" style="flex:0 0 224px">
+        <div class="p-h"><i></i><b>运费收入</b><em>FREIGHT</em></div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <div style="font-size:10.5px;color:#6E88A6;margin-bottom:5px">今日运费</div>
+            <div class="bn" style="font-size:32px">¥486,200</div>
+          </div>
+          <div>
+            <div style="font-size:10.5px;color:#6E88A6;margin-bottom:5px">本月运费</div>
+            <div class="bn" style="font-size:28px;color:#9FD8EA">¥12,846,300</div>
+          </div>
+        </div>
+        <div style="margin-top:auto;padding-top:10px;border-top:1px dashed rgba(90,150,220,.2);
+          display:flex;justify-content:space-between;font-size:10.5px;color:#6E88A6">
+          <span>环比 <b style="color:#2BE08A">+8.4%</b></span>
+          <span>单均 ¥2,614</span>
+        </div>
+      </section>
+
+      <section class="p" style="flex:0 0 322px">
+        <div class="p-h"><i></i><b>费用类型构成</b><em>BY TYPE</em></div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div class="donut"><div class="dv"><b>128.5万</b><span>本月上报</span></div></div>
+          <div class="lg-list" style="flex:1">
+            <div class="it"><i style="background:#FF3355"></i>费用上报<b>46%</b></div>
+            <div class="it"><i style="background:#FF8A3D"></i>补贴申请<b>17%</b></div>
+            <div class="it"><i style="background:#FFC53D"></i>借款申请<b>9%</b></div>
+            <div class="it"><i style="background:#33D6FF"></i>违章上报<b>8%</b></div>
+            <div class="it"><i style="background:#4D8BFF"></i>磅单 / 回单<b>14%</b></div>
+            <div class="it"><i style="background:#5E7895"></i>其他<b>6%</b></div>
+          </div>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px dashed rgba(90,150,220,.2);
+          display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><b style="font-family:var(--mono);font-size:18px;color:#EAF4FF">62</b>
+            <span style="font-size:10px;color:#6E88A6;margin-left:6px">本月笔数</span></div>
+          <div><b style="font-family:var(--mono);font-size:18px;color:#EAF4FF">¥20,726</b>
+            <span style="font-size:10px;color:#6E88A6;margin-left:6px">笔均</span></div>
+        </div>
+      </section>
+
+      <section class="p" style="flex:1">
+        <div class="p-h"><i></i><b>费用待办</b><em>TODO</em></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div style="border:1px solid rgba(255,45,75,.3);background:rgba(255,45,75,.07);padding:10px 12px">
+            <div style="font-size:10.5px;color:#FF9BAA">待我审批</div>
+            <div style="font-family:var(--mono);font-size:26px;color:#fff;line-height:1.2;margin-top:2px">12</div>
+            <div style="font-size:10px;color:#FF9BAA;font-family:var(--mono)">¥86,400</div>
+          </div>
+          <div style="border:1px solid rgba(255,176,32,.3);background:rgba(255,176,32,.06);padding:10px 12px">
+            <div style="font-size:10.5px;color:#FFC46B">待打款</div>
+            <div style="font-family:var(--mono);font-size:26px;color:#fff;line-height:1.2;margin-top:2px">8</div>
+            <div style="font-size:10px;color:#FFC46B;font-family:var(--mono)">¥152,300</div>
+          </div>
+        </div>
+        <div class="list">
+          <div class="li"><span class="t">10:21</span><span class="m"><b>晋A·D8821</b>费用上报 ¥3,280</span><span class="tag r">待审</span></div>
+          <div class="li"><span class="t">10:12</span><span class="m"><b>晋K·1H003</b>路桥费 ¥860</span><span class="tag r">待审</span></div>
+          <div class="li"><span class="t">09:56</span><span class="m"><b>晋J·D5566</b>补贴申请 ¥4,500</span><span class="tag">待打款</span></div>
+        </div>
+        <div style="margin-top:auto;padding-top:10px;font-size:10.5px;color:#6E88A6;display:flex;justify-content:space-between">
+          <span>本月已付 <b style="color:#2BE08A;font-family:var(--mono)">¥9,120,600</b></span>
+          <span>付款率 71.0%</span>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     B1 · 驾驶舱 · 车辆 / 定位 / 能耗
+     ============================================================ -->
+<div class="screen b" id="b1">
+  <div class="b-head">
+    <div class="b-brand">
+      <span class="dot"></span>
+      <div><b>东风车队</b> <span>FLEET COCKPIT</span></div>
+    </div>
+    <div class="b-nav">
+      <span class="b-pill on">运营总览</span>
+      <span class="b-pill">车辆 128</span>
+      <span class="b-pill">任务 42</span>
+      <span class="b-clock">10:26:41</span>
+    </div>
+  </div>
+
+  <div class="b-body">
+    <div class="b-kpis">
+      <div class="b-kpi">
+        <span class="lb">车辆总数</span>
+        <span class="vl">128<small>辆</small></span>
+        <span class="sub">牵引 74 · 自卸 32 · 厢式 22</span>
+      </div>
+      <div class="b-kpi">
+        <span class="lb">在线车辆</span>
+        <span class="vl">96<small>辆</small></span>
+        <span class="sub">在线率 <b>75.0%</b> · 离线 32</span>
+      </div>
+      <div class="b-kpi hot">
+        <span class="lb">今日里程</span>
+        <span class="vl">8,642<small>km</small></span>
+        <span class="sub"><b>▲ 6.4%</b> 较昨日 8,120</span>
+      </div>
+      <div class="b-kpi">
+        <span class="lb">今日电耗</span>
+        <span class="vl">11,978<small>kWh</small></span>
+        <span class="sub"><b>▲ 5.1%</b> 较昨日 11,395</span>
+      </div>
+      <div class="b-kpi">
+        <span class="lb">百公里电耗</span>
+        <span class="vl">138.6<small>kWh</small></span>
+        <span class="sub">优于车队均值 4.2%</span>
+      </div>
+      <div class="b-kpi">
+        <span class="lb">任务中车辆</span>
+        <span class="vl">42<small>辆</small></span>
+        <span class="sub">在途运单 42 · 准时率 96.4%</span>
+      </div>
+    </div>
+
+    <div class="b-main">
+      <div class="b-card" style="padding:0;overflow:hidden">
+        <div class="b-map" style="border:0;border-radius:20px">
+          <svg class="map-svg" viewBox="0 0 1000 780" preserveAspectRatio="xMidYMid slice">
+            <use href="#basemap" width="1000" height="780"/>
+            <path d="M500 350 Q 566 404 618 472" fill="none" stroke="url(#gRed)" stroke-width="3"
+              filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+            <path d="M500 350 Q 566 404 618 472" fill="none" stroke="#FFE0E5" stroke-width="1.2"
+              stroke-dasharray="7 15" class="flow"/>
+            <path d="M330 368 Q 300 540 380 694" fill="none" stroke="url(#gRed)" stroke-width="3"
+              filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+            <path d="M330 368 Q 300 540 380 694" fill="none" stroke="#FFE0E5" stroke-width="1.2"
+              stroke-dasharray="7 15" class="flow"/>
+            <path d="M560 302 Q 520 180 480 96" fill="none" stroke="url(#gRed)" stroke-width="3"
+              filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+            <path d="M560 302 Q 520 180 480 96" fill="none" stroke="#FFE0E5" stroke-width="1.2"
+              stroke-dasharray="7 15" class="flow"/>
+
+            <g transform="translate(618 472)">
+              <circle r="15" fill="rgba(255,51,85,.16)"/>
+              <circle r="5" fill="#FF3355" stroke="#FFD6DD" stroke-width="1.5"/>
+              <text y="26" text-anchor="middle" font-size="11" fill="#FF9BAA">长治</text>
+            </g>
+            <g transform="translate(380 694)">
+              <circle r="15" fill="rgba(255,51,85,.16)"/>
+              <circle r="5" fill="#FF3355" stroke="#FFD6DD" stroke-width="1.5"/>
+              <text y="-18" text-anchor="middle" font-size="11" fill="#FF9BAA">运城</text>
+            </g>
+            <g transform="translate(480 96)">
+              <circle r="15" fill="rgba(255,51,85,.16)"/>
+              <circle r="5" fill="#FF3355" stroke="#FFD6DD" stroke-width="1.5"/>
+              <text y="26" text-anchor="middle" font-size="11" fill="#FF9BAA">大同</text>
+            </g>
+
+            <g transform="translate(500 350)">
+              <circle r="18" class="vp r"/>
+              <circle r="9" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+              <circle r="3.4" fill="#FFD6DD"/>
+              <text y="-24" text-anchor="middle" font-size="11.5" font-weight="700" fill="#FFE3E8">晋A·D8821</text>
+            </g>
+            <g transform="translate(330 368)">
+              <circle r="18" class="vp r"/>
+              <circle r="9" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+              <circle r="3.4" fill="#FFD6DD"/>
+              <text y="-24" text-anchor="middle" font-size="11.5" font-weight="700" fill="#FFE3E8">晋K·1H003</text>
+            </g>
+            <g transform="translate(560 302)">
+              <circle r="18" class="vp r"/>
+              <circle r="9" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+              <circle r="3.4" fill="#FFD6DD"/>
+              <text y="-24" text-anchor="middle" font-size="11.5" font-weight="700" fill="#FFE3E8">晋J·D5566</text>
+            </g>
+            <g transform="translate(700 420)">
+              <circle r="14" class="vp"/>
+              <circle r="7" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/>
+              <circle r="2.6" fill="#7FE8FF"/>
+              <text y="-19" text-anchor="middle" font-size="10.5" fill="#9FD8EA">晋A·D9012</text>
+            </g>
+            <g transform="translate(250 522)">
+              <circle r="14" class="vp"/>
+              <circle r="7" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/>
+              <circle r="2.6" fill="#7FE8FF"/>
+              <text y="-19" text-anchor="middle" font-size="10.5" fill="#9FD8EA">晋K·1H001</text>
+            </g>
+            <g transform="translate(452 604)">
+              <circle r="14" class="vp"/>
+              <circle r="7" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/>
+              <circle r="2.6" fill="#7FE8FF"/>
+              <text y="-19" text-anchor="middle" font-size="10.5" fill="#9FD8EA">晋A·D6633</text>
+            </g>
+          </svg>
+
+          <div class="b-float">
+            <span class="on">全部 128</span><span>任务中 42</span><span>在线 96</span><span>离线 32</span>
+          </div>
+          <div class="b-legend">
+            <span><i style="background:#FF3355"></i>有任务</span>
+            <span><i style="background:#33D6FF"></i>空闲</span>
+            <span><i style="background:#6B7F94"></i>离线</span>
+          </div>
+          <div style="position:absolute;z-index:4;right:16px;bottom:14px;font-size:10.5px;color:#8C99A9;
+            font-family:var(--mono);background:rgba(8,10,14,.7);border:1px solid rgba(255,255,255,.1);
+            padding:6px 11px;border-radius:999px">定位延迟 3s · 高德暗色</div>
+        </div>
+      </div>
+
+      <div class="b-side">
+        <div class="b-card">
+          <div class="b-ch"><b>里程趋势</b><em>7 DAYS</em><span class="rt">本周 58,320 km</span></div>
+          <div style="position:relative;flex:1;min-height:0">
+            <svg viewBox="0 0 340 120" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%">
+              <path d="M0 92 L56 80 L112 86 L168 62 L224 70 L280 44 L340 30 L340 120 L0 120 Z" fill="url(#gAreaCyan)"/>
+              <path d="M0 92 L56 80 L112 86 L168 62 L224 70 L280 44 L340 30" fill="none" stroke="#33D6FF" stroke-width="2"/>
+              <circle cx="340" cy="30" r="3.2" fill="#7FE8FF"/>
+            </svg>
+          </div>
+          <div class="b-foot"><span>10-13</span><span>10-15</span><span>10-17</span><span>今日</span></div>
+        </div>
+
+        <div class="b-card">
+          <div class="b-ch"><b>近 7 日电耗</b><em>kWh</em><span class="rt">今日 11,978</span></div>
+          <div class="b-bars">
+            <div class="col"><i class="c" style="height:62%"></i><span>13</span></div>
+            <div class="col"><i class="c" style="height:56%"></i><span>14</span></div>
+            <div class="col"><i class="c" style="height:66%"></i><span>15</span></div>
+            <div class="col"><i class="c" style="height:50%"></i><span>16</span></div>
+            <div class="col"><i class="c" style="height:70%"></i><span>17</span></div>
+            <div class="col"><i class="c" style="height:58%"></i><span>18</span></div>
+            <div class="col"><i style="height:84%"></i><span>今日</span></div>
+          </div>
+        </div>
+
+        <div class="b-card">
+          <div class="b-ch"><b>车队里程排行</b><em>TOP 5</em><span class="rt">今日</span></div>
+          <div class="b-rank">
+            <div class="r"><span class="no">01</span><span class="nm">晋A·D8821 <i style="width:96px"></i></span><span class="vv">486 km</span></div>
+            <div class="r"><span class="no">02</span><span class="nm">晋K·1H003 <i style="width:84px"></i></span><span class="vv">462 km</span></div>
+            <div class="r"><span class="no">03</span><span class="nm">晋J·D5566 <i style="width:72px"></i></span><span class="vv">438 km</span></div>
+            <div class="r"><span class="no">04</span><span class="nm">晋A·D9012 <i style="width:60px"></i></span><span class="vv">421 km</span></div>
+            <div class="r"><span class="no">05</span><span class="nm">晋K·1H001 <i style="width:50px"></i></span><span class="vv">398 km</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="b-bottom">
+      <div class="b-card">
+        <div class="b-ch"><b>24 小时运行曲线</b><em>MILEAGE &amp; POWER</em>
+          <span class="rt">里程 8,642 km · 电耗 11,978 kWh</span></div>
+        <div style="position:relative;flex:1;min-height:0">
+          <svg viewBox="0 0 700 120" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%">
+            <g stroke="rgba(255,255,255,.07)" stroke-width="1">
+              <line x1="0" y1="30" x2="700" y2="30"/><line x1="0" y1="60" x2="700" y2="60"/>
+              <line x1="0" y1="90" x2="700" y2="90"/>
+            </g>
+            <path d="M0 108 L70 104 L140 96 L210 70 L280 52 L350 44 L420 40 L490 46 L560 58 L630 76 L700 92 L700 120 L0 120 Z"
+              fill="url(#gAreaCyan)"/>
+            <path d="M0 108 L70 104 L140 96 L210 70 L280 52 L350 44 L420 40 L490 46 L560 58 L630 76 L700 92"
+              fill="none" stroke="#33D6FF" stroke-width="2"/>
+            <path d="M0 112 L70 108 L140 102 L210 82 L280 66 L350 58 L420 54 L490 60 L560 72 L630 86 L700 98"
+              fill="none" stroke="#FF3355" stroke-width="2" stroke-dasharray="0"/>
+          </svg>
+        </div>
+        <div class="b-foot"><span>00</span><span>04</span><span>08</span><span>12</span><span>16</span><span>20</span><span>24</span></div>
+      </div>
+
+      <div class="b-card">
+        <div class="b-ch"><b>车辆状态与构成</b><em>STATUS</em></div>
+        <div style="display:flex;gap:22px;align-items:center;flex:1">
+          <div class="donut" style="width:118px;height:118px;
+            background:conic-gradient(#33D6FF 0 49%,#FFB020 49% 75%,#5E7895 75% 100%)">
+            <div class="dv"><b style="font-size:17px">96</b><span>在线</span></div>
+          </div>
+          <div class="lg-list" style="flex:1">
+            <div class="it"><i style="background:#33D6FF"></i>行驶中<b>63</b></div>
+            <div class="it"><i style="background:#FFB020"></i>静止<b>33</b></div>
+            <div class="it"><i style="background:#5E7895"></i>离线<b>32</b></div>
+            <div class="it"><i style="background:#FF3355"></i>任务中<b>42</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     B2 · 驾驶舱 · 运单 / 费用
+     ============================================================ -->
+<div class="screen b" id="b2">
+  <div class="b-head">
+    <div class="b-brand">
+      <span class="dot"></span>
+      <div><b>东风车队</b> <span>WAYBILL &amp; COST</span></div>
+    </div>
+    <div class="b-nav">
+      <span class="b-pill">运营总览</span>
+      <span class="b-pill on">运单与费用</span>
+      <span class="b-pill">待办 20</span>
+      <span class="b-clock">10:26:41</span>
+    </div>
+  </div>
+
+  <div class="b-body">
+    <div class="b-kpis">
+      <div class="b-kpi">
+        <span class="lb">今日新增运单</span>
+        <span class="vl">186<small>单</small></span>
+        <span class="sub">本月累计 4,286 单</span>
+      </div>
+      <div class="b-kpi hot">
+        <span class="lb">在途运单</span>
+        <span class="vl">42<small>单</small></span>
+        <span class="sub">平均在途 3h42m</span>
+      </div>
+      <div class="b-kpi">
+        <span class="lb">今日完成率</span>
+        <span class="vl">74.2<small>%</small></span>
+        <span class="sub">已完成 138 · 异常 3</span>
+      </div>
+      <div class="b-kpi">
+        <span class="lb">今日运费</span>
+        <span class="vl">48.6<small>万元</small></span>
+        <span class="sub"><b>▲ 8.4%</b> 单均 ¥2,614</span>
+      </div>
+      <div class="b-kpi">
+        <span class="lb">待我审批</span>
+        <span class="vl">12<small>笔</small></span>
+        <span class="sub">金额 ¥86,400</span>
+      </div>
+      <div class="b-kpi">
+        <span class="lb">待打款</span>
+        <span class="vl">8<small>笔</small></span>
+        <span class="sub">金额 ¥152,300</span>
+      </div>
+    </div>
+
+    <div class="b-main">
+      <div class="b-card" style="padding:0;overflow:hidden">
+        <div class="b-map" style="border:0;border-radius:20px">
+          <svg class="map-svg" viewBox="0 0 1000 780" preserveAspectRatio="xMidYMid slice">
+            <use href="#basemap" width="1000" height="780"/>
+            <path d="M470 340 Q 560 380 622 470" fill="none" stroke="url(#gRed)" stroke-width="3"
+              filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+            <path d="M470 340 Q 560 380 622 470" fill="none" stroke="#FFE0E5" stroke-width="1.2"
+              stroke-dasharray="7 15" class="flow"/>
+            <path d="M300 366 Q 330 520 392 690" fill="none" stroke="url(#gRed)" stroke-width="3"
+              filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+            <path d="M300 366 Q 330 520 392 690" fill="none" stroke="#FFE0E5" stroke-width="1.2"
+              stroke-dasharray="7 15" class="flow"/>
+            <path d="M560 300 Q 600 200 700 148" fill="none" stroke="url(#gRed)" stroke-width="3"
+              filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+            <path d="M560 300 Q 600 200 700 148" fill="none" stroke="#FFE0E5" stroke-width="1.2"
+              stroke-dasharray="7 15" class="flow"/>
+            <path d="M520 400 Q 570 450 610 500" fill="none" stroke="url(#gRed)" stroke-width="2.4"
+              filter="url(#fRed)" marker-end="url(#arrowRed)" opacity=".75"/>
+
+            <g transform="translate(622 470)">
+              <circle r="15" fill="rgba(255,51,85,.16)"/>
+              <circle r="5" fill="#FF3355" stroke="#FFD6DD" stroke-width="1.5"/>
+              <text y="26" text-anchor="middle" font-size="11" fill="#FF9BAA">长治</text>
+            </g>
+            <g transform="translate(392 690)">
+              <circle r="15" fill="rgba(255,51,85,.16)"/>
+              <circle r="5" fill="#FF3355" stroke="#FFD6DD" stroke-width="1.5"/>
+              <text y="-18" text-anchor="middle" font-size="11" fill="#FF9BAA">运城</text>
+            </g>
+            <g transform="translate(700 148)">
+              <circle r="15" fill="rgba(255,51,85,.16)"/>
+              <circle r="5" fill="#FF3355" stroke="#FFD6DD" stroke-width="1.5"/>
+              <text y="-18" text-anchor="middle" font-size="11" fill="#FF9BAA">大同</text>
+            </g>
+
+            <g transform="translate(470 340)">
+              <circle r="18" class="vp r"/>
+              <circle r="9" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+              <circle r="3.4" fill="#FFD6DD"/>
+              <text y="-24" text-anchor="middle" font-size="11.5" font-weight="700" fill="#FFE3E8">晋A·D8821</text>
+            </g>
+            <g transform="translate(300 366)">
+              <circle r="18" class="vp r"/>
+              <circle r="9" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+              <circle r="3.4" fill="#FFD6DD"/>
+              <text y="-24" text-anchor="middle" font-size="11.5" font-weight="700" fill="#FFE3E8">晋K·1H003</text>
+            </g>
+            <g transform="translate(560 300)">
+              <circle r="18" class="vp r"/>
+              <circle r="9" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+              <circle r="3.4" fill="#FFD6DD"/>
+              <text y="-24" text-anchor="middle" font-size="11.5" font-weight="700" fill="#FFE3E8">晋J·D5566</text>
+            </g>
+            <g transform="translate(520 400)">
+              <circle r="18" class="vp r"/>
+              <circle r="9" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+              <circle r="3.4" fill="#FFD6DD"/>
+              <text y="26" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFE3E8">晋A·D6633</text>
+            </g>
+          </svg>
+
+          <div class="b-float">
+            <span class="on">在途 42</span><span>待接单 6</span><span>已到达 28</span><span>异常 3</span>
+          </div>
+          <div class="b-legend">
+            <span><i style="background:#FF3355"></i>在途运单</span>
+            <span><i style="background:#33D6FF"></i>空闲车辆</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="b-side">
+        <div class="b-card" style="flex:1.35">
+          <div class="b-ch"><b>运单流水</b><em>LIVE</em><span class="rt">实时</span></div>
+          <div class="list" style="gap:8px">
+            <div class="li" style="background:rgba(255,255,255,.03);border-left-color:#FF3355">
+              <span class="t">10:24</span><span class="m"><b>YD20261019086</b>太原 → 晋中 · 2 车</span><span class="tag g">已发车</span></div>
+            <div class="li" style="background:rgba(255,255,255,.03);border-left-color:#FF3355">
+              <span class="t">10:19</span><span class="m"><b>YD20261019085</b>吕梁 → 长治 · 3 车</span><span class="tag">装车中</span></div>
+            <div class="li" style="background:rgba(255,255,255,.03);border-left-color:#33D6FF">
+              <span class="t">10:12</span><span class="m"><b>YD20261019084</b>太原 → 大同 · 1 车</span><span class="tag g">已完成</span></div>
+            <div class="li" style="background:rgba(255,255,255,.03);border-left-color:#FF3355">
+              <span class="t">10:05</span><span class="m"><b>YD20261019083</b>临汾 → 运城 · 2 车</span><span class="tag">已到达</span></div>
+            <div class="li" style="background:rgba(255,255,255,.03);border-left-color:#FFB020">
+              <span class="t">09:58</span><span class="m"><b>YD20261019082</b>忻州 → 阳泉 · 1 车</span><span class="tag r">待接单</span></div>
+          </div>
+          <div class="b-foot"><span>今日 186 单</span><span>平均响应 6 分钟</span></div>
+        </div>
+
+        <div class="b-card">
+          <div class="b-ch"><b>费用构成</b><em>THIS MONTH</em><span class="rt">¥128.5 万</span></div>
+          <div style="display:flex;align-items:center;gap:16px;flex:1">
+            <div class="donut" style="width:118px;height:118px;
+              background:conic-gradient(#FF3355 0 46%,#FF8A3D 46% 63%,#FFC53D 63% 72%,#33D6FF 72% 100%)">
+              <div class="dv"><b style="font-size:15px">62</b><span>笔</span></div></div>
+            <div class="lg-list" style="flex:1">
+              <div class="it"><i style="background:#FF3355"></i>费用上报<b>46%</b></div>
+              <div class="it"><i style="background:#FF8A3D"></i>补贴申请<b>17%</b></div>
+              <div class="it"><i style="background:#FFC53D"></i>借款申请<b>9%</b></div>
+              <div class="it"><i style="background:#33D6FF"></i>违章 / 其他<b>28%</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="b-bottom">
+      <div class="b-card">
+        <div class="b-ch"><b>近 7 日运单量与运费</b><em>VOLUME &amp; FREIGHT</em>
+          <span class="rt">今日 186 单 / ¥486,200</span></div>
+        <div style="position:relative;flex:1;min-height:0">
+          <svg viewBox="0 0 700 120" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%">
+            <g stroke="rgba(255,255,255,.07)" stroke-width="1">
+              <line x1="0" y1="30" x2="700" y2="30"/><line x1="0" y1="60" x2="700" y2="60"/>
+              <line x1="0" y1="90" x2="700" y2="90"/>
+            </g>
+            <g>
+              <rect x="18" y="52" width="40" height="68" fill="url(#gBarCyan)"/>
+              <rect x="118" y="44" width="40" height="76" fill="url(#gBarCyan)"/>
+              <rect x="218" y="58" width="40" height="62" fill="url(#gBarCyan)"/>
+              <rect x="318" y="40" width="40" height="80" fill="url(#gBarCyan)"/>
+              <rect x="418" y="34" width="40" height="86" fill="url(#gBarCyan)"/>
+              <rect x="518" y="46" width="40" height="74" fill="url(#gBarCyan)"/>
+              <rect x="618" y="24" width="40" height="96" fill="url(#gBarRed)"/>
+            </g>
+            <path d="M38 62 L138 54 L238 70 L338 50 L438 42 L538 56 L638 30"
+              fill="none" stroke="#FF3355" stroke-width="2.4"/>
+          </svg>
+        </div>
+        <div class="b-foot"><span>10-13</span><span>10-14</span><span>10-15</span><span>10-16</span>
+          <span>10-17</span><span>10-18</span><span>今日</span></div>
+      </div>
+
+      <div class="b-card">
+        <div class="b-ch"><b>客户运费排行</b><em>TOP 5</em><span class="rt">本月</span></div>
+        <div class="b-rank">
+          <div class="r"><span class="no">01</span><span class="nm">山西焦煤 <i style="width:110px"></i></span><span class="vv">¥284.6万</span></div>
+          <div class="r"><span class="no">02</span><span class="nm">晋能控股 <i style="width:88px"></i></span><span class="vv">¥198.2万</span></div>
+          <div class="r"><span class="no">03</span><span class="nm">太钢不锈 <i style="width:70px"></i></span><span class="vv">¥143.7万</span></div>
+          <div class="r"><span class="no">04</span><span class="nm">潞安化工 <i style="width:52px"></i></span><span class="vv">¥98.6万</span></div>
+          <div class="r"><span class="no">05</span><span class="nm">华阳新材 <i style="width:40px"></i></span><span class="vv">¥74.3万</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     C1 · 蜂巢磁贴 · 车辆 / 定位 / 能耗
+     ============================================================ -->
+<div class="screen c" id="c1">
+  <div class="c-head">
+    <div class="c-mark">DF</div>
+    <div class="c-tt">车队<span>数据墙</span></div>
+    <div class="c-st">FLEET DATA WALL · 01 VEHICLE</div>
+    <div class="rt">
+      <span>在线 96/128</span><span>告警 6</span><b>10:26:41</b><span>2026-10-19</span>
+    </div>
+  </div>
+
+  <div class="c-grid">
+    <div class="tile" style="grid-column:1/4;grid-row:1">
+      <span class="no">01</span>
+      <div class="t-h"><i></i>车辆总数<em>TOTAL</em></div>
+      <div class="t-val">128<small>辆</small></div>
+      <div class="t-sub">牵引 74 / 自卸 32 / 厢式 22</div>
+    </div>
+
+    <div class="tile" style="grid-column:4/7;grid-row:1">
+      <span class="no">02</span>
+      <div class="t-h"><i></i>在线 / 离线<em>ONLINE</em></div>
+      <div class="t-val">96<small>在线</small></div>
+      <div class="c-split">
+        <div><b style="color:#4E9CB8">75.0%</b><span>在线率</span></div>
+        <div><b>32</b><span>离线</span></div>
+        <div><b style="color:#D7263D">6</b><span>告警</span></div>
+      </div>
+    </div>
+
+    <div class="tile" style="grid-column:7/10;grid-row:1">
+      <span class="no">03</span>
+      <div class="t-h"><i></i>今日里程<em>MILEAGE</em></div>
+      <div class="t-val">8,642<small>km</small></div>
+      <div class="t-sub"><b>▲ 6.4%</b> 较昨日 · 周 58,320 · 月 236,480</div>
+    </div>
+
+    <div class="tile" style="grid-column:10/13;grid-row:1">
+      <span class="no">04</span>
+      <div class="t-h"><i></i>今日电耗<em>POWER</em></div>
+      <div class="t-val">11,978<small>kWh</small></div>
+      <div class="t-sub"><b>138.6</b> kWh/100km · 优于均值 4.2%</div>
+    </div>
+
+    <div class="c-map">
+      <svg class="map-svg" viewBox="0 0 1000 780" preserveAspectRatio="xMidYMid slice">
+        <use href="#basemap" width="1000" height="780"/>
+        <path d="M500 350 Q 566 404 618 472" fill="none" stroke="url(#gRed)" stroke-width="2.8"
+          filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+        <path d="M500 350 Q 566 404 618 472" fill="none" stroke="#FFE0E5" stroke-width="1.1"
+          stroke-dasharray="6 14" class="flow"/>
+        <path d="M330 368 Q 300 540 380 694" fill="none" stroke="url(#gRed)" stroke-width="2.8"
+          filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+        <path d="M330 368 Q 300 540 380 694" fill="none" stroke="#FFE0E5" stroke-width="1.1"
+          stroke-dasharray="6 14" class="flow"/>
+        <path d="M560 302 Q 520 180 480 96" fill="none" stroke="url(#gRed)" stroke-width="2.8"
+          filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+        <path d="M560 302 Q 520 180 480 96" fill="none" stroke="#FFE0E5" stroke-width="1.1"
+          stroke-dasharray="6 14" class="flow"/>
+
+        <g transform="translate(618 472)">
+          <rect x="-5" y="-5" width="10" height="10" fill="#D7263D" transform="rotate(45)"/>
+          <text y="26" text-anchor="middle" font-size="10.5" fill="#FF8A9B">长治</text>
+        </g>
+        <g transform="translate(380 694)">
+          <rect x="-5" y="-5" width="10" height="10" fill="#D7263D" transform="rotate(45)"/>
+          <text y="-16" text-anchor="middle" font-size="10.5" fill="#FF8A9B">运城</text>
+        </g>
+        <g transform="translate(480 96)">
+          <rect x="-5" y="-5" width="10" height="10" fill="#D7263D" transform="rotate(45)"/>
+          <text y="26" text-anchor="middle" font-size="10.5" fill="#FF8A9B">大同</text>
+        </g>
+
+        <g transform="translate(500 350)">
+          <circle r="16" class="vp r"/>
+          <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+          <circle r="3" fill="#FFD6DD"/>
+          <text y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋A·D8821</text>
+        </g>
+        <g transform="translate(330 368)">
+          <circle r="16" class="vp r"/>
+          <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+          <circle r="3" fill="#FFD6DD"/>
+          <text y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋K·1H003</text>
+        </g>
+        <g transform="translate(560 302)">
+          <circle r="16" class="vp r"/>
+          <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+          <circle r="3" fill="#FFD6DD"/>
+          <text y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋J·D5566</text>
+        </g>
+        <g transform="translate(700 420)">
+          <circle r="13" class="vp"/>
+          <circle r="6.5" fill="#0B1220" stroke="#4E9CB8" stroke-width="1.8"/>
+          <circle r="2.4" fill="#8FD4E8"/>
+          <text y="-18" text-anchor="middle" font-size="10" fill="#8FB4C2">晋A·D9012</text>
+        </g>
+        <g transform="translate(250 522)">
+          <circle r="13" class="vp"/>
+          <circle r="6.5" fill="#0B1220" stroke="#4E9CB8" stroke-width="1.8"/>
+          <circle r="2.4" fill="#8FD4E8"/>
+          <text y="-18" text-anchor="middle" font-size="10" fill="#8FB4C2">晋K·1H001</text>
+        </g>
+      </svg>
+      <div class="ov">
+        <b>实时定位 · 全省</b>
+        <span>VEHICLE POSITION / 30s</span>
+      </div>
+      <div class="lg">
+        <span><i style="background:#D7263D"></i>有任务车辆</span>
+        <span><i style="background:#4E9CB8"></i>空闲车辆</span>
+        <span><i style="background:#5C6A74"></i>离线</span>
+      </div>
+      <div style="position:absolute;z-index:3;right:14px;top:13px;font-family:var(--mono);font-size:10px;color:#7A8A95">
+        在途 42 · 定位延迟 3s
+      </div>
+    </div>
+
+    <div class="tile" style="grid-column:7/10;grid-row:2">
+      <span class="no">05</span>
+      <div class="t-h"><i></i>车辆状态<em>STATUS</em></div>
+      <div class="c-kpi" style="margin-top:8px">
+        <div class="r"><span>行驶中</span><b>63</b></div>
+        <div class="r"><span>静止</span><b>33</b></div>
+        <div class="r"><span>离线</span><b>32</b></div>
+        <div class="r"><span>任务中</span><b class="hot">42</b></div>
+        <div class="r"><span>出勤率</span><b>78.4%</b></div>
+        <div class="r"><span>空驶率</span><b>12.6%</b></div>
+      </div>
+      <svg class="cbars" viewBox="0 0 100 44" preserveAspectRatio="none"><rect x="4.50" y="2.00" width="16.00" height="42.00" fill="url(#gBarCyan)"/><rect x="29.50" y="22.16" width="16.00" height="21.84" fill="url(#gBarCyan)"/><rect x="54.50" y="23.00" width="16.00" height="21.00" fill="url(#gBarCyan)"/><rect x="79.50" y="16.28" width="16.00" height="27.72" fill="url(#gBarRed)"/></svg>
+    </div>
+
+    <div class="tile" style="grid-column:10/13;grid-row:2">
+      <span class="no">06</span>
+      <div class="t-h"><i></i>燃料构成<em>FUEL</em></div>
+      <div class="c-kpi" style="margin-top:8px">
+        <div class="r"><span>纯电动</span><b>86</b></div>
+        <div class="r"><span>燃气车</span><b>24</b></div>
+        <div class="r"><span>燃油车</span><b>18</b></div>
+        <div class="r"><span>电动占比</span><b class="hot">67%</b></div>
+        <div class="r"><span>燃气占比</span><b>19%</b></div>
+        <div class="r"><span>燃油占比</span><b>14%</b></div>
+      </div>
+      <svg class="cbars" viewBox="0 0 100 44" preserveAspectRatio="none"><rect x="6.00" y="2.00" width="21.33" height="42.00" fill="url(#gBarCyan)"/><rect x="39.33" y="32.24" width="21.33" height="11.76" fill="url(#gBarCyan)"/><rect x="72.67" y="35.18" width="21.33" height="8.82" fill="url(#gBarRed)"/></svg>
+    </div>
+
+    <div class="tile" style="grid-column:7/10;grid-row:3">
+      <span class="no">07</span>
+      <div class="t-h"><i></i>里程趋势<em>7 DAYS</em></div>
+      <svg class="cbars" viewBox="0 0 100 74" preserveAspectRatio="none"><rect x="2.57" y="23.60" width="9.14" height="50.40" fill="url(#gBarCyan)"/><rect x="16.86" y="29.36" width="9.14" height="44.64" fill="url(#gBarCyan)"/><rect x="31.14" y="20.72" width="9.14" height="53.28" fill="url(#gBarCyan)"/><rect x="45.43" y="32.24" width="9.14" height="41.76" fill="url(#gBarCyan)"/><rect x="59.71" y="17.84" width="9.14" height="56.16" fill="url(#gBarCyan)"/><rect x="74.00" y="26.48" width="9.14" height="47.52" fill="url(#gBarCyan)"/><rect x="88.29" y="4.88" width="9.14" height="69.12" fill="url(#gBarRed)"/></svg>
+      <div class="t-sub" style="display:flex;justify-content:space-between">
+        <span>周 58,320 km</span><span>月 236,480 km</span>
+      </div>
+    </div>
+
+    <div class="tile" style="grid-column:10/13;grid-row:3">
+      <span class="no">08</span>
+      <div class="t-h"><i></i>能耗 TOP5<em>kWh/100km</em></div>
+      <div class="c-list">
+        <div class="c-li"><span class="t">01</span><span class="m"><b>晋A·D8821</b></span><span class="s">168.4</span></div>
+        <div class="c-li"><span class="t">02</span><span class="m"><b>晋K·1H003</b></span><span class="s">162.7</span></div>
+        <div class="c-li"><span class="t">03</span><span class="m"><b>晋A·D9012</b></span><span class="s">159.2</span></div>
+        <div class="c-li"><span class="t">04</span><span class="m"><b>晋J·D5566</b></span><span class="s">154.8</span></div>
+        <div class="c-li"><span class="t">05</span><span class="m"><b>晋K·1H001</b></span><span class="s">151.3</span></div>
+      </div>
+      <div class="t-sub" style="margin-top:4px">车队均值 <b>138.6</b> · 高于均值 3 辆</div>
+    </div>
+
+    <div class="tile" style="grid-column:span 6">
+      <span class="no">09</span>
+      <div class="t-h"><i></i>实时动态<em>LIVE FEED</em><em style="margin-left:auto;color:#7A8A95">每 30 秒刷新</em></div>
+      <div class="c-list" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px">
+        <div class="c-li"><span class="t">10:24</span><span class="m"><b>晋K·1H001</b>太原 → 晋中 已发车</span><span class="s">发车</span></div>
+        <div class="c-li"><span class="t">10:22</span><span class="m"><b>晋A·D8821</b>装车完成 3 车</span><span class="s">装车</span></div>
+        <div class="c-li"><span class="t">10:19</span><span class="m"><b>晋J·D5566</b>进入围栏 吕梁装货区</span><span class="s">围栏</span></div>
+        <div class="c-li"><span class="t">10:15</span><span class="m"><b>晋K·1H003</b>超速 78 km/h</span><span class="s" style="color:#D7263D">超速</span></div>
+        <div class="c-li"><span class="t">10:08</span><span class="m"><b>晋A·D9012</b>到达长治 等待卸货</span><span class="s">到达</span></div>
+        <div class="c-li"><span class="t">10:02</span><span class="m"><b>晋A·D6633</b>停留超 30 分钟</span><span class="s" style="color:#D7263D">停留</span></div>
+      </div>
+    </div>
+
+    <div class="tile" style="grid-column:span 6">
+      <span class="no">10</span>
+      <div class="t-h"><i></i>近 7 日里程 / 电耗<em>MILEAGE &amp; POWER</em></div>
+      <div style="position:relative;flex:1;min-height:0;margin-top:8px">
+        <svg viewBox="0 0 600 90" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%">
+          <g stroke="rgba(150,170,185,.09)" stroke-width="1">
+            <line x1="0" y1="30" x2="600" y2="30"/><line x1="0" y1="60" x2="600" y2="60"/>
+          </g>
+          <g fill="rgba(78,156,184,.32)">
+            <rect x="16" y="40" width="42" height="46"/><rect x="100" y="34" width="42" height="52"/>
+            <rect x="184" y="44" width="42" height="42"/><rect x="268" y="28" width="42" height="58"/>
+            <rect x="352" y="38" width="42" height="48"/><rect x="436" y="30" width="42" height="56"/>
+            <rect x="520" y="18" width="42" height="68" fill="rgba(215,38,61,.55)"/>
+          </g>
+          <polyline points="37,50 121,44 205,54 289,38 373,48 457,40 541,26"
+            fill="none" stroke="#D7263D" stroke-width="2"/>
+        </svg>
+      </div>
+      <div class="t-sub" style="display:flex;justify-content:space-between;padding:0 4px">
+        <span>10-13</span><span>10-14</span><span>10-15</span><span>10-16</span>
+        <span>10-17</span><span>10-18</span><span>今日</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     C2 · 蜂巢磁贴 · 运单 / 费用
+     ============================================================ -->
+<div class="screen c" id="c2">
+  <div class="c-head">
+    <div class="c-mark">DF</div>
+    <div class="c-tt">车队<span>数据墙</span></div>
+    <div class="c-st">FLEET DATA WALL · 02 WAYBILL &amp; COST</div>
+    <div class="rt">
+      <span>在途 42</span><span>待办 20</span><b>10:26:41</b><span>2026-10-19</span>
+    </div>
+  </div>
+
+  <div class="c-grid">
+    <div class="tile" style="grid-column:1/4;grid-row:1">
+      <span class="no">01</span>
+      <div class="t-h"><i></i>今日新增<em>NEW</em></div>
+      <div class="t-val">186<small>单</small></div>
+      <div class="t-sub">本月累计 4,286 单</div>
+    </div>
+
+    <div class="tile" style="grid-column:4/7;grid-row:1">
+      <span class="no">02</span>
+      <div class="t-h"><i></i>在途运单<em>ON ROAD</em></div>
+      <div class="t-val">42<small>单</small></div>
+      <div class="c-split">
+        <div><b>3h42m</b><span>平均在途</span></div>
+        <div><b>96.4%</b><span>准时率</span></div>
+        <div><b style="color:#D7263D">3</b><span>异常</span></div>
+      </div>
+    </div>
+
+    <div class="tile" style="grid-column:7/10;grid-row:1">
+      <span class="no">03</span>
+      <div class="t-h"><i></i>今日运费<em>FREIGHT</em></div>
+      <div class="t-val">48.6<small>万元</small></div>
+      <div class="t-sub"><b>▲ 8.4%</b> 环比 · 单均 ¥2,614</div>
+    </div>
+
+    <div class="tile" style="grid-column:10/13;grid-row:1">
+      <span class="no">04</span>
+      <div class="t-h"><i></i>费用待办<em>TODO</em></div>
+      <div class="t-val">20<small>笔</small></div>
+      <div class="t-sub"><b>¥238,700</b> 待审批 12 + 待打款 8</div>
+    </div>
+
+    <div class="c-map">
+      <svg class="map-svg" viewBox="0 0 1000 780" preserveAspectRatio="xMidYMid slice">
+        <use href="#basemap" width="1000" height="780"/>
+        <path d="M470 340 Q 560 380 622 470" fill="none" stroke="url(#gRed)" stroke-width="2.8"
+          filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+        <path d="M470 340 Q 560 380 622 470" fill="none" stroke="#FFE0E5" stroke-width="1.1"
+          stroke-dasharray="6 14" class="flow"/>
+        <path d="M300 366 Q 330 520 392 690" fill="none" stroke="url(#gRed)" stroke-width="2.8"
+          filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+        <path d="M300 366 Q 330 520 392 690" fill="none" stroke="#FFE0E5" stroke-width="1.1"
+          stroke-dasharray="6 14" class="flow"/>
+        <path d="M560 300 Q 600 200 700 148" fill="none" stroke="url(#gRed)" stroke-width="2.8"
+          filter="url(#fRed)" marker-end="url(#arrowRed)"/>
+        <path d="M560 300 Q 600 200 700 148" fill="none" stroke="#FFE0E5" stroke-width="1.1"
+          stroke-dasharray="6 14" class="flow"/>
+        <path d="M520 400 Q 570 450 610 500" fill="none" stroke="url(#gRed)" stroke-width="2.2"
+          filter="url(#fRed)" marker-end="url(#arrowRed)" opacity=".72"/>
+
+        <g transform="translate(622 470)">
+          <rect x="-5" y="-5" width="10" height="10" fill="#D7263D" transform="rotate(45)"/>
+          <text y="26" text-anchor="middle" font-size="10.5" fill="#FF8A9B">长治</text>
+        </g>
+        <g transform="translate(392 690)">
+          <rect x="-5" y="-5" width="10" height="10" fill="#D7263D" transform="rotate(45)"/>
+          <text y="-16" text-anchor="middle" font-size="10.5" fill="#FF8A9B">运城</text>
+        </g>
+        <g transform="translate(700 148)">
+          <rect x="-5" y="-5" width="10" height="10" fill="#D7263D" transform="rotate(45)"/>
+          <text y="-16" text-anchor="middle" font-size="10.5" fill="#FF8A9B">大同</text>
+        </g>
+
+        <g transform="translate(470 340)">
+          <circle r="16" class="vp r"/>
+          <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+          <circle r="3" fill="#FFD6DD"/>
+          <text y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋A·D8821</text>
+        </g>
+        <g transform="translate(300 366)">
+          <circle r="16" class="vp r"/>
+          <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+          <circle r="3" fill="#FFD6DD"/>
+          <text y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋K·1H003</text>
+        </g>
+        <g transform="translate(560 300)">
+          <circle r="16" class="vp r"/>
+          <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+          <circle r="3" fill="#FFD6DD"/>
+          <text y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋J·D5566</text>
+        </g>
+        <g transform="translate(520 400)">
+          <circle r="16" class="vp r"/>
+          <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+          <circle r="3" fill="#FFD6DD"/>
+          <text y="24" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFE3E8">晋A·D6633</text>
+        </g>
+      </svg>
+      <div class="ov">
+        <b>在途运单 · 轨迹连线</b>
+        <span>IN-TRANSIT WAYBILL / 4 TASKS</span>
+      </div>
+      <div class="lg">
+        <span><i style="background:#D7263D"></i>在途路线</span>
+        <span><i style="background:#4E9CB8"></i>空闲车辆</span>
+      </div>
+      <div style="position:absolute;z-index:3;right:14px;top:13px;font-family:var(--mono);font-size:10px;color:#7A8A95">
+        轨迹更新 12s 前
+      </div>
+    </div>
+
+    <div class="tile" style="grid-column:7/10;grid-row:2">
+      <span class="no">05</span>
+      <div class="t-h"><i></i>运单状态<em>STATUS</em></div>
+      <div class="c-kpi" style="margin-top:8px">
+        <div class="r"><span>待接单</span><b>6</b></div>
+        <div class="r"><span>装车中</span><b>12</b></div>
+        <div class="r"><span>已发车</span><b class="hot">42</b></div>
+        <div class="r"><span>已到达</span><b>28</b></div>
+        <div class="r"><span>已完成</span><b>138</b></div>
+        <div class="r"><span>待重新指派</span><b>2</b></div>
+        <div class="r"><span>已取消</span><b>1</b></div>
+      </div>
+    </div>
+
+    <div class="tile" style="grid-column:10/13;grid-row:2">
+      <span class="no">06</span>
+      <div class="t-h"><i></i>费用类型<em>BY TYPE</em></div>
+      <div class="c-kpi" style="margin-top:8px">
+        <div class="r"><span>费用上报</span><b>46%</b></div>
+        <div class="r"><span>补贴申请</span><b>17%</b></div>
+        <div class="r"><span>借款申请</span><b>9%</b></div>
+        <div class="r"><span>违章上报</span><b>8%</b></div>
+        <div class="r"><span>磅单 / 回单</span><b>14%</b></div>
+        <div class="r"><span>超时报备</span><b>4%</b></div>
+        <div class="r"><span>补卡申请</span><b>2%</b></div>
+      </div>
+      <div class="t-sub" style="margin-top:6px">本月上报 <b>¥128.5 万</b> · 62 笔</div>
+    </div>
+
+    <div class="tile" style="grid-column:7/10;grid-row:3">
+      <span class="no">07</span>
+      <div class="t-h"><i></i>运单流水<em>LIVE</em></div>
+      <div class="c-list">
+        <div class="c-li"><span class="t">10:24</span><span class="m"><b>…19086</b> 太原→晋中</span><span class="s">已发车</span></div>
+        <div class="c-li"><span class="t">10:19</span><span class="m"><b>…19085</b> 吕梁→长治</span><span class="s">装车中</span></div>
+        <div class="c-li"><span class="t">10:12</span><span class="m"><b>…19084</b> 太原→大同</span><span class="s">已完成</span></div>
+        <div class="c-li"><span class="t">10:05</span><span class="m"><b>…19083</b> 临汾→运城</span><span class="s">已到达</span></div>
+        <div class="c-li"><span class="t">09:58</span><span class="m"><b>…19082</b> 忻州→阳泉</span><span class="s">待接单</span></div>
+        <div class="c-li"><span class="t">09:46</span><span class="m"><b>…19081</b> 太原→吕梁</span><span class="s">装车中</span></div>
+      </div>
+    </div>
+
+    <div class="tile" style="grid-column:10/13;grid-row:3">
+      <span class="no">08</span>
+      <div class="t-h"><i></i>客户运费<em>TOP 4</em></div>
+      <div class="c-kpi" style="margin-top:8px">
+        <div class="r"><span>山西焦煤</span><b>284.6万</b></div>
+        <div class="r"><span>晋能控股</span><b>198.2万</b></div>
+        <div class="r"><span>太钢不锈</span><b>143.7万</b></div>
+        <div class="r"><span>潞安化工</span><b>98.6万</b></div>
+        <div class="r"><span>华阳新材</span><b>74.3万</b></div>
+      </div>
+      <div class="t-sub" style="margin-top:6px">本月运费合计 <b>¥1,284.6 万</b></div>
+    </div>
+
+    <div class="tile" style="grid-column:span 6">
+      <span class="no">09</span>
+      <div class="t-h"><i></i>近 7 日运单量 / 运费<em>VOLUME &amp; FREIGHT</em></div>
+      <div style="position:relative;flex:1;min-height:0;margin-top:8px">
+        <svg viewBox="0 0 600 90" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%">
+          <g stroke="rgba(150,170,185,.09)" stroke-width="1">
+            <line x1="0" y1="30" x2="600" y2="30"/><line x1="0" y1="60" x2="600" y2="60"/>
+          </g>
+          <g fill="rgba(78,156,184,.32)">
+            <rect x="16" y="38" width="42" height="48"/><rect x="100" y="30" width="42" height="56"/>
+            <rect x="184" y="46" width="42" height="40"/><rect x="268" y="26" width="42" height="60"/>
+            <rect x="352" y="20" width="42" height="66"/><rect x="436" y="34" width="42" height="52"/>
+            <rect x="520" y="14" width="42" height="72" fill="rgba(215,38,61,.55)"/>
+          </g>
+          <polyline points="37,48 121,40 205,56 289,36 373,30 457,44 541,20"
+            fill="none" stroke="#D7263D" stroke-width="2"/>
+        </svg>
+      </div>
+      <div class="t-sub" style="display:flex;justify-content:space-between;padding:0 4px">
+        <span>10-13</span><span>10-14</span><span>10-15</span><span>10-16</span>
+        <span>10-17</span><span>10-18</span><span>今日</span>
+      </div>
+    </div>
+
+    <div class="tile" style="grid-column:span 6">
+      <span class="no">10</span>
+      <div class="t-h"><i></i>费用待办与付款<em>TODO &amp; PAYOUT</em></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px;flex:1">
+        <div style="border-left:2px solid #D7263D;padding-left:10px">
+          <div style="font-size:10.5px;color:#82919B">待我审批</div>
+          <div style="font-family:var(--mono);font-size:26px;color:#EDF2F5;line-height:1.3">12</div>
+          <div style="font-size:10px;color:#FF8A9B;font-family:var(--mono)">¥86,400</div>
+        </div>
+        <div style="border-left:2px solid #C08A2E;padding-left:10px">
+          <div style="font-size:10.5px;color:#82919B">待打款</div>
+          <div style="font-family:var(--mono);font-size:26px;color:#EDF2F5;line-height:1.3">8</div>
+          <div style="font-size:10px;color:#E8B45F;font-family:var(--mono)">¥152,300</div>
+        </div>
+        <div style="border-left:2px solid #4E7C8E;padding-left:10px">
+          <div style="font-size:10.5px;color:#82919B">本月已付</div>
+          <div style="font-family:var(--mono);font-size:20px;color:#EDF2F5;line-height:1.5">912.1万</div>
+          <div style="font-size:10px;color:#8FB4C2;font-family:var(--mono)">付款率 71.0%</div>
+        </div>
+      </div>
+      <div class="c-list" style="flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:8px">
+        <div class="c-li"><span class="t">10:21</span><span class="m"><b>晋A·D8821</b> 费用上报 ¥3,280</span><span class="s">待审</span></div>
+        <div class="c-li"><span class="t">10:12</span><span class="m"><b>晋K·1H003</b> 路桥费 ¥860</span><span class="s">待审</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+</div>
+</div>
+
+<!-- ============ 对比与落地说明 ============ -->
+<div class="doc" id="doc">
+  <h1>双屏大屏 · 三版方案对比与落地说明</h1>
+  <p class="lead">
+    共 3 套视觉与版式方案，每套都是「1 号屏：车辆 / 定位 / 里程电耗」+「2 号屏：运单 / 费用」两块 1920×1080 画面。
+    三套方案的信息内容一致，差别在版式骨架、视觉语言和信息密度；地图上的红色曲线是「有任务车辆 → 该运单卸货地」的连接线，
+    落地时用高德暗色底图 + 车辆实时定位 + <code>waybills.delivery_lng/lat</code> 绘制。
+  </p>
+
+  <h2>三版定位</h2>
+  <div class="cards3">
+    <div class="dc">
+      <span class="tag">方案 A</span>
+      <h3>指挥中心</h3>
+      <p>左右 412px 对称边栏 + 中央大地图，深空蓝黑底 + 中国红强调，带 HUD 角标、网格、扫描光。</p>
+      <ul>
+        <li>信息密度最高，单屏可放 9 个模块</li>
+        <li>左「车」右「动态」，符合值班人员扫视习惯</li>
+        <li>扩展性好：加模块只需往边栏加卡片</li>
+      </ul>
+      <div class="fit">适合：调度值班室常驻大屏（推荐）</div>
+    </div>
+    <div class="dc">
+      <span class="tag">方案 B</span>
+      <h3>驾驶舱</h3>
+      <p>顶部 6 格超大数字带 + 60/40 玻璃拟态分栏 + 底部双图表，深黑底 + 玫红渐变。</p>
+      <ul>
+        <li>数字最醒目，3 米外可读</li>
+        <li>模块少而大，汇报、参观时讲解顺畅</li>
+        <li>单屏信息量约为 A 的 70%</li>
+      </ul>
+      <div class="fit">适合：领导驾驶舱、月度经营汇报</div>
+    </div>
+    <div class="dc">
+      <span class="tag">方案 C</span>
+      <h3>蜂巢磁贴</h3>
+      <p>12 列磁贴网格，切角卡片 + 编号角标 + 蓝图底纹，暗铁灰底 + 砖红，工业仪表感。</p>
+      <ul>
+        <li>模块边界清晰，适合一屏看很多指标</li>
+        <li>切角与编号带来强「设备感」</li>
+        <li>地图占比小于 A，路线细节略弱</li>
+      </ul>
+      <div class="fit">适合：展厅、客户参观通道</div>
+    </div>
+  </div>
+
+  <h2>双屏信息架构</h2>
+  <table class="tb2">
+    <thead>
+      <tr><th style="width:110px">屏幕</th><th style="width:190px">区块</th><th>内容</th><th style="width:190px">数据来源</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="6">① 车辆<br>定位<br>能耗</td>
+        <td>车辆总览</td>
+        <td>总数 / 在线 / 行驶 / 静止 / 离线 / 任务中，在线率环形</td>
+        <td><code>vehicles</code> + 实时定位状态</td>
+      </tr>
+      <tr><td>实时定位</td><td>全省地图、车辆点位、任务车辆到卸货地的红色曲线</td><td><code>dongfeng-lostlocation</code> / <code>track/history</code></td></tr>
+      <tr><td>里程与电耗</td><td>今日 / 本周 / 本月三档：里程、电耗、百公里电耗、环比</td><td><code>vehicle_daily_stats</code>（km / fuel / rate）</td></tr>
+      <tr><td>趋势</td><td>近 7 日里程柱 + 电耗线；24h 运行曲线</td><td>同上，按日聚合</td></tr>
+      <tr><td>车辆构成</td><td>燃料类型、车型分布</td><td><code>vehicles.fuel_type / vehicle_type</code></td></tr>
+      <tr><td>动态与告警</td><td>发车 / 装车 / 到达 / 围栏 / 超速 / 停留；能耗 TOP5、里程 TOP5</td><td>运单状态 + <code>ele_fence_alerts</code> + 日统计</td></tr>
+
+      <tr>
+        <td rowspan="6">② 运单<br>费用</td>
+        <td>运单总览</td><td>今日新增 / 在途 / 已完成 / 异常 / 完成率 / 准时率</td><td><code>waybills</code></td>
+      </tr>
+      <tr><td>在途轨迹</td><td>在途运单车辆位置与卸货地连线、起终点标记</td><td><code>waybills</code> + 实时定位</td></tr>
+      <tr><td>运费收入</td><td>今日运费、本月运费、环比、单均</td><td><code>waybills</code> 货物运费合计</td></tr>
+      <tr><td>费用构成</td><td>费用上报 / 补贴 / 借款 / 违章 / 磅单 / 回单占比</td><td><code>reports.type / amount</code></td></tr>
+      <tr><td>费用待办</td><td>待我审批笔数与金额、待打款笔数与金额、最近上报</td><td><code>reports</code> + 审批流 <code>flow</code></td></tr>
+      <tr><td>客户排行</td><td>本月客户运费 TOP5</td><td><code>waybills.customer_archive_name</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>地图红线怎么画</h2>
+  <div class="note">
+    <b>连线规则：</b>只给「状态 = 装车中 / 已发车 / 已到达」且有 <code>delivery_lng / delivery_lat</code> 的运单画线；
+    起点用车辆实时定位，终点用卸货地坐标，中间用二次贝塞尔曲线（控制点取两点中垂线方向偏移 12%~18%），
+    再加一层虚线做流动动画。<b>没有终点坐标的运单不画线</b>，只保留车辆点位，避免画出错误方向。
+    <br><br>
+    <b>底图：</b>高德 <code>amap://styles/dark</code>，关闭 POI 与路名，只留 bg / road；红色在暗底上对比度最高，
+    但同一屏同时出现 3 条以上红线时容易糊，建议超过 5 条改为「只高亮选中运单，其余用 30% 透明度」。
+  </div>
+
+  <h2>落地要点</h2>
+  <table class="tb2">
+    <thead><tr><th style="width:150px">问题</th><th>做法</th></tr></thead>
+    <tbody>
+      <tr><td>大屏适配</td><td>页面按 1920×1080 固定排版，用 <code>transform: scale()</code> 等比缩放居中；不要用 vw/vh 布局，否则 2K/4K 屏上字号会失真。</td></tr>
+      <tr><td>数据刷新</td><td>车辆定位 30s、日统计 5min、运单与费用 60s。分三个定时器，不要一个大接口全量拉。</td></tr>
+      <tr><td>定位接口压力</td><td>128 辆车逐个调东风接口会打满浏览器并发（同域 6 个），必须分批 8~10 个并发 + 失败重试一次；或用云函数批量拉取后落库。</td></tr>
+      <tr><td>里程电耗口径</td><td>直接用 <code>vehicle_daily_stats</code> 的 km / fuel 求和，百公里电耗 = fuel / km × 100；不要用东风的 <code>hundredSumTravelFuel</code>（恒为 0.02，精度被截断）。</td></tr>
+      <tr><td>权限隔离</td><td>沿用现有 <code>customer_id</code> / <code>org</code> / <code>owner_account</code> 三重过滤；大屏只读，不做任何写操作。</td></tr>
+      <tr><td>空数据</td><td>每个卡片都要有「--」与空态，不能因为某天没同步就整屏空白；日统计缺失时降级到实时接口单日汇总。</td></tr>
+    </tbody>
+  </table>
+
+  <h2>建议</h2>
+  <p class="lead" style="margin-bottom:0">
+    推荐 <b style="color:#FF8095">方案 A</b> 作为主方案落地：信息密度和扩展性最好，左右边栏的模块可以按客户权限增减，
+    中央地图也能直接复用现有 FullMap 的定位与轨迹能力。如果之后要给领导做汇报页，把 B 方案的顶部「6 格超大数字带」
+    移植到 A 的顶部即可，两套并不冲突。C 方案的切角磁贴语言可以留给展厅或客户参观场景。
+  </p>
+</div>
+
+<script>
+(function () {
+  var scheme = 'A', page = '1'
+
+  // 支持 #A1 / #B2 / #D 直达某一屏，方便投屏和分享
+  var h = (location.hash || '').replace('#', '').toUpperCase()
+  if (/^[ABC][12]$/.test(h)) { scheme = h[0]; page = h[1] }
+  else if (h === 'D') { scheme = 'D' }
+  var stage = document.getElementById('stage')
+  var wrap = document.getElementById('stagewrap')
+  var doc = document.getElementById('doc')
+  var scaleTxt = document.getElementById('scaleTxt')
+
+  function fit () {
+    var w = wrap.clientWidth
+    var s = Math.min((w - 28) / 1920, 1)
+    stage.style.transform = 'scale(' + s + ')'
+    stage.style.left = Math.max(14, (w - 1920 * s) / 2) + 'px'
+    wrap.style.height = (1080 * s + 28) + 'px'
+    scaleTxt.textContent = Math.round(s * 100) + '%'
+  }
+
+  function syncBtns () {
+    var sb = document.querySelectorAll('#segScheme button')
+    for (var i = 0; i < sb.length; i++) sb[i].classList.toggle('on', sb[i].dataset.scheme === scheme)
+    var pb = document.querySelectorAll('#segPage button')
+    for (var j = 0; j < pb.length; j++) pb[j].classList.toggle('on', pb[j].dataset.page === page)
+    try {
+      history.replaceState(null, '', '#' + (scheme === 'D' ? 'D' : scheme + page))
+    } catch (e) {}
+  }
+
+  function render () {
+    syncBtns()
+    var screens = document.querySelectorAll('.screen')
+    for (var i = 0; i < screens.length; i++) screens[i].classList.remove('on')
+    if (scheme === 'D') {
+      wrap.style.display = 'none'
+      doc.classList.add('on')
+      document.getElementById('segPage').style.visibility = 'hidden'
+      window.scrollTo({ top: 0 })
+      return
+    }
+    wrap.style.display = 'block'
+    doc.classList.remove('on')
+    document.getElementById('segPage').style.visibility = 'visible'
+    var el = document.getElementById(scheme.toLowerCase() + page)
+    if (el) el.classList.add('on')
+    fit()
+  }
+
+  document.getElementById('segScheme').addEventListener('click', function (e) {
+    var b = e.target.closest('button')
+    if (!b) return
+    scheme = b.dataset.scheme
+    var all = this.querySelectorAll('button')
+    for (var i = 0; i < all.length; i++) all[i].classList.toggle('on', all[i] === b)
+    render()
+  })
+
+  document.getElementById('segPage').addEventListener('click', function (e) {
+    var b = e.target.closest('button')
+    if (!b) return
+    page = b.dataset.page
+    var all = this.querySelectorAll('button')
+    for (var i = 0; i < all.length; i++) all[i].classList.toggle('on', all[i] === b)
+    render()
+  })
+
+  window.addEventListener('resize', fit)
+  render()
+
+  // 实时时钟
+  var clocks = document.querySelectorAll('.a-clock, .b-clock, .c-head .rt b')
+  function tick () {
+    var d = new Date()
+    var p = function (n) { return String(n).padStart(2, '0') }
+    var t = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds())
+    var c = document.querySelectorAll('.a-clock')
+    for (var i = 0; i < c.length; i++) {
+      c[i].childNodes[0].nodeValue = t
+    }
+    var b = document.querySelector('.b-clock')
+    if (b) b.textContent = t
+  }
+  setInterval(tick, 1000)
+  tick()
+})()
+</script>
+
+<style>
+  /* 流动虚线 / 脉冲 */
+  .flow{animation:flowDash 2.4s linear infinite}
+  @keyframes flowDash{to{stroke-dashoffset:-60}}
+  .vp{fill:none;stroke:#33D6FF;stroke-width:1;opacity:.55;animation:vpulse 2.6s ease-out infinite}
+  .vp.r{stroke:#FF4D66}
+  @keyframes vpulse{
+    0%{r:8;opacity:.75}
+    100%{r:26;opacity:0}
+  }
+</style>
+</body>
+</html>

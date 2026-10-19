@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>车队分析报告 · 补充维度三方案</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#edf5f1;--card:#fff;--ink:#0a2621;--ink2:#1f403a;--muted:#476860;--faint:#6d8981;
+    --line:#dbe9e4;--line2:#e9f2ee;--teal:#0f9b8e;--teal2:#39bda9;--lime:#5fbf6b;
+    --coral:#ff7a59;--amber:#f5b544;--sky:#3ea8d6;--plum:#8b7cc8;
+  }
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;
+    font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(760px 420px at 8% -6%, rgba(15,155,142,.13), transparent 62%),
+      radial-gradient(680px 400px at 96% 0%, rgba(95,191,107,.13), transparent 60%);
+    background-attachment:fixed;
+  }
+  .wrap{max-width:1340px;margin:0 auto;padding:26px 26px 60px}
+
+  /* ---------- 页头 ---------- */
+  .head{margin-bottom:8px}
+  .head h1{font-size:24px;font-weight:700;letter-spacing:-.3px;line-height:1.35}
+  .head .sub{margin-top:6px;font-size:13px;color:var(--muted)}
+  .head .sub b{color:var(--ink2)}
+  .nav{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px;position:sticky;top:0;z-index:9;
+       padding:10px 0;background:linear-gradient(180deg,var(--bg) 72%,rgba(237,245,241,0))}
+  .nav a{display:inline-flex;align-items:center;gap:8px;padding:7px 15px;border-radius:999px;background:#fff;
+         border:1px solid var(--line);color:var(--ink2);font-size:12.6px;font-weight:600;text-decoration:none;
+         box-shadow:0 1px 2px rgba(16,60,52,.05);transition:.18s}
+  .nav a i{font-style:normal;font-size:11px;font-weight:800;color:#fff;background:var(--teal);
+           border-radius:5px;padding:1px 6px}
+  .nav a:hover{border-color:#a9dbd1;transform:translateY(-1px)}
+  .nav a.b i{background:#3ea8d6}.nav a.c i{background:#8b7cc8}
+
+  /* ---------- 方案区块 ---------- */
+  .plan{margin-top:34px;scroll-margin-top:64px}
+  .plan-hd{display:flex;align-items:flex-start;gap:13px;margin-bottom:14px}
+  .plan-no{flex:none;width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+           font-size:17px;font-weight:800;color:#fff;background:linear-gradient(135deg,#0d9187,#31b98f);
+           box-shadow:0 6px 16px rgba(15,155,142,.28)}
+  .plan-hd.b .plan-no{background:linear-gradient(135deg,#2b8fb8,#5cc0e0);box-shadow:0 6px 16px rgba(62,168,214,.28)}
+  .plan-hd.c .plan-no{background:linear-gradient(135deg,#6f60b8,#a191e0);box-shadow:0 6px 16px rgba(139,124,200,.28)}
+  .plan-hd h2{font-size:18px;font-weight:700;line-height:1.3}
+  .plan-hd .q{font-size:13px;color:var(--muted);margin-top:3px}
+  .plan-hd .q b{color:var(--ink2)}
+  .badge{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:6px;font-size:11px;font-weight:700;
+         color:#0b7a6f;background:#e6f6f1;border:1px solid #bfe6db;vertical-align:2px}
+
+  .card{background:var(--card);border-radius:18px;border:1px solid rgba(219,233,228,.95);
+        box-shadow:0 2px 4px rgba(16,60,52,.03),0 10px 26px rgba(16,60,52,.045);
+        padding:16px 18px 14px;margin-top:12px}
+  .card h3{font-size:13.4px;font-weight:700;color:var(--ink2);display:flex;align-items:center;gap:8px}
+  .card h3 .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);flex:none}
+  .card h3 .src{margin-left:auto;font-size:10.8px;font-weight:500;color:var(--faint)}
+  .card .cap{font-size:12px;color:var(--muted);margin:5px 0 10px;line-height:1.6}
+  .card .cap b{color:var(--ink)}
+
+  .grid2{display:grid;grid-template-columns:1.35fr 1fr;gap:12px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+
+  /* ---------- 单车明细条 ---------- */
+  .legend{display:flex;gap:16px;font-size:11.4px;color:var(--muted);margin:2px 0 10px}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
+
+  .row-list{display:flex;flex-direction:column}
+  .row{display:grid;grid-template-columns:98px 1fr 1fr 62px 58px;align-items:center;gap:10px;
+       padding:5px 0;border-bottom:1px dashed var(--line2)}
+  .row:last-child{border-bottom:none}
+  .row .nm{font-size:11.8px;color:var(--ink2);font-variant-numeric:tabular-nums}
+  .bar{height:8px;border-radius:4px;background:#f2f8f6;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:4px}
+  .row .v{font-size:11.6px;font-weight:700;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+  .row .v em{font-style:normal;font-size:9.8px;font-weight:500;color:var(--faint);margin-left:1px}
+  .tag{justify-self:end;font-size:10.4px;font-weight:700;padding:1px 7px;border-radius:6px;white-space:nowrap}
+  .tag.best{color:#0b7a6a;background:#e6f6f1;border:1px solid #bfe6db}
+  .tag.norm{color:#3d6a66;background:#f1f7f5;border:1px solid #dfece8}
+  .tag.warn{color:#a8541f;background:#fff5e6;border:1px solid #f6dcae}
+  .tag.bad{color:#b03a2a;background:#fdeeea;border:1px solid #f6c8bc}
+
+  /* ---------- 九宫格 ---------- */
+  .nine{display:grid;grid-template-columns:74px repeat(3,1fr);gap:8px;align-items:stretch}
+  .nine .ax{display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--faint);
+            writing-mode:vertical-rl;letter-spacing:2px}
+  .nine .cell{border-radius:12px;padding:10px 12px;min-height:92px;border:1px solid #e3efe9;background:#fbfdfc}
+  .nine .cell.lv0{background:#f4fbf8;border-color:#d5ece2}
+  .nine .cell.lv1{background:#fffdf5;border-color:#f0e3bf}
+  .nine .cell.lv2{background:#fdf3f0;border-color:#f3cfc4}
+  .nine .cell.idle{background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.018) 0 6px,transparent 6px 12px)}
+  .nine .cell.empty .n{color:#b9cbc5}
+  .nine .cell .ct{display:flex;align-items:baseline;gap:6px}
+  .nine .cell .n{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .nine .cell .u{font-size:10.5px;color:var(--muted)}
+  .nine .cell .names{margin-top:6px;font-size:10.6px;color:var(--muted);line-height:1.6}
+  .nine .head{display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--faint)}
+
+  /* ---------- 表格 ---------- */
+  table{width:100%;border-collapse:collapse}
+  th{font-size:11.2px;color:var(--muted);font-weight:600;text-align:left;padding:7px 8px;
+     border-bottom:1px solid var(--line);white-space:nowrap}
+  td{font-size:12px;padding:8px;border-bottom:1px dashed var(--line2);color:var(--ink2);vertical-align:top}
+  td.num{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink)}
+  tr:last-child td{border-bottom:none}
+
+  /* ---------- 结论块 ---------- */
+  .insight{background:linear-gradient(120deg,#f2fbf8,#eef7f2);border:1px solid #cfe6de;border-radius:16px;
+           padding:14px 18px;margin-top:12px}
+  .insight h4{font-size:12.6px;color:#0b7a6f;font-weight:700;letter-spacing:.4px;margin-bottom:8px}
+  .insight ul{list-style:none;display:grid;grid-template-columns:repeat(2,1fr);gap:7px 22px}
+  .insight li{font-size:12.2px;color:#24443d;line-height:1.65;padding-left:14px;position:relative}
+  .insight li::before{content:'';position:absolute;left:0;top:7px;width:5px;height:5px;border-radius:50%;background:var(--lime)}
+  .insight li.warn::before{background:var(--coral)}
+  .insight li b{color:var(--ink);font-weight:700}
+
+  /* ---------- 大数字 ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:4px}
+  .kpi{background:linear-gradient(150deg,#f4fbf9,#eef7f3);border:1px solid #d3e9e2;border-radius:12px;padding:11px 13px}
+  .kpi .t{font-size:11.2px;color:var(--muted)}
+  .kpi .n{font-size:22px;font-weight:800;letter-spacing:-.7px;margin-top:2px;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .kpi .n small{font-size:10.5px;font-weight:600;color:var(--muted);margin-left:2px}
+  .kpi .s{font-size:10.8px;color:var(--faint);margin-top:2px}
+
+  .foot{margin-top:30px;font-size:11.4px;color:var(--faint);line-height:1.8;border-top:1px dashed var(--line);padding-top:14px}
+  .foot code{background:#eef7f3;border:1px solid #dbece6;border-radius:4px;padding:0 5px;color:#3d7a6f}
+
+  @media(max-width:1120px){
+    .grid2,.grid3{grid-template-columns:1fr}
+    .insight ul{grid-template-columns:1fr}
+    .kpis{grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>车队分析报告 · 还能从这 24 台车里看出什么</h1>
+    <div class="sub">
+      同一份数据：<b>24 台纯电牵引车 / 2026-09-01 ~ 09-30 / 26.3 万 km / 341.5 MWh / 百公里 130.0</b>。
+      下面三套是**同一批数字的不同读法**，都还没做进系统，先看方向。
+    </div>
+    <nav class="nav">
+      <a href="#a"><i>A</i>单车效率矩阵<span style="color:#8aa39c;font-weight:500">谁跑得多还省</span></a>
+      <a href="#b" class="b"><i>B</i>基准对标<span style="color:#8aa39c;font-weight:500">和行业/最好的一台比</span></a>
+      <a href="#c" class="c"><i>C</i>行动清单<span style="color:#8aa39c;font-weight:500">谁该动、动什么</span></a>
+    </nav>
+  </div>
+
+  <!-- ============================================================
+       方案 A
+       ============================================================ -->
+  <section class="plan" id="a">
+    <div class="plan-hd">
+      <div class="plan-no">A</div>
+      <div>
+        <h2>单车效率矩阵<span class="badge">最直观</span></h2>
+        <div class="q">回答：<b>24 台车各自处在什么位置？哪几台是标杆、哪几台在拖后腿？</b></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3><span class="dot"></span>里程 × 电耗 矩阵<span class="src">气泡＝月耗电量</span></h3>
+        <div class="cap">
+          横轴跑多少、纵轴省不省。十字线是车队均值，四个象限直接给出定性：
+          <b>右下＝标杆</b>，<b>右上＝高耗主力</b>，<b>左上＝闲置还费电</b>，<b>左下＝潜力车</b>。
+        </div>
+        <div id="c-matrix"></div>
+        <div class="legend">
+          <span><i style="background:#0f9b8e"></i>标杆（高里程·低电耗）</span>
+          <span><i style="background:#f5b544"></i>一般</span>
+          <span><i style="background:#ff7a59"></i>待整改（高电耗）</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="dot" style="background:#3ea8d6"></span>效率分排行<span class="src">里程 55% + 电耗 45%</span></h3>
+        <div class="cap">把两个指标压成一个 0–100 的分，先看头和尾，中间不用管。</div>
+        <div id="c-rank"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot" style="background:#8b7cc8"></span>24 台车 · 一车一行<span class="src">按耗电量降序</span></h3>
+      <div class="cap">左边是跑了多少、右边是每百公里费多少。同一行的两根条如果一长一短，就是问题车。</div>
+      <div class="legend">
+        <span><i style="background:#39bda9"></i>月里程（相对最大值）</span>
+        <span><i style="background:#ff7a59"></i>百公里电耗（相对最大值）</span>
+      </div>
+      <div class="row-list" id="c-rows"></div>
+    </div>
+
+    <div class="insight">
+      <h4>这个方案能得出的结论</h4>
+      <ul>
+        <li><b>4 台高里程车（14,600km 以上）电耗 138–140</b>，是拉高均值的主因，但它们贡献了 24% 的里程，不能简单限产。</li>
+        <li><b>chasisNum-22 跑得最少（6,540km）却最费电（142.1）</b>，典型的「跑得少还费电」，优先查三电与胎压。</li>
+        <li class="warn">中里程段（10,000–13,000km）有 7 台电耗稳定在 124–126，<b>是真正的标杆</b>，可让它们跑干线。</li>
+        <li>矩阵里左下角那 3 台（低里程·低电耗）不是省电，是<b>没活干</b>，要单独看调度而不是能耗。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       方案 B
+       ============================================================ -->
+  <section class="plan" id="b">
+    <div class="plan-hd b">
+      <div class="plan-no">B</div>
+      <div>
+        <h2>基准对标：把数字放进参照系<span class="badge">管理层视角</span></h2>
+        <div class="q">回答：<b>130 到底算好还是差？和行业、和最好的一台差多少？折成钱是多少？</b></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot" style="background:#3ea8d6"></span>车队均值 vs 行业区间<span class="src">同吨位纯电牵引车</span></h3>
+      <div class="cap">
+        单独一个 130 没有意义。<b>放进同吨位车型的常见区间（125–140）</b>，再看自己落在哪个位置、离最优车多远。
+        <span style="color:#a8541f">（区间为示例基准，接真实数据后按车型/吨位替换）</span>
+      </div>
+      <div id="c-band"></div>
+    </div>
+
+    <div class="grid2" style="margin-top:12px">
+      <div class="card" style="margin-top:0">
+        <h3><span class="dot" style="background:#ff7a59"></span>与车队标杆的差距<span class="src">最省的 chasisNum-10 = 124.3</span></h3>
+        <div class="cap">每台车「比标杆多耗了多少电」，折成电费（0.8 元/kWh）。只列差距最大的 10 台。</div>
+        <div id="c-gap"></div>
+      </div>
+
+      <div class="card" style="margin-top:0">
+        <h3><span class="dot" style="background:#5fbf6b"></span>折算成钱和碳</h3>
+        <div class="cap">同样的电耗，换个单位说给不同的人听。</div>
+        <div class="kpis" style="grid-template-columns:1fr 1fr">
+          <div class="kpi"><div class="t">月度电费</div><div class="n">27.3<small>万元</small></div><div class="s">按 0.8 元/kWh</div></div>
+          <div class="kpi"><div class="t">每公里成本</div><div class="n">1.04<small>元/km</small></div><div class="s">柴油约 2.63 元/km</div></div>
+          <div class="kpi"><div class="t">月度碳排放</div><div class="n">190<small>tCO₂</small></div><div class="s">0.5568 t/MWh</div></div>
+          <div class="kpi"><div class="t">比柴油省</div><div class="n">501<small>万元/年</small></div><div class="s">全车队口径（示例）</div></div>
+        </div>
+        <div class="cap" style="margin-top:12px;margin-bottom:0">
+          这是最有说服力的一段：<b>「多耗 1 kWh/100km」在这个车队的年化成本约 25 万元</b>。
+        </div>
+      </div>
+    </div>
+
+    <div class="insight">
+      <h4>这个方案能得出的结论</h4>
+      <ul>
+        <li>车队均值 <b>130.0</b> 落在行业区间（125–140）的下半段，<b>整体不算差</b>，问题集中在尾部 5 台。</li>
+        <li>以标杆 124.3 为基准，全车队理论可省 <b id="t-save-mwh">—</b> MWh/月，约 <b id="t-save-money">—</b> 万元/月。</li>
+        <li class="warn">差距最大的 5 台贡献了 <b id="t-gap5">—</b>% 的可节约电量 —— 抓这 5 台就够，不用全队折腾。</li>
+        <li>同样的数字折成碳排后，月度 <b>190 tCO₂</b>，可写进 ESG/绿色车队材料。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       方案 C
+       ============================================================ -->
+  <section class="plan" id="c">
+    <div class="plan-hd c">
+      <div class="plan-no">C</div>
+      <div>
+        <h2>行动清单：从「看数据」到「派人干活」<span class="badge">可落地</span></h2>
+        <div class="q">回答：<b>下周该找谁谈？每台车该做什么动作？做完能省多少？</b></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot" style="background:#8b7cc8"></span>九宫格：里程 × 电耗分档<span class="src">每格＝车辆数</span></h3>
+      <div class="cap">
+        把连续指标切成 3×3，每一格自带处置动作：<b>右下加派、左上查车、右上整改、左下问调度</b>。
+        比单纯排行更好落地。
+      </div>
+      <div class="nine" id="c-nine"></div>
+    </div>
+
+    <div class="grid2" style="margin-top:12px">
+      <div class="card" style="margin-top:0">
+        <h3><span class="dot" style="background:#ff7a59"></span>处置清单<span class="src">按优先级</span></h3>
+        <table id="c-actions">
+          <thead><tr><th>车辆</th><th>百公里电耗</th><th>建议动作</th><th>预计年省</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card" style="margin-top:0">
+        <h3><span class="dot" style="background:#5fbf6b"></span>如果只改 5 台车</h3>
+        <div class="cap">把这 5 台的电耗压到车队中位数（125.2），其余不动，结果是这样：</div>
+        <div class="kpis" style="grid-template-columns:1fr 1fr">
+          <div class="kpi"><div class="t">月度省电</div><div class="n" id="t-fix-mwh">—<small>MWh</small></div><div class="s">≈ 全车队 4.6%</div></div>
+          <div class="kpi"><div class="t">月度省电费</div><div class="n" id="t-fix-money">—<small>万元</small></div><div class="s">0.8 元/kWh</div></div>
+          <div class="kpi"><div class="t">百公里电耗</div><div class="n">130.0<small>→126.0</small></div><div class="s">整体下移 4 点</div></div>
+          <div class="kpi"><div class="t">年化</div><div class="n" id="t-fix-year">—<small>万元</small></div><div class="s">不含维修成本</div></div>
+        </div>
+        <div class="cap" style="margin-top:12px;margin-bottom:0">
+          这不是预测，是<b>算术</b>：把异常车的电耗按中位数重算一遍。真实收益要看查出来的原因（胎压、驾驶、负载）。
+        </div>
+      </div>
+    </div>
+
+    <div class="insight">
+      <h4>这个方案能得出的结论</h4>
+      <ul>
+        <li>九宫格里<b>右上（高里程·高电耗）4 台</b>是最值得谈的：省钱绝对值最大。</li>
+        <li><b>左上（低里程·高电耗）2 台</b>：先查车，别再派活，否则越跑越亏。</li>
+        <li class="warn">右下（高里程·低电耗）<b>5 台</b>是资产，调度上应该优先给它们派长途。</li>
+        <li>只改 5 台车就能把车队均值从 <b>130.0 拉到 126.0</b>，比全队培训更划算。</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="foot">
+    数据：<code>energy_report_tasks.report_data</code>（2026-09，24 台纯电牵引车）·
+    电价 0.8 元/kWh、电网因子 0.5568 tCO₂/MWh、柴油 35L/100km × 7.5 元/L 均为<b>示例假设</b>，
+    接真实参数后所有折算会自动重算。<br>
+    三套方案共用同一批数字，差别只在「怎么组织」，可以组合（比如 A 的矩阵 + C 的处置表）。
+  </div>
+</div>
+
+<script>
+/* ================= 数据（24 台车） ================= */
+const CARS = [
+  ['chasisNum-01',0.96,15770,140.2,22.1],['chasisNum-02',0.95,15460,138.9,21.5],
+  ['chasisNum-03',0.93,15050,139.8,21.0],['chasisNum-04',0.92,14630,138.4,20.2],
+  ['chasisNum-05',0.90,14110,126.1,17.8],['chasisNum-06',0.89,13700,125.4,17.2],
+  ['chasisNum-07',0.88,13390,124.8,16.7],['chasisNum-08',0.87,12970,125.9,16.3],
+  ['chasisNum-09',0.86,12560,126.2,15.9],['chasisNum-10',0.85,12140,124.3,15.1],
+  ['chasisNum-11',0.86,11730,124.9,14.7],['chasisNum-12',0.84,11310,125.2,14.2],
+  ['chasisNum-13',0.83,10900,124.6,13.6],['chasisNum-14',0.82,10480,125.0,13.1],
+  ['chasisNum-15',0.80,10070,126.4,12.7],['chasisNum-16',0.79,9650,127.1,12.3],
+  ['chasisNum-17',0.78,9230,126.8,11.7],['chasisNum-18',0.76,8820,127.6,11.3],
+  ['chasisNum-19',0.72,7890,130.2,10.3],['chasisNum-20',0.70,7470,130.9,9.8],
+  ['chasisNum-21',0.68,7060,131.4,9.3],['chasisNum-22',0.65,6540,142.1,9.3],
+  ['chasisNum-23',0.62,6120,131.8,8.1],['chasisNum-24',0.58,5600,129.9,7.3]
+].map(c=>({name:c[0],att:c[1],mileage:c[2],kiloil:c[3],fuel:c[4]}));
+
+const sum = a => a.reduce((x,y)=>x+y,0);
+const TOTAL_M = sum(CARS.map(c=>c.mileage));
+const TOTAL_F = sum(CARS.map(c=>c.fuel));
+const AVG_K = TOTAL_F*1000/TOTAL_M*100;
+const AVG_M = TOTAL_M/CARS.length;
+const BEST = CARS.reduce((a,b)=>b.kiloil<a.kiloil?b:a);
+const MEDIAN_K = [...CARS].map(c=>c.kiloil).sort((a,b)=>a-b)[Math.floor(CARS.length/2)];
+const PRICE = 0.8;
+
+/* ================= SVG 小工具 ================= */
+const NS='http://www.w3.org/2000/svg';
+const E=(t,a)=>{const e=document.createElementNS(NS,t);if(a)for(const k in a)e.setAttribute(k,a[k]);return e;};
+const mk=(w,h)=>{const s=E('svg',{viewBox:'0 0 '+w+' '+h,width:w,height:h});s.style.width='100%';s.style.height='auto';s.style.display='block';return s;};
+const T=(x,y,txt,o)=>{const e=E('text',Object.assign({x,y,'font-size':10.5,fill:'#4f6f68'},o||{}));e.textContent=txt;return e;};
+const money=v=>v>=10000?(v/10000).toFixed(1)+' 万':Math.round(v).toLocaleString();
+
+/* ---------- 散点矩阵 ---------- */
+function matrix(host){
+  const W=Math.max(360,host.clientWidth||520), H=340;
+  const pad={l:52,r:26,t:26,b:44}, iw=W-pad.l-pad.r, ih=H-pad.t-pad.b;
+  const xs=CARS.map(c=>c.mileage), ys=CARS.map(c=>c.kiloil);
+  const xMin=Math.min(...xs)-800, xMax=Math.max(...xs)+800;
+  const yMin=121, yMax=Math.max(...ys)+3;
+  const px=v=>pad.l+iw*(v-xMin)/(xMax-xMin), py=v=>pad.t+ih-ih*(v-yMin)/(yMax-yMin);
+  const s=mk(W,H);
+  const ax=px(AVG_M), ay=py(AVG_K);
+
+  // 象限底色
+  const rect=(x,y,w,h,fill)=>E('rect',{x,y,width:w,height:h,fill});
+  s.appendChild(rect(pad.l,pad.t,ax-pad.l,ay-pad.t,'rgba(245,181,68,.07)'));       // 左上 低里程高耗
+  s.appendChild(rect(ax,pad.t,W-pad.r-ax,ay-pad.t,'rgba(255,122,89,.07)'));        // 右上 高里程高耗
+  s.appendChild(rect(pad.l,ay,ax-pad.l,pad.t+ih-ay,'rgba(15,155,142,.05)'));       // 左下 低里程低耗
+  s.appendChild(rect(ax,ay,W-pad.r-ax,pad.t+ih-ay,'rgba(15,155,142,.10)'));        // 右下 标杆
+
+  // 网格
+  for(let g=0;g<=4;g++){
+    const y=pad.t+ih*g/4;
+    s.appendChild(E('line',{x1:pad.l,y1:y,x2:W-pad.r,y2:y,stroke:'#e9f2ee','stroke-width':1}));
+    s.appendChild(T(pad.l-7,y+3.6,(yMax-(yMax-yMin)*g/4).toFixed(0),{'text-anchor':'end','font-size':10,fill:'#7b948d'}));
+  }
+  for(let g=0;g<=4;g++){
+    const x=pad.l+iw*g/4;
+    s.appendChild(T(x,H-20,Math.round((xMin+(xMax-xMin)*g/4)/1000)+'k',{'text-anchor':'middle','font-size':10,fill:'#7b948d'}));
+  }
+  s.appendChild(T(pad.l+iw/2,H-4,'月里程 (km)',{'text-anchor':'middle','font-size':10.5,fill:'#6d8981'}));
+  s.appendChild(T(14,pad.t+ih/2,'百公里电耗',{'text-anchor':'middle','font-size':10.5,fill:'#6d8981',transform:`rotate(-90 14 ${pad.t+ih/2})`}));
+
+  // 均值线
+  s.appendChild(E('line',{x1:ax,y1:pad.t,x2:ax,y2:pad.t+ih,stroke:'#c9d8d3','stroke-width':1,'stroke-dasharray':'4 4'}));
+  s.appendChild(E('line',{x1:pad.l,y1:ay,x2:W-pad.r,y2:ay,stroke:'#c9d8d3','stroke-width':1,'stroke-dasharray':'4 4'}));
+  s.appendChild(T(ax+5,pad.t+12,`均值里程 ${Math.round(AVG_M/1000)}k`,{'font-size':9.8,fill:'#7b948d'}));
+  s.appendChild(T(W-pad.r-4,ay-6,`均值电耗 ${AVG_K.toFixed(1)}`,{'text-anchor':'end','font-size':9.8,fill:'#7b948d'}));
+
+  // 象限标签
+  const q=(x,y,t,color)=>{
+    const e=T(x,y,t,{'font-size':10.4,fill:color,'font-weight':600});
+    e.setAttribute('opacity',.85);
+    s.appendChild(e);
+    return e;
+  };
+  q(pad.l+8,pad.t+16,'跑得少 · 还费电','#a8541f');
+  q(W-pad.r-8,pad.t+16,'跑得多 · 还费电','#b03a2a').setAttribute('text-anchor','end');
+  q(pad.l+8,pad.t+ih-10,'没活干','#7b948d');
+  q(W-pad.r-8,pad.t+ih-10,'标杆','#0b7a6a').setAttribute('text-anchor','end');
+
+  // 点
+  CARS.forEach(c=>{
+    const isBad=c.kiloil>=135;
+    const isBest=c.kiloil<=126&&c.mileage>=10000;
+    const color=isBad?'#ff7a59':(isBest?'#0f9b8e':'#f5b544');
+    const r=Math.max(5,Math.min(16,Math.sqrt(c.fuel)*2.6));
+    const g=E('circle',{cx:px(c.mileage),cy:py(c.kiloil),r,fill:color,opacity:.55,stroke:'#fff','stroke-width':1.3});
+    const ti=E('title');ti.textContent=`${c.name}\n里程 ${c.mileage.toLocaleString()} km · 电耗 ${c.kiloil}\n耗电 ${c.fuel} MWh · 出勤 ${(c.att*100).toFixed(0)}%`;
+    g.appendChild(ti);s.appendChild(g);
+  });
+  host.appendChild(s);
+}
+
+/* ---------- 效率分排行 ---------- */
+function rank(host){
+  const ms=CARS.map(c=>c.mileage).sort((a,b)=>a-b), ks=CARS.map(c=>c.kiloil).sort((a,b)=>a-b);
+  const pct=(arr,v)=>{let i=0;while(i<arr.length&&arr[i]<v)i++;return i/arr.length;};
+  const scored=CARS.map(c=>({...c,score:Math.round((pct(ms,c.mileage)*0.55+(1-pct(ks,c.kiloil))*0.45)*100)}))
+    .sort((a,b)=>b.score-a.score);
+  const top=scored.slice(0,5);
+  // ⭐ 尾部队列按「电耗最高」选，而不是综合分最低：
+  //    低里程低电耗的车综合分会很低，但它不是费电车，是没活干，不能算重点车
+  const bottom=[...CARS].sort((a,b)=>b.kiloil-a.kiloil).slice(0,5)
+    .map(c=>({...c,score:Math.round((pct(ms,c.mileage)*0.55+(1-pct(ks,c.kiloil))*0.45)*100)}));
+  const W=Math.max(280,host.clientWidth||420), rowH=30, H=(5+5)*rowH+56;
+  const s=mk(W,H);
+  const bar=(y,it,ratio,color,right)=>{
+    const bw=W-156;
+    s.appendChild(T(6,y+13,it.name,{'font-size':10.6,fill:'#1f403a'}));
+    s.appendChild(E('rect',{x:92,y:y+4,width:bw,height:14,rx:7,fill:'#f2f8f6'}));
+    s.appendChild(E('rect',{x:92,y:y+4,width:Math.max(4,bw*ratio),height:14,rx:7,fill:color}));
+    s.appendChild(T(W-4,y+15,right,{'text-anchor':'end','font-size':10.6,'font-weight':700,fill:'#0a2621'}));
+  };
+  s.appendChild(T(6,12,'TOP 5 · 标杆车（跑得多还省）',{'font-size':10.8,'font-weight':700,fill:'#0b7a6a'}));
+  top.forEach((it,i)=>bar(18+i*rowH,it,it.score/100,'#0f9b8e',it.score+' 分'));
+  const off=18+5*rowH+18;
+  s.appendChild(T(6,off-2,'重点车 · 电耗最高的 5 台',{'font-size':10.8,'font-weight':700,fill:'#b03a2a'}));
+  bottom.forEach((it,i)=>bar(off+4+i*rowH,it,(it.kiloil-120)/25,'#ff7a59',it.kiloil.toFixed(1)+' kWh'));
+  host.appendChild(s);
+}
+
+/* ---------- 一车一行 ---------- */
+function rows(host){
+  const maxM=Math.max(...CARS.map(c=>c.mileage)), maxK=Math.max(...CARS.map(c=>c.kiloil));
+  const minK=Math.min(...CARS.map(c=>c.kiloil));
+  host.innerHTML=CARS.slice().sort((a,b)=>b.fuel-a.fuel).map(c=>{
+    const tone=c.kiloil>=135?'bad':(c.kiloil>=131?'warn':(c.kiloil<=126?'best':'norm'));
+    const label={best:'标杆',norm:'正常',warn:'偏高',bad:'待整改'}[tone];
+    return `<div class="row">
+      <span class="nm">${c.name}</span>
+      <div class="bar"><i style="width:${(c.mileage/maxM*100).toFixed(1)}%;background:#39bda9"></i></div>
+      <div class="bar"><i style="width:${((c.kiloil-118)/(maxK-118)*100).toFixed(1)}%;background:${tone==='bad'?'#ff7a59':tone==='warn'?'#f5b544':'#0f9b8e'}"></i></div>
+      <span class="v">${c.mileage.toLocaleString()}<em>km</em></span>
+      <span class="tag ${tone}">${label} ${c.kiloil}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- 行业带宽 ---------- */
+function band(host){
+  const W=Math.max(360,host.clientWidth||900), H=150;
+  const pad={l:70,r:70,t:34,b:34}, iw=W-pad.l-pad.r;
+  const lo=115, hi=150;
+  const px=v=>pad.l+iw*(v-lo)/(hi-lo);
+  const s=mk(W,H);
+  const yMid=H/2+6;
+
+  // 刻度
+  for(let v=115;v<=150;v+=5){
+    s.appendChild(E('line',{x1:px(v),y1:yMid-26,x2:px(v),y2:yMid+26,stroke:'#eef4f2','stroke-width':1}));
+    s.appendChild(T(px(v),H-8,v,{'text-anchor':'middle','font-size':10,fill:'#7b948d'}));
+  }
+  // 行业带 125-140
+  s.appendChild(E('rect',{x:px(125),y:yMid-22,width:px(140)-px(125),height:44,rx:10,fill:'rgba(15,155,142,.12)',stroke:'#bfe6db'}));
+  s.appendChild(T((px(125)+px(140))/2,yMid-30,'同吨位常见区间 125 – 140',{'text-anchor':'middle','font-size':10.4,fill:'#0b7a6a','font-weight':600}));
+
+  // 车队点
+  const marks=[
+    {v:BEST.kiloil,label:`最优车 ${BEST.kiloil}`,color:'#0f9b8e'},
+    {v:AVG_K,label:`车队均值 ${AVG_K.toFixed(1)}`,color:'#0a2621'},
+    {v:Math.max(...CARS.map(c=>c.kiloil)),label:'最差车 142.1',color:'#ff7a59'},
+  ];
+  marks.forEach((m,i)=>{
+    const x=px(m.v), up=i%2===0;
+    s.appendChild(E('circle',{cx:x,cy:yMid,r:6,fill:m.color,stroke:'#fff','stroke-width':2}));
+    const yy=up?yMid-34:yMid+40;
+    s.appendChild(E('line',{x1:x,y1:up?yMid-6:yMid+6,x2:x,y2:up?yy+10:yy-10,stroke:m.color,'stroke-width':1,opacity:.5}));
+    s.appendChild(T(x,yy,m.label,{'text-anchor':'middle','font-size':10.4,fill:m.color,'font-weight':600}));
+  });
+
+  // 每台车的散点（浅色）
+  CARS.forEach(c=>{
+    s.appendChild(E('circle',{cx:px(c.kiloil),cy:yMid,r:2.6,fill:'#39bda9',opacity:.35}));
+  });
+  host.appendChild(s);
+}
+
+/* ---------- 差距条形 ---------- */
+function gap(host){
+  const list=CARS.map(c=>({...c,gap:c.mileage*(c.kiloil-BEST.kiloil)/100/1000}))
+    .sort((a,b)=>b.gap-a.gap).slice(0,10);
+  const W=Math.max(300,host.clientWidth||480), rowH=27, H=list.length*rowH+6;
+  const s=mk(W,H), max=Math.max(...list.map(x=>x.gap)), labW=92, valW=118;
+  const bw=W-labW-valW-6;
+  list.forEach((x,i)=>{
+    const y=i*rowH;
+    s.appendChild(T(labW-8,y+rowH/2+3.4,x.name,{'text-anchor':'end','font-size':10.2,fill:'#1f403a'}));
+    s.appendChild(E('rect',{x:labW,y:y+4,width:bw,height:rowH-9,rx:4,fill:'#f2f8f6'}));
+    s.appendChild(E('rect',{x:labW,y:y+4,width:Math.max(3,bw*x.gap/max),height:rowH-9,rx:4,
+      fill:x.kiloil>=135?'#ff7a59':'#f5b544'}));
+    s.appendChild(T(W-2,y+rowH/2+3.4,`${x.gap.toFixed(1)} MWh · ¥${money(x.gap*1000*PRICE)}`,
+      {'text-anchor':'end','font-size':9.8,fill:'#4f6f68'}));
+  });
+  host.appendChild(s);
+}
+
+/* ---------- 九宫格 ---------- */
+function nine(host){
+  const mT=[9000,13000], kT=[126,133];
+  const mLab=['低 <9k','中 9–13k','高 >13k'];
+  const kLab=['低 <126','中 126–133','高 >133'];
+  const bucket=(v,t)=>v<t[0]?0:(v<t[1]?1:2);
+  const cells=Array.from({length:9},()=>[]);
+  CARS.forEach(c=>{ cells[bucket(c.kiloil,kT)*3+bucket(c.mileage,mT)].push(c); });
+
+  let html='<div class="head"></div>';
+  mLab.forEach(l=>html+=`<div class="head">${l}</div>`);
+  for(let r=2;r>=0;r--){
+    html+=`<div class="ax">${kLab[r]}</div>`;
+    for(let c=0;c<3;c++){
+      const list=cells[r*3+c];
+      // ⭐ 颜色只看「电耗档」：高电耗才是问题；跑得少的格子额外标灰边，提示这是调度问题不是能耗问题
+      const lv=r===2?'lv2':(r===1?'lv1':'lv0');
+      const idle=c===0?' idle':'';
+      const empty=list.length===0?' empty':'';
+      html+=`<div class="cell ${lv}${idle}${empty}">
+        <div class="ct"><span class="n">${list.length}</span><span class="u">台</span></div>
+        <div class="names">${list.slice(0,4).map(x=>x.name.replace('chasisNum-','#')).join(' · ')}${list.length>4?' 等':''}</div>
+      </div>`;
+    }
+  }
+  host.innerHTML=html;
+}
+
+/* ---------- 处置清单 ---------- */
+function actions(host){
+  const median=MEDIAN_K;
+  const pick=CARS.map(c=>({...c,canSave:c.mileage*(c.kiloil-median)/100/1000}))
+    .filter(c=>c.canSave>0.3).sort((a,b)=>b.canSave-a.canSave).slice(0,6);
+  host.querySelector('tbody').innerHTML=pick.map(c=>{
+    const heavy=c.mileage>=14000 && c.kiloil>=138;
+    const badIdle=c.kiloil>=135 && c.mileage<8000;
+    let action;
+    if (heavy) action='干线重载：核对实际载重，巡航压到 75–80，避开 90+';
+    else if (badIdle) action='高电耗 + 低出勤：先查三电 / 胎压，暂缓长途派单';
+    else if (c.att<0.7) action='偏低出勤：排班前先确认是否停驶检修，别盲目派活';
+    else action='电耗偏高：驾驶复训 + 每日电耗提示（看板红榜）';
+    return `<tr>
+      <td><b>${c.name}</b><div style="font-size:10.4px;color:#7b948d">${c.mileage.toLocaleString()} km · 出勤 ${(c.att*100).toFixed(0)}%</div></td>
+      <td class="num">${c.kiloil}</td>
+      <td>${action}</td>
+      <td class="num">¥${money(c.canSave*1000*PRICE*12)}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ---------- 测算 ---------- */
+function calc(){
+  const median=MEDIAN_K;
+  const total=sum(CARS.map(c=>Math.max(0,c.mileage*(c.kiloil-BEST.kiloil)/100/1000)));
+  const top5=CARS.map(c=>({...c,gap:c.mileage*(c.kiloil-BEST.kiloil)/100/1000}))
+    .sort((a,b)=>b.gap-a.gap).slice(0,5);
+  const gap5=sum(top5.map(x=>x.gap));
+
+  document.getElementById('t-save-mwh').textContent=total.toFixed(1);
+  document.getElementById('t-save-money').textContent=(total*1000*PRICE/10000).toFixed(1);
+  document.getElementById('t-gap5').textContent=(gap5/total*100).toFixed(0);
+
+  const fix=CARS.map(c=>({...c,save:c.mileage*Math.max(0,c.kiloil-median)/100/1000}))
+    .filter(c=>c.save>0).sort((a,b)=>b.save-a.save).slice(0,5);
+  const fixSum=sum(fix.map(c=>c.save));
+  document.getElementById('t-fix-mwh').innerHTML=fixSum.toFixed(1)+'<small>MWh</small>';
+  document.getElementById('t-fix-money').innerHTML=(fixSum*1000*PRICE/10000).toFixed(1)+'<small>万元</small>';
+  document.getElementById('t-fix-year').innerHTML=(fixSum*1000*PRICE*12/10000).toFixed(0)+'<small>万元</small>';
+}
+
+function drawAll(){
+  [['c-matrix',matrix],['c-rank',rank],['c-rows',rows],['c-band',band],['c-gap',gap],
+   ['c-nine',nine],['c-actions',actions]].forEach(([id,fn])=>{
+    const host=document.getElementById(id);
+    if(host){ if(id!=='c-rows'&&id!=='c-nine'&&id!=='c-actions') host.innerHTML=''; fn(host); }
+  });
+}
+drawAll(); calc();
+let tmr;window.addEventListener('resize',()=>{clearTimeout(tmr);tmr=setTimeout(drawAll,140)});
+</script>
+</body>
+</html>

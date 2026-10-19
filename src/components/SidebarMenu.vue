@@ -64,8 +64,13 @@
             <Wallet />
           </el-icon>
           <span class="menu-label">费用管理</span>
+          <span v-if="todoApprove" class="menu-badge" :title="`待我审批 ${todoApprove} 笔`">{{ todoApprove }}</span>
         </template>
         <el-menu-item v-if="isMaster || hasPerm('fee_stats')" index="/fee/stats">费用统计</el-menu-item>
+        <el-menu-item v-if="(isMaster || isFinance) && payoutOn" index="/fee/payout">
+          <span class="mi-label">付款登记</span>
+          <span v-if="todoPay" class="menu-badge sm" :title="`待付款 ${todoPay} 笔`">{{ todoPay }}</span>
+        </el-menu-item>
         <el-menu-item v-if="isMaster" index="/fee/config">费用审批设置</el-menu-item>
       </el-sub-menu>
 
@@ -125,11 +130,15 @@
 <script setup>
 import { computed } from 'vue'
 import { HomeFilled, Van, Location, DataLine, Tickets, User, Setting, FolderOpened, Wallet } from '@element-plus/icons-vue'
+import { moduleFlags } from '@/utils/modules'
 
 const props = defineProps({
   activePath: { type: String, required: true },
   expanded: { type: Boolean, default: false },
   pinned: { type: Boolean, default: false },
+  /* ⭐ 费用待办角标（由 Dashboard 统一查，避免两处各打一遍接口） */
+  todoApprove: { type: Number, default: 0 },
+  todoPay: { type: Number, default: 0 },
 })
 const emit = defineEmits(['menuSelect', 'toggle-pin'])
 const handleSelect = (index) => emit('menuSelect', index)
@@ -164,8 +173,11 @@ const isMaster = computed(() => {
   return currentUser.role === 'customer' && !currentUser.isSubAccount
 })
 
-// 费用管理整组：主账号看全部；其他人只有拿到 fee_stats 才显示
-const showFeeMenu = computed(() => isMaster.value || hasPerm('fee_stats'))
+// 费用管理整组：主账号看全部；财务可进付款登记；其他人只有拿到 fee_stats 才显示
+const isFinance = computed(() => String(currentUser?.roleName || '').includes('财务'))
+const showFeeMenu = computed(() => isMaster.value || isFinance.value || hasPerm('fee_stats'))
+// 付款登记是可配置模块：没开通就完全不显示入口
+const payoutOn = computed(() => moduleFlags.payout === true)
 </script>
 
 <style scoped>
@@ -270,6 +282,51 @@ const showFeeMenu = computed(() => isMaster.value || hasPerm('fee_stats'))
   white-space: nowrap;
   opacity: 1;
   transition: opacity .18s ease;
+}
+
+/* ⭐ 待办角标：父菜单（待我审批）与子项（待打款）共用 */
+.menu-badge {
+  margin-left: auto;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: #c8102e;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  flex: 0 0 auto;
+  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.28);
+}
+
+.menu-badge.sm {
+  min-width: 16px;
+  height: 15px;
+  line-height: 15px;
+  font-size: 10px;
+  background: #D97706;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.26);
+}
+
+.sidebar-wrap.collapsed .menu-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-width: 12px;
+  height: 12px;
+  padding: 0;
+  font-size: 0;
+  line-height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+/* 收起态角标要贴在本行右上角 */
+.sidebar-wrap.collapsed .sidebar-menu :deep(.el-sub-menu__title),
+.sidebar-wrap.collapsed .sidebar-menu :deep(.el-menu-item) {
+  position: relative;
 }
 
 .sidebar-wrap.collapsed .menu-label {

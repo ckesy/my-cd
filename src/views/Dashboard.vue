@@ -5,6 +5,7 @@
       <div class="nav-shell" :class="{ expanded: navPinned || navHover, pinned: navPinned }"
         @mouseenter="navHover = true" @mouseleave="navHover = false">
         <SidebarMenu :active-path="activeMenu" :expanded="navPinned || navHover" :pinned="navPinned"
+          :todo-approve="todo.approve" :todo-pay="canPayFee ? todo.pay : 0"
           @menu-select="handleMenuSelect" @toggle-pin="toggleNavPin" />
       </div>
     </el-aside>
@@ -13,6 +14,32 @@
       <el-header class="dashboard-header">
         <div class="dashboard-title">车队管理平台</div>
         <div class="dashboard-actions">
+          <!-- ⭐ 费用待办：待我审批 + 待打款 合成一个红点 -->
+          <div class="todo-wrap">
+            <button class="todo-bell" :class="{ on: todoTotal > 0 }" title="费用待办" @click="todoOpen = !todoOpen">
+              <el-icon><Bell /></el-icon>
+              <span v-if="todoTotal" class="todo-dot">{{ todoTotal > 99 ? '99+' : todoTotal }}</span>
+            </button>
+            <div v-if="todoOpen" class="todo-mask" @click="todoOpen = false"></div>
+            <div v-if="todoOpen" class="todo-panel">
+              <div class="tp-head">
+                <span>费用待办</span>
+                <span class="tp-refresh" @click="loadTodo">刷新</span>
+              </div>
+              <div class="tp-row" @click="goTodo('approve')">
+                <span class="tp-ic wait">审</span>
+                <div class="tp-m"><b>待我审批</b><em>当前审批节点是我</em></div>
+                <span class="tp-n">{{ todo.approve }}</span>
+              </div>
+              <div v-if="canPayFee" class="tp-row" @click="goTodo('pay')">
+                <span class="tp-ic pay">付</span>
+                <div class="tp-m"><b>待付款</b><em>已通过、还没登记付款</em></div>
+                <span class="tp-n">{{ todo.pay }}</span>
+              </div>
+              <div v-if="!todoTotal" class="tp-empty">暂无待办</div>
+            </div>
+          </div>
+
           <el-button size="small" plain class="action-btn settings-btn" @click="handleSettings">
             <el-icon>
               <Setting />
@@ -67,6 +94,9 @@
           <template v-else-if="route.path === '/fee/stats'">
             <FeeStats />
           </template>
+          <template v-else-if="route.path === '/fee/payout'">
+            <FeePayout />
+          </template>
           <template v-else-if="route.path === '/fee/config'">
             <FeeApprovalSetting />
           </template>
@@ -101,6 +131,9 @@
           </template>
           <template v-else-if="route.path === '/operation/energy'">
             <OperationEnergy />
+          </template>
+          <template v-else-if="route.path === '/operation/energy/report'">
+            <EnergyReportDetail />
           </template>
           <template v-else-if="route.path === '/operation/driving'">
             <OperationDriving />
@@ -147,10 +180,10 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { Setting } from '@element-plus/icons-vue'
+import { Setting, Bell } from '@element-plus/icons-vue'
 import SidebarMenu from '../components/SidebarMenu.vue'
 import PersonalSettings from '../components/PersonalSettings.vue'
 import ClientHome from '../views/ClientHome.vue'
@@ -170,6 +203,7 @@ import EleFenceAlertQuery from '../views/EleFenceAlertQuery.vue'
 // ⭐ 运营管理
 import OperationSummary from '../views/OperationSummary.vue'
 import OperationEnergy from '../views/OperationEnergy.vue'
+import EnergyReportDetail from '../views/EnergyReportDetail.vue'
 import OperationDriving from '../views/OperationDriving.vue'
 
 import UserManage from '../views/UserManage.vue'
@@ -179,7 +213,10 @@ import OrgManage from '../views/OrgManage.vue'
 // ⭐ 路线管理
 import RouteManage from '../views/RouteManage.vue'
 import FeeStats from '../views/FeeStats.vue'
+import FeePayout from '../views/FeePayout.vue'
 import FeeApprovalSetting from '../views/FeeApprovalSetting.vue'
+import { fetchFeeTodo, isPayer } from '@/utils/feeTodo'
+import { moduleFlags, ensureModuleFlags } from '@/utils/modules'
 
 const route = useRoute()
 const router = useRouter()
@@ -233,6 +270,7 @@ const routePermissionMap = {
   '/dashboard/运营管理': 'operation',
   '/operation/summary': 'operation',
   '/operation/energy': 'operation',
+  '/operation/energy/report': 'operation',
   '/operation/driving': 'operation',
   '/waybill': 'waybill',
   '/waybill/create': 'waybill',
@@ -260,11 +298,16 @@ const isMaster = computed(() => {
   return currentUser.role === 'customer' && !currentUser.isSubAccount
 })
 
+// ⭐ 财务：角色名里带「财务」即可登记付款（与审批链「找财务」同一口径）
+const isFinance = computed(() => String(currentUser?.roleName || '').includes('财务'))
+
 const isPermitted = computed(() => {
   if (clientPerms.value === null) return true
   if (route.path === '/dashboard' && !route.params.page) return true
   // 费用审批设置只给主账号：不看权限 key，避免被误配给其他角色
   if (route.path === '/fee/config') return isMaster.value
+  // 付款登记：主账号 + 财务 + 模块已开通（其余人看不到入口，也别让他们直接敲地址）
+  if (route.path === '/fee/payout') return (isMaster.value || isFinance.value) && moduleFlags.payout
   // 费用统计：主账号始终可见；其他人看功能配置
   if (route.path === '/fee/stats') return isMaster.value || clientPerms.value.includes('fee_stats')
   const permKey = routePermissionMap[route.path]
@@ -282,6 +325,45 @@ watch(isPermitted, (val) => {
 }, { immediate: false })
 
 const goHome = () => router.push('/dashboard')
+
+// ============================================================
+// ⭐ 费用待办角标：待我审批 + 待付款
+//    ⚠️ 和「运单列表 → 待我审批」「付款登记」同一口径（utils/feeTodo.js），
+//       别在这里另写一套 flow 判断。
+// ============================================================
+const todoOpen = ref(false)
+const todo = ref({ approve: 0, pay: 0 })
+const canPayFee = computed(() => isPayer(currentUser) && moduleFlags.payout === true)
+const todoTotal = computed(() =>
+  Number(todo.value.approve || 0) + (canPayFee.value ? Number(todo.value.pay || 0) : 0)
+)
+
+const loadTodo = async () => {
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+  /* 模块开关先就位：付款登记没开通时，待付款这一项不该出现 */
+  await ensureModuleFlags(currentUser)
+  todo.value = await fetchFeeTodo(currentUser)
+}
+
+const goTodo = (kind) => {
+  todoOpen.value = false
+  if (kind === 'pay') {
+    router.push('/fee/payout')
+    return
+  }
+  router.push({ path: '/waybill', query: { mine: '1' } })
+}
+
+let todoTimer = null
+onMounted(() => {
+  loadTodo()
+  todoTimer = setInterval(loadTodo, 60000)
+})
+onBeforeUnmount(() => {
+  if (todoTimer) clearInterval(todoTimer)
+  todoTimer = null
+})
+watch(() => route.path, () => { loadTodo() })
 
 // ============================================================
 // 页面识别
@@ -320,6 +402,7 @@ const pathLabels = {
   '/dashboard/运营管理': '运营管理',
   '/operation/summary': '综合报表',
   '/operation/energy': '能耗报告',
+  '/operation/energy/report': '能耗报告',
   '/operation/driving': '驾驶行为报表',
   '/dashboard/运输管理': '运输管理',
   '/dashboard/基础数据管理': '基础数据管理',
@@ -330,6 +413,7 @@ const pathLabels = {
   '/report': '车队运营报告',
   '/waybill/create': '新建运单',
   '/fee/stats': '费用统计',
+  '/fee/payout': '付款登记',
   '/fee/config': '费用审批设置',
   '/vehicle-archive': '车辆档案',
   '/driver-archive': '司机档案',
@@ -509,6 +593,157 @@ const goLogin = () => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* ===== 费用待办：铃铛 + 下拉面板 ===== */
+.todo-wrap {
+  position: relative;
+}
+
+.todo-bell {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #E2E8F0;
+  background: #fff;
+  border-radius: 8px;
+  color: #64748B;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s;
+}
+
+.todo-bell:hover {
+  border-color: #c8102e;
+  color: #c8102e;
+  background: #FEF2F2;
+}
+
+.todo-bell.on {
+  color: #c8102e;
+  border-color: #FBD5DB;
+  background: #FEF2F2;
+}
+
+.todo-dot {
+  position: absolute;
+  top: -5px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #c8102e;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.35);
+}
+
+.todo-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.todo-panel {
+  position: absolute;
+  top: 38px;
+  right: 0;
+  width: 268px;
+  z-index: 51;
+  background: #fff;
+  border: 1px solid #E8EDF4;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+  padding: 8px;
+}
+
+.tp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0F172A;
+  border-bottom: 1px solid #F1F5F9;
+  margin-bottom: 4px;
+}
+
+.tp-refresh {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #94A3B8;
+  cursor: pointer;
+}
+
+.tp-refresh:hover { color: #c8102e; }
+
+.tp-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 7px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+
+.tp-row:hover { background: #F8FAFC; }
+
+.tp-ic {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.tp-ic.wait { background: #FEF2F2; color: #c8102e; }
+.tp-ic.pay { background: #FFFBEB; color: #B45309; }
+
+.tp-m {
+  flex: 1;
+  min-width: 0;
+}
+
+.tp-m b {
+  display: block;
+  font-size: 12.5px;
+  color: #0F172A;
+}
+
+.tp-m em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  color: #94A3B8;
+  margin-top: 1px;
+}
+
+.tp-n {
+  font-size: 14px;
+  font-weight: 700;
+  color: #c8102e;
+  font-family: var(--num-font, monospace);
+}
+
+.tp-empty {
+  padding: 14px 6px 8px;
+  text-align: center;
+  font-size: 12px;
+  color: #94A3B8;
 }
 
 .action-btn {
@@ -701,6 +936,18 @@ const goLogin = () => {
   height: 100%;
   max-height: 100%;
   overflow: hidden;
+}
+
+/* ⭐ 能耗报告：列表页整页定高、表格内部滚；详情是长报告，交给外壳滚 */
+.content-wrapper:has(.energy-report-page) {
+  padding: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.content-wrapper:has(.energy-report-detail-page) {
+  padding: 0;
 }
 
 .animate-fade-up {

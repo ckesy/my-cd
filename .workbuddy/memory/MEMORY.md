@@ -73,8 +73,22 @@
 
 ## 运营报表（Web）
 
+- ⭐ **列表页版式（2026-10-19 起，照「综合报表 · 明细表」）**：
+  一行筛选（**控件不写 label，用 placeholder**，搜索红/重置·导出白，按钮紧跟控件不右对齐）→
+  次要条件放第二行（前缀「更多」）→ **工具行（红色竖条 + 标题 + `共 N 条`，右上角主操作 + TableTools 四件套）**
+  → 白卡表格（表头 #F7F9FC、行 padding 13px、状态用**圆点+文字**）→ 卡片内右下分页。
+  ⚠️ 工具行在**筛选下方、表格正上方**（不是页面顶部），且要和表格一起放进 Teleport 包裹层，
+  这样全屏时工具行也铺满。页面底色 #F5F7FA、控件高 32 圆角 8。
+  参考实现：`src/views/OperationEnergy.vue`。
 - 菜单：运营管理 → 综合报表 `/operation/summary`、能耗报告 `/operation/energy`、
   驾驶行为报表 `/operation/driving`，三项共用 `operation` 权限 key。
+- ⭐ **能耗报告已不是占位页**（2026-10-19）：`energy_report_tasks`（`sql/2026-10-19_energy_report.sql`）
+  一个任务一行，**报告数据整包存 `report_data jsonb`**；新建只落「待生成」，取数接口还没接。
+  详情页 `/operation/energy/report?task_no=` 是车队分析报告，版式照设计稿
+  `设计-方案C2-青绿能源-数据前置.html` 1:1（青绿 Bento：01 统计数据 + 02 分析视图 + 关键洞察）。
+  图表用 `src/utils/svgCharts.js`（手写 SVG：combo/hbars/radar/donut/area/scatter）+
+  `components/charts/SvgPlot.vue` 挂载，**不要再用 echarts** 重画这套（EChart.vue 已删）。
+  ⚠️ 电耗折线轴不能 0 基线，用 `lineBand()` 给 ±2 窗口，否则曲线是一条直线。
 - 接口封装统一在 `src/utils/dongfengReport.js`，**别在页面里另写一套**。
 - ⭐ `track/tripAnalysisOil`：**只能 POST，参数放 query，body 传 `{}`**；
   参数写进 body 会一直返回 `2101 入参错误`（东风侧报错）。
@@ -96,6 +110,14 @@
   1. `el-table-column` 外层包 `<template v-for>` 会被拆成 Fragment，列注册不上
      （表头空、行渲染成空 tr）→ 直接对 `el-table-column` 用 `v-for`；
   2. 列配置必须显式写 `visible: true`，否则 `filter(c => c.visible)` 会把列全部过滤掉。
+- ⭐ el-table 展开列（`type="expand"`）是**唯一**能挂展开内容的入口，但它天生占一列。
+  要「按钮换个地方」：列留 `width="1"` 当挂载点 + 只藏 `.el-table__expand-icon`，
+  触发按钮画到别的单元格里，用 `:expand-row-keys` + `toggleRowExpansion(row)` 受控。
+  **绝不能对 `.el-table__expand-column` 的 td 写 `display:none`** —— 该行后续 td 会整体
+  左移一格，和 fixed 左列错位（状态列被盖住）。EP 2.14 展开行类名是
+  `.el-table__expanded-cell`（没有 `el-table__expanded-row`）。
+- 表格里的数字统一 `font-family: var(--num-font)`（系统无衬线）+ `tabular-nums`，
+  **不要用 Courier 等宽**：13px 下笔画太细，屏幕上看不清。`--num-font` 定义在页面根节点。
 - Web 端禁止 `app.callFunction`（匿名登录会 `EXCEED_AUTHORITY`），云函数走 HTTP 网关；
   小程序端反之，必须用 `wx.cloud.callFunction`。
 - 改登录/权限相关文件后必须退出重登再验证。
