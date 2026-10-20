@@ -245,7 +245,18 @@
       append-to-body :close-on-click-modal="false" class="role-form-dialog">
       <el-form :model="form" label-width="90px" label-position="right" size="default">
         <el-form-item label="角色名称" required>
-          <el-input v-model="form.name" placeholder="请输入角色名称" maxlength="20" show-word-limit />
+          <div class="role-name-field">
+            <el-input v-model="form.name" placeholder="可以直接输入，或点下面的可选角色" maxlength="20" show-word-limit />
+            <div class="preset-row">
+              <span class="preset-label">可选角色</span>
+              <span v-for="t in ROLE_PRESETS" :key="t.value" class="preset-chip"
+                :class="{ on: form.name === t.name }" @click="pickPreset(t)">
+                {{ t.name }}
+                <em v-if="t.tag">{{ t.tag }}</em>
+              </span>
+              <span class="preset-tip">也可以输入自定义名称</span>
+            </div>
+          </div>
         </el-form-item>
 
         <!-- ⭐ 所属组织（客户名根节点 + 下级机构） -->
@@ -403,7 +414,25 @@ const form = reactive({
   org: '',
   description: '',
   status: 1,
+  /* ⭐ 角色类型：normal=管理员（通用） / finance=财务
+     财务角色登录小程序直接进财务版，且要「费用审批」或「付款记录」开着才出现 */
+  role_type: 'normal',
 })
+
+/* ⭐ 现成角色：点一下把名称填进去，同时定 role_type
+   —— 名称仍然可以随便改，这两个只是快捷方式 */
+const ROLE_PRESETS = [
+  { value: 'normal', name: '管理员', tag: '' },
+  { value: 'finance', name: '财务', tag: '进财务版' },
+]
+
+/** 点现成角色：填名字 + 定类型 */
+function pickPreset(t) {
+  form.name = t.name
+  form.role_type = t.value
+}
+
+const roleTypeName = (v) => (ROLE_PRESETS.find((x) => x.value === v) || ROLE_PRESETS[0]).name
 
 // 权限配置弹窗
 const permDialogVisible = ref(false)
@@ -568,6 +597,7 @@ const handleAdd = () => {
   form.org = customerRootOrg.value?.name || ''
   form.description = ''
   form.status = 1
+  form.role_type = 'normal'
   formVisible.value = true
 }
 
@@ -577,6 +607,7 @@ const handleEdit = (row) => {
   form.name = row.name || ''
   form.org = row.org || ''
   form.description = row.description || ''
+  form.role_type = row.role_type || 'normal'
   form.status = isRowActive(row) ? 1 : 0
   formVisible.value = true
 }
@@ -592,28 +623,60 @@ const handleSubmit = async () => {
       org: form.org,
       description: form.description?.trim() || null,
       status: Number(form.status),
+      role_type: form.role_type || 'normal',
       owner_account: isAdmin ? null : myAccount,
       updated_at: new Date().toISOString(),
     }
 
+    /* ⚠️ role_type 是本次新加的列：迁移没跑时会报 42703 / PGRST204，
+       剥掉这个字段重试一次，别让「加角色」这种基础操作直接失败 */
+    const isMissingCol = (e) =>
+      /role_type|42703|PGRST204|column .* does not exist/i.test(
+        String((e && (e.message || e.details || e.code)) || '')
+      )
+
+    let degraded = false
+
     if (isEdit.value) {
       let q = supabase.from('roles').update(payload).eq('id', form.id)
       if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
-      const { error } = await q
+      const r1 = await q
+      let error = r1.error
+
+      if (error && isMissingCol(error)) {
+        const { role_type, ...rest } = payload
+        let q2 = supabase.from('roles').update(rest).eq('id', form.id)
+        if (isCustomer && myAccount) q2 = q2.eq('owner_account', myAccount)
+        const r2 = await q2
+        error = r2.error
+        degraded = true
+      }
       if (error) throw error
-      ElMessage.success('更新成功')
     } else {
       payload.permissions = { client: [] }
       payload.created_at = new Date().toISOString()
 
-      const { error } = await supabase.from('roles').insert(payload)
+      const r1 = await supabase.from('roles').insert(payload)
+      let error = r1.error
+
+      if (error && isMissingCol(error)) {
+        const { role_type, ...rest } = payload
+        const r2 = await supabase.from('roles').insert(rest)
+        error = r2.error
+        degraded = true
+      }
       if (error) {
         if (String(error.message).includes('unique') || String(error.code) === '23505') {
           throw new Error('该角色名称已存在')
         }
         throw error
       }
-      ElMessage.success('新增成功')
+    }
+
+    if (degraded) {
+      ElMessage.warning('已保存，但「角色类型」没写进去：请先执行迁移 SQL')
+    } else {
+      ElMessage.success(isEdit.value ? '更新成功' : '新增成功')
     }
 
     formVisible.value = false
@@ -1409,6 +1472,38 @@ onBeforeUnmount(() => {
     justify-content: flex-end;
   }
 }
+
+/* ⭐ 现成角色快捷填充 */
+/* ⚠️ 这个类名不能用 .name-wrap —— 表格里角色名称单元格已经用了，
+   scoped 样式会一起命中，导致列表里的名字被竖排 */
+.role-name-field {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.role-name-field :deep(.el-input) { width: 100%; }
+.preset-row {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; line-height: 1.6;
+}
+.preset-label { font-size: 11.5px; color: #94A3B8; }
+.preset-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; color: #475569;
+  background: #F8FAFC; border: 1px solid #E6ECF3;
+  border-radius: 7px; padding: 4px 11px;
+  cursor: pointer; transition: .15s; user-select: none;
+}
+.preset-chip:hover { border-color: #CBD5E1; color: #0F172A; background: #fff; }
+.preset-chip.on {
+  background: #FFF7F8; border-color: #C8102E; color: #A00D24; font-weight: 700;
+}
+.preset-chip em {
+  font-style: normal; font-size: 9.5px; font-weight: 600;
+  color: #1D4ED8; background: #EFF6FF; border-radius: 4px; padding: 0 4px;
+}
+.preset-tip { font-size: 11px; color: #B4BECB; margin-left: 2px; }
 </style>
 
 <style>
@@ -1724,4 +1819,6 @@ onBeforeUnmount(() => {
   min-height: 0;
   overflow-y: auto;
 }
+
+
 </style>

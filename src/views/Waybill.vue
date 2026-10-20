@@ -549,7 +549,8 @@ const DEFAULT_COLUMNS = [
   { prop: 'source', label: '运单来源', visible: true, fixed: false, minWidth: 100, align: 'center' },
   { prop: 'creator', label: '发起人', visible: true, fixed: false, minWidth: 100, align: 'center' },
   { prop: 'createTime', label: '创建运单时间', visible: true, fixed: false, minWidth: 170, align: 'center' },
-  { prop: 'fee', label: '费用', visible: true, fixed: false, minWidth: 150, align: 'center' },
+  /* ⭐ 费用列放在最末，与操作列一起右侧固定，横向滚动时始终可见 */
+  { prop: 'fee', label: '费用', visible: true, fixed: 'right', minWidth: 150, align: 'center' },
   { prop: 'action', label: '操作', visible: true, fixed: 'right', width: 130, align: 'center' },
 ]
 const columnConfig = ref(JSON.parse(JSON.stringify(DEFAULT_COLUMNS)))

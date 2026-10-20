@@ -257,6 +257,40 @@
             <code>db_migration_modules_payment.sql</code>。
           </div>
         </section>
+        <!-- ⑤ 流程预览：改配置立刻能看到一笔单会怎么走 -->
+        <section class="fc-card pv-card">
+          <header class="fc-card-head">
+            <b>⑤ 完整链路（含付款）</b>
+            <span>上一栏只看策略；这里连付款环节一起推演</span>
+          </header>
+
+          <div class="pv-amount">
+            <span class="pv-l">试算金额</span>
+            <el-input-number v-model="previewAmount" :min="0" :step="100" :controls="false"
+              size="small" style="width:130px" />
+            <span class="pv-hint">改金额看是否触发老板终审</span>
+          </div>
+
+          <div class="pv-flow">
+            <template v-for="(st, i) in previewSteps" :key="i">
+              <div class="pv-node" :class="'k-' + st.kind">
+                <span class="pv-t">{{ st.text }}</span>
+                <em v-if="st.note" class="pv-n">{{ st.note }}</em>
+              </div>
+              <span v-if="i < previewSteps.length - 1" class="pv-ar">›</span>
+            </template>
+          </div>
+
+          <div class="pv-foot">
+            <span>最终状态：<b>{{ previewEnd }}</b></span>
+            <span v-if="payoutEnabled" class="pv-fin">财务端可见 · 待登记有入口</span>
+            <span v-else class="pv-nofin">财务端只有审批，没有付款</span>
+          </div>
+
+          <p class="fc-note" v-if="config.mode === 'custom'">
+            自定义模式下每张单可单独覆盖，以上按<b>默认值</b>推演；单票设成「不审」则不经过任何一级。
+          </p>
+        </section>
       </div>
 
       <!-- 右列 -->
@@ -418,6 +452,55 @@ async function onTogglePayout(val) {
 }
 
 const config = reactive({ ...DEFAULTS })
+
+/* ============ 流程预览 ============
+   口径与云函数 buildFlow 一致：
+     一级 = 发单人（l1_mode='skip' 时免审）
+     二级 = 财务（同人去重）
+     三级 = 老板：require_owner 为真，或 金额 ≥ threshold
+   注意 threshold 决定的是「要不要老板终审」，不是「要不要审批」 */
+const previewAmount = ref(800)
+
+const previewSteps = computed(() => {
+  const out = []
+  if (config.mode === 'off') {
+    out.push({ text: '提交即通过', kind: 'skip', note: '全局关闭，不建审批链' })
+  } else {
+    if (config.l1_mode === 'skip') {
+      out.push({ text: '一级免审', kind: 'skip', note: '配置跳过' })
+    } else {
+      out.push({ text: '发单人审批', kind: 'step', note: '一级' })
+    }
+    out.push({ text: '财务审批', kind: 'step', note: '二级' })
+
+    const th = Number(config.threshold) || 0
+    const needOwner =
+      config.require_owner === true || (th > 0 && Number(previewAmount.value) >= th)
+    if (needOwner) {
+      out.push({
+        text: '老板终审',
+        kind: 'step',
+        note: config.require_owner === true
+          ? '配置要求'
+          : `≥ ¥${Number(th).toLocaleString()}`,
+      })
+    } else if (th > 0) {
+      out.push({ text: '不到阈值，无老板终审', kind: 'muted', note: `< ¥${Number(th).toLocaleString()}` })
+    }
+  }
+
+  out.push({
+    text: payoutEnabled.value ? '待打款' : '已通过',
+    kind: 'end',
+    note: payoutEnabled.value ? '等财务登记' : '终态',
+  })
+  if (payoutEnabled.value) {
+    out.push({ text: '登记付款', kind: 'fin', note: '已打款' })
+  }
+  return out
+})
+
+const previewEnd = computed(() => (payoutEnabled.value ? '已打款' : '已通过'))
 const dbReady = ref(true)
 const saving = ref(false)
 const users = ref([])
@@ -1164,4 +1247,49 @@ onMounted(async () => {
   .fc-grid { grid-template-columns: 1fr; }
   .fc-head-actions { position: static; margin-top: 12px; }
 }
+
+/* ⑤ 流程预览 */
+.pv-card { border-color: #FBD5DB; background: #FFFCFD; }
+.pv-amount {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.pv-l { font-size: 12px; color: #64748B; }
+.pv-hint { font-size: 11px; color: #A9B4C2; }
+
+.pv-flow {
+  display: flex; align-items: center; gap: 6px;
+  flex-wrap: wrap; padding: 4px 0 14px;
+}
+.pv-node {
+  position: relative;
+  padding: 8px 12px;
+  border-radius: 9px;
+  background: #fff;
+  border: 1px solid #E4EBF3;
+  min-width: 92px;
+  text-align: center;
+}
+.pv-node .pv-t { display: block; font-size: 12px; font-weight: 700; color: #0F172A; }
+.pv-node .pv-n { display: block; font-style: normal; font-size: 9.5px; color: #94A3B8; margin-top: 2px; }
+.pv-node.k-step { border-color: #CBD5E1; }
+.pv-node.k-skip { background: #F8FAFC; }
+.pv-node.k-skip .pv-t { color: #94A3B8; }
+.pv-node.k-muted { background: #FBFCFE; border-style: dashed; }
+.pv-node.k-muted .pv-t { color: #A9B4C2; font-weight: 600; }
+.pv-node.k-end { border-color: #BBF7D0; background: #F0FDF4; }
+.pv-node.k-end .pv-t { color: #15803D; }
+.pv-node.k-fin { border-color: #BFDBFE; background: #EFF6FF; }
+.pv-node.k-fin .pv-t { color: #1D4ED8; }
+.pv-ar { color: #CBD5E1; font-size: 16px; }
+
+.pv-foot {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 12px; color: #64748B;
+  padding-top: 12px; border-top: 1px dashed #F1F4F8;
+}
+.pv-foot b { color: #0F172A; }
+.pv-fin { font-size: 11px; color: #1D4ED8; background: #EFF6FF; padding: 2px 8px; border-radius: 5px; }
+.pv-nofin { font-size: 11px; color: #92400E; background: #FEF3C7; padding: 2px 8px; border-radius: 5px; }
+
 </style>

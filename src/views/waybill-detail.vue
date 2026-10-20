@@ -886,8 +886,8 @@
                 <div v-if="reportImages(r).length" class="fr-imgs">
                   <template v-for="(img, i) in reportImages(r)" :key="i">
                     <el-image
-                      v-if="imageUrls[img.fileID]"
-                      :src="imageUrls[img.fileID]"
+                      v-if="imageUrls[img.key || img.fileID]"
+                      :src="imageUrls[img.key || img.fileID]"
                       :preview-src-list="reportImageUrls(r)"
                       :initial-index="i"
                       fit="cover"
@@ -1028,6 +1028,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { WarningFilled, Refresh, ArrowDown, Tickets } from '@element-plus/icons-vue'
 import app, { supabase } from '@/utils/supabase'
+import { signGet } from '@/utils/cos'
 import { unitFull } from '@/utils/units'
 import { isPayer } from '@/utils/feeTodo'
 import { moduleFlags, ensureModuleFlags } from '@/utils/modules'
@@ -1606,6 +1607,11 @@ const setRecurringStatus = async (next) => {
 const buildTimelineNodes = (rec, opts) => {
   if (!rec) return []
   const st = String(rec.status || '').trim()
+  /* ⭐ 极简 / 详细必须跟随运单本身的配置（用户 2026-10-20）：
+     极简只走「接单 → 完成运单」，装车完成 / 已发车 / 已到达这些节点
+     永远不会发生，摊在节点时间里只会让人以为「卡住了」。
+     （真走过历史节点 —— 有时间的 —— 仍然显示，别把历史藏了） */
+  const isBrief = String(rec.transport_mode || '').indexOf('极简') > -1
   /* ⭐ 分车承运：每一趟没有自己的 status_log，用整单日志兜底会把别人的时间算进来 →
      造腿记录时必须关掉兜底（opts.noLog） */
   const allowLog = !(opts && opts.noLog)
@@ -1681,6 +1687,8 @@ const buildTimelineNodes = (rec, opts) => {
     const entered = timeOf[key]
     const isCurrent = currentKey === key
     if (def.legacy && !entered && !isCurrent) return
+    /* 极简模式：除了「待装车」（接单后的状态）以外，没真走过的节点不画 */
+    if (isBrief && key !== '待装车' && !entered && !isCurrent) return
 
     const nextDef = ACCEPTED_NODE_DEFS[i + 1]
     const nextAt = nextDef ? timeOf[nextDef.key] : timeOf['已完成']
@@ -1724,8 +1732,14 @@ const buildTimelineNodes = (rec, opts) => {
     })
   }
 
-  return out
+  return reverseNodes(out)
 }
+
+/* ⭐ 节点时间「倒序」（用户 2026-10-20 拍板，司机端任务中心同步改）：
+   最新的节点排最上面，刚发生的进度一眼可见，不用往下翻。
+   整体倒过来正好是**时间倒序**（「已接单」分组那条也会落在
+   待装车 与 待接单 之间），别单独把它挪位置，否则时间顺序就乱了。 */
+const reverseNodes = (list) => (list || []).slice().reverse()
 
 const timelineNodes = computed(() => buildTimelineNodes(activeRecord.value))
 
@@ -2163,26 +2177,26 @@ const reportItems = (r) => {
 }
 const reportImages = (r) => (Array.isArray(r?.images) ? r.images : [])
 
-/* ⭐ fileID → 临时链接（失败就保留文字占位，不影响主流程） */
+/* ⭐ 凭证 key → 临时链接（失败就保留文字占位，不影响主流程）
+   ⚠️ 2026-10-20：凭证已改为直传 COS，字段是 `key`；老数据是 `fileID`，两个都认
+   （历史里没有真·云存储 fileID，全部是空数组，所以把 fileID 当 key 签不会出事） */
 const imageUrls = ref({})
+const imgKeyOf = (img) => (img && (img.key || img.fileID)) || ''
 const reportImageUrls = (r) =>
-  reportImages(r).map((img) => imageUrls.value[img.fileID]).filter(Boolean)
+  reportImages(r).map((img) => imageUrls.value[imgKeyOf(img)]).filter(Boolean)
 
 async function loadImageUrls(list) {
-  const ids = []
+  const keys = []
   ;(list || []).forEach((r) => {
     reportImages(r).forEach((img) => {
-      if (img && img.fileID && !imageUrls.value[img.fileID]) ids.push(img.fileID)
+      const k = imgKeyOf(img)
+      if (k && !imageUrls.value[k]) keys.push(k)
     })
   })
-  if (!ids.length) return
+  if (!keys.length) return
   try {
-    const res = await app.getTempFileURL({ fileList: ids })
-    const map = { ...imageUrls.value }
-    ;(res.fileList || []).forEach((f) => {
-      if (f.tempFileURL) map[f.fileID] = f.tempFileURL
-    })
-    imageUrls.value = map
+    const map = await signGet([...new Set(keys)])
+    imageUrls.value = { ...imageUrls.value, ...map }
   } catch (e) {
     console.warn('[费用情况] 凭证临时链接获取失败（仍显示文字占位）', e)
   }

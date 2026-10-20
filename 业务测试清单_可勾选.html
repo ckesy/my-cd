@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>业务测试清单 · 2026-10-20</title>
+<style>
+  :root{
+    --bg:#F5F7FA; --card:#fff; --line:#E6ECF3; --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8;
+    --red:#C8102E; --green:#15803D; --green-l:#F0FDF4; --amber:#B45309; --amber-l:#FFFBEB;
+    --num: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--ink); -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:26px 20px 80px}
+
+  /* 顶部 */
+  .hd{
+    position:sticky; top:0; z-index:20;
+    background:rgba(245,247,250,.94); backdrop-filter:blur(10px);
+    margin:0 -20px 18px; padding:16px 20px 12px;
+    border-bottom:1px solid var(--line);
+  }
+  .hd-top{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+  h1{margin:0;font-size:19px;font-weight:800;letter-spacing:-.3px}
+  .sub{font-size:12px;color:var(--ink3);padding-bottom:2px}
+  .hd-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .stat{font-size:12.5px;color:var(--ink2)}
+  .stat b{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:15px;color:var(--ink)}
+  button{
+    font:inherit;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer;
+    border:1px solid var(--line);background:#fff;color:var(--ink2);transition:.15s;
+  }
+  button:hover{border-color:#CBD5E1;color:var(--ink)}
+  button.on{background:var(--red);border-color:var(--red);color:#fff}
+
+  .bar{height:5px;background:#E8EDF4;border-radius:3px;margin-top:11px;overflow:hidden}
+  .bar>i{display:block;height:100%;width:0;border-radius:3px;
+    background:linear-gradient(90deg,#22C55E,#16A34A);transition:width .3s}
+
+  /* 分组 */
+  .group{margin-bottom:14px;background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  .g-head{
+    display:flex;align-items:center;gap:10px;padding:13px 16px;
+    background:linear-gradient(180deg,#FCFDFE,#F8FAFD);border-bottom:1px solid var(--line);cursor:pointer;
+  }
+  .g-dot{width:4px;height:15px;border-radius:2px;background:var(--gc,#94A3B8);flex:0 0 auto}
+  .g-name{font-size:13.5px;font-weight:800;letter-spacing:-.2px}
+  .g-meta{margin-left:auto;font-size:11.5px;color:var(--ink3);font-family:var(--num);font-variant-numeric:tabular-nums}
+  .g-body{padding:4px 0 8px}
+  .group.done .g-name{color:var(--green)}
+
+  /* 条目 */
+  .item{display:flex;gap:10px;padding:9px 16px;align-items:flex-start;transition:background .12s}
+  .item:hover{background:#FBFCFE}
+  .item.done{background:var(--green-l)}
+  .item.done .t{color:var(--ink3);text-decoration:line-through;text-decoration-color:#B9C4D2}
+  input[type=checkbox]{
+    appearance:none;-webkit-appearance:none;width:16px;height:16px;flex:0 0 auto;margin-top:1px;
+    border:1.5px solid #CBD5E1;border-radius:4px;background:#fff;cursor:pointer;position:relative;transition:.15s;
+  }
+  input[type=checkbox]:checked{background:var(--green);border-color:var(--green)}
+  input[type=checkbox]:checked::after{
+    content:'';position:absolute;left:4.6px;top:1.2px;width:4px;height:8px;
+    border:solid #fff;border-width:0 2px 2px 0;transform:rotate(42deg);
+  }
+  .txt{flex:1;min-width:0}
+  .t{font-size:12.8px;line-height:1.65;color:var(--ink)}
+  .t code{
+    font-family:var(--num);font-size:11.5px;background:#F1F5F9;color:#0F172A;
+    padding:1px 5px;border-radius:4px;border:1px solid #E6ECF3;
+  }
+  .note{font-size:11px;color:var(--ink3);line-height:1.7;margin-top:2px}
+  .note.warn{color:var(--amber)}
+
+  .cfg{
+    font-size:11.5px;color:var(--ink2);background:var(--amber-l);border:1px solid #FDE68A;
+    border-radius:8px;padding:8px 12px;margin:2px 16px 10px;line-height:1.7;
+  }
+  .cfg code{font-family:var(--num);background:rgba(255,255,255,.7);padding:1px 5px;border-radius:4px}
+
+  .hide-done .item.done{display:none}
+  .collapsed .g-body{display:none}
+
+  .foot{margin-top:22px;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:12px;
+    font-size:12px;color:var(--ink2);line-height:1.9}
+  .foot b{color:var(--ink)}
+  .foot code{font-family:var(--num);background:#F1F5F9;padding:1px 6px;border-radius:4px;font-size:11.5px}
+
+  @media print{
+    body{background:#fff}
+    .hd{position:static;background:#fff}
+    button{display:none}
+    .group{break-inside:avoid}
+    .item{padding:6px 12px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">
+    <div class="hd-top">
+      <h1>业务测试清单</h1>
+      <span class="sub">2026-10-20 · 车队 15035660010 · 勾选自动保存在本机</span>
+      <div class="hd-right">
+        <span class="stat"><b id="done">0</b> / <span id="total">0</span></span>
+        <button id="btn-hide">只看未完成</button>
+        <button id="btn-reset">重置</button>
+      </div>
+    </div>
+    <div class="bar"><i id="prog"></i></div>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="foot">
+    <b>收尾</b><br>
+    <code>node tools/biz-seed.mjs --clean --yes</code> 删测试单<br>
+    <code>node tools/biz-config.mjs --restore</code> 还原配置<br><br>
+    <b>报问题时带上</b>：用例编号 + 账号 + <code>node tools/biz-config.mjs</code> 的输出。
+  </div>
+</div>
+
+<script>
+const KEY = 'biz_checklist_20261020'
+
+/* cfg: 该组需要的前提配置；无则留空 */
+const DATA = [
+  {
+    g: '准备', color: '#64748B',
+    items: [
+      { id:'p1', t:'跑 <code>node tools/db-doctor.mjs</code>，结论是「全部通过」' },
+      { id:'p2', t:'记下体检 ③ 段的「待审 N / 待付款 M」', note:'后面 A5 会用到这个数字' },
+      { id:'p3', t:'确认测试单存在：<code>TEST-TOPAY-1</code>（待打款 ¥1280）、<code>TEST-PENDING-1</code>（审核中 ¥680）' },
+    ],
+  },
+  {
+    g: 'A 组 · 开关与可见性', color: '#3B82F6',
+    items: [
+      { id:'a1', cfg:'先 <code>node tools/biz-config.mjs --mode off --payout off</code>，等 5 秒', t:'【A1】Web 画布点「接单建单」→ 停用' },
+      { id:'a2', t:'弹窗里显示「还有 N 笔待审、M 笔待付款」，数字和准备阶段记的一致', note:'不一致 = 影响预览查错了字段' },
+      { id:'a3', t:'确认关闭后，左侧菜单「运输管理」整组消失' },
+      { id:'a4', t:'左侧菜单「费用管理」整组消失' },
+      { id:'a5', t:'浏览器直接输 <code>/waybill</code>，显示「暂无访问权限」', note:'不能白屏、不能报错崩溃' },
+      { id:'a6', t:'综合报表 <code>/operation/summary</code> 仍能正常打开', note:'数据底座不受运单影响' },
+      { id:'a7', t:'小程序用司机 <code>15035660050</code> 登录，被拒并提示「未开通运输业务」' },
+      { id:'a8', t:'画布上重新开启运单，之前开的付款模块自动恢复（不需要手动再开）', note:'验证依赖只算不写库' },
+
+      { id:'a9', cfg:'<code>--mode on --payout off</code>', t:'【A2】Web 菜单里「费用管理」还在，但「付款登记」消失' },
+      { id:'a10', t:'小程序财务端底栏是「待办 · 台账 · 统计 · 我的」，<b>没有「待登记」</b>' },
+
+      { id:'a11', cfg:'把付款开回来 <code>--payout on</code>，然后用主账号 <code>15035660010</code> 登 Web', t:'【A3】进「业务流程」，只显示已开通的节点' },
+      { id:'a12', t:'未开通的节点收在左栏「未开通池」里，置灰不可点' },
+      { id:'a13', t:'点任意节点，抽屉里<b>没有</b>「停用此模块」按钮' },
+      { id:'a14', t:'抽屉顶部显示「已开通 · 如需关闭请联系服务顾问」' },
+      { id:'a15', t:'顶栏没有「预览客户视角」开关' },
+
+      { id:'a16', cfg:'<code>--mode off --payout off</code>', t:'【A5】画布点运单 → 停用，弹窗写的待审笔数 = 准备阶段记录值' },
+      { id:'a17', t:'点「取消」，模块仍是开启状态', note:'取消不能真的关掉' },
+    ],
+  },
+  {
+    g: 'C 组 · 审批（续）', color: '#A63BC8',
+    items: [
+      { id:'a18', cfg:'<code>--mode on</code>', t:'【C1】司机上报 ¥800，状态为「审核中」' },
+      { id:'a19', t:'主账号登录 Web 或财务端「待办」，能看到这一笔' },
+      { id:'a20', t:'主账号通过后，流转到财务，状态仍是「审核中」' },
+      { id:'a21', t:'财务 <code>15035660090</code> 通过后变「待打款」' },
+      { id:'a22', t:'审批流水里只有「一级 发单人 + 二级 财务」两条' },
+      { id:'c1', cfg:'<code>--mode on</code>，用司机上报 <b>¥6200</b>', t:'【C2-a】看审批流水，只有 2 级（发单人=老板 → 财务）' },
+      { id:'c2', t:'老板<b>没有</b>出现两次', note:'这是去重，不是 bug。老板已在流程里就不重复加' },
+      { id:'c3', cfg:'用员工 <code>15035660020</code> 建一张运单，再让司机在那张单上报 ¥6200', t:'【C2-b】审批流水有 <b>3 级</b>：员工 → 财务 → 老板' },
+      { id:'c4', t:'财务通过后仍是「审核中」，要老板通过才终态', note:'这才是阈值真正生效的样子' },
+      { id:'c5', cfg:'<code>--mode off</code>', t:'【C3】司机上报，直接到终态，不产生「待办」' },
+      { id:'c6', t:'财务端底栏没有「待办」' },
+      { id:'c7', cfg:'<code>--mode custom</code>，默认「要审」', t:'【C4】建一张单审批设为「不审」，该单上报直接过' },
+      { id:'c8', t:'另一张保持「跟随默认」，上报进「审核中」' },
+    ],
+  },
+  {
+    g: 'D 组 · 付款', color: '#C8102E',
+    items: [
+      { id:'d1', cfg:'<code>--mode off --payout on</code>', t:'【D1】财务端「待登记」里有 <code>TEST-TOPAY-1</code> ¥1280，角标为 1' },
+      { id:'d2', t:'勾选后点「登记付款」，弹出表单（方式 / 日期 / 流水号 / 备注）' },
+      { id:'d3', t:'选「银行转账」提交，提示成功' },
+      { id:'d4', t:'这条从「待登记」消失' },
+      { id:'d5', t:'台账「已付款」里出现它，显示付款方式' },
+      { id:'d6', t:'【D2】台账里点这条 → 撤销，填原因' },
+      { id:'d7', t:'状态回到「待打款」' },
+      { id:'d8', t:'详情里<b>原付款方式还在</b>，多了撤销记录', note:'撤销是标记不是删除' },
+      { id:'d9', t:'【D4】对已打款的单再点登记，提示「已被处理，请刷新」' },
+    ],
+  },
+  {
+    g: 'E 组 · 财务端页面', color: '#F59E0B',
+    items: [
+      { id:'e1', cfg:'<code>--mode on --payout on</code>，财务登录', t:'【E1】底栏 5 项：待办 · 待登记 · 台账 · 统计 · 我的' },
+      { id:'e2', cfg:'<code>--payout off</code> 重登', t:'底栏 4 项，没有「待登记」' },
+      { id:'e3', cfg:'<code>--mode off</code> 重登', t:'底栏「待登记 · 台账 · 统计 · 我的」，没有「待办」' },
+      { id:'e4', cfg:'<code>--mode off --payout off</code> 重登', t:'<b>财务端不出现</b>，直接落在管理端首页，不是空白页' },
+      { id:'e5', cfg:'<code>--mode on --payout on</code>', t:'【E2】「待登记」只列「待打款 且 pay_required=true」，已通过的不在其中' },
+      { id:'e6', t:'「台账」能切换已付款/待登记，金额、方式、时间都对' },
+      { id:'e7', t:'「统计」按状态和按类型的合计，和台账能对上' },
+      { id:'e8', t:'「我的」显示正确的姓名、角色、能力（审批/付款/统计）' },
+    ],
+  },
+  {
+    g: 'F 组 · 边界', color: '#14B8A6',
+    items: [
+      { id:'f1', cfg:'先造一笔「审核中」的单，再把 <code>--mode off</code>', t:'【F1】回到那笔单继续审，<b>仍按原审批链走完</b>' },
+      { id:'f2', t:'它<b>没有</b>被自动变成「已通过」', note:'在途单按快照走，不受新配置影响' },
+      { id:'f3', t:'此时新报一笔，直接到终态（新配置生效）' },
+      { id:'f4', cfg:'关掉运单模块', t:'【F2】输 <code>/waybill</code>、<code>/report</code> 都被拦' },
+      { id:'f5', t:'小程序司机登录被拒' },
+      { id:'f6', t:'【F3】财务 A 登录看到待办 N 笔' },
+      { id:'f7', t:'退出换司机账号登录，底栏变司机端 4 项，看不到财务入口' },
+      { id:'f8', t:'再换回财务，数据没串（还是自己那几笔）' },
+    ],
+  },
+]
+
+/* ---------- 渲染 ---------- */
+const state = JSON.parse(localStorage.getItem(KEY) || '{}')
+
+const el = (h) => { const d = document.createElement('div'); d.innerHTML = h.trim(); return d.firstChild }
+
+function render() {
+  const list = document.getElementById('list')
+  list.innerHTML = ''
+  let total = 0, done = 0
+
+  DATA.forEach((group, gi) => {
+    const box = el(`<div class="group" style="--gc:${group.color}"></div>`)
+    const items = group.items
+    const gDone = items.filter((x) => state[x.id]).length
+    const gTotal = items.length
+    total += gTotal
+    done += gDone
+    if (gDone === gTotal) box.classList.add('done')
+
+    const head = el(`<div class="g-head">
+      <span class="g-dot"></span>
+      <span class="g-name">${group.g}</span>
+      <span class="g-meta">${gDone} / ${gTotal}</span>
+    </div>`)
+    head.onclick = () => box.classList.toggle('collapsed')
+    box.appendChild(head)
+
+    const body = el('<div class="g-body"></div>')
+
+    items.forEach((it) => {
+      if (it.cfg) {
+        body.appendChild(el(`<div class="cfg">前提：${it.cfg}</div>`))
+      }
+      const row = el(`<label class="item ${state[it.id] ? 'done' : ''}">
+        <input type="checkbox" ${state[it.id] ? 'checked' : ''}>
+        <span class="txt">
+          <span class="t">${it.t}</span>
+          ${it.note ? `<span class="note">${it.note}</span>` : ''}
+        </span>
+      </label>`)
+      const cb = row.querySelector('input')
+      cb.onchange = () => {
+        if (cb.checked) state[it.id] = 1
+        else delete state[it.id]
+        localStorage.setItem(KEY, JSON.stringify(state))
+        row.classList.toggle('done', cb.checked)
+        updateProgress()
+      }
+      body.appendChild(row)
+    })
+
+    box.appendChild(body)
+    list.appendChild(box)
+  })
+
+  document.getElementById('total').textContent = total
+  updateProgress()
+}
+
+function updateProgress() {
+  let total = 0, done = 0
+  DATA.forEach((g) => g.items.forEach((it) => {
+    total++
+    if (state[it.id]) done++
+  }))
+  document.getElementById('done').textContent = done
+  document.getElementById('prog').style.width = (total ? (done / total * 100) : 0) + '%'
+  /* 每组计数 */
+  document.querySelectorAll('.group').forEach((box, gi) => {
+    const items = DATA[gi].items
+    const gDone = items.filter((x) => state[x.id]).length
+    const meta = box.querySelector('.g-meta')
+    if (meta) meta.textContent = `${gDone} / ${items.length}`
+    box.classList.toggle('done', gDone === items.length)
+  })
+}
+
+/* 按钮 */
+let hideDone = false
+document.getElementById('btn-hide').onclick = (e) => {
+  hideDone = !hideDone
+  document.querySelector('.wrap').classList.toggle('hide-done', hideDone)
+  e.target.classList.toggle('on', hideDone)
+  e.target.textContent = hideDone ? '显示全部' : '只看未完成'
+}
+
+document.getElementById('btn-reset').onclick = () => {
+  if (!confirm('清空所有勾选？')) return
+  Object.keys(state).forEach((k) => delete state[k])
+  localStorage.removeItem(KEY)
+  document.querySelectorAll('input[type=checkbox]').forEach((c) => { c.checked = false })
+  document.querySelectorAll('.item').forEach((r) => r.classList.remove('done'))
+  updateProgress()
+}
+
+render()
+</script>
+</body>
+</html>

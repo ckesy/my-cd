@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>业务测试清单 · 人人都能照着点</title>
+<style>
+  :root{
+    --bg:#F5F7FA; --card:#fff; --line:#E6ECF3; --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8;
+    --red:#C8102E; --green:#15803D; --green-l:#F0FDF4; --amber:#B45309; --amber-l:#FFFBEB;
+    --num:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:900px;margin:0 auto;padding:24px 20px 80px}
+
+  .hd{position:sticky;top:0;z-index:20;background:rgba(245,247,250,.95);
+    backdrop-filter:blur(10px);margin:0 -20px 16px;padding:15px 20px 11px;border-bottom:1px solid var(--line)}
+  .hd-top{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+  h1{margin:0;font-size:19px;font-weight:800;letter-spacing:-.3px}
+  .sub{font-size:12px;color:var(--ink3);padding-bottom:2px}
+  .hd-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .stat{font-size:12.5px;color:var(--ink2)}
+  .stat b{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:15px;color:var(--ink)}
+  button{font:inherit;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer;
+    border:1px solid var(--line);background:#fff;color:var(--ink2);transition:.15s}
+  button:hover{border-color:#CBD5E1;color:var(--ink)}
+  button.on{background:var(--red);border-color:var(--red);color:#fff}
+  .bar{height:5px;background:#E8EDF4;border-radius:3px;margin-top:10px;overflow:hidden}
+  .bar>i{display:block;height:100%;width:0;border-radius:3px;
+    background:linear-gradient(90deg,#22C55E,#16A34A);transition:width .3s}
+
+  .group{margin-bottom:13px;background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  .g-head{display:flex;align-items:center;gap:10px;padding:13px 16px;
+    background:linear-gradient(180deg,#FCFDFE,#F8FAFD);border-bottom:1px solid var(--line);cursor:pointer}
+  .g-dot{width:4px;height:15px;border-radius:2px;background:var(--gc,#94A3B8);flex:0 0 auto}
+  .g-name{font-size:13.5px;font-weight:800;letter-spacing:-.2px}
+  .g-meta{margin-left:auto;font-size:11.5px;color:var(--ink3);font-family:var(--num);font-variant-numeric:tabular-nums}
+  .g-body{padding:4px 0 8px}
+  .group.done .g-name{color:var(--green)}
+
+  .item{display:flex;gap:10px;padding:9px 16px;align-items:flex-start;transition:background .12s}
+  .item:hover{background:#FBFCFE}
+  .item.done{background:var(--green-l)}
+  .item.done .t{color:var(--ink3);text-decoration:line-through;text-decoration-color:#B9C4D2}
+  input[type=checkbox]{appearance:none;-webkit-appearance:none;width:16px;height:16px;flex:0 0 auto;margin-top:1px;
+    border:1.5px solid #CBD5E1;border-radius:4px;background:#fff;cursor:pointer;position:relative;transition:.15s}
+  input[type=checkbox]:checked{background:var(--green);border-color:var(--green)}
+  input[type=checkbox]:checked::after{content:'';position:absolute;left:4.6px;top:1.2px;width:4px;height:8px;
+    border:solid #fff;border-width:0 2px 2px 0;transform:rotate(42deg)}
+  .txt{flex:1;min-width:0}
+  .t{font-size:13px;line-height:1.68;color:var(--ink)}
+  .t b{color:#A00D24}
+  .t u{text-decoration:none;background:#FEF3C7;padding:0 3px;border-radius:3px}
+  .note{font-size:11.5px;color:var(--ink3);line-height:1.7;margin-top:3px}
+  .note.warn{color:var(--amber)}
+
+  .cfg{font-size:12px;color:#7C4A03;background:var(--amber-l);border:1px solid #FDE68A;
+    border-radius:8px;padding:9px 12px;margin:4px 16px 10px;line-height:1.75}
+  .cfg b{color:#5C3402}
+
+  .hide-done .item.done{display:none}
+  .collapsed .g-body{display:none}
+
+  .foot{margin-top:20px;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:12px;
+    font-size:12.5px;color:var(--ink2);line-height:1.9}
+  .foot b{color:var(--ink)}
+
+  @media print{
+    body{background:#fff}
+    .hd{position:static;background:#fff}
+    button{display:none}
+    .group{break-inside:avoid}
+    .item{padding:6px 12px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">
+    <div class="hd-top">
+      <h1>业务测试清单</h1>
+      <span class="sub">2026-10-20 · 全程在界面上操作，不需要任何命令</span>
+      <div class="hd-right">
+        <span class="stat"><b id="done">0</b> / <span id="total">0</span></span>
+        <button id="btn-hide">只看未完成</button>
+        <button id="btn-reset">重置</button>
+      </div>
+    </div>
+    <div class="bar"><i id="prog"></i></div>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="foot">
+    <b>测完记得改回去</b><br>
+    · 业务流程页：把刚才关掉的「运单」重新打开<br>
+    · 费用审批设置：把审批方式改回原来的<br>
+    · 测试过程中司机上报的单据，可以让财务驳回或忽略
+  </div>
+</div>
+
+<script>
+const KEY = 'biz_checklist_plain_20261020'
+const state = JSON.parse(localStorage.getItem(KEY) || '{}')
+
+/* 用谁登录：放在每条里说清楚 */
+const DATA = [
+  {
+    g: '开始前 · 认一下界面', color: '#64748B',
+    items: [
+      { t:'用<b>主账号</b>登录网页端，左侧菜单能看到「业务流程」（在「系统管理」上面）' },
+      { t:'点进「业务流程」，左栏是 3 张灰色卡片（综合报表 / 能耗报告 / 驾驶行为），右边是四条流程' },
+      { t:'右边四条流程从上到下是：<u>调度</u> <u>执行</u> <u>费用</u> <u>运单报表</u>，每条 2~3 个方块', note:'方块就是一个个功能，比如「接单建单」「费用审批」「付款记录」' },
+      { t:'用<b>财务账号 15035660090</b> 登录小程序，能进到财务的界面（底部有「台账」「我的」）' },
+      { t:'记住现在财务端「待登记」里有几笔，后面要用', note:'没有也没关系，后面会自己造' },
+    ],
+  },
+  {
+    g: '一、把「运单」关掉会怎样', color: '#3B82F6',
+    items: [
+      { cfg:'在<b>业务流程</b>页面，点「<b>接单建单</b>」这个方块，右边会滑出一个面板', t:'面板里有一个<b>「停用此模块」</b>按钮' },
+      { t:'点它，会弹窗告诉你「关闭后会影响什么」，里面会写还有几笔单没处理完', note:'这个数字就是防止你误关的' },
+      { t:'确认关闭后，看左手边菜单：<b>「运输管理」整组不见了</b>' },
+      { t:'<b>「费用管理」整组也不见了</b>', note:'因为费用都是挂在运单上的，运单没了费用也没意义了' },
+      { t:'但「<b>运营管理</b>」（综合报表、能耗报告）<b>还在，还能正常打开</b>', note:'这三个是数据底座，不跟着运单走' },
+      { t:'用司机账号 <b>15035660050</b> 登录小程序 → <b>登不进去</b>，提示「本车队未开通运输业务」' },
+      { t:'回到业务流程页，点「接单建单」→ 点「开启此模块」' },
+      { t:'<b>之前开着的「付款记录」自动回来了</b>，不用你手动再开一次', note:'这是设计好的：关掉不会把你的配置清空' },
+    ],
+  },
+  {
+    g: '二、审批是怎么走的', color: '#A63BC8',
+    items: [
+      { cfg:'打开<b>费用审批设置</b>页面（菜单：费用管理 → 费用审批设置），把审批方式选成「<b>全局开启</b>」', t:'保存成功' },
+      { t:'用司机账号在小程序里上报一笔费用（金额随便，比如 800）' },
+      { t:'上报后状态显示「<b>审核中</b>」' },
+      { t:'用主账号打开财务端或网页端的待办，<b>能看到这一笔</b>' },
+      { t:'主账号点「通过」后，这一笔流转到<b>财务</b>，状态还是「审核中」' },
+      { t:'财务账号 15035660090 登录 → 待办里能看到 → 点「通过」' },
+      { t:'通过后状态变成「<b>待打款</b>」（如果付款登记是开着的）或「<b>已通过</b>」（没开）' },
+      { t:'点开这笔单看审批记录，应该只有两条：<b>发单人 → 财务</b>' },
+
+      { cfg:'再上报一笔 <b>6200</b>（金额超过设置的 5000）', t:'看这笔的审批记录是几条', note:'如果发单人就是老板，还是 2 条——这是对的，老板已经在流程里了不会重复出现' },
+      { t:'想看到真的多一级，得让<b>员工账号发单</b>：用 15035660020 建一张运单，司机在那张单上报 6200' },
+      { t:'这时候审批记录是 <b>3 条</b>：员工 → 财务 → 老板', note:'这才是「金额超过 5000 要多一级」的真实效果' },
+
+      { cfg:'把审批方式改成「<b>全局关闭</b>」', t:'司机再上报一笔，<b>直接出结果，不进审核</b>' },
+      { t:'财务端底部<b>没有「待办」这一项了</b>' },
+    ],
+  },
+  {
+    g: '三、付款登记怎么做', color: '#C8102E',
+    items: [
+      { cfg:'业务流程页确认「付款记录」是开着的；费用审批设置里审批选「全局关闭」', t:'这样上报的单会直接变成「待打款」' },
+      { t:'司机上报一笔，状态应该是「<b>待打款</b>」' },
+      { t:'财务账号登录，底部出现「<b>待登记</b>」，右上角有个红色数字' },
+      { t:'点进去能看到刚才那笔，勾上它' },
+      { t:'点「登记付款」，弹出表单：付款方式、日期、流水号、备注' },
+      { t:'选「银行转账」→ 确认 → 提示登记成功' },
+      { t:'回到「待登记」列表，<b>这笔不见了</b>' },
+      { t:'去「台账」里找，<b>能看到它，显示已付款和付款方式</b>' },
+      { t:'在台账里点这笔的「撤销」→ 填个原因 → 确认' },
+      { t:'它<b>回到「待打款」</b>，而且<b>原来的付款方式还看得见</b>，只是标了撤销', note:'撤销是留痕，不是删掉重来' },
+      { t:'对已经付过款的单再点一次登记，应该提示「已被处理」', note:'防止两个人同时记两次账' },
+    ],
+  },
+  {
+    g: '四、财务端看到什么', color: '#F59E0B',
+    items: [
+      { cfg:'审批「全局开启」+ 付款登记开着，财务登录', t:'底部 <b>5 项</b>：待办 · 待登记 · 台账 · 统计 · 我的' },
+      { cfg:'把付款登记关掉，重新登录', t:'底部 <b>4 项</b>，<b>没有「待登记」</b>' },
+      { cfg:'把审批改成「全局关闭」（付款关着），重新登录', t:'底部有「台账」，「<b>没有「待办」</b>」' },
+      { cfg:'审批关闭 + 付款也关，重新登录', t:'<b>进不了财务端</b>，直接回到车队管理首页，不是空白页' },
+      { t:'「待登记」里<b>只应该有等付款的单</b>，已经通过的、已经付过的不该混进来' },
+      { t:'「统计」页的合计，和「台账」里的数字能对得上' },
+    ],
+  },
+  {
+    g: '五、改了设置，老单不能乱动', color: '#14B8A6',
+    items: [
+      { t:'先让司机上报一笔，停留在「审核中」' },
+      { t:'然后去费用审批设置，把审批改成「全局关闭」' },
+      { t:'回到那笔还在审核中的单，<b>继续审批，它还是按原来的流程走完</b>' },
+      { t:'它<b>不会</b>因为你关了审批就自己变成「已通过」', note:'这条最容易被当成 bug 报上来，其实是设计如此：老单按当时的规矩走完' },
+      { t:'这时候新上报一笔，<b>直接出结果</b>，不审核', note:'新的按新规矩，老的不受影响' },
+    ],
+  },
+  {
+    g: '六、从别的地方硬闯进不去', color: '#64748B',
+    items: [
+      { t:'把「运单」关掉' },
+      { t:'在浏览器地址栏直接敲运单页面的地址（或者用收藏夹里存的老链接）→ <b>提示没有权限</b>，不是白屏也不是报错' },
+      { t:'把运单重新打开，一切恢复正常' },
+    ],
+  },
+]
+
+/* ---------- 渲染 ---------- */
+const el = (h) => { const d = document.createElement('div'); d.innerHTML = h.trim(); return d.firstChild }
+
+function render() {
+  const list = document.getElementById('list')
+  list.innerHTML = ''
+  DATA.forEach((group, gi) => {
+    const box = el(`<div class="group" style="--gc:${group.color}"></div>`)
+    const items = group.items
+    const gDone = items.filter((x, i) => state[group.g + '_' + i]).length
+    if (gDone === items.length) box.classList.add('done')
+
+    const head = el(`<div class="g-head"><span class="g-dot"></span>
+      <span class="g-name">${group.g}</span>
+      <span class="g-meta">${gDone} / ${items.length}</span></div>`)
+    head.onclick = () => box.classList.toggle('collapsed')
+    box.appendChild(head)
+
+    const body = el('<div class="g-body"></div>')
+    items.forEach((it, i) => {
+      const id = group.g + '_' + i
+      if (it.cfg) body.appendChild(el(`<div class="cfg">🔧 前提：${it.cfg}</div>`))
+      const row = el(`<label class="item ${state[id] ? 'done' : ''}">
+        <input type="checkbox" ${state[id] ? 'checked' : ''}>
+        <span class="txt"><span class="t">${it.t}</span>
+        ${it.note ? `<span class="note">${it.note}</span>` : ''}</span></label>`)
+      const cb = row.querySelector('input')
+      cb.onchange = () => {
+        if (cb.checked) state[id] = 1
+        else delete state[id]
+        localStorage.setItem(KEY, JSON.stringify(state))
+        row.classList.toggle('done', cb.checked)
+        updateProgress()
+      }
+      body.appendChild(row)
+    })
+    box.appendChild(body)
+    list.appendChild(box)
+  })
+
+  let total = 0
+  DATA.forEach((g) => { total += g.items.length })
+  document.getElementById('total').textContent = total
+  updateProgress()
+}
+
+function updateProgress() {
+  let total = 0, done = 0
+  DATA.forEach((g) => g.items.forEach((it, i) => {
+    total++
+    if (state[g.g + '_' + i]) done++
+  }))
+  document.getElementById('done').textContent = done
+  document.getElementById('prog').style.width = (total ? done / total * 100 : 0) + '%'
+  document.querySelectorAll('.group').forEach((box, gi) => {
+    const items = DATA[gi].items
+    const gDone = items.filter((x, i) => state[DATA[gi].g + '_' + i]).length
+    const meta = box.querySelector('.g-meta')
+    if (meta) meta.textContent = `${gDone} / ${items.length}`
+    box.classList.toggle('done', gDone === items.length)
+  })
+}
+
+let hideDone = false
+document.getElementById('btn-hide').onclick = (e) => {
+  hideDone = !hideDone
+  document.querySelector('.wrap').classList.toggle('hide-done', hideDone)
+  e.target.classList.toggle('on', hideDone)
+  e.target.textContent = hideDone ? '显示全部' : '只看未完成'
+}
+
+document.getElementById('btn-reset').onclick = () => {
+  if (!confirm('清空所有勾选？')) return
+  Object.keys(state).forEach((k) => delete state[k])
+  localStorage.removeItem(KEY)
+  document.querySelectorAll('input[type=checkbox]').forEach((c) => { c.checked = false })
+  document.querySelectorAll('.item').forEach((r) => r.classList.remove('done'))
+  updateProgress()
+}
+
+render()
+</script>
+</body>
+</html>

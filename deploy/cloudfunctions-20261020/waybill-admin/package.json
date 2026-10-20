@@ -1,0 +1,10 @@
+{
+  "name": "waybill-admin",
+  "version": "1.0.0",
+  "description": "小程序管理端取数：全站运单（按装货日分天）+ 概览统计",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

@@ -12,7 +12,7 @@
       <div v-if="imgList.length" class="pv-grid">
         <el-image
           v-for="(img, i) in imgList"
-          :key="img.fileID"
+          :key="img.key || img.fileID"
           :src="img.url"
           :preview-src-list="imgList.map((x) => x.url)"
           :initial-index="i"
@@ -25,7 +25,7 @@
       </div>
 
       <div v-if="fileList.length" class="pv-files">
-        <div v-for="f in fileList" :key="f.fileID" class="pv-file">
+        <div v-for="f in fileList" :key="f.key || f.fileID" class="pv-file">
           <span class="pv-file-ic">件</span>
           <span class="pv-file-n" :title="f.name">{{ f.name }}</span>
           <a v-if="f.url" :href="f.url" target="_blank" rel="noopener" class="pv-file-a">打开</a>
@@ -40,7 +40,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import app from '@/utils/supabase'
+import { signGet } from '@/utils/cos'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -55,8 +55,8 @@ const loading = ref(false)
 const withUrl = computed(() =>
   (props.images || []).map((img) => ({
     ...img,
-    url: urls.value[img.fileID] || '',
-    isImage: isImageName(img.name || img.fileID),
+    url: urls.value[img.key || img.fileID] || '',
+    isImage: isImageName(img.name || img.key || img.fileID),
   }))
 )
 const imgList = computed(() => withUrl.value.filter((x) => x.isImage && x.url))
@@ -68,16 +68,11 @@ function isImageName(name) {
 }
 
 async function loadUrls() {
-  const ids = (props.images || []).map((x) => x.fileID).filter(Boolean)
-  if (!ids.length) return
+  const keys = (props.images || []).map((x) => x.key).filter(Boolean)
+  if (!keys.length) return
   loading.value = true
   try {
-    const res = await app.getTempFileURL({ fileList: ids })
-    const map = {}
-    ;(res.fileList || []).forEach((f) => {
-      if (f.tempFileURL) map[f.fileID] = f.tempFileURL
-    })
-    urls.value = map
+    urls.value = await signGet(keys)
   } catch (e) {
     console.warn('[付款凭据] 临时链接获取失败', e)
   } finally {
@@ -89,7 +84,7 @@ watch(
   () => props.modelValue,
   (v) => {
     if (!v) return
-    const need = (props.images || []).some((x) => x.fileID && !urls.value[x.fileID])
+    const need = (props.images || []).some((x) => x.key && !urls.value[x.key])
     if (need) loadUrls()
   }
 )

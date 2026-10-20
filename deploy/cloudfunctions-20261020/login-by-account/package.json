@@ -1,0 +1,11 @@
+{
+  "name": "login-by-account",
+  "version": "1.0.0",
+  "private": true,
+  "description": "小程序账号密码登录 + 用户权限 + 司机档案",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

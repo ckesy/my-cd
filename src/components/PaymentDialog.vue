@@ -154,7 +154,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
-import app, { supabase, ensureAnonymousLogin } from '@/utils/supabase'
+import { signPut, putToCos, cosKey } from '@/utils/cos'
 import { PAY_PENDING_STATUS, currentFeeUser } from '@/utils/feeTodo'
 
 const props = defineProps({
@@ -264,16 +264,14 @@ const friendly = (e) => {
 
 async function uploadFiles() {
   if (!files.value.length) return []
-  try { await ensureAnonymousLogin() } catch (e) { /* 已有登录态时忽略 */ }
 
   const out = []
   for (let i = 0; i < files.value.length; i++) {
     const f = files.value[i]
-    const ext = (String(f.name).split('.').pop() || 'bin').toLowerCase().slice(0, 6)
-    const cloudPath = `reports/payment/${dayjs().format('YYYYMM')}/${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}.${ext}`
-    const res = await app.uploadFile({ cloudPath, filePath: f.raw })
-    if (!res || !res.fileID) throw new Error(`「${f.name}」上传失败`)
-    out.push({ fileID: res.fileID, name: f.name, size: Number(f.size) || 0 })
+    const key = cosKey(`reports/payment/${dayjs().format('YYYYMM')}`, f.name)
+    const putUrl = await signPut(key)
+    await putToCos(putUrl, f.raw)
+    out.push({ key, name: f.name, size: Number(f.size) || 0 })
   }
   return out
 }

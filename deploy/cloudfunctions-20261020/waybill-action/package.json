@@ -1,0 +1,11 @@
+{
+  "name": "waybill-action",
+  "version": "1.0.0",
+  "private": true,
+  "description": "小程序任务中心——司机对运单执行接单 / 拒单 / 确认到达",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

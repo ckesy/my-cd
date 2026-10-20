@@ -33,6 +33,12 @@ const routes = [
     component: () => import('../views/Dashboard.vue'),
   },
   // ⭐ 费用管理（与运输管理平级）
+  // ⭐ 业务流程画布（管理员可编辑 / 客户只读调参）
+  {
+    path: '/flow/canvas',
+    name: 'FlowCanvas',
+    component: () => import('../views/Dashboard.vue'),
+  },
   {
     path: '/fee/stats',
     name: 'FeeStats',

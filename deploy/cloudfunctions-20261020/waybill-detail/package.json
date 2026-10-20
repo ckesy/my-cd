@@ -1,0 +1,11 @@
+{
+  "name": "waybill-detail",
+  "version": "1.0.0",
+  "private": true,
+  "description": "小程序运单详情——返回单条运单完整信息 + 指派人（姓名/手机号）",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

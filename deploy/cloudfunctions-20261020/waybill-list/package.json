@@ -1,0 +1,11 @@
+{
+  "name": "waybill-list",
+  "version": "1.0.0",
+  "private": true,
+  "description": "小程序任务中心——按司机身份取出指派给他的运单",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

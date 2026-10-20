@@ -1,0 +1,9 @@
+{
+  "name": "report-action",
+  "version": "1.0.0",
+  "private": true,
+  "description": "司机端上报：创建（含审批链快照）与列表",
+  "main": "index.js",
+  "engines": { "node": ">=18" },
+  "dependencies": {}
+}

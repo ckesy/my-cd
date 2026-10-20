@@ -8,6 +8,15 @@
         <span class="menu-label">首页</span>
       </el-menu-item>
 
+      <!-- ⭐ 业务流程：主账号可见。管理员可启停+配参数，客户只能看已开通的并调参数 -->
+      <el-menu-item v-if="isMaster" index="/flow/canvas">
+        <el-icon>
+          <Share />
+        </el-icon>
+        <span class="menu-label">业务流程</span>
+      </el-menu-item>
+
+
       <el-sub-menu v-if="hasPerm('driving_fullmap') || hasPerm('vehicle_fault') || hasPerm('appearance_inspect')"
         index="drive-management">
         <template #title>
@@ -45,7 +54,9 @@
         <el-menu-item index="/operation/driving">驾驶行为报表</el-menu-item>
       </el-sub-menu>
 
-      <el-sub-menu v-if="hasPerm('waybill') || hasPerm('report') || hasPerm('route')" index="transport-management">
+      <!-- ⭐ 运输管理：整组挂在运单模块下（运单关了，底下三项都没有意义） -->
+      <el-sub-menu v-if="waybillOn && (hasPerm('waybill') || hasPerm('report') || hasPerm('route'))"
+        index="transport-management">
         <template #title>
           <el-icon>
             <Tickets />
@@ -53,12 +64,12 @@
           <span class="menu-label">运输管理</span>
         </template>
         <el-menu-item v-if="hasPerm('waybill')" index="/waybill">运单管理</el-menu-item>
-        <el-menu-item index="/route/manage">路线管理</el-menu-item>
-        <el-menu-item v-if="hasPerm('report')" index="/report">车队运营报告</el-menu-item>
+        <el-menu-item v-if="routeOn" index="/route/manage">路线管理</el-menu-item>
+        <el-menu-item v-if="reportOn && hasPerm('report')" index="/report">车队运营报告</el-menu-item>
       </el-sub-menu>
 
       <!-- ⭐ 费用管理：与「运输管理」平级；审批设置只有主账号能看到 -->
-      <el-sub-menu v-if="showFeeMenu" index="fee-management">
+      <el-sub-menu v-if="waybillOn && showFeeMenu" index="fee-management">
         <template #title>
           <el-icon>
             <Wallet />
@@ -129,7 +140,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { HomeFilled, Van, Location, DataLine, Tickets, User, Setting, FolderOpened, Wallet } from '@element-plus/icons-vue'
+import { HomeFilled, Van, Location, DataLine, Tickets, User, Setting, FolderOpened, Wallet, Share } from '@element-plus/icons-vue'
 import { moduleFlags } from '@/utils/modules'
 
 const props = defineProps({
@@ -178,6 +189,11 @@ const isFinance = computed(() => String(currentUser?.roleName || '').includes('�
 const showFeeMenu = computed(() => isMaster.value || isFinance.value || hasPerm('fee_stats'))
 // 付款登记是可配置模块：没开通就完全不显示入口
 const payoutOn = computed(() => moduleFlags.payout === true)
+/* ⭐ 模块联动：运单是总闸，路线/报表挂在它下面
+   waybill 用 !== false：模块表还没读回来时先按「有」显示，避免菜单闪一下 */
+const waybillOn = computed(() => moduleFlags.waybill !== false)
+const routeOn = computed(() => moduleFlags.route === true)
+const reportOn = computed(() => moduleFlags.report === true)
 </script>
 
 <style scoped>

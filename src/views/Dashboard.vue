@@ -90,6 +90,10 @@
           <template v-else-if="route.path === '/waybill/create'">
             <WaybillCreate ref="waybillCreateRef" />
           </template>
+          <!-- ⭐ 业务流程画布 -->
+          <template v-else-if="route.path === '/flow/canvas'">
+            <FlowCanvas />
+          </template>
           <!-- ⭐ 费用管理 -->
           <template v-else-if="route.path === '/fee/stats'">
             <FeeStats />
@@ -215,6 +219,7 @@ import RouteManage from '../views/RouteManage.vue'
 import FeeStats from '../views/FeeStats.vue'
 import FeePayout from '../views/FeePayout.vue'
 import FeeApprovalSetting from '../views/FeeApprovalSetting.vue'
+import FlowCanvas from '../views/FlowCanvas.vue'
 import { fetchFeeTodo, isPayer } from '@/utils/feeTodo'
 import { moduleFlags, ensureModuleFlags } from '@/utils/modules'
 
@@ -301,9 +306,24 @@ const isMaster = computed(() => {
 // ⭐ 财务：角色名里带「财务」即可登记付款（与审批链「找财务」同一口径）
 const isFinance = computed(() => String(currentUser?.roleName || '').includes('财务'))
 
+/* ⭐ 模块闸门：菜单藏掉之外的第二道（直接敲 URL / 收藏夹进来）
+   管理员在 modules.js 里被当作全开，所以这里不影响服务商 */
+const MODULE_GATE = {
+  '/waybill': 'waybill',
+  '/waybill/create': 'waybill',
+  '/waybill/detail': 'waybill',
+  '/route/manage': 'route',
+  '/report': 'report',
+  '/fee/payout': 'payout',
+}
+
 const isPermitted = computed(() => {
   if (clientPerms.value === null) return true
+  const gate = MODULE_GATE[route.path]
+  if (gate && moduleFlags[gate] !== true && moduleFlags.waybill !== undefined) return false
   if (route.path === '/dashboard' && !route.params.page) return true
+  // 业务流程画布：主账号可进（管理员可编辑，客户只读调参）
+  if (route.path === '/flow/canvas') return isMaster.value
   // 费用审批设置只给主账号：不看权限 key，避免被误配给其他角色
   if (route.path === '/fee/config') return isMaster.value
   // 付款登记：主账号 + 财务 + 模块已开通（其余人看不到入口，也别让他们直接敲地址）
@@ -911,6 +931,14 @@ const goLogin = () => {
 .content-wrapper:has(.summary-page),
 .content-wrapper:has(.placeholder-page) {
   padding: 0;
+}
+
+/* ⭐ 业务流程画布：整页定高，画布区自己横向滚动 */
+.content-wrapper:has(.flow-page) {
+  padding: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 /* ⭐ 组织管理：整页固定高度，页面本身不滚动（内部左右两栏各自滚） */
