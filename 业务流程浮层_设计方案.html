@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>业务流程 · 浮层设计方案</title>
+<style>
+  :root{
+    --bg:#F1F4F8; --card:#fff; --line:#E2E8F0; --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8;
+    --red:#C8102E; --green:#15803D; --lane:#C8102E;
+    --num:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1000px;margin:0 auto;padding:32px 24px 60px}
+
+  .page-hd{margin-bottom:26px}
+  h1{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-.4px}
+  .sub{font-size:12.5px;color:var(--ink3);line-height:1.7}
+  .sub b{color:var(--ink2)}
+
+  /* 方案容器 */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .scheme{
+    background:#fff;border:1px solid var(--line);border-radius:16px;
+    overflow:hidden;display:flex;flex-direction:column;
+  }
+  .s-hd{
+    display:flex;align-items:center;gap:9px;
+    padding:14px 16px 12px;border-bottom:1px solid #F1F5F9;
+  }
+  .s-no{
+    width:22px;height:22px;border-radius:7px;flex:0 0 auto;
+    background:#0F172A;color:#fff;font-size:12px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .s-name{font-size:13.5px;font-weight:800}
+  .s-tag{
+    margin-left:auto;font-size:10px;font-weight:700;
+    padding:2px 7px;border-radius:5px;
+    background:#F1F5F9;color:#64748B;
+  }
+  .s-tag.rec{background:#FEF2F4;color:var(--red)}
+
+  .s-desc{
+    padding:11px 16px 0;font-size:11.5px;color:var(--ink3);line-height:1.7;
+  }
+
+  /* 舞台：模拟画布背景 */
+  .stage{
+    margin:14px 16px;padding:22px 18px;
+    border-radius:12px;
+    background:
+      radial-gradient(circle at 1px 1px, #D9E2EC 1px, transparent 0) 0 0/12px 12px,
+      linear-gradient(180deg,#FBFCFE,#F4F7FB);
+    border:1px solid #EDF1F6;
+    display:flex;justify-content:center;
+  }
+
+  /* 通用浮层外壳 */
+  .pop{
+    width:296px;border-radius:14px;position:relative;
+    background:#fff;
+  }
+
+  /* ---------- 方案 A ---------- */
+  .popA{
+    background:#fff;
+    border:1px solid #E2E8F0;
+    border-color:color-mix(in srgb, #C8102E 18%, #E2E8F0);
+    background:color-mix(in srgb, #C8102E 7%, #fff);
+    box-shadow:0 18px 44px rgba(15,23,42,.16);
+    padding:14px 16px 15px;
+  }
+  .hd-row{display:flex;align-items:center;gap:8px}
+  .hd-name{font-size:13.5px;font-weight:800}
+  .hd-st{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px}
+  .hd-st.on{color:#15803D;background:#F0FDF4}
+  .hd-st.off{color:#B45309;background:#FFFBEB}
+  .hd-x{margin-left:auto;color:#B4BECB;font-size:17px;line-height:1}
+  .desc{font-size:10.5px;color:#94A3B8;margin:6px 0 0;line-height:1.6}
+
+  .sec{margin-top:12px;border-top:1px solid rgba(15,23,42,.07);padding-top:10px}
+  .sec-label{font-size:10.5px;font-weight:700;color:#64748B;margin-bottom:6px}
+  .chk-item{display:flex;align-items:center;gap:8px;padding:5px 0}
+  .chk{
+    width:14px;height:14px;border-radius:4px;border:1.5px solid #CBD5E1;background:#fff;
+    position:relative;flex:0 0 auto;
+  }
+  .chk.on{background:#15803D;border-color:#15803D}
+  .chk.on::after{
+    content:'';position:absolute;left:3.6px;top:.8px;width:3.6px;height:7px;
+    border:solid #fff;border-width:0 2px 2px 0;transform:rotate(42deg);
+  }
+  .chk-t{font-size:12px;color:#0F172A}
+  .chk-off{margin-left:auto;font-size:9.5px;color:#B4BECB}
+
+  .foot{margin-top:12px;padding-top:11px;border-top:1px solid rgba(15,23,42,.07);
+    display:flex;align-items:center;gap:9px}
+  .btn{font:inherit;font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:7px;cursor:pointer;border:none}
+  .btn.danger{color:#A00D24;background:#FEF2F4;border:1px solid #FAD4DA}
+  .hint{font-size:9.5px;color:#B4BECB;line-height:1.5}
+
+  /* ---------- 方案 B：开关列表 ---------- */
+  .popB{
+    background:#fff;border:1px solid #E2E8F0;border-radius:14px;
+    box-shadow:0 18px 44px rgba(15,23,42,.16);
+    padding:0;overflow:hidden;
+  }
+  .b-top{
+    padding:13px 15px 11px;
+    background:linear-gradient(135deg,#C8102E,#A00D24);
+    color:#fff;
+  }
+  .b-top .hd-name{color:#fff;font-size:13.5px}
+  .b-top .hd-x{color:rgba(255,255,255,.6)}
+  .b-st{
+    font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;
+    background:rgba(255,255,255,.2);color:#fff;
+  }
+  .b-sub{font-size:10px;color:rgba(255,255,255,.72);margin:4px 0 0}
+
+  .b-body{padding:6px 15px 12px}
+  .sw-row{
+    display:flex;align-items:center;gap:10px;
+    padding:11px 0;border-bottom:1px solid #F4F6F9;
+  }
+  .sw-row:last-child{border-bottom:none}
+  .sw-txt{flex:1;min-width:0}
+  .sw-name{font-size:12px;color:#0F172A;font-weight:600}
+  .sw-note{font-size:9.5px;color:#B4BECB;margin-top:2px;line-height:1.5}
+  .sw{
+    width:34px;height:19px;border-radius:10px;background:#E2E8F0;
+    position:relative;flex:0 0 auto;transition:.18s;
+  }
+  .sw::after{
+    content:'';position:absolute;left:2px;top:2px;width:15px;height:15px;
+    border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.16);transition:.18s;
+  }
+  .sw.on{background:#15803D}
+  .sw.on::after{left:17px}
+
+  .b-foot{
+    display:flex;gap:8px;padding:11px 15px 13px;
+    background:#FAFBFD;border-top:1px solid #F1F5F9;
+  }
+  .b-foot .btn{flex:1;text-align:center;padding:8px 0}
+  .btn.ghost{color:#64748B;background:#fff;border:1px solid #E2E8F0}
+
+  /* ---------- 方案 C：功能磁贴 ---------- */
+  .popC{
+    background:#fff;border:1px solid #E2E8F0;border-radius:14px;
+    box-shadow:0 18px 44px rgba(15,23,42,.16);
+    padding:14px 15px 15px;
+  }
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
+  .tile{
+    border:1.5px solid #E8EEF5;border-radius:10px;
+    padding:10px 9px;text-align:center;background:#fff;
+  }
+  .tile.on{border-color:#C8102E;background:#FFF7F8}
+  .tile-ico{
+    width:22px;height:22px;border-radius:6px;margin:0 auto 6px;
+    background:#F1F5F9;display:flex;align-items:center;justify-content:center;
+    font-size:11px;color:#94A3B8;
+  }
+  .tile.on .tile-ico{background:#FDE8EC;color:#C8102E}
+  .tile-t{font-size:11px;font-weight:700;color:#64748B}
+  .tile.on .tile-t{color:#A00D24}
+  .tile-s{font-size:9px;color:#B4BECB;margin-top:2px}
+  .tile.on .tile-s{color:#D98A9A}
+
+  .c-strip{
+    display:flex;align-items:center;gap:6px;margin-top:12px;
+    padding:9px 11px;border-radius:9px;background:#F8FAFC;
+  }
+  .c-strip-t{font-size:10.5px;color:#94A3B8;flex:1}
+
+  /* ---------- 方案 D：极简 chips ---------- */
+  .popD{
+    background:#fff;border:1px solid #E2E8F0;border-radius:14px;
+    box-shadow:0 16px 38px rgba(15,23,42,.14);
+    padding:13px 15px 12px;
+  }
+  .d-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+  .chip{
+    font-size:11px;font-weight:600;
+    padding:5px 11px;border-radius:20px;
+    border:1px solid #E2E8F0;color:#94A3B8;background:#fff;
+  }
+  .chip.on{background:#0F172A;border-color:#0F172A;color:#fff}
+  .d-line{
+    display:flex;align-items:center;gap:8px;
+    margin-top:12px;padding-top:10px;border-top:1px solid #F1F5F9;
+  }
+  .d-link{font-size:11px;color:#A00D24;font-weight:600}
+  .d-link.gray{color:#94A3B8;margin-left:auto;font-weight:400}
+
+  /* 优缺点 */
+  .pc{padding:12px 16px 14px;border-top:1px solid #F1F5F9;font-size:11px;line-height:1.85}
+  .pc .row{display:flex;gap:7px;margin-bottom:3px}
+  .pc .k{flex:0 0 34px;font-weight:800;color:#94A3B8}
+  .pc .p{color:#15803D}
+  .pc .c{color:#B45309}
+  .pc .n{color:#64748B}
+
+  /* 推荐 */
+  .pick{
+    margin-top:24px;padding:18px 20px;
+    background:#fff;border:1px solid #FBD5DB;border-radius:14px;
+    background:#FFFCFD;
+  }
+  .pick h2{margin:0 0 8px;font-size:15px;font-weight:800;color:#A00D24}
+  .pick p{margin:0 0 10px;font-size:12.5px;color:#475569;line-height:1.9}
+  .pick code{
+    font-family:var(--num);font-size:11.5px;background:#F1F5F9;
+    padding:1px 5px;border-radius:4px;
+  }
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11.5px}
+  th,td{padding:7px 9px;text-align:left;border-bottom:1px solid #F1F5F9}
+  th{font-weight:700;color:#64748B;font-size:10.5px;background:#FAFBFD}
+  td:first-child{font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="page-hd">
+    <h1>业务流程 · 浮层设计方案</h1>
+    <p class="sub">
+      四版都基于同一份数据：<b>节点名 + 开关状态 + 功能项列表</b>。
+      差别只在「功能项怎么表达」和「操作按钮放哪」。<br>
+      下面每个方案都画在真实的画布背景上，宽度与线上一致（296px）。
+    </p>
+  </div>
+
+  <div class="grid">
+
+    <!-- ===== A ===== -->
+    <div class="scheme">
+      <div class="s-hd">
+        <span class="s-no">A</span>
+        <span class="s-name">勾选列表（当前版）</span>
+        <span class="s-tag">已上线</span>
+      </div>
+      <p class="s-desc">功能用复选框表达，底部放模块启停按钮。信息最全，视觉最朴素。</p>
+
+      <div class="stage">
+        <div class="pop popA">
+          <div class="hd-row">
+            <span class="hd-name">费用审批</span>
+            <span class="hd-st on">已开启</span>
+            <span class="hd-x">×</span>
+          </div>
+          <p class="desc">审批开关，关掉后费用上报直接通过</p>
+
+          <div class="sec">
+            <div class="sec-label">包含功能</div>
+            <div class="chk-item"><span class="chk on"></span><span class="chk-t">多级审批</span></div>
+            <div class="chk-item"><span class="chk on"></span><span class="chk-t">阈值判断</span></div>
+            <div class="chk-item"><span class="chk"></span><span class="chk-t">超时提醒</span><span class="chk-off">卡片上隐藏</span></div>
+          </div>
+
+          <div class="foot">
+            <button class="btn danger">关闭费用审批</button>
+            <span class="hint">当前走审批链</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc">
+        <div class="row"><span class="k">优点</span><span class="p">信息完整，功能多了也不会乱；勾选是通用认知</span></div>
+        <div class="row"><span class="k">缺点</span><span class="c">「勾选」听起来像多选筛选，不像开关；没有地方放功能说明</span></div>
+      </div>
+    </div>
+
+    <!-- ===== B ===== -->
+    <div class="scheme">
+      <div class="s-hd">
+        <span class="s-no">B</span>
+        <span class="s-name">开关列表 + 彩色头</span>
+        <span class="s-tag rec">推荐</span>
+      </div>
+      <p class="s-desc">顶部做泳道色渐变头，功能每行一个开关，右边带一句说明。底部两个动作按钮。</p>
+
+      <div class="stage">
+        <div class="pop popB">
+          <div class="b-top">
+            <div class="hd-row">
+              <span class="hd-name">费用审批</span>
+              <span class="b-st">已开启</span>
+              <span class="hd-x">×</span>
+            </div>
+            <p class="b-sub">关掉后费用上报直接通过，不再走审批链</p>
+          </div>
+
+          <div class="b-body">
+            <div class="sw-row">
+              <div class="sw-txt">
+                <div class="sw-name">多级审批</div>
+                <div class="sw-note">按金额逐级审，可配置审批人</div>
+              </div>
+              <span class="sw on"></span>
+            </div>
+            <div class="sw-row">
+              <div class="sw-txt">
+                <div class="sw-name">阈值判断</div>
+                <div class="sw-note">超过 ¥5,000 追加老板终审</div>
+              </div>
+              <span class="sw on"></span>
+            </div>
+            <div class="sw-row">
+              <div class="sw-txt">
+                <div class="sw-name">超时提醒</div>
+                <div class="sw-note">超过 24 小时未审自动提醒</div>
+              </div>
+              <span class="sw"></span>
+            </div>
+          </div>
+
+          <div class="b-foot">
+            <button class="btn ghost">停用</button>
+            <button class="btn danger">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc">
+        <div class="row"><span class="k">优点</span><span class="p">「开关」语义准确；每个功能能写一句说明，不用回头问；彩色头一眼认出泳道</span></div>
+        <div class="row"><span class="k">缺点</span><span class="c">比 A 高约 40px；说明文字要有人维护</span></div>
+      </div>
+    </div>
+
+    <!-- ===== C ===== -->
+    <div class="scheme">
+      <div class="s-hd">
+        <span class="s-no">C</span>
+        <span class="s-name">功能磁贴</span>
+        <span class="s-tag">2×2 网格</span>
+      </div>
+      <p class="s-desc">每个功能做成小方块，点一下切换选中态。视觉最活泼，功能超过 4 个要翻页。</p>
+
+      <div class="stage">
+        <div class="pop popC">
+          <div class="hd-row">
+            <span class="hd-name">费用审批</span>
+            <span class="hd-st on">已开启</span>
+            <span class="hd-x">×</span>
+          </div>
+
+          <div class="tiles">
+            <div class="tile on">
+              <div class="tile-ico">◈</div>
+              <div class="tile-t">多级审批</div>
+              <div class="tile-s">逐级审</div>
+            </div>
+            <div class="tile on">
+              <div class="tile-ico">⚖</div>
+              <div class="tile-t">阈值判断</div>
+              <div class="tile-s">≥ ¥5,000</div>
+            </div>
+            <div class="tile">
+              <div class="tile-ico">◷</div>
+              <div class="tile-t">超时提醒</div>
+              <div class="tile-s">24 小时</div>
+            </div>
+            <div class="tile">
+              <div class="tile-ico">✉</div>
+              <div class="tile-t">结果通知</div>
+              <div class="tile-s">推送司机</div>
+            </div>
+          </div>
+
+          <div class="c-strip">
+            <span class="c-strip-t">已启用 2 / 4 项</span>
+            <button class="btn danger">关闭审批</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc">
+        <div class="row"><span class="k">优点</span><span class="p">点选面积大，手机上不容易点错；一眼看出「开了几个」</span></div>
+        <div class="row"><span class="k">缺点</span><span class="c">功能超过 4 个就挤；方块比一行文字更占地方；缺少说明文字的位置</span></div>
+      </div>
+    </div>
+
+    <!-- ===== D ===== -->
+    <div class="scheme">
+      <div class="s-hd">
+        <span class="s-no">D</span>
+        <span class="s-name">极简胶囊</span>
+        <span class="s-tag">最轻</span>
+      </div>
+      <p class="s-desc">功能用胶囊标签，点一下切换。整体最矮，适合浮层只做「快速开关」的场景。</p>
+
+      <div class="stage">
+        <div class="pop popD">
+          <div class="hd-row">
+            <span class="hd-name">费用审批</span>
+            <span class="hd-st on">已开启</span>
+            <span class="hd-x">×</span>
+          </div>
+
+          <div class="d-chips">
+            <span class="chip on">多级审批</span>
+            <span class="chip on">阈值判断</span>
+            <span class="chip">超时提醒</span>
+            <span class="chip">结果通知</span>
+          </div>
+
+          <div class="d-line">
+            <span class="d-link">关闭费用审批</span>
+            <span class="d-link gray">灰色 = 已关闭，卡片上隐藏</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc">
+        <div class="row"><span class="k">优点</span><span class="p">最矮（约 140px），不挡画布；扫一眼就知道开了几个</span></div>
+        <div class="row"><span class="k">缺点</span><span class="c">功能说明无处安放；胶囊点选区域小；「实心 vs 空心」需要解释</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="pick">
+    <h2>我的建议：B</h2>
+    <p>
+      理由不是好看，是<b>这批功能名需要解释</b>。比如「指派车队」和「指派车辆」，
+      业务第一眼分不清差别；「超时提醒」要写清多少小时。
+      A 和 D 都只有一个词的位置，用户只能猜。
+    </p>
+    <p>
+      B 每行右侧能挂一句说明，而且「开关」这个词本身就说明它是开关，不用教。
+    </p>
+
+    <table>
+      <tr><th></th><th>A 勾选</th><th>B 开关</th><th>C 磁贴</th><th>D 胶囊</th></tr>
+      <tr><td>高度</td><td>约 230px</td><td>约 270px</td><td>约 250px</td><td>约 140px</td></tr>
+      <tr><td>能放说明</td><td>否</td><td><b>能</b></td><td>仅一行小字</td><td>否</td></tr>
+      <tr><td>功能 6 个以上</td><td>没问题</td><td>没问题</td><td>要翻页</td><td>换行变高</td></tr>
+      <tr><td>语义清晰度</td><td>中</td><td><b>高</b></td><td>中</td><td>低</td></tr>
+      <tr><td>改动量</td><td>0（现状）</td><td>中（重写样式）</td><td>中</td><td>小</td></tr>
+    </table>
+
+    <p style="margin-top:14px">
+      如果觉得 B 太"重"，折中是 <b>B 的头 + D 的胶囊</b>：
+      保留彩色渐变头（识别泳道），功能改成胶囊，底下一个「关闭审批」文字链接。
+      高度能压到 180px 左右，但还是没法放说明。
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

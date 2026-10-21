@@ -431,6 +431,7 @@ const pathLabels = {
   // ⭐ 路线管理标签
   '/route/manage': '路线管理',
   '/report': '车队运营报告',
+  '/flow/canvas': '业务流程',
   '/waybill/create': '新建运单',
   '/fee/stats': '费用统计',
   '/fee/payout': '付款登记',

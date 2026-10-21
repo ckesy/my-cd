@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>业务流程 · 浮层设计方案 v2</title>
+<style>
+  :root{
+    --bg:#EDF1F6; --line:#E2E8F0; --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8;
+    --red:#C8102E; --num:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1060px;margin:0 auto;padding:30px 22px 60px}
+
+  .page-hd{margin-bottom:22px}
+  h1{margin:0 0 7px;font-size:21px;font-weight:800;letter-spacing:-.4px}
+  .sub{font-size:12.5px;color:#64748B;line-height:1.75}
+  .sub b{color:#0F172A}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:880px){.grid{grid-template-columns:1fr}}
+
+  .scheme{background:#fff;border:1px solid var(--line);border-radius:15px;overflow:hidden;display:flex;flex-direction:column}
+  .s-hd{display:flex;align-items:center;gap:9px;padding:13px 15px 11px;border-bottom:1px solid #F1F5F9}
+  .s-no{
+    width:22px;height:22px;border-radius:7px;flex:0 0 auto;background:#0F172A;color:#fff;
+    font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  }
+  .s-name{font-size:13px;font-weight:800}
+  .s-tag{margin-left:auto;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:#F1F5F9;color:#64748B}
+  .s-tag.hot{background:#0F172A;color:#fff}
+  .s-desc{padding:10px 15px 0;font-size:11.5px;color:#94A3B8;line-height:1.7}
+
+  /* 舞台：真实画布背景 */
+  .stage{
+    margin:13px 15px;padding:24px 16px;border-radius:12px;
+    background:
+      radial-gradient(circle at 1px 1px,#D7E0EA 1px,transparent 0) 0 0/12px 12px,
+      linear-gradient(180deg,#FBFCFE,#F2F6FA);
+    border:1px solid #E8EEF5;
+    display:flex;justify-content:center;align-items:flex-start;
+    min-height:300px;
+  }
+
+  .pop{width:288px;position:relative}
+
+  /* 通用文字 */
+  .hd-row{display:flex;align-items:center;gap:7px}
+  .hd-name{font-size:13px;font-weight:800;letter-spacing:-.1px}
+  .hd-x{font-size:16px;line-height:1;cursor:pointer}
+  .desc-line{font-size:10px;margin:5px 0 0;line-height:1.6}
+
+  /* ============ E · 墨黑卡片 ============ */
+  .popE{
+    background:linear-gradient(165deg,#171C28 0%,#0E121B 100%);
+    border:1px solid #2B3244;
+    border-radius:14px;
+    box-shadow:0 24px 56px -10px rgba(2,6,23,.55), 0 0 0 1px rgba(255,255,255,.03) inset;
+    overflow:hidden;
+  }
+  .e-bar{height:2.5px;background:linear-gradient(90deg,#E11D48,#C8102E 60%,#A00D24)}
+  .e-body{padding:12px 14px 13px}
+  .popE .hd-name{color:#F1F5F9}
+  .popE .hd-st{
+    font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;
+    background:rgba(34,197,94,.16);color:#4ADE80;
+  }
+  .popE .hd-x{color:#64748B;margin-left:auto}
+  .popE .desc-line{color:#7C8798}
+
+  .e-sec{margin-top:11px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}
+  .e-label{font-size:9.5px;font-weight:700;color:#5B6577;letter-spacing:.5px;margin-bottom:5px}
+  .e-row{display:flex;align-items:center;gap:9px;padding:6px 0}
+  .e-name{font-size:11.5px;color:#D6DEE9;font-weight:600}
+  .e-note{font-size:9px;color:#5B6577;margin-left:auto}
+  .e-sw{
+    width:30px;height:17px;border-radius:9px;background:#2B3244;position:relative;flex:0 0 auto;
+  }
+  .e-sw::after{
+    content:'';position:absolute;left:2px;top:2px;width:13px;height:13px;border-radius:50%;
+    background:#7C8798;transition:.18s;
+  }
+  .e-sw.on{background:#15803D}
+  .e-sw.on::after{left:15px;background:#fff}
+
+  .e-foot{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:8px}
+  .e-btn{
+    font:inherit;font-size:11px;font-weight:700;padding:6px 12px;border-radius:7px;cursor:pointer;
+    background:rgba(255,255,255,.06);color:#CBD5E1;border:1px solid rgba(255,255,255,.1);
+  }
+  .e-btn.warn{background:rgba(200,16,46,.16);color:#FB7185;border-color:rgba(200,16,46,.3)}
+  .e-hint{font-size:9px;color:#5B6577;margin-left:auto}
+
+  /* ============ F · 白卡 + 强投影 + 箭头 ============ */
+  .popF{
+    background:#fff;
+    border-radius:13px;
+    box-shadow:0 0 0 1px rgba(15,23,42,.07), 0 26px 64px -10px rgba(15,23,42,.32);
+    padding:13px 14px 13px 16px;
+    margin-top:9px;
+  }
+  .popF::before{
+    content:'';position:absolute;top:-6.5px;left:28px;
+    width:13px;height:13px;background:#fff;transform:rotate(45deg);
+    box-shadow:-1px -1px 0 rgba(15,23,42,.07);
+    border-radius:2px 0 0 0;
+  }
+  .popF::after{
+    content:'';position:absolute;left:0;top:10px;bottom:10px;width:3.5px;
+    border-radius:0 2px 2px 0;background:var(--lane,#C8102E);
+  }
+  .popF .hd-st{
+    font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;
+    background:#F0FDF4;color:#15803D;
+  }
+  .popF .hd-x{color:#C4CDD9;margin-left:auto}
+  .popF .desc-line{color:#A9B4C2}
+
+  .f-sec{margin-top:10px}
+  .f-row{
+    display:flex;align-items:center;gap:8px;padding:6px 0;
+    border-bottom:1px solid #F6F8FB;
+  }
+  .f-row:last-child{border-bottom:none}
+  .f-check{
+    width:15px;height:15px;border-radius:5px;border:1.5px solid #D5DDE7;background:#fff;
+    position:relative;flex:0 0 auto;
+  }
+  .f-check.on{background:#0F172A;border-color:#0F172A}
+  .f-check.on::after{
+    content:'';position:absolute;left:4px;top:1px;width:3.6px;height:7.4px;
+    border:solid #fff;border-width:0 1.8px 1.8px 0;transform:rotate(42deg);
+  }
+  .f-name{font-size:11.5px;color:#1E293B;font-weight:600}
+  .f-note{font-size:9px;color:#B4BECB;margin-left:auto}
+
+  .f-foot{margin-top:10px;padding-top:10px;border-top:1px solid #F1F5F9;display:flex;align-items:center;gap:8px}
+  .f-btn{font:inherit;font-size:11px;font-weight:700;padding:6px 13px;border-radius:7px;cursor:pointer}
+  .f-btn.dark{background:#0F172A;color:#fff;border:none}
+  .f-btn.line{background:#fff;color:#64748B;border:1px solid #E2E8F0}
+  .f-hint{font-size:9px;color:#C4CDD9;margin-left:auto}
+
+  /* ============ G · 渐变整卡 ============ */
+  .popG{
+    border-radius:16px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:0 0 0 1px rgba(15,23,42,.05), 0 22px 50px -12px rgba(15,23,42,.24);
+  }
+  .g-head{
+    padding:12px 14px 11px;
+    background:linear-gradient(135deg,
+      color-mix(in srgb,var(--lane,#C8102E) 16%,#fff),
+      color-mix(in srgb,var(--lane,#C8102E) 6%,#fff));
+    border-bottom:1px solid color-mix(in srgb,var(--lane,#C8102E) 12%,#F1F5F9);
+  }
+  .popG .hd-st{
+    font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;
+    background:#fff;color:#15803D;box-shadow:0 1px 3px rgba(15,23,42,.08);
+  }
+  .popG .hd-x{color:rgba(15,23,42,.32);margin-left:auto}
+  .popG .desc-line{color:rgba(15,23,42,.42)}
+
+  .g-body{padding:9px 14px 12px}
+  .g-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+  .g-chip{
+    font-size:10.5px;font-weight:700;padding:4.5px 11px;border-radius:8px;
+    border:1.5px solid #E8EEF5;color:#94A3B8;background:#FCFDFE;
+  }
+  .g-chip.on{
+    background:#0F172A;border-color:#0F172A;color:#fff;
+    box-shadow:0 2px 6px rgba(15,23,42,.2);
+  }
+  .g-foot{
+    display:flex;align-items:center;gap:8px;
+    margin-top:11px;padding-top:10px;border-top:1px solid #F1F5F9;
+  }
+  .g-link{font-size:10.5px;font-weight:700;color:#C8102E}
+  .g-hint{font-size:9px;color:#C4CDD9;margin-left:auto}
+
+  /* ============ H · 分块层级 ============ */
+  .popH{
+    background:#fff;border-radius:14px;overflow:hidden;
+    box-shadow:0 0 0 1px rgba(15,23,42,.06), 0 20px 46px -12px rgba(15,23,42,.3);
+  }
+  .h-head{
+    display:flex;align-items:center;gap:8px;
+    padding:11px 14px;
+    background:#F7F9FC;
+    border-bottom:1px solid #EDF1F6;
+  }
+  .h-head .hd-name{font-size:12.5px}
+  .h-head .hd-st{
+    font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;
+    background:#E8EEF5;color:#64748B;
+  }
+  .h-head .hd-st.on{background:#DCFCE7;color:#15803D}
+  .h-head .hd-x{color:#B4BECB;margin-left:auto;font-size:15px}
+
+  .h-body{padding:4px 14px 6px}
+  .h-row{display:flex;align-items:center;gap:8px;padding:7px 0}
+  .h-row+.h-row{border-top:1px dashed #F1F5F9}
+  .h-dot{width:6px;height:6px;border-radius:50%;background:#D5DDE7;flex:0 0 auto}
+  .h-dot.on{background:#15803D;box-shadow:0 0 0 3px rgba(21,128,61,.12)}
+  .h-name{font-size:11.5px;font-weight:600;color:#334155}
+  .h-row.off .h-name{color:#B4BECB;font-weight:400}
+  .h-note{font-size:9px;color:#C4CDD9;margin-left:auto}
+
+  .h-foot{
+    display:flex;align-items:center;gap:7px;
+    padding:9px 14px;background:#F7F9FC;border-top:1px solid #EDF1F6;
+  }
+  .h-btn{
+    font:inherit;font-size:10.5px;font-weight:700;padding:5px 11px;border-radius:6px;cursor:pointer;
+    background:#fff;border:1px solid #DFE6EE;color:#64748B;
+  }
+  .h-btn.warn{background:#A00D24;border-color:#A00D24;color:#fff}
+  .h-hint{font-size:9px;color:#B4BECB;margin-left:auto}
+
+  /* 优缺点 */
+  .pc{padding:11px 15px 13px;border-top:1px solid #F1F5F9;font-size:10.5px;line-height:1.8}
+  .pc .row{display:flex;gap:7px;margin-bottom:2px}
+  .pc .k{flex:0 0 32px;font-weight:800;color:#94A3B8}
+  .pc .p{color:#15803D}
+  .pc .c{color:#B45309}
+
+  /* 对比说明 */
+  .note{
+    margin-top:22px;padding:16px 18px;background:#fff;border:1px solid var(--line);border-radius:13px;
+    font-size:12.5px;color:#475569;line-height:1.95;
+  }
+  .note h2{margin:0 0 8px;font-size:14px;font-weight:800;color:#0F172A}
+  .note b{color:#0F172A}
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11.5px}
+  th,td{padding:7px 9px;text-align:left;border-bottom:1px solid #F1F5F9}
+  th{font-weight:700;color:#64748B;font-size:10.5px;background:#FAFBFD}
+  td:first-child{font-weight:700;color:#0F172A}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="page-hd">
+    <h1>浮层设计 v2 · 强化对比</h1>
+    <p class="sub">
+      上一版用淡色底，和画布背景太接近，浮层"糊"在纸上。<br>
+      这四版都让浮层<b>明确脱离画布</b>：靠深色、靠投影、靠渐变、靠分区，各有不同的"浮起来"方式。<br>
+      全部按<b>紧凑</b>来做 —— 功能项压到 24~28px 一行。
+    </p>
+  </div>
+
+  <div class="grid">
+
+    <!-- ===== E ===== -->
+    <div class="scheme">
+      <div class="s-hd">
+        <span class="s-no">E</span>
+        <span class="s-name">墨黑卡片</span>
+        <span class="s-tag hot">对比最强</span>
+      </div>
+      <p class="s-desc">深色底 + 顶部一道泳道色。在浅色画布上"砸"出最强反差，功能开关是最常见的暗色模式样式。</p>
+
+      <div class="stage">
+        <div class="pop popE">
+          <div class="e-bar"></div>
+          <div class="e-body">
+            <div class="hd-row">
+              <span class="hd-name">费用审批</span>
+              <span class="hd-st">已开启</span>
+              <span class="hd-x">×</span>
+            </div>
+            <p class="desc-line">关掉后费用上报直接通过</p>
+
+            <div class="e-sec">
+              <div class="e-label">功能</div>
+              <div class="e-row">
+                <span class="e-name">多级审批</span>
+                <span class="e-note">按金额逐级</span>
+                <span class="e-sw on"></span>
+              </div>
+              <div class="e-row">
+                <span class="e-name">阈值判断</span>
+                <span class="e-note">≥ ¥5,000</span>
+                <span class="e-sw on"></span>
+              </div>
+              <div class="e-row">
+                <span class="e-name">超时提醒</span>
+                <span class="e-note">24 小时</span>
+                <span class="e-sw"></span>
+              </div>
+            </div>
+
+            <div class="e-foot">
+              <button class="e-btn warn">关闭审批</button>
+              <span class="e-hint">当前走审批链</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc">
+        <div class="row"><span class="k">优点</span><span class="p">对比最强，浅色画布上一眼锁定；暗色不干扰连线颜色；紧凑度好</span></div>
+        <div class="row"><span class="k">缺点</span><span class="c">和整个后台的浅色风格不统一；暗色下说明文字容易糊，要严格控制对比度</span></div>
+      </div>
+    </div>
+
+    <!-- ===== F ===== -->
+    <div class="scheme">
+      <div class="s-hd">
+        <span class="s-no">F</span>
+        <span class="s-name">白卡 + 强投影 + 箭头</span>
+        <span class="s-tag hot">最稳妥</span>
+      </div>
+      <p class="s-desc">纯白但投影很重，靠"高度差"脱离画布。左上角一个箭头指向卡片，交代来源。</p>
+
+      <div class="stage">
+        <div class="pop popF" style="--lane:#C8102E">
+          <div class="hd-row">
+            <span class="hd-name">费用审批</span>
+            <span class="hd-st">已开启</span>
+            <span class="hd-x">×</span>
+          </div>
+          <p class="desc-line">关掉后费用上报直接通过</p>
+
+          <div class="f-sec">
+            <div class="f-row">
+              <span class="f-check on"></span>
+              <span class="f-name">多级审批</span>
+              <span class="f-note">按金额逐级</span>
+            </div>
+            <div class="f-row">
+              <span class="f-check on"></span>
+              <span class="f-name">阈值判断</span>
+              <span class="f-note">≥ ¥5,000</span>
+            </div>
+            <div class="f-row">
+              <span class="f-check"></span>
+              <span class="f-name">超时提醒</span>
+              <span class="f-note">24 小时</span>
+            </div>
+          </div>
+
+          <div class="f-foot">
+            <button class="f-btn dark">关闭审批</button>
+            <button class="f-btn line">编辑参数</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc">
+        <div class="row"><span class="k">优点</span><span class="p">最符合系统整体风格；投影足够脱离背景；箭头说明"从哪弹出来的"</span></div>
+        <div class="row"><span class="k">缺点</span><span class="c">白卡在浅灰背景上对比靠投影，屏幕亮度低时可能不够跳</span></div>
+      </div>
+    </div>
+
+    <!-- ===== G ===== -->
+    <div class="scheme">
+      <div class="s-hd">
+        <span class="s-no">G</span>
+        <span class="s-name">渐变头 + 胶囊</span>
+        <span class="s-tag">最紧凑</span>
+      </div>
+      <p class="s-desc">头部用泳道色染成浅渐变，身体纯白。功能压成胶囊，整块只有 175px 高。</p>
+
+      <div class="stage">
+        <div class="pop popG" style="--lane:#C8102E">
+          <div class="g-head">
+            <div class="hd-row">
+              <span class="hd-name">费用审批</span>
+              <span class="hd-st">已开启</span>
+              <span class="hd-x">×</span>
+            </div>
+            <p class="desc-line">关掉后费用上报直接通过</p>
+          </div>
+
+          <div class="g-body">
+            <div class="g-chips">
+              <span class="g-chip on">多级审批</span>
+              <span class="g-chip on">阈值判断</span>
+              <span class="g-chip">超时提醒</span>
+            </div>
+
+            <div class="g-foot">
+              <span class="g-link">关闭费用审批</span>
+              <span class="g-hint">浅色 = 已关闭</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc">
+        <div class="row"><span class="k">优点</span><span class="p">最矮最轻，几乎不挡画布；渐变头一眼认出泳道；对比靠头部色块</span></div>
+        <div class="row"><span class="k">缺点</span><span class="c">功能说明放不下；胶囊的"实心/空心"需要一句提示</span></div>
+      </div>
+    </div>
+
+    <!-- ===== H ===== -->
+    <div class="scheme">
+      <div class="s-hd">
+        <span class="s-no">H</span>
+        <span class="s-name">三段式分块</span>
+        <span class="s-tag">结构最清</span>
+      </div>
+      <p class="s-desc">标题块 / 功能块 / 操作块，用深浅交替的底色分开。像一个小面板，不像一张纸条。</p>
+
+      <div class="stage">
+        <div class="pop popH">
+          <div class="h-head">
+            <span class="hd-name">费用审批</span>
+            <span class="hd-st on">已开启</span>
+            <span class="hd-x">×</span>
+          </div>
+
+          <div class="h-body">
+            <div class="h-row">
+              <span class="h-dot on"></span>
+              <span class="h-name">多级审批</span>
+              <span class="h-note">按金额逐级</span>
+            </div>
+            <div class="h-row">
+              <span class="h-dot on"></span>
+              <span class="h-name">阈值判断</span>
+              <span class="h-note">≥ ¥5,000</span>
+            </div>
+            <div class="h-row off">
+              <span class="h-dot"></span>
+              <span class="h-name">超时提醒</span>
+              <span class="h-note">24 小时</span>
+            </div>
+          </div>
+
+          <div class="h-foot">
+            <button class="h-btn">编辑</button>
+            <button class="h-btn warn">关闭审批</button>
+            <span class="h-hint">走审批链</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc">
+        <div class="row"><span class="k">优点</span><span class="p">分区明确，功能/操作不混在一起；圆点状态比复选框更轻；投影 + 分区双重脱离</span></div>
+        <div class="row"><span class="k">缺点</span><span class="c">三段底色在浅灰画布上对比稍弱；圆点不如开关直观</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note">
+    <h2>怎么比</h2>
+    <table>
+      <tr><th></th><th>E 墨黑</th><th>F 白卡投影</th><th>G 渐变胶囊</th><th>H 三段式</th></tr>
+      <tr><td>脱离画布的方式</td><td>底色反差</td><td>投影 + 箭头</td><td>头部色块</td><td>投影 + 分区</td></tr>
+      <tr><td>对比强度</td><td>★★★★★</td><td>★★★★</td><td>★★★</td><td>★★★</td></tr>
+      <tr><td>高度</td><td>约 205px</td><td>约 215px</td><td><b>约 175px</b></td><td>约 200px</td></tr>
+      <tr><td>风格统一</td><td>✗ 突兀</td><td><b>✓ 最协调</b></td><td>✓</td><td>✓</td></tr>
+      <tr><td>能放说明</td><td>能（右侧小字）</td><td>能（右侧小字）</td><td>否</td><td>能（右侧小字）</td></tr>
+    </table>
+
+    <p style="margin:14px 0 0">
+      <b>我的选择：F</b>。你的后台整体是浅色 + 卡片投影，
+      突然弹一个深色块会像"另一个系统"。
+      F 靠 <code>0 26px 64px rgba(15,23,42,.32)</code> 这种重投影照样能跳出来，
+      再加箭头说明"从哪冒出来的"，比纯白卡清楚得多。
+    </p>
+    <p style="margin:8px 0 0">
+      如果你想要更"跳"一点：<b>F 的骨架 + G 的渐变头</b> —— 白色身体保持协调，
+      头部染一层泳道色，对比和统一都能兼顾。这是我最想推的一版。
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

@@ -15,7 +15,7 @@
       <div class="fb-right">
         <el-switch v-if="isAdmin" v-model="previewClient" size="small"
           active-text="预览客户视角" style="margin-right:14px" />
-        <span v-if="moduleFlags.folded && Object.keys(moduleFlags.folded).length" class="fb-warn">
+        <span v-if="isAdmin && moduleFlags.folded && Object.keys(moduleFlags.folded).length" class="fb-warn">
           {{ Object.keys(moduleFlags.folded).length }} 个模块因依赖未满足而不可用
         </span>
         <div class="zoom">
@@ -29,15 +29,15 @@
       </div>
     </div>
 
-    <div v-if="moduleFlags.failed" class="flow-alert">
+    <div v-if="isAdmin && moduleFlags.failed" class="flow-alert">
       模块配置读取失败，已按「全部开启」降级显示。请确认已执行
       <code>sql/2026-10-20_flow_modules.sql</code>
     </div>
 
     <!-- 画布 -->
-    <div ref="scrollRef" class="flow-scroll">
+    <div ref="scrollRef" class="flow-scroll" @scroll="onScrollClose">
       <div class="canvas-scaler" :style="{ width: W * scale + 'px', height: H * scale + 'px' }">
-      <div class="flow-canvas" :style="{ transform: `scale(${scale})` }">
+      <div class="flow-canvas" :style="{ transform: `scale(${scale})` }" @click="closePop">
         <!-- 背景网格 -->
         <svg class="bg-grid" :width="W" :height="H">
           <defs>
@@ -62,7 +62,7 @@
           <p class="bc-sub">不参与流程配置，所有客户都有</p>
 
           <div v-for="b in BASE_MODULES" :key="b.key" class="bc-card"
-            :style="{ '--bar': b.color }" @click="openBase(b)">
+            :style="{ '--bar': b.color }">
             <div class="bc-name">{{ b.name }}</div>
             <div class="bc-desc">{{ b.desc }}</div>
             <div class="bc-chips">
@@ -74,13 +74,12 @@
           <template v-if="!isAdmin && offModules.length">
             <div class="bc-divider"></div>
             <div class="bc-pool-t">未开通 · {{ offModules.length }} 项</div>
-            <div v-for="m in offModules" :key="m.key" class="bc-pool-item"
-              :class="{ 'can-open': m.configured }">
+            <div v-for="m in offModules" :key="m.key" class="bc-pool-item">
               {{ m.name }}
-              <em v-if="m.configured">可开启</em>
+              <em class="lock">需联系运营人员开启</em>
             </div>
             <div class="bc-pool-hint">
-              如需开通，请联系<br>您的服务顾问
+              以上功能暂未开通，<br>如需使用请联系运营人员
             </div>
           </template>
 
@@ -161,10 +160,10 @@
         </svg>
 
         <!-- 节点卡片 -->
-        <div v-for="n in visibleNodes" :key="n.uid" class="fnode"
+        <div v-for="n in visibleNodes" :key="n.uid" :data-uid="n.uid" class="fnode"
           :class="{ ghost: n.disabled, locked: !n.interactive, 'has-menu': n.interactive }"
           :style="{ left: n.x + 'px', top: n.y + 'px', width: LANE_W + 'px', height: NODE_H + 'px', '--bar': n.color }"
-          @click="openNode(n)">
+          @click.stop="openNode(n)">
           <span class="bar"></span>
           <div class="fn-t">
             <span v-if="!n.enabled && !previewClient" class="fn-warn" title="该模块未开启">!</span>
@@ -172,7 +171,7 @@
             <em v-if="n.badge">{{ n.badge }}</em>
           </div>
           <div class="fn-c">
-            <span v-for="c in n.chips" :key="c">{{ c }}</span>
+            <span v-for="f in shownFeatures(n)" :key="f.key">{{ f.name }}</span>
           </div>
           <span v-if="isAdmin" class="fn-menu" :class="{ dim: !n.interactive }"><i></i><i></i><i></i></span>
           <span v-else-if="n.enabled" class="fn-dot"></span>
@@ -181,83 +180,77 @@
       </div>
     </div>
 
-    <!-- 配置抽屉 -->
-    <el-drawer v-model="drawer" :size="360" :with-header="false" append-to-body>
-      <div v-if="active" class="drawer-body">
-        <div class="db-hd">
-          <span class="db-bar" :style="{ background: active.color }"></span>
-          <div>
-            <div class="db-name">{{ active.name }}</div>
-            <div class="db-desc">{{ active.desc || '流程步骤，随运单模块启停' }}</div>
+    <!-- ⭐ 卡片下方浮层（点哪个卡片就在哪个下面弹）
+         ⚠️ 必须 Teleport 到 body：.content-wrapper 上有 animate-fade-up 的 transform，
+            fixed 会变成「相对该祖先定位」，坐标就全错了 -->
+    <Teleport to="body">
+    <div v-if="pop" class="node-pop" @click.stop :style="{ '--pop-c': pop.color }">
+      <div class="np-hd">
+        <span class="np-dot"></span>
+        <span class="np-name">{{ pop.name }}</span>
+        <span class="np-st" :class="statusOf(pop).cls">{{ statusOf(pop).text }}</span>
+        <span class="np-x" @click="closePop">×</span>
+      </div>
+      <div class="np-split">
+        <!-- 左：功能目录 -->
+        <div class="np-left">
+          <div class="np-label">功能</div>
+          <div v-for="f in pop.features" :key="f.key" class="np-nav"
+            :class="{ on: activeFeat === f.key, off: !featureOn(pop, f.key) }"
+            @click="activeFeat = f.key">
+            <i></i>{{ f.name }}
+          </div>
+          <div v-if="!(pop.features && pop.features.length)" class="np-nav-empty">
+            这个节点没有可配项
           </div>
         </div>
 
-        <!-- 状态 -->
-        <div class="db-sec">
-          <div class="db-label">当前状态</div>
-          <div v-if="active.module" class="db-state" :class="active.enabled ? 'on' : 'off'">
-            <span>{{ active.enabled ? '已开通' : '未开通' }}</span>
-            <em v-if="!isAdmin">如需{{ active.enabled ? '关闭' : '开通' }}请联系服务顾问</em>
-            <em v-else>{{ active.enabled ? '关闭后整块功能消失' : '开通后立即对客户可见' }}</em>
-          </div>
-          <div v-else class="db-state on">
-            <span>随运单模块</span>
-            <em>运单开启时此类步骤自动可用</em>
-          </div>
-        </div>
+        <!-- 右：选中功能的详情 -->
+        <div class="np-right">
+          <template v-if="curFeat">
+            <div class="np-fname">{{ curFeat.name }}</div>
+            <p class="np-fdesc">{{ curFeat.desc || '关闭后，卡片上不再显示这一项，相关功能也停用' }}</p>
 
-        <!-- 依赖缺失 -->
-        <div v-if="active.foldedBy && active.foldedBy.length" class="db-sec">
-          <div class="db-alert">
-            依赖未满足：{{ active.foldedBy.map(k => moduleName(k)).join('、') }} 未开通，
-            本模块当前不可用
-          </div>
-        </div>
+            <div class="np-switch-row">
+              <span class="np-switch-t">启用</span>
+              <span class="np-sw" :class="{ on: featureOn(pop, curFeat.key) }"
+                @click="toggleFeature(curFeat)"></span>
+            </div>
 
-        <!-- 启停：管理员不限制；客户只能改「管理员配过」的 -->
-        <div v-if="active.module" class="db-sec">
-          <div class="db-label">启停</div>
-          <template v-if="active.canToggle">
-            <el-button :type="active.enabled ? 'danger' : 'primary'" plain size="small"
-              :loading="saving" @click="toggleModule(active)">
-              {{ active.enabled ? '停用此模块' : '开启此模块' }}
-            </el-button>
-            <div class="db-hint">
-              {{ active.enabled
-                ? '停用只影响之后的使用，历史数据不会删除；重新开启后原配置保留'
-                : '开启后立即可用，无需重启' }}
+            <div class="np-state">
+              {{ featureOn(pop, curFeat.key) ? '当前已启用，卡片上会显示这个标签' : '已关闭，卡片上隐藏此标签' }}
             </div>
           </template>
-          <div v-else class="db-locked">
-            <el-icon><Lock /></el-icon>
-            <div>
-              <b>该功能尚未开通</b>
-              <p>如需使用请联系您的服务顾问开通</p>
-            </div>
-          </div>
-        </div>
 
-        <!-- 参数 -->
-        <div class="db-sec">
-          <div class="db-label">参数</div>
-          <div v-if="!active.module" class="db-hint">该节点没有独立参数</div>
           <template v-else>
-            <div v-for="f in active.fields" :key="f.key" class="db-field">
-              <label>{{ f.label }}</label>
-              <el-input v-model="form[f.key]" size="small" :placeholder="f.ph || ''"
-                :disabled="!active.enabled" />
-            </div>
-            <el-button v-if="active.fields && active.fields.length" size="small" type="primary"
-              plain :loading="saving" :disabled="!active.enabled" @click="saveConfig(active)">
-              保存参数
-            </el-button>
-            <div v-if="!active.fields || !active.fields.length" class="db-hint">
-              该模块暂无可调参数（阈值、审批链在「费用审批设置」里）
+            <div class="np-empty">
+              <span class="np-empty-t">流程步骤</span>
+              <p>随运单模块一起启停，没有单独的功能项</p>
             </div>
           </template>
         </div>
       </div>
-    </el-drawer>
+
+      <!-- 底部：模块 / 审批 启停 -->
+      <div v-if="pop.module && pop.canToggle" class="np-foot">
+        <button class="np-btn" :class="pop.enabled ? 'danger' : 'primary'"
+          :disabled="saving" @click="toggleModule(pop)">
+          {{ pop.enabled ? '停用此模块' : '开启此模块' }}
+        </button>
+        <span class="np-hint">{{ pop.enabled ? '历史数据保留' : '立即生效' }}</span>
+      </div>
+      <div v-else-if="pop.special === 'audit' && isAdmin" class="np-foot">
+        <button class="np-btn" :class="approvalMode === 'off' ? 'primary' : 'danger'"
+          :disabled="saving" @click="toggleAudit">
+          {{ approvalMode === 'off' ? '开启费用审批' : '关闭费用审批' }}
+        </button>
+        <span class="np-hint">{{ approvalMode === 'off' ? '提交即通过' : '走审批链' }}</span>
+      </div>
+      <div v-else-if="pop.module && !pop.canToggle" class="np-foot">
+        <span class="np-hint">需联系运营人员开启</span>
+      </div>
+    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -290,31 +283,94 @@ const LANES = [
   {
     key: 'dispatch', name: '调度', color: '#22C55E',
     nodes: [
-      { key: 'waybill', name: '接单建单', module: 'waybill', chips: ['客户下单', '自建运单'] },
-      { key: 'dispatch', name: '派单配载', chips: ['司机指派', '车辆指派'] },
-      { key: 'recurring', name: '常驻任务', module: 'recurring', badge: '旁支', main: false, chips: ['按时间', '按次数'] },
+      {
+        key: 'create', name: '创建运单', module: 'waybill',
+        features: [
+          { key: 'manual', name: '自建运单' },
+          { key: 'smart', name: '智能建单' },
+        ],
+      },
+      {
+        key: 'dispatch', name: '派单调度',
+        features: [
+          { key: 'driver', name: '指派司机' },
+          { key: 'vehicle', name: '指派车辆' },
+          { key: 'fleet', name: '指派车队' },
+        ],
+      },
+      {
+        key: 'recurring', name: '常驻任务', module: 'recurring', badge: '旁支', main: false,
+        features: [
+          { key: 'byTime', name: '按时间' },
+          { key: 'byCount', name: '按次数' },
+        ],
+      },
     ],
   },
   {
     key: 'execute', name: '执行', color: '#3B82F6',
     nodes: [
-      { key: 'accept', name: '司机接单', chips: ['接单 / 拒单'] },
-      { key: 'load', name: '装货发车', chips: ['装车完成', '确认发车'] },
-      { key: 'arrive', name: '卸货完成', chips: ['确认到达', '完成运单'] },
+      {
+        key: 'accept', name: '司机接单',
+        features: [
+          { key: 'accept', name: '接单' },
+          { key: 'grab', name: '抢单' },
+          { key: 'reject', name: '拒单' },
+        ],
+      },
+      {
+        key: 'load', name: '装货发车',
+        features: [
+          { key: 'sync', name: '状态同步' },
+          { key: 'fence', name: '围栏打卡' },
+        ],
+      },
+      {
+        key: 'arrive', name: '卸货完成',
+        features: [
+          { key: 'sync', name: '状态同步' },
+          { key: 'fence', name: '围栏打卡' },
+        ],
+      },
     ],
   },
   {
     key: 'settle', name: '费用', color: '#C8102E',
     nodes: [
-      { key: 'report_fee', name: '司机上报', chips: ['费用', '回单'] },
-      { key: 'audit', name: '费用审批', chips: ['多级审批', '阈值'] },
-      { key: 'payout', name: '付款记录', module: 'payout', chips: ['登记付款', '撤销'] },
+      {
+        key: 'report_fee', name: '司机上报',
+        features: [
+          { key: 'fee', name: '费用' },
+          { key: 'receipt', name: '回单' },
+        ],
+      },
+      {
+        key: 'audit', name: '费用审批', special: 'audit',
+        features: [
+          { key: 'multiLevel', name: '多级审批' },
+          { key: 'threshold', name: '阈值判断' },
+        ],
+      },
+      {
+        key: 'payout', name: '付款记录', module: 'payout',
+        features: [
+          { key: 'record', name: '付款记录' },
+          { key: 'voucher', name: '凭证上传' },
+        ],
+      },
     ],
   },
   {
     key: 'report', name: '运单报表', color: '#F59E0B',
     nodes: [
-      { key: 'fleet_report', name: '车队运营报告', module: 'report', chips: ['运单汇总', '按客户'] },
+      {
+        key: 'fleet_report', name: '车队运营报告', module: 'report',
+        features: [
+          { key: 'summary', name: '运营汇总' },
+          { key: 'scheduled', name: '定时报告' },
+          { key: 'insight', name: '智能分析' },
+        ],
+      },
     ],
   },
 ]
@@ -364,6 +420,7 @@ function fitWidth() {
 
 /** 第一次进来：容器够宽就填满，不够就保持 100%（可滚动），不压缩 */
 onMounted(() => {
+  loadApprovalMode()
   /* 不做自适应：默认就是 130%，窄窗口靠滚动 */
   nextTick(checkOverflow)
   window.addEventListener('resize', () => { nextTick(checkOverflow) })
@@ -393,12 +450,18 @@ const allNodes = computed(() => {
   const out = []
   LANES.forEach((lane, li) => {
     lane.nodes.forEach((n, ci) => {
-      const enabled = n.module ? modOn(n.module) : moduleFlags.effective.waybill === true
+      /* 费用审批是特例：它的开关是 fee_approval_configs.mode，不是模块表 */
+      const enabled = n.special === 'audit'
+        ? approvalMode.value !== 'off'
+        : (n.module ? modOn(n.module) : moduleFlags.effective.waybill === true)
+      /* 步骤节点没有自己的模块，子功能挂在 waybill 上 */
+      const moduleKey = n.module || 'waybill'
       out.push({
         ...n,
         uid: `${lane.key}-${n.key}`,
         lane: lane.key,
         color: lane.color,
+        moduleKey,
         x: colX(ci),
         y: LANE_Y[li] + NODE_DY,
         ci, li,
@@ -478,6 +541,9 @@ const paths = computed(() => {
   })
 
   rows.forEach(({ li, nodes }, ri) => {
+    /* ⚠️ 整行都没节点时必须直接跳过：下面 `nodes[nodes.length - 1]` 会拿到 undefined，
+       再读 .x 就崩了（客户视角把某一行模块全关掉就会这样） */
+    if (!nodes.length) return
     const cy = LANE_Y[li] + NODE_DY + NODE_H / 2
     // 行内横向
     for (let i = 0; i < nodes.length - 1; i++) {
@@ -488,7 +554,7 @@ const paths = computed(() => {
     }
     // 回绕到下一行
     const next = rows[ri + 1]
-    if (next && next.nodes.length) {
+    if (next && next.nodes.length && nodes.length) {
       const from = nodes[nodes.length - 1]
       const to = next.nodes[0]
       const x1 = from.x + LANE_W / 2
@@ -539,152 +605,75 @@ const wireKey = computed(() =>
 const arrowH = (x, y) => `M${x - 9} ${y - 4.2} L${x + 1} ${y} L${x - 9} ${y + 4.2} Z`
 const arrowV = (x, y) => `M${x - 4.2} ${y - 9} L${x} ${y + 1} L${x + 4.2} ${y - 9} Z`
 
+/* ============ 子功能（节点上的小标签） ============
+   存在 tenant_modules.config.sub 里：
+     { sub: { dispatch: { driver:true, fleet:false }, accept: {...} } }
+   没配过 = 全开（默认都启用）
+   ============================================ */
+const subOf = (moduleKey, nodeKey) => {
+  const cfg = (moduleFlags.config || {})[moduleKey] || {}
+  return (cfg.sub || {})[nodeKey] || {}
+}
+
+const featureOn = (n, fk) => subOf(n.moduleKey, n.key)[fk] !== false
+
+/** 卡片上只显示「已开启」的功能 */
+const shownFeatures = (n) => (n.features || []).filter((f) => featureOn(n, f.key))
+
 /* ============ 抽屉 ============ */
-const drawer = ref(false)
-const active = ref(null)
+/* ============ 卡片下方的浮层（替代原来的右侧抽屉） ============ */
+const pop = ref(null)          // 当前展开的节点
 const saving = ref(false)
 const preLoading = ref(false)
-const form = ref({})
+const approvalMode = ref('on') // 费用审批开关（fee_approval_configs.mode）
 
-const FIELDS = {
-  payout: [
-    { key: 'method', label: '默认付款方式', ph: '银行转账 / 现金' },
-    { key: 'note', label: '默认备注', ph: '选填' },
-  ],
-  report: [
-    { key: 'caliber', label: '统计口径', ph: 'waybill / vehicle' },
-  ],
-  recurring: [
-    { key: 'pattern', label: '默认周期', ph: '每天 / 每周一' },
-  ],
-  waybill: [],
-  route: [],
-}
 
 function openNode(n) {
-  const def = n.module ? { ...n } : { ...n, module: null }
-  active.value = {
-    ...def,
-    desc: n.module ? undefined : '流程步骤，随运单模块启停',
-    foldedBy: moduleFlags.folded?.[n.module] || [],
-    fields: n.module ? (FIELDS[n.module] || []) : [],
+  /* 右侧浮岛：不跟随卡片定位，直接固定在右边，所以只存数据 */
+  pop.value = {
+    ...n,
+    features: n.features || [],
     canToggle: canToggle(n),
-    configured: n.module ? isConfigured(n.module) : false,
+    configured: isConfigured(n.module),
   }
-  form.value = n.module ? { ...(moduleFlags.config?.[n.module] || {}) } : {}
-  drawer.value = true
+  activeFeat.value = (n.features && n.features[0] && n.features[0].key) || null
 }
 
-function openBase(b) {
-  active.value = {
-    ...b, module: null, interactive: false,
-    desc: b.desc, foldedBy: [], fields: [],
+const closePop = () => { pop.value = null }
+
+/* 双栏右侧显示的那个功能 */
+const activeFeat = ref(null)
+const curFeat = computed(() => {
+  const fs = (pop.value && pop.value.features) || []
+  return fs.find((f) => f.key === activeFeat.value) || fs[0] || null
+})
+
+/** 浮层右上角的状态标签 */
+function statusOf(n) {
+  if (n.special === 'audit') {
+    return approvalMode.value === 'off'
+      ? { text: '已关闭', cls: 'off' }
+      : { text: '已开启', cls: 'on' }
   }
-  form.value = {}
-  drawer.value = true
+  return n.enabled ? { text: '已开通', cls: 'on' } : { text: '未开通', cls: 'off' }
 }
 
-const moduleName = (k) => LANES.flatMap((l) => l.nodes).find((n) => n.module === k)?.name || k
+/* 滚动/缩放后浮层位置会错，直接关掉 */
+const onScrollClose = () => { if (pop.value) closePop() }
 
-/* ============ 影响预览：这个模块关掉会卡住多少单 ============ */
-const countBy = async (status, extra) => {
-  const owner = moduleOwner(user)
-  if (!owner) return 0
-  try {
-    let q = supabase.from('reports')
-      .select('id', { count: 'exact', head: true })
-      .eq('owner_account', owner)
-      .eq('status', status)
-    if (extra) q = extra(q)
-    const { count } = await q
-    return count || 0
-  } catch (e) {
-    return 0
-  }
-}
+/* ---- 子功能开关 ---- */
+async function toggleFeature(f) {
+  if (!pop.value) return
+  const n = pop.value
+  const mk = n.moduleKey
+  const cur = subOf(mk, n.key)
+  const next = { ...cur, [f.key]: cur[f.key] === false }  // 取反
+  const nextSub = { ...((moduleFlags.config[mk] || {}).sub || {}), [n.key]: next }
 
-/**
- * 关掉某模块的后果。
- * ⭐ 关键：运单关掉后财务端进不去，在途的待审/待付款单会「卡在那里没人能处理」，
- *    必须让操作者当场看到这个数字，而不是事后解释。
- */
-async function impactOf(moduleKey) {
-  if (moduleKey === 'waybill') {
-    const [audit, pay] = await Promise.all([
-      countBy('审核中'),
-      countBy('待打款', (q) => q.eq('pay_required', true)),
-    ])
-    const lines = []
-    lines.push('关闭后：车队运营报告、费用 4 项、路线、司机端全部消失')
-    if (audit || pay) {
-      lines.push(`⚠️ 当前还有 ${audit} 笔待审、${pay} 笔待付款——关闭后财务端进不去，这些单会卡住`)
-    } else {
-      lines.push('当前没有待处理的费用单，可以安全关闭')
-    }
-    lines.push('历史数据不会删除，重新开启后原配置保留')
-    return lines
-  }
-  if (moduleKey === 'payout') {
-    const pay = await countBy('待打款', (q) => q.eq('pay_required', true))
-    const lines = ['关闭后：付款登记入口消失，费用单停在「待打款」不再往下走']
-    if (pay) lines.push(`⚠️ 当前有 ${pay} 笔待付款，关闭后无法登记`)
-    lines.push('重新开启后这些单会回到待登记')
-    return lines
-  }
-  if (moduleKey === 'report') {
-    return ['关闭后：车队运营报告入口消失（数据本身不受影响）', '重新开启即恢复']
-  }
-  if (moduleKey === 'recurring') {
-    return ['关闭后：常驻任务入口消失，已生成的运单不受影响', '重新开启即恢复']
-  }
-  return ['关闭后该功能入口消失', '历史数据不会删除']
-}
-
-async function toggleModule(node) {
-  if (!isAdmin) return
-  const turningOff = node.enabled
-  if (turningOff) {
-    /* ⭐ 影响预览：先算清会卡住多少单，再让操作者确认 */
-    preLoading.value = true
-    let lines = []
-    try {
-      lines = await impactOf(node.module)
-    } finally {
-      preLoading.value = false
-    }
-    const html = `<div style="line-height:1.9;font-size:13px;color:#334155">`
-      + lines.map((t) => `<div${t.startsWith('⚠️') ? ' style="color:#A00D24;font-weight:600"' : ''}>${t}</div>`).join('')
-      + `</div>`
-    try {
-      await ElMessageBox.confirm(html, `停用「${node.name}」`, {
-        type: 'warning',
-        dangerouslyUseHTMLString: true,
-        confirmButtonText: '我已了解，确认停用',
-        cancelButtonText: '取消',
-        confirmButtonClass: 'el-button--danger',
-      })
-    } catch { return }
-  }
   saving.value = true
   try {
-    const next = !node.enabled
-    await setModuleFlag(node.module, next, user)
-
-    /* ⭐ 兜底：setModuleFlag 内部会 force 重读一次，但重读可能受 RLS / 缓存影响
-       没拿到最新值 → 界面看着开关拨了、连线却没变。
-       这里本地强制同步一次，保证「开启后线一定连上」。 */
-    if (moduleFlags.effective[node.module] !== next) {
-      console.warn('[画布] 重读模块状态未生效，本地兜底同步', node.module, next)
-      const intent = { ...(moduleFlags.intent || {}), [node.module]: next }
-      moduleFlags.intent = intent
-      moduleFlags.effective = foldDeps(intent)
-      MODULES_FOR_FLAGS.forEach((m) => {
-        if (m.key in moduleFlags) moduleFlags[m.key] = moduleFlags.effective[m.key] === true
-      })
-    }
-
-    ElMessage.success(node.enabled ? '已停用' : '已开通')
-    drawer.value = false
+    await setModuleConfig(mk, { sub: nextSub }, user)
+    pop.value = { ...n, features: n.features }
   } catch (e) {
     ElMessage.error(e.message || '保存失败')
   } finally {
@@ -692,13 +681,37 @@ async function toggleModule(node) {
   }
 }
 
-async function saveConfig(node) {
+/* ---- 费用审批开关（写 fee_approval_configs.mode） ---- */
+async function loadApprovalMode() {
+  try {
+    const owner = moduleOwner(user)
+    if (!owner) return
+    const { data } = await supabase
+      .from('fee_approval_configs')
+      .select('mode')
+      .eq('owner_account', owner)
+      .limit(1)
+    approvalMode.value = (data && data[0] && data[0].mode) || 'on'
+  } catch (e) { /* 读不到按开 */ }
+}
+
+async function toggleAudit() {
+  const owner = moduleOwner(user)
+  if (!owner) return
+  const next = approvalMode.value === 'off' ? 'on' : 'off'
   saving.value = true
   try {
-    await setModuleConfig(node.module, form.value, user)
-    ElMessage.success('参数已保存')
+    await supabase.from('fee_approval_configs').upsert(
+      { owner_account: owner, mode: next, updated_at: new Date().toISOString() },
+      { onConflict: 'owner_account' }
+    )
+    approvalMode.value = next
+    ElMessage.success(next === 'off' ? '费用审批已关闭' : '费用审批已开启')
+    if (pop.value && pop.value.special === 'audit') {
+      pop.value = { ...pop.value }
+    }
   } catch (e) {
-    ElMessage.error(e.message || '保存失败')
+    ElMessage.error('保存失败：' + (e.message || ''))
   } finally {
     saving.value = false
   }
@@ -962,6 +975,204 @@ onMounted(async () => {
 .fnode.ghost .bar { background: #CBD5E1; }
 .fnode.ghost .fn-t { color: #94A3B8; }
 .fnode.ghost .fn-c span { color: #B4BECB; background: #FBFCFE; border-color: #F0F4F9; }
+
+/* ===== 卡片下方浮层 ===== */
+.np-mask { display: none; }
+
+/* 右侧浮岛：离右边和上下各留 14px，四角圆，靠投影和画布分成两层 */
+.node-pop {
+  position: fixed;
+  right: 14px;
+  /* 顶到画布内容区上沿，而不是贴浏览器顶（上方还有 header + 标签栏 + 工具栏） */
+  top: 160px;
+  width: 342px;
+  /* 高度跟内容走，内容多才撑到最大高度并滚动 */
+  max-height: calc(100vh - 174px);
+  z-index: 991;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, .06), 0 22px 50px -10px rgba(15, 23, 42, .3);
+  overflow: hidden;
+  animation: panelIn .22s cubic-bezier(.22, .61, .36, 1);
+}
+@keyframes panelIn {
+  from { transform: translateX(26px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+/* ===== 双栏（L 版） ===== */
+.np-split {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  border-top: 1px solid #F1F5F9;
+}
+.np-left {
+  width: 130px;
+  flex: 0 0 auto;
+  background: #FAFBFD;
+  border-right: 1px solid #F1F5F9;
+  padding: 9px 0;
+  overflow-y: auto;
+}
+.np-label {
+  font-size: 10px; font-weight: 800; color: #A9B4C2;
+  letter-spacing: .4px; padding: 3px 14px 8px;
+}
+.np-nav {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 14px;
+  font-size: 12.5px; color: #64748B;
+  cursor: pointer; transition: background .12s, color .12s;
+}
+.np-nav:hover { background: #F1F5F9; }
+.np-nav.on {
+  background: #fff; color: #0F172A; font-weight: 700;
+  box-shadow: inset 2px 0 0 var(--pop-c, #C8102E);
+}
+.np-nav i {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: #15803D; flex: 0 0 auto;
+}
+.np-nav.off { color: #B4BECB; }
+.np-nav.off i { background: #CBD5E1; }
+.np-nav-empty { padding: 7px 14px; font-size: 11.5px; color: #C4CDD9; line-height: 1.6; }
+
+.np-right {
+  flex: 1; min-width: 0;
+  overflow-y: auto;
+  padding: 16px 18px;
+}
+.np-right::-webkit-scrollbar { width: 7px; }
+.np-right::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 4px; }
+
+.np-fname { font-size: 14.5px; font-weight: 800; color: #0F172A; }
+.np-fdesc { font-size: 11.5px; color: #94A3B8; margin: 6px 0 0; line-height: 1.7; }
+
+.np-switch-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 15px; padding-top: 12px;
+  border-top: 1px solid #F1F5F9;
+}
+.np-switch-t { font-size: 12.5px; color: #475569; font-weight: 600; }
+.np-sw {
+  width: 36px; height: 20px; border-radius: 11px;
+  background: #E2E8F0; position: relative;
+  cursor: pointer; flex: 0 0 auto; transition: background .18s;
+}
+.np-sw::after {
+  content: ''; position: absolute; left: 2px; top: 2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .16);
+  transition: left .18s;
+}
+.np-sw.on { background: #15803D; }
+.np-sw.on::after { left: 18px; }
+
+.np-state {
+  margin-top: 12px; padding: 10px 12px;
+  background: #F8FAFC; border-radius: 8px;
+  font-size: 11px; color: #94A3B8; line-height: 1.65;
+}
+
+.np-empty { padding: 4px 0; }
+.np-empty-t { font-size: 13px; font-weight: 800; color: #64748B; }
+.np-empty p { margin: 6px 0 0; font-size: 11.5px; color: #A9B4C2; line-height: 1.65; }
+
+.np-hd {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 0 0 auto;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid #F1F5F9;
+}
+/* 泳道色小圆点：代替浮层原来的左侧色条，更轻 */
+.np-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--pop-c, #C8102E);
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pop-c, #C8102E) 14%, #fff);
+}
+.np-name { font-size: 15px; font-weight: 800; color: #0F172A; }
+.np-st { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 5px; }
+.np-st.on { color: #15803D; background: #F0FDF4; }
+.np-st.off { color: #B45309; background: #FFFBEB; }
+.np-x {
+  margin-left: auto; cursor: pointer; color: #C4CDD9;
+  font-size: 19px; line-height: 1;
+}
+.np-x:hover { color: #64748B; }
+
+.np-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 16px 16px;
+}
+.np-scroll::-webkit-scrollbar { width: 8px; }
+.np-scroll::-webkit-scrollbar-thumb { background: #DDE4EC; border-radius: 4px; }
+
+.np-desc { font-size: 10.5px; color: #94A3B8; margin: 0 0 4px; line-height: 1.6; }
+
+.np-sec { margin-top: 12px; border-top: 1px solid #F1F5F9; padding-top: 10px; }
+.np-label { font-size: 10.5px; font-weight: 700; color: #64748B; margin-bottom: 6px; }
+.np-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 0; cursor: pointer;
+  border-bottom: 1px solid #F6F8FB;
+}
+.np-item:last-child { border-bottom: none; }
+.np-item:hover .np-fname { color: #C8102E; }
+.np-check {
+  width: 15px; height: 15px; border-radius: 5px;
+  border: 1.5px solid #D5DDE7; background: #fff;
+  position: relative; flex: 0 0 auto;
+}
+.np-check.on { background: #0F172A; border-color: #0F172A; }
+.np-check.on::after {
+  content: ''; position: absolute; left: 4px; top: 1px;
+  width: 3.6px; height: 7.4px;
+  border: solid #fff; border-width: 0 1.8px 1.8px 0;
+  transform: rotate(42deg);
+}
+.np-fname { font-size: 12px; color: #0F172A; }
+.np-off { margin-left: auto; font-size: 9.5px; color: #B4BECB; }
+
+.np-foot {
+  flex: 0 0 auto;
+  margin-top: 0; padding: 13px 18px;
+  border-top: 1px solid #F1F5F9;
+  display: flex; align-items: center; gap: 9px;
+}
+.np-btn {
+  font: inherit; font-size: 12.5px; font-weight: 700;
+  padding: 8px 17px; border-radius: 8px; cursor: pointer;
+  transition: .15s;
+}
+.np-btn.danger { color: #fff; background: #0F172A; border: none; }
+.np-btn.danger:hover { background: #1E293B; }
+.np-btn.primary { color: #fff; background: #C8102E; border: none; }
+.np-btn.primary:hover { background: #A00D24; }
+.np-btn.line { color: #64748B; background: #fff; border: 1px solid #E2E8F0; }
+.np-btn.line:hover { border-color: #CBD5E1; color: #0F172A; }
+.np-hint { font-size: 10.5px; color: #C4CDD9; line-height: 1.5; margin-left: auto; }
+
+.np-lock {
+  margin-top: 12px; padding-top: 11px;
+  border-top: 1px solid #F1F5F9;
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; color: #94A3B8;
+}
+.np-lock-dot { width: 6px; height: 6px; border-radius: 50%; background: #CBD5E1; }
+
+.bc-pool-item em.lock {
+  font-style: normal; font-size: 8.5px; font-weight: 600;
+  color: #94A3B8; background: #F1F5F9;
+  border-radius: 4px; padding: 0 5px; margin-left: 6px;
+}
 
 /* 抽屉 */
 .drawer-body { padding: 4px 2px; }

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>业务流程 · 右侧面板设计方案</title>
+<style>
+  :root{
+    --bg:#EDF1F6; --line:#E2E8F0; --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8;
+    --red:#C8102E; --num:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:30px 22px 60px}
+
+  .page-hd{margin-bottom:22px}
+  h1{margin:0 0 7px;font-size:21px;font-weight:800;letter-spacing:-.4px}
+  .sub{font-size:12.5px;color:#64748B;line-height:1.75}
+  .sub b{color:#0F172A}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:920px){.grid{grid-template-columns:1fr}}
+
+  .scheme{background:#fff;border:1px solid var(--line);border-radius:15px;overflow:hidden;display:flex;flex-direction:column}
+  .s-hd{display:flex;align-items:center;gap:9px;padding:13px 15px 11px;border-bottom:1px solid #F1F5F9}
+  .s-no{
+    width:22px;height:22px;border-radius:7px;flex:0 0 auto;background:#0F172A;color:#fff;
+    font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  }
+  .s-name{font-size:13px;font-weight:800}
+  .s-tag{margin-left:auto;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:#F1F5F9;color:#64748B}
+  .s-tag.hot{background:#0F172A;color:#fff}
+  .s-desc{padding:10px 15px 0;font-size:11.5px;color:#94A3B8;line-height:1.7}
+
+  /* 舞台：左画布 + 右抽屉 */
+  .stage{
+    margin:13px 15px;height:392px;border-radius:11px;overflow:hidden;
+    position:relative;display:flex;
+    background:
+      radial-gradient(circle at 1px 1px,#D7E0EA 1px,transparent 0) 0 0/12px 12px,
+      linear-gradient(180deg,#FBFCFE,#F2F6FA);
+    border:1px solid #E8EEF5;
+  }
+  /* 左侧假画布 */
+  .fake-canvas{flex:1;padding:16px 14px;position:relative}
+  .fc-lane{height:76px;margin-bottom:12px;border-radius:9px;background:rgba(255,255,255,.55);border:1px solid #E7EDF4;padding:9px}
+  .fc-card{
+    height:38px;border-radius:8px;background:#fff;border:1px solid #E7EDF4;
+    border-left:3px solid var(--c,#C8102E);
+    display:flex;align-items:center;padding:0 8px;font-size:9px;color:#64748B;
+    box-shadow:0 1px 4px rgba(15,23,42,.05);
+  }
+
+  /* ---------- 通用面板文字 ---------- */
+  .p-name{font-size:13px;font-weight:800;letter-spacing:-.1px}
+  .p-desc{font-size:10px;color:#94A3B8;margin:4px 0 0;line-height:1.6}
+  .p-x{color:#C4CDD9;font-size:16px;line-height:1;cursor:pointer}
+  .p-label{font-size:9.5px;font-weight:800;color:#94A3B8;letter-spacing:.4px;margin-bottom:6px}
+
+  /* ---------- I · 全高经典 ---------- */
+  .panelI{
+    width:238px;flex:0 0 auto;background:#fff;height:100%;
+    border-left:1px solid #E2E8F0;
+    box-shadow:-14px 0 34px rgba(15,23,42,.1);
+    display:flex;flex-direction:column;
+  }
+  .i-top{padding:12px 14px 11px;border-bottom:1px solid #F1F5F9}
+  .i-body{flex:1;overflow:hidden;padding:9px 14px}
+  .i-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #F6F8FB}
+  .i-row:last-child{border-bottom:none}
+  .i-name{font-size:11px;color:#334155;font-weight:600}
+  .i-note{font-size:8.5px;color:#C4CDD9;margin-left:auto}
+  .i-foot{padding:10px 14px;border-top:1px solid #F1F5F9;display:flex;gap:7px}
+
+  .chk{width:14px;height:14px;border-radius:4px;border:1.5px solid #D5DDE7;background:#fff;position:relative;flex:0 0 auto}
+  .chk.on{background:#0F172A;border-color:#0F172A}
+  .chk.on::after{content:'';position:absolute;left:3.6px;top:.6px;width:3.4px;height:7px;border:solid #fff;border-width:0 1.8px 1.8px 0;transform:rotate(42deg)}
+
+  .btn{font:inherit;font-size:10.5px;font-weight:700;padding:6px 12px;border-radius:6px;cursor:pointer;border:none}
+  .btn.dark{background:#0F172A;color:#fff}
+  .btn.red{background:#C8102E;color:#fff}
+  .btn.line{background:#fff;color:#64748B;border:1px solid #E2E8F0}
+
+  /* ---------- J · 浮岛 ---------- */
+  .panelJ{
+    width:228px;flex:0 0 auto;
+    margin:14px 14px 14px 0;
+    background:#fff;border-radius:14px;
+    box-shadow:0 0 0 1px rgba(15,23,42,.06), 0 22px 50px -10px rgba(15,23,42,.3);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .j-top{padding:12px 13px 10px;display:flex;align-items:flex-start;gap:8px}
+  .j-body{flex:1;padding:0 13px 6px;overflow:hidden}
+  .j-foot{padding:9px 13px 11px;border-top:1px solid #F4F6F9;display:flex;gap:7px}
+
+  /* ---------- K · 顶部色带 ---------- */
+  .panelK{
+    width:234px;flex:0 0 auto;background:#fff;height:100%;
+    border-left:1px solid #E2E8F0;
+    box-shadow:-16px 0 38px rgba(15,23,42,.12);
+    display:flex;flex-direction:column;
+  }
+  .k-hero{
+    padding:16px 14px 14px;
+    background:linear-gradient(140deg,#C8102E,#A00D24);
+    color:#fff;
+  }
+  .k-hero .p-name{color:#fff;font-size:14px}
+  .k-hero .p-desc{color:rgba(255,255,255,.72)}
+  .k-hero .p-x{color:rgba(255,255,255,.6)}
+  .k-badge{
+    display:inline-block;font-size:8.5px;font-weight:700;
+    padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.2);
+    color:#fff;margin-bottom:7px;
+  }
+  .k-body{flex:1;padding:10px 14px;overflow:hidden}
+  .k-foot{padding:10px 14px;background:#FAFBFD;border-top:1px solid #F1F5F9;display:flex;gap:7px}
+
+  /* ---------- L · 双栏加宽 ---------- */
+  .panelL{
+    width:290px;flex:0 0 auto;background:#fff;height:100%;
+    border-left:1px solid #E2E8F0;
+    box-shadow:-18px 0 44px rgba(15,23,42,.13);
+    display:flex;flex-direction:column;
+  }
+  .l-top{padding:12px 14px 10px;border-bottom:1px solid #F1F5F9}
+  .l-split{flex:1;display:flex;overflow:hidden}
+  .l-left{
+    width:118px;flex:0 0 auto;background:#FAFBFD;border-right:1px solid #F1F5F9;
+    padding:8px 0;
+  }
+  .l-nav{padding:6px 12px;font-size:10px;color:#64748B;display:flex;align-items:center;gap:6px}
+  .l-nav.on{background:#fff;color:#0F172A;font-weight:700;border-left:2px solid #C8102E}
+  .l-nav i{width:4px;height:4px;border-radius:50%;background:#CBD5E1;flex:0 0 auto}
+  .l-nav.on i{background:#15803D}
+  .l-right{flex:1;padding:9px 12px;overflow:hidden}
+  .l-field{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#64748B;padding:7px 0;border-bottom:1px dashed #F4F6F9}
+  .l-field b{color:#0F172A;font-weight:700}
+  .l-foot{padding:10px 14px;border-top:1px solid #F1F5F9;display:flex;gap:7px}
+
+  .sw{width:29px;height:16px;border-radius:9px;background:#E2E8F0;position:relative;flex:0 0 auto}
+  .sw::after{content:'';position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.14)}
+  .sw.on{background:#15803D}
+  .sw.on::after{left:15px}
+
+  /* 优缺点 */
+  .pc{padding:11px 15px 13px;border-top:1px solid #F1F5F9;font-size:10.5px;line-height:1.8}
+  .pc .row{display:flex;gap:7px;margin-bottom:2px}
+  .pc .k{flex:0 0 32px;font-weight:800;color:#94A3B8}
+  .pc .p{color:#15803D}
+  .pc .c{color:#B45309}
+
+  .note{
+    margin-top:22px;padding:16px 18px;background:#fff;border:1px solid var(--line);border-radius:13px;
+    font-size:12.5px;color:#475569;line-height:1.95;
+  }
+  .note h2{margin:0 0 8px;font-size:14px;font-weight:800;color:#0F172A}
+  .note b{color:#0F172A}
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11.5px}
+  th,td{padding:7px 9px;text-align:left;border-bottom:1px solid #F1F5F9}
+  th{font-weight:700;color:#64748B;font-size:10.5px;background:#FAFBFD}
+  td:first-child{font-weight:700;color:#0F172A}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="page-hd">
+    <h1>右侧面板设计 · 四版</h1>
+    <p class="sub">
+      返回右侧之后，最大变化是<b>空间够了</b> —— 可以放参数表单、可以写长说明、不用再挤。<br>
+      四版差别在「贴不贴边」「头怎么做」「要不要分栏」。下面每版左边是画布（被遮住的部分），右边是面板。
+    </p>
+  </div>
+
+  <div class="grid">
+
+    <!-- ===== I ===== -->
+    <div class="scheme">
+      <div class="s-hd">
+        <span class="s-no">I</span>
+        <span class="s-name">全高经典</span>
+        <span class="s-tag">最常规</span>
+      </div>
+      <p class="s-desc">贴右边、通到底，顶部标题栏 + 底部操作栏固定，中间滚动。原来那版就是这个结构。</p>
+
+      <div class="stage">
+        <div class="fake-canvas">
+          <div class="fc-lane"><div class="fc-card" style="--c:#22C55E">创建运单</div></div>
+          <div class="fc-lane"><div class="fc-card" style="--c:#3B82F6">司机接单</div></div>
+          <div class="fc-lane"><div class="fc-card" style="--c:#C8102E">费用审批</div></div>
+        </div>
+
+        <div class="panelI">
+          <div class="i-top">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span class="p-name">费用审批</span>
+              <span class="p-x" style="margin-left:auto">×</span>
+            </div>
+            <p class="p-desc">关掉后费用上报直接通过</p>
+          </div>
+
+          <div class="i-body">
+            <div class="p-label">包含功能</div>
+            <div class="i-row"><span class="chk on"></span><span class="i-name">多级审批</span><span class="i-note">按金额</span></div>
+            <div class="i-row"><span class="chk on"></span><span class="i-name">阈值判断</span><span class="i-note">≥5000</span></div>
+            <div class="i-row"><span class="chk"></span><span class="i-name">超时提醒</span><span class="i-note">24h</span></div>
+
+            <div class="p-label" style="margin-top:14px">参数</div>
+            <div class="i-row"><span class="i-name">审批阈值</span><span class="i-note">¥5,000</span></div>
+            <div class="i-row"><span class="i-name">超时时长</span><span class="i-note">24 小时</span></div>
+          </div>
+
+          <div class="i-foot">
+            <button class="btn line">停用</button>
+            <button class="btn dark" style="flex:1">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc">
+        <div class="row"><span class="k">优点</span><span class="p">能放参数表单；结构稳定，用户熟悉；底部按钮永远可见</span></div>
+        <div class="row"><span class="k">缺点</span><span class="c">贴边全高有点"压"；和画布之间只有一条 1px 线，层次靠阴影撑</span></div>
+      </div>
+    </div>
+
+    <!-- ===== J ===== -->
+    <div class="scheme">
+      <div class="s-hd">
+        <span class="s-no">J</span>
+        <span class="s-name">浮岛（不贴边）</span>
+        <span class="s-tag hot">推荐</span>
+      </div>
+      <p class="s-desc">面板离右边和上下各留 14px，四角圆起来，像一张卡片飘在右边。比全高压迫感小很多。</p>
+
+      <div class="stage">
+        <div class="fake-canvas">
+          <div class="fc-lane"><div class="fc-card" style="--c:#22C55E">创建运单</div></div>
+          <div class="fc-lane"><div class="fc-card" style="--c:#3B82F6">司机接单</div></div>
+        </div>
+
+        <div class="panelJ">
+          <div class="j-top">
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:7px">
+                <span class="p-name">费用审批</span>
+              </div>
+              <p class="p-desc">关掉后费用上报直接通过</p>
+            </div>
+            <span class="p-x">×</span>
+          </div>
+
+          <div class="j-body">
+            <div class="p-label">包含功能</div>
+            <div class="i-row"><span class="chk on"></span><span class="i-name">多级审批</span><span class="i-note">按金额</span></div>
+            <div class="i-row"><span class="chk on"></span><span class="i-name">阈值判断</span><span class="i-note">≥5000</span></div>
+            <div class="i-row"><span class="chk"></span><span class="i-name">超时提醒</span><span class="i-note">24h</span></div>
+
+            <div class="p-label" style="margin-top:12px">参数</div>
+            <div class="i-row"><span class="i-name">审批阈值</span><span class="i-note">¥5,000</span></div>
+          </div>
+
+          <div class="j-foot">
+            <button class="btn red" style="flex:1">关闭审批</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc">
+        <div class="row"><span class="k">优点</span><span class="p">四角圆 + 四周留白，压迫感最小；一张卡片的观感，和后台其他卡片同语言</span></div>
+        <div class="row"><span class="k">缺点</span><span class="c">可用高度比全高少 28px；内容很长时要滚动</span></div>
+      </div>
+    </div>
+
+    <!-- ===== K ===== -->
+    <div class="scheme">
+      <div class="s-hd">
+        <span class="s-no">K</span>
+        <span class="s-name">顶部泳道色带</span>
+        <span class="s-tag">呼应画布</span>
+      </div>
+      <p class="s-desc">面板顶部一整块泳道色渐变，写清"这是哪条流程的哪个节点"。和画布上的色条一眼对上。</p>
+
+      <div class="stage">
+        <div class="fake-canvas">
+          <div class="fc-lane"><div class="fc-card" style="--c:#C8102E">费用审批</div></div>
+          <div class="fc-lane"><div class="fc-card" style="--c:#F59E0B">车队运营报告</div></div>
+        </div>
+
+        <div class="panelK">
+          <div class="k-hero">
+            <div style="display:flex;align-items:flex-start">
+              <div style="flex:1">
+                <span class="k-badge">费用 · 第 2 步</span>
+                <div class="p-name">费用审批</div>
+                <p class="p-desc">关掉后费用上报直接通过，不再走审批链</p>
+              </div>
+              <span class="p-x">×</span>
+            </div>
+          </div>
+
+          <div class="k-body">
+            <div class="p-label">包含功能</div>
+            <div class="i-row"><span class="chk on"></span><span class="i-name">多级审批</span><span class="i-note">按金额</span></div>
+            <div class="i-row"><span class="chk on"></span><span class="i-name">阈值判断</span><span class="i-note">≥5000</span></div>
+            <div class="i-row"><span class="chk"></span><span class="i-name">超时提醒</span><span class="i-note">24h</span></div>
+          </div>
+
+          <div class="k-foot">
+            <button class="btn dark" style="flex:1">关闭审批</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc">
+        <div class="row"><span class="k">优点</span><span class="p">色带和画布色条呼应，不会迷失在流程里；头部信息可以放"第几步"</span></div>
+        <div class="row"><span class="k">缺点</span><span class="c">色带吃掉了约 70px 高度；深色底上说明文字对比要控制</span></div>
+      </div>
+    </div>
+
+    <!-- ===== L ===== -->
+    <div class="scheme">
+      <div class="s-hd">
+        <span class="s-no">L</span>
+        <span class="s-name">双栏加宽</span>
+        <span class="s-tag">内容多</span>
+      </div>
+      <p class="s-desc">面板加宽到 290px，左边是功能目录，右边是当前选中功能的参数。适合以后功能变多。</p>
+
+      <div class="stage">
+        <div class="fake-canvas">
+          <div class="fc-lane"><div class="fc-card" style="--c:#C8102E">费用审批</div></div>
+        </div>
+
+        <div class="panelL">
+          <div class="l-top">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span class="p-name">费用审批</span>
+              <span class="p-x" style="margin-left:auto">×</span>
+            </div>
+          </div>
+
+          <div class="l-split">
+            <div class="l-left">
+              <div class="p-label" style="padding-left:12px">功能</div>
+              <div class="l-nav on"><i></i>多级审批</div>
+              <div class="l-nav"><i></i>阈值判断</div>
+              <div class="l-nav" style="opacity:.5"><i></i>超时提醒</div>
+            </div>
+
+            <div class="l-right">
+              <div style="font-size:10px;font-weight:800;color:#0F172A;margin-bottom:6px">多级审批</div>
+              <div class="l-field">一级审批人 <b>发单人</b></div>
+              <div class="l-field">二级审批人 <b>财务</b></div>
+              <div class="l-field">三级审批人 <b>老板</b></div>
+              <div class="l-field" style="border-bottom:none">去重规则 <b>已开启</b></div>
+            </div>
+          </div>
+
+          <div class="l-foot">
+            <button class="btn line">停用</button>
+            <button class="btn dark" style="flex:1">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc">
+        <div class="row"><span class="k">优点</span><span class="p">功能多了不会一长条；目录和配置分离，找东西快</span></div>
+        <div class="row"><span class="k">缺点</span><span class="c">占宽 290px，遮住更多画布；功能只有 2~3 个时目录栏显得空</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note">
+    <h2>怎么选</h2>
+    <table>
+      <tr><th></th><th>I 全高</th><th>J 浮岛</th><th>K 色带</th><th>L 双栏</th></tr>
+      <tr><td>宽度</td><td>238px</td><td>228px</td><td>234px</td><td><b>290px</b></td></tr>
+      <tr><td>压迫感</td><td>中</td><td><b>最小</b></td><td>中</td><td>较大</td></tr>
+      <tr><td>能放参数</td><td>能</td><td>能</td><td>能</td><td><b>能放很多</b></td></tr>
+      <tr><td>和画布的呼应</td><td>弱</td><td>弱</td><td><b>强（色带）</b></td><td>弱</td></tr>
+      <tr><td>以后功能变多</td><td>滚动</td><td>滚动</td><td>滚动</td><td><b>不挤</b></td></tr>
+    </table>
+
+    <p style="margin:14px 0 0">
+      <b>我的选择：J</b>。理由是它最像"后台里的一张卡片"，
+      而不是"从右边推出来的一个抽屉" —— 四周留白让它和画布是两层关系，不贴在一起。
+    </p>
+    <p style="margin:8px 0 0">
+      但如果你在意「一眼知道这是哪条流程」，就选 <b>K</b> —— 顶部色带和画布色条是同一个颜色，
+      扫一眼就能把面板和节点对上。宽度和 J 差不多，只是矮了 70px。
+    </p>
+    <p style="margin:8px 0 0">
+      <b>L 留作下一步</b>：等每个节点的可配项真的多起来（比如"多级审批"里有 5 个字段），再升级成双栏。
+      现在只有 2~3 个功能，左边目录栏会空一半。
+    </p>
+  </div>
+
+</div>
+</body>
+</html>
