@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>车队运营分析报告 · 四版方案</title>
+<style>
+  :root{
+    --bg:#F1F4F8; --card:#fff; --line:#E6ECF3; --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8;
+    --red:#C8102E; --blue:#1D4ED8; --green:#15803D; --amber:#D97706;
+    --num:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1180px;margin:0 auto;padding:30px 24px 70px}
+
+  .hd{margin-bottom:22px}
+  h1{margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-.4px}
+  .sub{font-size:12.5px;color:#64748B;line-height:1.85}
+  .sub b{color:#0F172A}
+
+  .scheme{background:#fff;border:1px solid var(--line);border-radius:15px;margin-bottom:22px;overflow:hidden}
+  .s-hd{display:flex;align-items:center;gap:10px;padding:15px 18px 13px;border-bottom:1px solid #F1F5F9}
+  .s-no{width:24px;height:24px;border-radius:7px;flex:0 0 auto;background:#0F172A;color:#fff;
+    font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  .s-name{font-size:14px;font-weight:800}
+  .s-tag{margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;background:#F1F5F9;color:#64748B}
+  .s-tag.rec{background:#0F172A;color:#fff}
+  .s-desc{padding:12px 18px 0;font-size:12px;color:#64748B;line-height:1.8}
+  .stage{padding:16px 18px 18px}
+
+  /* ===== 通用 ===== */
+  .bar-hd{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:9px 12px;border:1px solid #EDF1F6;border-radius:9px;background:#FAFBFD;margin-bottom:12px;
+  }
+  .seg{display:flex;gap:2px;background:#EEF2F7;border-radius:7px;padding:2px}
+  .seg span{font-size:10.5px;padding:3px 9px;border-radius:5px;color:#64748B;cursor:default}
+  .seg span.on{background:#fff;color:#0F172A;font-weight:700;box-shadow:0 1px 2px rgba(15,23,42,.08)}
+  .bar-hd .lbl{font-size:10px;color:#B4BECB;margin-right:2px}
+  .bar-hd .sp{flex:1}
+
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px}
+  .kpi{border:1px solid #EDF1F6;border-radius:10px;padding:11px 13px;background:#fff}
+  .kpi.hero{background:linear-gradient(135deg,#1E3A8A,#152C6B);border-color:transparent}
+  .kpi-k{font-size:10px;color:#94A3B8}
+  .kpi.hero .kpi-k{color:rgba(255,255,255,.72)}
+  .kpi-v{font-family:var(--num);font-size:19px;font-weight:800;letter-spacing:-.5px;margin-top:4px}
+  .kpi.hero .kpi-v{color:#fff}
+  .kpi-d{font-size:9.5px;margin-top:3px;color:#94A3B8}
+  .kpi.hero .kpi-d{color:rgba(255,255,255,.6)}
+  .kpi-d.up{color:var(--red)}
+  .kpi-d.down{color:var(--green)}
+
+  .panel{border:1px solid #EDF1F6;border-radius:10px;background:#fff;padding:12px 14px}
+  .p-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .p-t{font-size:11.5px;font-weight:800}
+  .p-s{font-size:9.5px;color:#B4BECB;margin-left:auto}
+  .grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:11px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  thead th{background:#F7F9FC;color:#475569;font-size:10.5px;font-weight:700;
+    text-align:left;padding:7px 9px;border-bottom:1px solid #E6ECF3;white-space:nowrap}
+  tbody td{padding:8px 9px;border-bottom:1px solid #F4F6F9}
+  .num{font-family:var(--num);font-variant-numeric:tabular-nums}
+  .ta-r{text-align:right}
+  .muted{color:#B4BECB}
+
+  /* 图：折线 */
+  .chart{position:relative;height:96px;margin:2px 0}
+  .chart svg{width:100%;height:100%;display:block}
+  .axis-x{display:flex;justify-content:space-between;font-size:9px;color:#B4BECB;margin-top:4px}
+
+  /* 图：堆叠柱 */
+  .stack{display:flex;align-items:flex-end;gap:9px;height:88px}
+  .stc{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:1.5px;align-items:center}
+  .stc i{width:100%;border-radius:2px}
+
+  /* 图：环形 */
+  .donut{width:96px;height:96px;border-radius:50%;position:relative;flex:0 0 auto}
+  .donut::after{content:'';position:absolute;inset:22px;background:#fff;border-radius:50%}
+  .donut-c{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:var(--num);font-size:12px;font-weight:800;z-index:1}
+
+  .legend{display:flex;flex-direction:column;gap:5px;font-size:10px;color:#64748B}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .legend i{width:7px;height:7px;border-radius:2px;display:inline-block}
+
+  .bars{display:flex;flex-direction:column;gap:7px}
+  .bar-row{display:flex;align-items:center;gap:8px;font-size:10.5px}
+  .bar-n{width:64px;color:#475569;flex:0 0 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar-t{flex:1;height:8px;border-radius:4px;background:#F1F5F9;overflow:hidden}
+  .bar-t i{display:block;height:100%;border-radius:4px}
+  .bar-v{width:56px;text-align:right;font-family:var(--num);font-weight:700;flex:0 0 auto}
+
+  /* 章节（报告式） */
+  .chap{border-left:2.5px solid #E6ECF3;padding-left:13px;margin-bottom:16px}
+  .chap-hd{display:flex;align-items:baseline;gap:8px;margin-bottom:9px}
+  .chap-no{font-family:var(--num);font-size:11px;font-weight:800;color:#1D4ED8}
+  .chap-t{font-size:12.5px;font-weight:800}
+  .chap-sum{font-size:10.5px;color:#64748B;line-height:1.7;margin-top:7px;
+    background:#FAFBFD;border-radius:7px;padding:8px 10px}
+  .chap-sum b{color:#0F172A}
+
+  /* 矩阵 */
+  .mtx{width:100%;border-collapse:separate;border-spacing:2px;font-size:10.5px}
+  .mtx th{background:#F7F9FC;color:#475569;font-weight:700;padding:6px 7px;border-radius:5px;font-size:10px}
+  .mtx td{padding:6px 7px;border-radius:5px;text-align:right;font-family:var(--num);background:#FAFBFD}
+  .mtx td.lbl{text-align:left;font-family:inherit;font-weight:600;color:#0F172A;background:#fff}
+  .mtx td.v0{background:#F7F9FC;color:#C4CDD9}
+  .mtx td.v1{background:#EFF6FF;color:#1E40AF}
+  .mtx td.v2{background:#BFDBFE;color:#1E3A8A}
+  .mtx td.v3{background:#60A5FA;color:#fff}
+  .mtx td.v4{background:#1D4ED8;color:#fff}
+
+  /* 对比式 */
+  .vs{display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;font-size:10.5px;margin-bottom:7px}
+  .vs-l,.vs-r{border:1px solid #EDF1F6;border-radius:8px;padding:7px 10px;background:#fff}
+  .vs-r{background:#FAFBFD}
+  .vs-m{text-align:center;font-family:var(--num);font-size:10px;font-weight:800}
+  .vs-k{font-size:9.5px;color:#B4BECB;margin-bottom:2px}
+  .vs-v{font-family:var(--num);font-size:12.5px;font-weight:800}
+
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:13px;padding:14px 18px 16px;border-top:1px solid #F1F5F9}
+  .pc-box{border-radius:9px;padding:11px 13px;font-size:11px;line-height:1.8}
+  .pc-box.p{background:#F0FDF4;color:#166534}
+  .pc-box.c{background:#FFFBEB;color:#92400E}
+  .pc-box b{display:block;font-size:9.5px;font-weight:800;letter-spacing:.5px;margin-bottom:4px;opacity:.7}
+
+  .tip{margin-top:22px;padding:18px 20px;background:#fff;border:1px solid var(--line);border-radius:14px;
+    font-size:12.5px;color:#475569;line-height:1.95}
+  .tip h2{margin:0 0 10px;font-size:15px;font-weight:800;color:#0F172A}
+  .tip table{margin-top:10px;font-size:11.5px}
+  .tip th{background:#FAFBFD;color:#475569;font-weight:700;padding:7px 9px;text-align:left;font-size:10.5px}
+  .tip td{padding:7px 9px;border-bottom:1px solid #F1F5F9}
+  .tip td:first-child{font-weight:700}
+  .tip b{color:#0F172A}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hd">
+    <h1>车队运营分析报告 · 四版</h1>
+    <p class="sub">
+      把运单和费用揉在一起，回答一个老板真正关心的问题：<b>这些车跑得值不值</b>。<br>
+      四版都带同一套切换器：<b>时间粒度</b>（日 / 周 / 月 / 季 / 半年 / 年）× <b>范围</b>（全部 / 车队 / 单车 / 线路）× <b>指标</b>（运单 / 费用 / 综合）。<br>
+      差别在「怎么组织这些信息」—— 是铺开看、顺着读、交叉比，还是前后对照。
+    </p>
+  </div>
+
+  <!-- ============ A ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">A</span>
+      <span class="s-name">驾驶舱 · 一屏尽览</span>
+      <span class="s-tag rec">日常首选</span>
+    </div>
+    <p class="s-desc">
+      所有关键数字挤在一屏：5 个 KPI → 趋势双轴 → 结构 + 排行。不用滚，一眼看完，适合每天早上开一次。
+    </p>
+
+    <div class="stage">
+      <div class="bar-hd">
+        <span class="lbl">粒度</span>
+        <div class="seg"><span>日</span><span>周</span><span class="on">月</span><span>季</span><span>半年</span><span>年</span></div>
+        <span class="lbl" style="margin-left:8px">范围</span>
+        <div class="seg"><span class="on">全部</span><span>车队</span><span>单车</span></div>
+        <span class="sp"></span>
+        <span style="font-size:10px;color:#94A3B8">2026-10 · 12 台车 · 6 个车队</span>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi hero">
+          <div class="kpi-k">运单</div>
+          <div class="kpi-v">60</div>
+          <div class="kpi-d">完成 51 · 在途 9</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-k">总里程</div>
+          <div class="kpi-v">24,680</div>
+          <div class="kpi-d">km · 均 411/趟</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-k">运输收入</div>
+          <div class="kpi-v">¥1,728,000</div>
+          <div class="kpi-d up">环比 +12.4%</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-k">费用支出</div>
+          <div class="kpi-v" style="color:var(--red)">¥746,681</div>
+          <div class="kpi-d up">环比 +8.1%</div>
+        </div>
+        <div class="kpi" style="background:#F0FDF4;border-color:#BBF7D0">
+          <div class="kpi-k" style="color:#166534">单公里成本</div>
+          <div class="kpi-v" style="color:#15803D">¥30.3</div>
+          <div class="kpi-d down">环比 -2.6%</div>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-bottom:11px">
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">运单量 vs 费用</span><span class="p-s">近 6 个月 · 双轴</span></div>
+          <div class="chart">
+            <svg viewBox="0 0 400 96" preserveAspectRatio="none">
+              <!-- 柱：运单量 -->
+              <g fill="#DBEAFE">
+                <rect x="18" y="52" width="30" height="36" rx="2"/>
+                <rect x="86" y="44" width="30" height="44" rx="2"/>
+                <rect x="154" y="58" width="30" height="30" rx="2"/>
+                <rect x="222" y="36" width="30" height="52" rx="2"/>
+                <rect x="290" y="46" width="30" height="42" rx="2"/>
+                <rect x="358" y="30" width="30" height="58" rx="2"/>
+              </g>
+              <!-- 柱：费用（叠在右侧窄条） -->
+              <g fill="#FBB6C0">
+                <rect x="50" y="62" width="10" height="26" rx="2"/>
+                <rect x="118" y="56" width="10" height="32" rx="2"/>
+                <rect x="186" y="64" width="10" height="24" rx="2"/>
+                <rect x="254" y="48" width="10" height="40" rx="2"/>
+                <rect x="322" y="54" width="10" height="34" rx="2"/>
+                <rect x="390" y="40" width="10" height="48" rx="2"/>
+              </g>
+              <!-- 折线：单公里成本 -->
+              <polyline points="33,66 101,70 169,64 237,60 305,62 373,58"
+                fill="none" stroke="#15803D" stroke-width="2" stroke-linejoin="round"/>
+              <g fill="#15803D">
+                <circle cx="33" cy="66" r="2.2"/><circle cx="101" cy="70" r="2.2"/>
+                <circle cx="169" cy="64" r="2.2"/><circle cx="237" cy="60" r="2.2"/>
+                <circle cx="305" cy="62" r="2.2"/><circle cx="373" cy="58" r="2.2"/>
+              </g>
+            </svg>
+          </div>
+          <div class="axis-x"><span>5月</span><span>6月</span><span>7月</span><span>8月</span><span>9月</span><span>10月</span></div>
+          <div class="legend" style="flex-direction:row;gap:12px;margin-top:8px">
+            <span><i style="background:#DBEAFE"></i>运单量</span>
+            <span><i style="background:#FBB6C0"></i>费用</span>
+            <span><i style="background:#15803D"></i>单公里成本</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">费用结构</span><span class="p-s">按类型</span></div>
+          <div style="display:flex;align-items:center;gap:14px">
+            <div class="donut" style="background:conic-gradient(#C8102E 0 58%, #15803D 58% 76%, #7C3AED 76% 87%, #1D4ED8 87% 94%, #B45309 94% 100%)">
+              <div class="donut-c">¥74.7万</div>
+            </div>
+            <div class="legend">
+              <span><i style="background:#C8102E"></i>费用上报 58%</span>
+              <span><i style="background:#15803D"></i>补贴 18%</span>
+              <span><i style="background:#7C3AED"></i>过磅 11%</span>
+              <span><i style="background:#1D4ED8"></i>借款 7%</span>
+              <span><i style="background:#B45309"></i>违章 4%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid3">
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">车辆产出</span><span class="p-s">趟数 · TOP5</span></div>
+          <div class="bars">
+            <div class="bar-row"><span class="bar-n">晋A·12345</span><span class="bar-t"><i style="width:100%;background:#1D4ED8"></i></span><span class="bar-v">14 趟</span></div>
+            <div class="bar-row"><span class="bar-n">晋A·67890</span><span class="bar-t"><i style="width:79%;background:#3B82F6"></i></span><span class="bar-v">11 趟</span></div>
+            <div class="bar-row"><span class="bar-n">晋A·24680</span><span class="bar-t"><i style="width:64%;background:#60A5FA"></i></span><span class="bar-v">9 趟</span></div>
+            <div class="bar-row"><span class="bar-n">晋A·13579</span><span class="bar-t"><i style="width:50%;background:#93C5FD"></i></span><span class="bar-v">7 趟</span></div>
+            <div class="bar-row"><span class="bar-n">晋A·86420</span><span class="bar-t"><i style="width:29%;background:#BFDBFE"></i></span><span class="bar-v">4 趟</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">单公里成本</span><span class="p-s">越低越好</span></div>
+          <div class="bars">
+            <div class="bar-row"><span class="bar-n">晋A·24680</span><span class="bar-t"><i style="width:52%;background:#15803D"></i></span><span class="bar-v">¥24.1</span></div>
+            <div class="bar-row"><span class="bar-n">晋A·12345</span><span class="bar-t"><i style="width:66%;background:#22C55E"></i></span><span class="bar-v">¥30.3</span></div>
+            <div class="bar-row"><span class="bar-n">晋A·67890</span><span class="bar-t"><i style="width:74%;background:#D97706"></i></span><span class="bar-v">¥34.2</span></div>
+            <div class="bar-row"><span class="bar-n">晋A·13579</span><span class="bar-t"><i style="width:88%;background:#EA580C"></i></span><span class="bar-v">¥40.8</span></div>
+            <div class="bar-row"><span class="bar-n">晋A·86420</span><span class="bar-t"><i style="width:100%;background:#C8102E"></i></span><span class="bar-v">¥46.2</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">需要关注</span></div>
+          <div style="font-size:10px;line-height:1.75;color:#92400E">
+            <div style="background:#FFFBEB;border-radius:6px;padding:7px 9px;margin-bottom:6px">
+              <b>晋A·86420</b> 单公里 ¥46.2，比均值高 52%
+            </div>
+            <div style="background:#FEF2F4;border-radius:6px;padding:7px 9px;margin-bottom:6px;color:#A00D24">
+              <b>违章 5 笔</b> 扣 9 分，集中在 2 台车
+            </div>
+            <div style="background:#EFF6FF;border-radius:6px;padding:7px 9px;color:#1E40AF">
+              <b>准时率 82%</b>，卸货环节拖累最大
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>信息密度最高；一屏不用滚，日常扫一眼就够；单公里成本放在最显眼位置——这是唯一能横向比车的指标</div>
+      <div class="pc-box c"><b>缺点</b>图表多但都不深，想追一辆车的历史得切页面；不能直接导出成一份像样的报告</div>
+    </div>
+  </div>
+
+  <!-- ============ B ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">B</span>
+      <span class="s-name">报告式 · 分章节递进</span>
+      <span class="s-tag">适合汇报</span>
+    </div>
+    <p class="s-desc">
+      像一份月报：01 概览 → 02 运单 → 03 费用 → 04 车辆 → 05 结论。每章有 KPI、图、一句结论。
+      滚动读下来是有逻辑的，可以直接导 PDF 给老板。
+    </p>
+
+    <div class="stage">
+      <div class="chap">
+        <div class="chap-hd"><span class="chap-no">01</span><span class="chap-t">本月概览</span></div>
+        <div class="kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:0">
+          <div class="kpi"><div class="kpi-k">运单</div><div class="kpi-v">60</div><div class="kpi-d">完成率 85%</div></div>
+          <div class="kpi"><div class="kpi-k">里程</div><div class="kpi-v">24,680</div><div class="kpi-d">km</div></div>
+          <div class="kpi"><div class="kpi-k">总支出</div><div class="kpi-v" style="color:var(--red)">¥74.7万</div><div class="kpi-d up">+8.1%</div></div>
+          <div class="kpi"><div class="kpi-k">单公里成本</div><div class="kpi-v" style="color:var(--green)">¥30.3</div><div class="kpi-d down">-2.6%</div></div>
+        </div>
+        <div class="chap-sum">
+          本月跑了 <b>60 趟</b>、<b>2.47 万公里</b>，支出 <b>¥74.7 万</b>。
+          跑量比上月多 <b>9 趟</b>，费用只涨 <b>8.1%</b> —— <b>单公里成本降了 2.6%</b>，效率在改善。
+        </div>
+      </div>
+
+      <div class="chap">
+        <div class="chap-hd"><span class="chap-no">02</span><span class="chap-t">运单执行</span></div>
+        <div class="grid2">
+          <div class="panel">
+            <div class="p-hd"><span class="p-t">各环节耗时</span></div>
+            <table>
+              <thead><tr><th>环节</th><th class="ta-r">平均</th><th class="ta-r">最长</th><th class="ta-r">占比</th></tr></thead>
+              <tbody>
+                <tr><td>接单→装车</td><td class="ta-r num">2.6h</td><td class="ta-r num muted">8.4h</td><td class="ta-r num">9%</td></tr>
+                <tr><td>装货</td><td class="ta-r num">3.1h</td><td class="ta-r num muted">6.2h</td><td class="ta-r num">11%</td></tr>
+                <tr><td>在途</td><td class="ta-r num">14.3h</td><td class="ta-r num muted">22.1h</td><td class="ta-r num">51%</td></tr>
+                <tr><td style="color:#A00D24"><b>卸货</b></td><td class="ta-r num" style="color:#A00D24"><b>5.8h</b></td><td class="ta-r num muted">11.4h</td><td class="ta-r num">21%</td></tr>
+                <tr><td>回单</td><td class="ta-r num">1.4h</td><td class="ta-r num muted">3.2h</td><td class="ta-r num">5%</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="panel">
+            <div class="p-hd"><span class="p-t">准时率</span><span class="p-s">按线路</span></div>
+            <div class="bars">
+              <div class="bar-row"><span class="bar-n">云南→厦门</span><span class="bar-t"><i style="width:92%;background:#15803D"></i></span><span class="bar-v">92%</span></div>
+              <div class="bar-row"><span class="bar-n">山西→云南</span><span class="bar-t"><i style="width:86%;background:#22C55E"></i></span><span class="bar-v">86%</span></div>
+              <div class="bar-row"><span class="bar-n">厦门→山西</span><span class="bar-t"><i style="width:74%;background:#D97706"></i></span><span class="bar-v">74%</span></div>
+              <div class="bar-row"><span class="bar-n">云南→贵阳</span><span class="bar-t"><i style="width:68%;background:#EA580C"></i></span><span class="bar-v">68%</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="chap-sum">
+          准时率 <b>82%</b>。晚点主要出在<b>卸货环节</b>（平均 5.8 小时，比计划多 2.8），
+          集中在<b>厦门海沧</b>这条线 —— 建议跟客户谈卸货时段，或给这条线加 3 小时缓冲。
+        </div>
+      </div>
+
+      <div class="chap">
+        <div class="chap-hd"><span class="chap-no">03</span><span class="chap-t">费用支出</span></div>
+        <div class="grid3">
+          <div class="panel">
+            <div class="p-hd"><span class="p-t">类型结构</span></div>
+            <div class="bars">
+              <div class="bar-row"><span class="bar-n">费用上报</span><span class="bar-t"><i style="width:100%;background:#C8102E"></i></span><span class="bar-v">43.3万</span></div>
+              <div class="bar-row"><span class="bar-n">补贴</span><span class="bar-t"><i style="width:31%;background:#15803D"></i></span><span class="bar-v">13.4万</span></div>
+              <div class="bar-row"><span class="bar-n">过磅</span><span class="bar-t"><i style="width:19%;background:#7C3AED"></i></span><span class="bar-v">8.2万</span></div>
+              <div class="bar-row"><span class="bar-n">借款</span><span class="bar-t"><i style="width:12%;background:#1D4ED8"></i></span><span class="bar-v">5.1万</span></div>
+              <div class="bar-row"><span class="bar-n">违章</span><span class="bar-t"><i style="width:7%;background:#B45309"></i></span><span class="bar-v">4.7万</span></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="p-hd"><span class="p-t">处理状态</span></div>
+            <div class="kpi" style="border:none;padding:0">
+              <div style="display:flex;gap:4px;height:9px;border-radius:5px;overflow:hidden;margin-bottom:9px">
+                <div style="flex:13;background:#B45309"></div>
+                <div style="flex:15;background:#1D4ED8"></div>
+                <div style="flex:72;background:#15803D"></div>
+              </div>
+              <div class="legend">
+                <span><i style="background:#B45309"></i>待审核 ¥64.7万（13 笔）</span>
+                <span><i style="background:#1D4ED8"></i>待打款 ¥10.0万（15 笔）</span>
+                <span><i style="background:#15803D"></i>已打款 ¥0（0 笔）</span>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="p-hd"><span class="p-t">环比</span><span class="p-s">vs 上月</span></div>
+            <table>
+              <tbody>
+                <tr><td>费用上报</td><td class="ta-r num" style="color:var(--red)">+15%</td></tr>
+                <tr><td>补贴</td><td class="ta-r num" style="color:var(--green)">-3%</td></tr>
+                <tr><td>过磅</td><td class="ta-r num" style="color:var(--red)">+31%</td></tr>
+                <tr><td>借款</td><td class="ta-r num" style="color:var(--green)">-30%</td></tr>
+                <tr><td>违章</td><td class="ta-r num" style="color:var(--red)">+35%</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="chap-sum">
+          支出 <b>¥74.7 万</b>，环比 <b>+8.1%</b>。涨得最多的是<b>违章</b>（+35%）和<b>过磅</b>（+31%）——
+          过磅涨是因为重载增多，属正常；<b>违章要盯</b>，5 笔集中在 2 台车。
+        </div>
+      </div>
+
+      <div class="chap" style="margin-bottom:0">
+        <div class="chap-hd"><span class="chap-no">05</span><span class="chap-t">结论与建议</span></div>
+        <div style="font-size:10.5px;line-height:1.85;color:#475569">
+          <div style="margin-bottom:5px"><b style="color:#15803D">保持</b>：单公里成本连降 2 个月，跑量增长没带来成本失控。</div>
+          <div style="margin-bottom:5px"><b style="color:#D97706">改进</b>：卸货环节吃掉 21% 的总时长，先解决厦门海沧的排队问题。</div>
+          <div><b style="color:#A00D24">处理</b>：晋A·86420 单公里 ¥46.2 偏高，违章也集中在这台，重点查。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>有叙事、有结论，不是堆数字；能直接导 PDF 当月报；每章末尾的「一句话」是最有价值的部分</div>
+      <div class="pc-box c"><b>缺点</b>页面很长，日常查看效率不如驾驶舱；图表数量受限于章节节奏</div>
+    </div>
+  </div>
+
+  <!-- ============ C ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">C</span>
+      <span class="s-name">透视矩阵 · 交叉对比</span>
+      <span class="s-tag">深挖用</span>
+    </div>
+    <p class="s-desc">
+      行是车，列是时间，格子里是可切换的指标（趟数 / 里程 / 费用 / 单公里成本）。一眼看出哪台车哪个月不对劲。
+    </p>
+
+    <div class="stage">
+      <div class="bar-hd">
+        <span class="lbl">指标</span>
+        <div class="seg"><span>趟数</span><span class="on">单公里成本</span><span>费用</span><span>里程</span></div>
+        <span class="lbl" style="margin-left:8px">行</span>
+        <div class="seg"><span class="on">单车</span><span>车队</span><span>线路</span></div>
+        <span class="sp"></span>
+        <span style="font-size:10px;color:#94A3B8">颜色越深 = 成本越高</span>
+      </div>
+
+      <table class="mtx">
+        <thead>
+          <tr>
+            <th style="text-align:left;width:120px">车辆</th>
+            <th>5月</th><th>6月</th><th>7月</th><th>8月</th><th>9月</th><th>10月</th>
+            <th>均值</th><th>趋势</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="lbl">晋A·12345</td>
+            <td class="v2">¥31.2</td><td class="v1">¥29.8</td><td class="v2">¥31.4</td><td class="v2">¥32.1</td><td class="v1">¥28.9</td><td class="v2">¥30.3</td>
+            <td class="v2">¥30.6</td><td class="v1">↓ 稳</td>
+          </tr>
+          <tr>
+            <td class="lbl">晋A·67890</td>
+            <td class="v2">¥33.4</td><td class="v3">¥36.1</td><td class="v2">¥34.8</td><td class="v3">¥35.9</td><td class="v2">¥33.2</td><td class="v3">¥34.2</td>
+            <td class="v3">¥34.6</td><td class="v2">→ 平</td>
+          </tr>
+          <tr>
+            <td class="lbl">晋A·24680</td>
+            <td class="v1">¥26.4</td><td class="v1">¥25.1</td><td class="v1">¥24.8</td><td class="v1">¥23.9</td><td class="v1">¥24.2</td><td class="v1">¥24.1</td>
+            <td class="v1">¥24.8</td><td class="v1">↓ 好</td>
+          </tr>
+          <tr>
+            <td class="lbl">晋A·13579</td>
+            <td class="v3">¥38.2</td><td class="v3">¥39.4</td><td class="v3">¥37.8</td><td class="v4">¥42.1</td><td class="v3">¥40.2</td><td class="v4">¥40.8</td>
+            <td class="v4">¥39.8</td><td class="v4">↑ 差</td>
+          </tr>
+          <tr>
+            <td class="lbl">晋A·86420</td>
+            <td class="v3">¥41.2</td><td class="v4">¥43.8</td><td class="v4">¥45.1</td><td class="v4">¥44.2</td><td class="v4">¥45.9</td><td class="v4">¥46.2</td>
+            <td class="v4">¥44.4</td><td class="v4">↑ 差</td>
+          </tr>
+          <tr>
+            <td class="lbl" style="background:#F1F5F9">车队均值</td>
+            <td class="v2" style="background:#F1F5F9">¥34.1</td><td class="v2" style="background:#F1F5F9">¥34.8</td>
+            <td class="v2" style="background:#F1F5F9">¥34.8</td><td class="v2" style="background:#F1F5F9">¥35.6</td>
+            <td class="v2" style="background:#F1F5F9">¥34.5</td><td class="v2" style="background:#F1F5F9">¥34.3</td>
+            <td class="v2" style="background:#F1F5F9">¥34.7</td><td style="background:#F1F5F9"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="display:flex;gap:6px;align-items:center;margin-top:10px;font-size:10px;color:#94A3B8">
+        <span>低</span>
+        <i style="width:16px;height:11px;border-radius:3px;background:#EFF6FF;display:inline-block"></i>
+        <i style="width:16px;height:11px;border-radius:3px;background:#BFDBFE;display:inline-block"></i>
+        <i style="width:16px;height:11px;border-radius:3px;background:#60A5FA;display:inline-block"></i>
+        <i style="width:16px;height:11px;border-radius:3px;background:#1D4ED8;display:inline-block"></i>
+        <span>高</span>
+        <span style="margin-left:auto">点任意格子 → 展开该车该月的运单 + 费用明细</span>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>一张表看 6 个月 × 12 台车的全貌；颜色直接暴露异常；点格子可下钻到明细</div>
+      <div class="pc-box c"><b>缺点</b>只有数字没有趋势解读；列多了横向溢出；不适合汇报（老板看不懂矩阵）</div>
+    </div>
+  </div>
+
+  <!-- ============ D ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">D</span>
+      <span class="s-name">对比式 · 本期 vs 上期</span>
+      <span class="s-tag">找问题</span>
+    </div>
+    <p class="s-desc">
+      左右并排：左边上个月，右边这个月，中间是差异。哪项变了、变了多少，一眼看出来。适合月中复盘。
+    </p>
+
+    <div class="stage">
+      <div style="display:grid;grid-template-columns:1fr 74px 1fr;gap:10px;margin-bottom:13px;font-size:9.5px;color:#94A3B8">
+        <div style="text-align:center">2026 年 9 月</div>
+        <div></div>
+        <div style="text-align:center;font-weight:800;color:#0F172A">2026 年 10 月</div>
+      </div>
+
+      <div class="vs">
+        <div class="vs-l"><div class="vs-k">运单</div><div class="vs-v">51 趟</div></div>
+        <div class="vs-m" style="color:#C8102E">+9 趟<br><span style="font-size:9px;opacity:.7">+17.6%</span></div>
+        <div class="vs-r"><div class="vs-k">运单</div><div class="vs-v">60 趟</div></div>
+      </div>
+      <div class="vs">
+        <div class="vs-l"><div class="vs-k">里程</div><div class="vs-v">21,340 km</div></div>
+        <div class="vs-m" style="color:#C8102E">+3,340<br><span style="font-size:9px;opacity:.7">+15.7%</span></div>
+        <div class="vs-r"><div class="vs-k">里程</div><div class="vs-v">24,680 km</div></div>
+      </div>
+      <div class="vs">
+        <div class="vs-l"><div class="vs-k">费用支出</div><div class="vs-v" style="color:#C8102E">¥690,600</div></div>
+        <div class="vs-m" style="color:#C8102E">+56,081<br><span style="font-size:9px;opacity:.7">+8.1%</span></div>
+        <div class="vs-r"><div class="vs-k">费用支出</div><div class="vs-v" style="color:#C8102E">¥746,681</div></div>
+      </div>
+      <div class="vs">
+        <div class="vs-l" style="background:#F0FDF4;border-color:#BBF7D0"><div class="vs-k" style="color:#166534">单公里成本</div><div class="vs-v" style="color:#15803D">¥32.4</div></div>
+        <div class="vs-m" style="color:#15803D">-2.1<br><span style="font-size:9px;opacity:.7">-6.5%</span></div>
+        <div class="vs-r" style="background:#F0FDF4;border-color:#BBF7D0"><div class="vs-k" style="color:#166534">单公里成本</div><div class="vs-v" style="color:#15803D">¥30.3</div></div>
+      </div>
+      <div class="vs">
+        <div class="vs-l"><div class="vs-k">准时率</div><div class="vs-v">85.2%</div></div>
+        <div class="vs-m" style="color:#C8102E">-3.0pp</div>
+        <div class="vs-r"><div class="vs-k">准时率</div><div class="vs-v" style="color:#C8102E">82.2%</div></div>
+      </div>
+
+      <div class="panel" style="margin-top:12px">
+        <div class="p-hd"><span class="p-t">费用分类差异</span><span class="p-s">涨红跌绿</span></div>
+        <table>
+          <thead><tr><th>类型</th><th class="ta-r">9 月</th><th class="ta-r">10 月</th><th class="ta-r">差异</th><th>判断</th></tr></thead>
+          <tbody>
+            <tr><td>费用上报</td><td class="ta-r num muted">¥376,500</td><td class="ta-r num">¥433,200</td><td class="ta-r num" style="color:var(--red)">+15.1%</td><td class="muted">跟跑量同步，正常</td></tr>
+            <tr><td>补贴</td><td class="ta-r num muted">¥138,400</td><td class="ta-r num">¥134,000</td><td class="ta-r num" style="color:var(--green)">-3.2%</td><td class="muted">—</td></tr>
+            <tr><td>过磅</td><td class="ta-r num muted">¥62,600</td><td class="ta-r num">¥82,000</td><td class="ta-r num" style="color:var(--red)">+31.0%</td><td style="color:#92400E">重载增多</td></tr>
+            <tr><td>违章</td><td class="ta-r num muted">¥34,800</td><td class="ta-r num">¥47,000</td><td class="ta-r num" style="color:var(--red)">+35.1%</td><td style="color:#A00D24"><b>要处理</b></td></tr>
+            <tr><td>借款</td><td class="ta-r num muted">¥78,300</td><td class="ta-r num">¥50,500</td><td class="ta-r num" style="color:var(--green)">-35.5%</td><td class="muted">还款正常</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>差异最直观；能直接回答「这个月为什么贵了」；「判断」列给了性质（正常 / 要处理）</div>
+      <div class="pc-box c"><b>缺点</b>只能两期对比，看不了长期趋势；没有单车维度</div>
+    </div>
+  </div>
+
+  <div class="tip">
+    <h2>怎么选</h2>
+    <table>
+      <tr><th></th><th>A 驾驶舱</th><th>B 报告式</th><th>C 透视矩阵</th><th>D 对比式</th></tr>
+      <tr><td>回答什么</td><td>现在什么状况</td><td>这个月发生了什么</td><td>哪台车哪个月不对</td><td>为什么变了</td></tr>
+      <tr><td>时间粒度</td><td><b>7 档全支持</b></td><td>月 / 季 / 年</td><td><b>任意期数</b></td><td>两期</td></tr>
+      <tr><td>多车对比</td><td>TOP5 排行</td><td>弱</td><td><b>最强（矩阵）</b></td><td>无</td></tr>
+      <tr><td>能导 PDF</td><td>勉强</td><td><b>天生适合</b></td><td>不行</td><td>可以</td></tr>
+      <tr><td>日常打开</td><td><b>最顺</b></td><td>太长</td><td>要选指标</td><td>要选两期</td></tr>
+    </table>
+
+    <p style="margin:14px 0 0">
+      <b>建议：A 和 B 都做，分两个入口。</b>
+    </p>
+    <p style="margin:8px 0 0">
+      <b>A 做「运营看板」</b>——打开就是驾驶舱，时间粒度切换放在顶部，日常看这个。
+      它也是唯一能满足你「日 / 周 / 月 / 季 / 半年 / 年」全部 7 档的形态：粒度一变，趋势图的横轴跟着变，KPI 跟着变，不需要换页面。
+    </p>
+    <p style="margin:8px 0 0">
+      <b>B 做「月度报告」</b>——每个月自动生成一份，带结论文案，可导出 PDF。老板/l 客户要的是这个，不是一堆图。
+    </p>
+    <p style="margin:8px 0 0">
+      C 可以做成 A 里的一个「车辆透视」标签页，不用单独开页面。
+      D 的价值其实被 A 的「环比」列覆盖了大半，除非你经常做月中复盘，否则优先级最低。
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

@@ -191,43 +191,22 @@
         <span class="np-st" :class="statusOf(pop).cls">{{ statusOf(pop).text }}</span>
         <span class="np-x" @click="closePop">×</span>
       </div>
-      <div class="np-split">
-        <!-- 左：功能目录 -->
-        <div class="np-left">
-          <div class="np-label">功能</div>
-          <div v-for="f in pop.features" :key="f.key" class="np-nav"
-            :class="{ on: activeFeat === f.key, off: !featureOn(pop, f.key) }"
-            @click="activeFeat = f.key">
-            <i></i>{{ f.name }}
+      <div class="np-scroll">
+        <p class="np-desc">
+          {{ pop.special === 'audit'
+            ? '关掉后费用上报直接通过，不再走审批链'
+            : (pop.module ? '点下面的开关控制这个功能' : '流程步骤，随运单模块启停') }}
+        </p>
+
+        <div v-if="pop.features && pop.features.length" class="np-sec">
+          <div class="np-label">包含功能</div>
+          <div v-for="f in pop.features" :key="f.key" class="np-feat">
+            <div class="np-feat-hd">
+              <span class="np-feat-name">{{ f.name }}</span>
+              <span v-if="!featureOn(pop, f.key)" class="np-feat-off">已关闭</span>
+            </div>
+            <p v-if="f.desc" class="np-feat-desc">{{ f.desc }}</p>
           </div>
-          <div v-if="!(pop.features && pop.features.length)" class="np-nav-empty">
-            这个节点没有可配项
-          </div>
-        </div>
-
-        <!-- 右：选中功能的详情 -->
-        <div class="np-right">
-          <template v-if="curFeat">
-            <div class="np-fname">{{ curFeat.name }}</div>
-            <p class="np-fdesc">{{ curFeat.desc || '关闭后，卡片上不再显示这一项，相关功能也停用' }}</p>
-
-            <div class="np-switch-row">
-              <span class="np-switch-t">启用</span>
-              <span class="np-sw" :class="{ on: featureOn(pop, curFeat.key) }"
-                @click="toggleFeature(curFeat)"></span>
-            </div>
-
-            <div class="np-state">
-              {{ featureOn(pop, curFeat.key) ? '当前已启用，卡片上会显示这个标签' : '已关闭，卡片上隐藏此标签' }}
-            </div>
-          </template>
-
-          <template v-else>
-            <div class="np-empty">
-              <span class="np-empty-t">流程步骤</span>
-              <p>随运单模块一起启停，没有单独的功能项</p>
-            </div>
-          </template>
         </div>
       </div>
 
@@ -245,6 +224,9 @@
           {{ approvalMode === 'off' ? '开启费用审批' : '关闭费用审批' }}
         </button>
         <span class="np-hint">{{ approvalMode === 'off' ? '提交即通过' : '走审批链' }}</span>
+      </div>
+      <div v-else-if="pop.module && approvalGated(pop.module)" class="np-foot">
+        <span class="np-hint">需先开启「费用审批」，这一项才能使用</span>
       </div>
       <div v-else-if="pop.module && !pop.canToggle" class="np-foot">
         <span class="np-hint">需联系运营人员开启</span>
@@ -286,23 +268,23 @@ const LANES = [
       {
         key: 'create', name: '创建运单', module: 'waybill',
         features: [
-          { key: 'manual', name: '自建运单' },
-          { key: 'smart', name: '智能建单' },
+          { key: 'manual', name: '自建运单', desc: '手动填单，一次一单' },
+          { key: 'smart', name: '智能建单', desc: '按模板批量生成' },
         ],
       },
       {
         key: 'dispatch', name: '派单调度',
         features: [
-          { key: 'driver', name: '指派司机' },
-          { key: 'vehicle', name: '指派车辆' },
-          { key: 'fleet', name: '指派车队' },
+          { key: 'driver', name: '指派司机', desc: '指定司机接单，司机收到提醒' },
+          { key: 'vehicle', name: '指派车辆', desc: '指定车辆跑这趟' },
+          { key: 'fleet', name: '指派车队', desc: '发给整个车队，司机抢单' },
         ],
       },
       {
         key: 'recurring', name: '常驻任务', module: 'recurring', badge: '旁支', main: false,
         features: [
-          { key: 'byTime', name: '按时间' },
-          { key: 'byCount', name: '按次数' },
+          { key: 'byTime', name: '按时间', desc: '每天 / 每周定时生成运单' },
+          { key: 'byCount', name: '按次数', desc: '跑满设定趟数后自动结束' },
         ],
       },
     ],
@@ -313,23 +295,23 @@ const LANES = [
       {
         key: 'accept', name: '司机接单',
         features: [
-          { key: 'accept', name: '接单' },
-          { key: 'grab', name: '抢单' },
-          { key: 'reject', name: '拒单' },
+          { key: 'accept', name: '接单', desc: '司机确认接单，状态转待装车' },
+          { key: 'grab', name: '抢单', desc: '多个司机同时看到，先到先得' },
+          { key: 'reject', name: '拒单', desc: '司机可拒绝，需填写原因' },
         ],
       },
       {
         key: 'load', name: '装货发车',
         features: [
-          { key: 'sync', name: '状态同步' },
-          { key: 'fence', name: '围栏打卡' },
+          { key: 'sync', name: '状态同步', desc: '打卡后自动推进运单状态' },
+          { key: 'fence', name: '围栏打卡', desc: '必须到指定围栏范围内才能打卡' },
         ],
       },
       {
         key: 'arrive', name: '卸货完成',
         features: [
-          { key: 'sync', name: '状态同步' },
-          { key: 'fence', name: '围栏打卡' },
+          { key: 'sync', name: '状态同步', desc: '打卡后自动推进运单状态' },
+          { key: 'fence', name: '围栏打卡', desc: '必须到指定围栏范围内才能打卡' },
         ],
       },
     ],
@@ -340,22 +322,22 @@ const LANES = [
       {
         key: 'report_fee', name: '司机上报',
         features: [
-          { key: 'fee', name: '费用' },
-          { key: 'receipt', name: '回单' },
+          { key: 'fee', name: '费用', desc: '上报过路费、加油、装卸等' },
+          { key: 'receipt', name: '回单', desc: '上传回单照片留档' },
         ],
       },
       {
         key: 'audit', name: '费用审批', special: 'audit',
         features: [
-          { key: 'multiLevel', name: '多级审批' },
-          { key: 'threshold', name: '阈值判断' },
+          { key: 'multiLevel', name: '多级审批', desc: '按金额逐级审批，可配审批人' },
+          { key: 'threshold', name: '阈值判断', desc: '超过 ¥5,000 追加老板终审' },
         ],
       },
       {
         key: 'payout', name: '付款记录', module: 'payout',
         features: [
-          { key: 'record', name: '付款记录' },
-          { key: 'voucher', name: '凭证上传' },
+          { key: 'record', name: '付款记录', desc: '登记付款方式、时间和流水号' },
+          { key: 'voucher', name: '凭证上传', desc: '上传转账截图作为凭证' },
         ],
       },
     ],
@@ -366,9 +348,9 @@ const LANES = [
       {
         key: 'fleet_report', name: '车队运营报告', module: 'report',
         features: [
-          { key: 'summary', name: '运营汇总' },
-          { key: 'scheduled', name: '定时报告' },
-          { key: 'insight', name: '智能分析' },
+          { key: 'summary', name: '运营汇总', desc: '按客户、线路、车辆汇总' },
+          { key: 'scheduled', name: '定时报告', desc: '每周 / 每月自动推送' },
+          { key: 'insight', name: '智能分析', desc: '异常费用预警与趋势对比' },
         ],
       },
     ],
@@ -453,7 +435,9 @@ const allNodes = computed(() => {
       /* 费用审批是特例：它的开关是 fee_approval_configs.mode，不是模块表 */
       const enabled = n.special === 'audit'
         ? approvalMode.value !== 'off'
-        : (n.module ? modOn(n.module) : moduleFlags.effective.waybill === true)
+        : (n.module
+          ? (modOn(n.module) && !approvalGated(n.module))
+          : moduleFlags.effective.waybill === true)
       /* 步骤节点没有自己的模块，子功能挂在 waybill 上 */
       const moduleKey = n.module || 'waybill'
       out.push({
@@ -467,7 +451,7 @@ const allNodes = computed(() => {
         ci, li,
         enabled,
         /* 管理员不灰（只靠连线断开提示）；预览客户和真实客户才灰 */
-        disabled: !!n.module && !enabled && (!isAdmin || previewClient.value),
+        disabled: !!(n.module || n.special) && !enabled && (!isAdmin || previewClient.value),
         interactive: !!n.module && (isAdmin || isConfigured(n.module)),
       })
     })
@@ -496,11 +480,19 @@ const visibleNodes = computed(() => {
 const isConfigured = (key) =>
   !!key && Object.prototype.hasOwnProperty.call(moduleFlags.intent || {}, key)
 
+/**
+ * 费用审批关闭时，只有「付款记录」跟着不可用
+ * ⭐ 车队运营报告是**独立开关**，不依赖审批和付款 —— 它统计的是运输数据，不是钱
+ */
+const approvalGated = (key) =>
+  key === 'payout' && approvalMode.value === 'off'
+
 /** 当前用户能不能开关这个节点 */
 const canToggle = (n) => {
   if (!n || !n.module) return false
-  if (isAdmin) return true            // 服务商：随便改
-  return isConfigured(n.module)       // 客户：只能改配过的
+  if (approvalGated(n.module)) return false   // 被审批卡住，谁都开不了
+  if (isAdmin) return true                    // 服务商：随便改
+  return isConfigured(n.module)               // 客户：只能改配过的
 }
 
 /** 客户视角下未开通的模块（放左栏池子） */
@@ -625,7 +617,9 @@ const shownFeatures = (n) => (n.features || []).filter((f) => featureOn(n, f.key
 const pop = ref(null)          // 当前展开的节点
 const saving = ref(false)
 const preLoading = ref(false)
-const approvalMode = ref('on') // 费用审批开关（fee_approval_configs.mode）
+/* 费用审批开关（与左侧菜单共用 modules.js 的 approvalState） */
+import { approvalState, approvalOn, ensureApprovalMode, setApprovalModeLocal } from '@/utils/modules'
+const approvalMode = computed(() => approvalState.mode)
 
 
 function openNode(n) {
@@ -681,18 +675,68 @@ async function toggleFeature(f) {
   }
 }
 
+const MODULE_LABEL = { waybill: '运单', route: '路线', recurring: '常驻任务', payout: '付款记录', report: '车队运营报告' }
+const moduleName = (k) => MODULE_LABEL[k] || k
+
+/** 关闭某模块时的影响提示（有待处理单就说明白） */
+function impactOf(key) {
+  const c = (moduleFlags && moduleFlags.counts) || {}
+  const parts = []
+  if (key === 'waybill' && c.pending) parts.push(`${c.pending} 笔费用待审`)
+  if ((key === 'waybill' || key === 'payout') && c.toPay) parts.push(`${c.toPay} 笔待付款`)
+  return parts.length ? `\n\n注意：还有 ${parts.join('、')}，关掉后这些单会卡住。` : ''
+}
+
+/* ---- 模块启停 ---- */
+async function toggleModule(node) {
+  if (!node || !node.module) return
+  const next = !node.enabled
+
+  /* 开启直接执行（可逆、没影响）；停用要确认（会断流程，可能卡住待办） */
+  if (!next) {
+    try {
+      await ElMessageBox.confirm(
+        `停用后「${node.name}」相关功能将不可用，历史数据保留。${impactOf(node.module)}`,
+        '停用此模块',
+        {
+          type: 'warning',
+          confirmButtonText: '确认停用',
+          cancelButtonText: '取消',
+        }
+      )
+    } catch (e) {
+      return /* 用户取消 */
+    }
+  }
+
+  saving.value = true
+  try {
+    await setModuleFlag(node.module, next, user)
+
+    /* 兜底：重读可能受 RLS / 缓存影响没拿到最新值，本地强制同步一次，
+       保证「停用后线断开、开启后线接上」立即可见 */
+    if (moduleFlags.effective[node.module] !== next) {
+      console.warn('[画布] 重读模块状态未生效，本地兜底同步', node.module, next)
+      const intent = { ...(moduleFlags.intent || {}), [node.module]: next }
+      moduleFlags.intent = intent
+      moduleFlags.effective = foldDeps(intent)
+      MODULES_FOR_FLAGS.forEach((m) => {
+        if (m.key in moduleFlags) moduleFlags[m.key] = moduleFlags.effective[m.key] === true
+      })
+    }
+
+    ElMessage.success(next ? `「${node.name}」已开启` : `「${node.name}」已停用`)
+    pop.value = null
+  } catch (e) {
+    ElMessage.error(e.message || '保存失败')
+  } finally {
+    saving.value = false
+  }
+}
+
 /* ---- 费用审批开关（写 fee_approval_configs.mode） ---- */
 async function loadApprovalMode() {
-  try {
-    const owner = moduleOwner(user)
-    if (!owner) return
-    const { data } = await supabase
-      .from('fee_approval_configs')
-      .select('mode')
-      .eq('owner_account', owner)
-      .limit(1)
-    approvalMode.value = (data && data[0] && data[0].mode) || 'on'
-  } catch (e) { /* 读不到按开 */ }
+  await ensureApprovalMode(user)
 }
 
 async function toggleAudit() {
@@ -705,8 +749,35 @@ async function toggleAudit() {
       { owner_account: owner, mode: next, updated_at: new Date().toISOString() },
       { onConflict: 'owner_account' }
     )
-    approvalMode.value = next
-    ElMessage.success(next === 'off' ? '费用审批已关闭' : '费用审批已开启')
+    setApprovalModeLocal(next)
+
+    /* ⭐ 关审批 → 付款记录和车队运营报告一起关掉（业务依赖） */
+    if (next === 'off') {
+      const cascaded = []
+      for (const k of ['payout']) {
+        if (moduleFlags.effective[k] === true) {
+          try {
+            await setModuleFlag(k, false, user)
+            cascaded.push(moduleName(k))
+          } catch (e) {
+            console.warn('[画布] 级联关闭失败', k, e)
+          }
+        }
+      }
+      /* 本地同步，避免重读延迟 */
+      const intent = { ...(moduleFlags.intent || {}), payout: false }
+      moduleFlags.intent = intent
+      moduleFlags.effective = foldDeps(intent)
+      MODULES_FOR_FLAGS.forEach((m) => {
+        if (m.key in moduleFlags) moduleFlags[m.key] = moduleFlags.effective[m.key] === true
+      })
+
+      ElMessage.success(cascaded.length
+        ? `费用审批已关闭，同时关掉了 ${cascaded.join('、')}`
+        : '费用审批已关闭')
+    } else {
+      ElMessage.success('费用审批已开启，付款记录可以单独开启')
+    }
     if (pop.value && pop.value.special === 'audit') {
       pop.value = { ...pop.value }
     }
@@ -1002,7 +1073,26 @@ onMounted(async () => {
   to { transform: none; opacity: 1; }
 }
 
-/* ===== 双栏（L 版） ===== */
+/* ===== 功能说明列表 ===== */
+.np-sec {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #F1F5F9;
+}
+.np-feat { padding: 8px 0; }
+.np-feat + .np-feat { border-top: 1px solid #F6F8FB; }
+.np-feat-hd { display: flex; align-items: center; gap: 8px; }
+.np-feat-name { font-size: 12.5px; font-weight: 700; color: #0F172A; }
+.np-feat-off {
+  font-size: 9.5px; color: #B4BECB;
+  background: #F1F5F9; border-radius: 4px; padding: 1px 6px;
+}
+.np-feat-desc {
+  margin: 3px 0 0; font-size: 11px;
+  color: #94A3B8; line-height: 1.6;
+}
+
+/* ===== 双栏（L 版，暂时保留） ===== */
 .np-split {
   flex: 1;
   min-height: 0;

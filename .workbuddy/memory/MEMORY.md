@@ -179,3 +179,49 @@
 - 前端对新字段/新表一律做**降级重试**（WaybillCreate 的 `stripNewFields`、
   CustomerArchive 的 `insertArchive/updateArchive`）：命中类型/列不存在错误就剥字段重试，
   别让没跑迁移的环境直接不可用。
+
+## 列表页字号与对比度（2026-10-21 起）
+
+用户反馈"看不清"，实测是**字号偏小 + 次要文字太淡**。统一规范：
+
+| 元素 | 字号 | 颜色 | 字重 |
+|---|---|---|---|
+| 表头 | 12px | `#475569` | 700 |
+| 主数字（金额） | 15.5px | `#0F172A` | 800 |
+| 主文字（名称） | 13px | `#0F172A` | 600 |
+| 次要文字（单号/车牌） | 12px | `#94A3B8` | 400 |
+| 时间 | 12.5px | `#64748B` | 400 |
+| 状态 | 12.5px | 语义色 | 700 |
+| 小标签（类型） | 11px | `#475569` / `#EEF2F7` 底 | 600 |
+| 行高 | `td padding 13px` | — | — |
+
+⭐ 三条硬规矩：
+1. **正文不小于 11.5px**，10px 及以下只有在徽标里才允许
+2. **次要文字不要用 `#B4BECB` / `#C4CDD9`** —— 浅色底上基本看不见，
+   最低用 `#94A3B8`
+3. 表头别用 11px + `#64748B`，加粗到 700 + `#475569` 才立得住
+
+## ⭐ CloudBase 必须在启动时匿名登录（2026-10-21 修）
+
+**现象**：整站查询全失败（`FetchError: undefined`），所有列表像"没数据"。
+
+**根因**：`ensureAnonymousLogin()` 只在两个地方调：
+- `LoginView.vue`（点登录时）
+- `OperationTable.vue`（综合报表页挂载时）
+
+`main.js` 启动时**直接查库**，没有先登录。所以：
+- 走登录页进来的 → 有登录态，正常
+- **直接从书签/上次会话进业务页**（localStorage 还有 currentUser，跳过登录）→
+  CloudBase 登录态已过期 → 每次查询都失败，整站数据为空
+
+**修**：`main.js` 启动即 `ensureAnonymousLogin()`，成功后再查 `vehicles` 做连通性检查：
+```js
+ensureAnonymousLogin()
+  .then(() => supabase.from('vehicles').select('*', { count: 'exact', head: true }))
+  .then(({ error }) => error ? console.error('❌ 数据库查询失败:', error.message)
+                            : console.log('✅ 数据库连接成功'))
+```
+
+⭐ 前端只有 `app.rdb()`（CloudBase），**不是真 Supabase**。
+`curl` 带 `.env` 里的 anon key 直连 REST 一定 401（网关不认那个 key），
+别用它判断"有没有连上库" —— 要在浏览器里看 console 的 `✅ 数据库连接成功`。

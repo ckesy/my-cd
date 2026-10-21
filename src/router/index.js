@@ -40,6 +40,16 @@ const routes = [
     component: () => import('../views/Dashboard.vue'),
   },
   {
+    path: '/waybill/stats',
+    name: 'WaybillStats',
+    component: () => import('../views/Dashboard.vue'),
+  },
+  {
+    path: '/fee/list',
+    name: 'FeeList',
+    component: () => import('../views/Dashboard.vue'),
+  },
+  {
     path: '/fee/stats',
     name: 'FeeStats',
     component: () => import('../views/Dashboard.vue'),

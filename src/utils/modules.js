@@ -16,7 +16,7 @@
  *   - 开关（enabled）：只有管理员能写 → setModuleFlag
  *   - 参数（config） ：客户主账号可写 → setModuleConfig
  */
-import { reactive } from 'vue'
+import { reactive, computed } from 'vue'
 import { supabase } from '@/utils/supabase'
 import {
   MODULE, MODULES, DEFAULT_ON, foldDeps, foldedBy,
@@ -262,4 +262,51 @@ export function canUse(key, perms = []) {
   const m = MODULES.find((x) => x.key === key)
   if (!m || !m.perm) return true
   return Array.isArray(perms) && perms.includes(m.perm)
+}
+
+/* ============================================================
+   费用审批开关（fee_approval_configs.mode）
+   ------------------------------------------------------------
+   画布和左侧菜单共用这一份状态：
+   · 画布：审批关了 → 付款记录/车队运营报告一起不可用
+   · 菜单：审批关了 → 「费用审批设置」这一项隐藏
+   ============================================================ */
+export const approvalState = reactive({ mode: 'on', loaded: false })
+export const approvalOn = computed(() => approvalState.mode !== 'off')
+
+export async function ensureApprovalMode(user) {
+  if (approvalState.loaded) return approvalState
+  try {
+    /* 本地调试钩子：window.__MOCK_APPROVAL = 'off' 模拟审批关闭（仅在读库前生效） */
+    const mock = typeof window !== 'undefined' ? window.__MOCK_APPROVAL : null
+    if (mock) {
+      approvalState.mode = mock
+      approvalState.loaded = true
+      return approvalState
+    }
+    const owner = moduleOwner(user || currentUserForModules())
+    if (!owner) { approvalState.loaded = true; return approvalState }
+    const { data } = await supabase
+      .from('fee_approval_configs')
+      .select('mode')
+      .eq('owner_account', owner)
+      .limit(1)
+    approvalState.mode = (data && data[0] && data[0].mode) || 'on'
+  } catch (e) {
+    /* 读不到按「开」处理，别让菜单莫名消失 */
+  }
+  approvalState.loaded = true
+  return approvalState
+}
+
+/** 本地同步（写完库立刻生效，不等重读） */
+export function setApprovalModeLocal(mode) {
+  approvalState.mode = mode || 'on'
+  approvalState.loaded = true
+}
+
+/** 切换租户/重新登录时清缓存用 */
+export function resetApprovalMode() {
+  approvalState.mode = 'on'
+  approvalState.loaded = false
 }

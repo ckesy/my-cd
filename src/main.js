@@ -4,7 +4,7 @@ import 'element-plus/dist/index.css'
 import './style.css'                    // ← 保留你的全局样式
 import App from './App.vue'
 import router from './router'
-import { supabase } from './utils/supabase'
+import { supabase, ensureAnonymousLogin } from './utils/supabase'
 
 // 1. 导入中文语言包和 dayjs
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
@@ -31,12 +31,17 @@ app.use(ElementPlus, {
 
 app.use(router)
 app.mount('#app')
-// 测试 Supabase 连接（临时）
-supabase.from('vehicles').select('*', { count: 'exact', head: true })
+/* ============================================================
+   ⭐ 启动即确保 CloudBase 匿名登录态
+   ------------------------------------------------------------
+   以前只在「登录页点登录」时才 signInAnonymously。
+   用户下次直接进业务页（localStorage 里还有 currentUser，跳过登录），
+   CloudBase 的登录态已经过期 → 所有查询 FetchError / 401，整站看起来"没数据"。
+   ============================================================ */
+ensureAnonymousLogin()
+  .then(() => supabase.from('vehicles').select('*', { count: 'exact', head: true }))
   .then(({ error }) => {
-    if (error) {
-      console.error('❌ Supabase 连接失败:', error.message)
-    } else {
-      console.log('✅ Supabase 连接成功！')
-    }
+    if (error) console.error('❌ 数据库查询失败:', error.message)
+    else console.log('✅ 数据库连接成功')
   })
+  .catch((e) => console.error('❌ 匿名登录失败:', e && (e.message || e)))

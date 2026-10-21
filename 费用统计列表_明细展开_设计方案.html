@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>运单费用明细 · 三种展开方式</title>
+<style>
+  :root{
+    --bg:#F1F4F8; --card:#fff; --line:#E6ECF3; --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8;
+    --red:#C8102E; --num:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:30px 24px 70px}
+
+  .hd{margin-bottom:22px}
+  h1{margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-.4px}
+  .sub{font-size:12.5px;color:#64748B;line-height:1.8}
+  .sub b{color:#0F172A}
+
+  .scheme{background:#fff;border:1px solid var(--line);border-radius:15px;margin-bottom:22px;overflow:hidden}
+  .s-hd{display:flex;align-items:center;gap:10px;padding:15px 18px 13px;border-bottom:1px solid #F1F5F9}
+  .s-no{
+    width:24px;height:24px;border-radius:7px;flex:0 0 auto;background:#0F172A;color:#fff;
+    font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  }
+  .s-name{font-size:14px;font-weight:800}
+  .s-tag{margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;background:#F1F5F9;color:#64748B}
+  .s-tag.rec{background:#0F172A;color:#fff}
+  .s-desc{padding:12px 18px 0;font-size:12px;color:#64748B;line-height:1.75}
+
+  .stage{padding:16px 18px 20px}
+
+  /* 通用 */
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  thead th{
+    background:#F7F9FC;color:#64748B;font-size:11px;font-weight:700;
+    text-align:left;padding:9px 10px;border-bottom:1px solid #E6ECF3;white-space:nowrap;
+  }
+  tbody td{padding:10px;border-bottom:1px solid #F4F6F9}
+  .num{font-family:var(--num);font-variant-numeric:tabular-nums}
+  .amt{font-size:14px;font-weight:800;letter-spacing:-.2px}
+  .sub-line{font-size:10.5px;color:#B4BECB;margin-top:2px}
+
+  .st{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;border-radius:5px;padding:2px 8px;white-space:nowrap}
+  .st::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+  .st.wait{color:#B45309;background:#FFFBEB}
+  .st.pay{color:#1D4ED8;background:#EFF6FF}
+  .st.done{color:#15803D;background:#F0FDF4}
+  .tp{display:inline-block;font-size:10px;font-weight:600;border-radius:4px;padding:1px 6px;background:#F5F7FA;color:#64748B}
+
+  /* 展开行 */
+  .expand-row td{background:#FCFDFE;padding:0;border-bottom:1px solid #E6ECF3}
+  .ex-wrap{padding:14px 16px 16px 46px;border-left:3px solid #C8102E;margin:0 0 0 0}
+  .ex-hd{
+    display:flex;align-items:center;gap:10px;margin-bottom:11px;
+    font-size:10.5px;font-weight:800;color:#64748B;letter-spacing:.4px;
+  }
+  .ex-grid{display:grid;grid-template-columns:1fr 220px;gap:20px}
+  .ex-items{border:1px solid #EDF1F6;border-radius:9px;overflow:hidden;background:#fff}
+  .ex-item{
+    display:flex;align-items:center;gap:11px;
+    padding:10px 13px;border-bottom:1px solid #F7F9FC;font-size:11.5px;
+  }
+  .ex-item:last-child{border-bottom:none}
+  .ex-ico{
+    width:24px;height:24px;border-radius:6px;flex:0 0 auto;
+    background:#F5F7FA;color:#64748B;font-size:10px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ex-name{flex:1;min-width:0}
+  .ex-name b{font-size:11.5px;font-weight:700;color:#0F172A;display:block}
+  .ex-name span{font-size:10px;color:#B4BECB}
+  .ex-amt{font-family:var(--num);font-size:13px;font-weight:800;margin-left:auto;white-space:nowrap}
+  .ex-sum{
+    display:flex;align-items:baseline;justify-content:flex-end;gap:10px;
+    padding:11px 13px;background:#FAFBFD;border-top:1px solid #EDF1F6;
+    font-size:11px;color:#64748B;
+  }
+  .ex-sum b{font-family:var(--num);font-size:17px;color:#C8102E;letter-spacing:-.3px}
+
+  .ex-side{font-size:11px}
+  .side-block{margin-bottom:12px}
+  .side-k{font-size:10px;font-weight:800;color:#94A3B8;letter-spacing:.4px;margin-bottom:6px}
+  .side-row{display:flex;justify-content:space-between;padding:4px 0;font-size:11px;color:#475569}
+  .side-row b{color:#0F172A;font-weight:700}
+  .flow-step{display:flex;align-items:flex-start;gap:7px;padding:4px 0}
+  .flow-dot{
+    width:7px;height:7px;border-radius:50%;margin-top:5px;flex:0 0 auto;
+    background:#15803D;box-shadow:0 0 0 2.5px rgba(21,128,61,.14);
+  }
+  .flow-txt{font-size:10.5px;color:#64748B;line-height:1.6}
+  .flow-txt b{color:#0F172A;font-weight:700}
+  .ex-link{font-size:10.5px;color:#C8102E;font-weight:600;cursor:pointer}
+
+  /* 抽屉 */
+  .drawer-stage{position:relative;height:420px;border-radius:10px;overflow:hidden;
+    background:radial-gradient(circle at 1px 1px,#DDE5EE 1px,transparent 0) 0 0/12px 12px,
+    linear-gradient(180deg,#FBFCFE,#F3F7FA);border:1px solid #E8EEF5}
+  .drawer-stage .ghost-table{opacity:.35;padding:16px;pointer-events:none;filter:blur(.3px)}
+  .drawer{
+    position:absolute;right:12px;top:12px;bottom:12px;width:330px;
+    background:#fff;border-radius:13px;
+    box-shadow:0 0 0 1px rgba(15,23,42,.06), 0 20px 50px -10px rgba(15,23,42,.28);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .dr-hd{padding:13px 15px 11px;border-bottom:1px solid #F1F5F9;flex:0 0 auto}
+  .dr-t{font-size:13px;font-weight:800}
+  .dr-s{font-size:10.5px;color:#94A3B8;margin-top:3px}
+  .dr-body{flex:1;overflow:hidden;padding:12px 15px}
+  .dr-foot{flex:0 0 auto;padding:10px 15px;border-top:1px solid #F1F5F9;display:flex;gap:8px}
+  .btn{font:inherit;font-size:11.5px;font-weight:700;padding:6px 14px;border-radius:7px;cursor:pointer;border:none}
+  .btn.dark{background:#0F172A;color:#fff}
+  .btn.line{background:#fff;color:#64748B;border:1px solid #E2E8F0}
+
+  /* 弹窗 */
+  .modal-stage{position:relative;height:400px;border-radius:10px;overflow:hidden;
+    background:rgba(15,23,42,.18);display:flex;align-items:center;justify-content:center}
+  .modal{
+    width:580px;background:#fff;border-radius:14px;overflow:hidden;
+    box-shadow:0 24px 60px -12px rgba(15,23,42,.4);
+  }
+  .md-hd{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #F1F5F9}
+  .md-t{font-size:14px;font-weight:800}
+  .md-x{margin-left:auto;color:#C4CDD9;font-size:17px}
+  .md-body{padding:16px 18px;display:grid;grid-template-columns:1fr 200px;gap:22px}
+  .md-foot{padding:12px 18px;background:#FAFBFD;border-top:1px solid #F1F5F9;display:flex;gap:8px;justify-content:flex-end}
+
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 18px 16px;border-top:1px solid #F1F5F9}
+  .pc-box{border-radius:9px;padding:11px 13px;font-size:11.5px;line-height:1.8}
+  .pc-box.p{background:#F0FDF4;color:#166534}
+  .pc-box.c{background:#FFFBEB;color:#92400E}
+  .pc-box b{display:block;font-size:10px;font-weight:800;letter-spacing:.5px;margin-bottom:4px;opacity:.7}
+
+  .tip{margin-top:24px;padding:18px 20px;background:#fff;border:1px solid var(--line);border-radius:14px;
+    font-size:12.5px;color:#475569;line-height:1.95}
+  .tip h2{margin:0 0 10px;font-size:15px;font-weight:800;color:#0F172A}
+  .tip table{margin-top:10px}
+  .tip td:first-child{font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hd">
+    <h1>运单费用明细 · 三种展开方式</h1>
+    <p class="sub">
+      承接方案 A（运单为行）。点「明细」之后，一趟车的钱是怎么摊开的。<br>
+      三种方式的<b>内容完全一样</b>：3 项费用 + 合计 + 审批流水 + 付款状态，差别只在<b>放在哪</b>。
+    </p>
+  </div>
+
+  <!-- ============ 1 展开行 ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">1</span>
+      <span class="s-name">表格内展开</span>
+      <span class="s-tag rec">推荐</span>
+    </div>
+    <p class="s-desc">
+      点「明细」→ 在这一行下面撑开一块。列表不离开视野，可以接着点下一趟车对比。
+      费用项竖排、合计在最下面、右侧一列放审批和付款状态。
+    </p>
+
+    <div class="stage">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:26%">费用</th>
+            <th style="width:15%">费用状态</th>
+            <th style="width:22%">运单 / 任务</th>
+            <th style="width:16%">司机 · 车牌</th>
+            <th style="width:13%">完成时间</th>
+            <th style="width:8%">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="amt num">¥2,880.00</div>
+              <div><span class="tp">过路费</span><span class="tp">加油</span></div>
+            </td>
+            <td><span class="st wait">待审核</span></td>
+            <td><div>测试抢单</div><div class="sub-line num">YD202610210001</div></td>
+            <td><div>李亚楠</div><div class="sub-line num">晋A·12345</div></td>
+            <td class="num" style="color:#94A3B8">10-20 14:32</td>
+            <td><a style="color:#94A3B8;font-size:11.5px;text-decoration:none">收起</a></td>
+          </tr>
+
+          <tr class="expand-row">
+            <td colspan="6">
+              <div class="ex-wrap">
+                <div class="ex-hd">费用明细 · 共 2 笔</div>
+                <div class="ex-grid">
+                  <div>
+                    <div class="ex-items">
+                      <div class="ex-item">
+                        <span class="ex-ico">路</span>
+                        <span class="ex-name"><b>过路费</b><span>云南装货点 → 厦门卸货点 · 10-20 14:32</span></span>
+                        <span class="ex-amt num">¥680.00</span>
+                      </div>
+                      <div class="ex-item">
+                        <span class="ex-ico">油</span>
+                        <span class="ex-name"><b>加油</b><span>中国石化 · 92# · 320L · 10-20 14:35</span></span>
+                        <span class="ex-amt num">¥2,200.00</span>
+                      </div>
+                      <div class="ex-sum">
+                        合计 <b>¥2,880.00</b>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="ex-side">
+                    <div class="side-block">
+                      <div class="side-k">审批</div>
+                      <div class="flow-step">
+                        <span class="flow-dot"></span>
+                        <span class="flow-txt"><b>发单人</b> 已通过<br>10-20 14:40</span>
+                      </div>
+                      <div class="flow-step">
+                        <span class="flow-dot" style="background:#B45309;box-shadow:0 0 0 2.5px rgba(180,83,9,.14)"></span>
+                        <span class="flow-txt"><b>财务</b> 待处理</span>
+                      </div>
+                    </div>
+                    <div class="side-block">
+                      <div class="side-k">付款</div>
+                      <div class="side-row"><span>状态</span><b style="color:#1D4ED8">待打款</b></div>
+                      <div class="side-row"><span>付款方式</span><b>—</b></div>
+                    </div>
+                    <span class="ex-link">查看凭证（2 张）→</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="amt num">¥1,280.00</div>
+              <div><span class="tp">加油</span></div>
+            </td>
+            <td><span class="st pay">待打款</span></td>
+            <td><div>测试抢单</div><div class="sub-line num">YD202610210008</div></td>
+            <td><div>王建国</div><div class="sub-line num">晋A·67890</div></td>
+            <td class="num" style="color:#94A3B8">10-19 09:15</td>
+            <td><a style="color:#C8102E;font-size:11.5px;text-decoration:none">明细</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>不离开列表，可以边看这趟车边对比下一趟；展开多行也互不干扰；键盘上下键就能连着看</div>
+      <div class="pc-box c"><b>缺点</b>费用项多的时候展开块会很高，把下面的行推出屏幕；凭证图放不下，只能点进去</div>
+    </div>
+  </div>
+
+  <!-- ============ 2 抽屉 ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">2</span>
+      <span class="s-name">右侧抽屉</span>
+      <span class="s-tag">信息最全</span>
+    </div>
+    <p class="s-desc">
+      从右边滑出一块，列表还在（变暗但可读）。凭证缩略图、完整审批流水都塞得下，适合要仔细核对的时候。
+    </p>
+
+    <div class="stage">
+      <div class="drawer-stage">
+        <div class="ghost-table">
+          <table>
+            <thead><tr><th>费用</th><th>状态</th><th>运单</th></tr></thead>
+            <tbody>
+              <tr><td class="num">¥2,880.00</td><td>待审核</td><td>YD...0001</td></tr>
+              <tr><td class="num">¥1,280.00</td><td>待打款</td><td>YD...0008</td></tr>
+              <tr><td class="num">¥5,898.00</td><td>已打款</td><td>YD...0006</td></tr>
+              <tr><td class="num">¥402.00</td><td>已打款</td><td>YD...0010</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="drawer">
+          <div class="dr-hd">
+            <div class="dr-t">测试抢单 · ¥2,880.00</div>
+            <div class="dr-s num">YD202610210001 · 李亚楠 · 晋A·12345</div>
+          </div>
+          <div class="dr-body">
+            <div class="side-k">费用明细 · 2 笔</div>
+            <div class="ex-items" style="margin-bottom:12px">
+              <div class="ex-item">
+                <span class="ex-ico">路</span>
+                <span class="ex-name"><b>过路费</b><span>云南装货点 → 厦门卸货点</span></span>
+                <span class="ex-amt num">¥680.00</span>
+              </div>
+              <div class="ex-item">
+                <span class="ex-ico">油</span>
+                <span class="ex-name"><b>加油</b><span>中国石化 · 92# · 320L</span></span>
+                <span class="ex-amt num">¥2,200.00</span>
+              </div>
+              <div class="ex-sum">合计 <b>¥2,880.00</b></div>
+            </div>
+
+            <div class="side-k">凭证</div>
+            <div style="display:flex;gap:7px;margin-bottom:12px">
+              <div style="width:52px;height:52px;border-radius:7px;background:#EEF2F7;border:1px solid #E2E8F0"></div>
+              <div style="width:52px;height:52px;border-radius:7px;background:#EEF2F7;border:1px solid #E2E8F0"></div>
+            </div>
+
+            <div class="side-k">审批流水</div>
+            <div class="flow-step">
+              <span class="flow-dot"></span>
+              <span class="flow-txt"><b>发单人</b> 已通过 · 10-20 14:40</span>
+            </div>
+            <div class="flow-step">
+              <span class="flow-dot" style="background:#B45309;box-shadow:0 0 0 2.5px rgba(180,83,9,.14)"></span>
+              <span class="flow-txt"><b>财务</b> 待处理</span>
+            </div>
+          </div>
+          <div class="dr-foot">
+            <button class="btn line">驳回</button>
+            <button class="btn dark" style="flex:1">通过并付款</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>空间大，凭证图、流水、操作按钮都能放；不打断列表（还能看到旁边几行）</div>
+      <div class="pc-box c"><b>缺点</b>遮住右边三列（完成时间、操作）；宽度 330px 在 1280 屏上会压到列表</div>
+    </div>
+  </div>
+
+  <!-- ============ 3 弹窗 ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">3</span>
+      <span class="s-name">居中弹窗</span>
+      <span class="s-tag">最聚焦</span>
+    </div>
+    <p class="s-desc">
+      居中弹出，背景压暗。看的时候注意力全在这趟车上，看完关掉回列表。
+      两栏布局：左边费用项，右边运单和状态。
+    </p>
+
+    <div class="stage">
+      <div class="modal-stage">
+        <div class="modal">
+          <div class="md-hd">
+            <span class="md-t">费用明细</span>
+            <span class="tp num">YD202610210001</span>
+            <span class="md-x">×</span>
+          </div>
+          <div class="md-body">
+            <div>
+              <div class="side-k">费用 · 2 笔</div>
+              <div class="ex-items">
+                <div class="ex-item">
+                  <span class="ex-ico">路</span>
+                  <span class="ex-name"><b>过路费</b><span>云南 → 厦门 · 10-20 14:32</span></span>
+                  <span class="ex-amt num">¥680.00</span>
+                </div>
+                <div class="ex-item">
+                  <span class="ex-ico">油</span>
+                  <span class="ex-name"><b>加油</b><span>92# · 320L · 10-20 14:35</span></span>
+                  <span class="ex-amt num">¥2,200.00</span>
+                </div>
+                <div class="ex-sum">合计 <b>¥2,880.00</b></div>
+              </div>
+            </div>
+            <div>
+              <div class="side-k">运单</div>
+              <div class="side-row"><span>司机</span><b>李亚楠</b></div>
+              <div class="side-row"><span>车牌</span><b class="num">晋A·12345</b></div>
+              <div class="side-row"><span>完成</span><b class="num">10-20 14:32</b></div>
+              <div class="side-k" style="margin-top:12px">状态</div>
+              <div class="side-row"><span>审批</span><b style="color:#B45309">财务待审</b></div>
+              <div class="side-row"><span>付款</span><b style="color:#1D4ED8">待打款</b></div>
+            </div>
+          </div>
+          <div class="md-foot">
+            <button class="btn line">关闭</button>
+            <button class="btn line">查看凭证</button>
+            <button class="btn dark">通过</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>注意力集中，不会看串行；两栏布局信息密度高，一屏看完不用滚</div>
+      <div class="pc-box c"><b>缺点</b>每次都要开/关一次，连看几趟车很烦；背景压暗后完全看不到列表</div>
+    </div>
+  </div>
+
+  <div class="tip">
+    <h2>怎么选</h2>
+    <table>
+      <tr><th></th><th>1 展开行</th><th>2 右侧抽屉</th><th>3 居中弹窗</th></tr>
+      <tr><td>看的时候还能看到列表</td><td><b>能</b></td><td>部分能看到</td><td>看不到</td></tr>
+      <tr><td>凭证图</td><td>不行（要跳）</td><td><b>能</b></td><td>要跳</td></tr>
+      <tr><td>连看多趟车</td><td><b>顺</b></td><td>切一次</td><td>开关各一次</td></tr>
+      <tr><td>行数多时</td><td>会把下面顶下去</td><td>不影响</td><td>不影响</td></tr>
+    </table>
+
+    <p style="margin:14px 0 0">
+      <b>我的建议：1 展开行</b>。这个列表是拿来「扫」的——一趟趟往下看，哪笔钱不对劲就点开。
+      展开行能做到"看这趟的同时还知道下一趟是多少"，这个对比是财务最常见的动作。
+    </p>
+    <p style="margin:8px 0 0">
+      凭证图放不下没关系：展开区右下角放一个「查看凭证（2 张）→」，点了滑出<b>方案 2 的抽屉</b>。
+      两种不是二选一，是主次关系。
+    </p>
+    <p style="margin:8px 0 0">
+      如果你更想"点一次就把这趟车彻底看清楚"，直接选 <b>2 抽屉</b> 也行，
+      代价是每次遮住右边两列，横向对比会断。
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

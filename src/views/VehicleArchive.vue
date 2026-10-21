@@ -945,7 +945,7 @@ onBeforeUnmount(() => {
               <el-col :span="12"><el-form-item label="车辆昵称"><el-input
                     v-model="editFormData.nickname" /></el-form-item></el-col>
               <el-col :span="12">
-                <el-form-item label="所属机构组织">
+                <el-form-item label="所属机构组织（即车队）">
                   <el-select v-model="editFormData.org" placeholder="请选择" :clearable="!originalOrgWhenEdit"
                     style="width: 100%">
                     <el-option v-for="o in orgOptions" :key="o" :label="o" :value="o" />

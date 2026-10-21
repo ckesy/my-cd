@@ -231,8 +231,8 @@
           </div>
         </section>
 
-        <!-- ④ 功能模块 -->
-        <section class="fc-card">
+        <!-- ④ 功能模块：客户没买这项时整块不显示 -->
+        <section v-if="showPayoutCard" class="fc-card">
           <header class="fc-card-head">
             <b>④ 功能模块</b>
             <span>按客户开关；关掉之后界面完全看不到，不是灰掉</span>
@@ -257,8 +257,9 @@
             <code>db_migration_modules_payment.sql</code>。
           </div>
         </section>
-        <!-- ⑤ 流程预览：改配置立刻能看到一笔单会怎么走 -->
-        <section class="fc-card pv-card">
+        <!-- ⑤ 流程预览：改配置立刻能看到一笔单会怎么走
+             ⚠️ 付款登记没开时整块隐藏 —— 「含付款」的链路推演对没开付款的客户毫无意义 -->
+        <section v-if="payoutEnabled" class="fc-card pv-card">
           <header class="fc-card-head">
             <b>⑤ 完整链路（含付款）</b>
             <span>上一栏只看策略；这里连付款环节一起推演</span>
@@ -357,7 +358,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import { supabase } from '@/utils/supabase'
-import { MODULE_PAYOUT, moduleFlags, ensureModuleFlags, setModuleFlag } from '@/utils/modules'
+import { MODULE_PAYOUT, moduleFlags, ensureModuleFlags, setModuleFlag, isFlowAdmin } from '@/utils/modules'
 
 /* ============================================================
    当前用户
@@ -421,6 +422,18 @@ const DEFAULTS = {
 const payoutEnabled = ref(false)
 const moduleSaving = ref(false)
 const moduleFailed = computed(() => moduleFlags.failed)
+
+/**
+ * 「功能模块 / 付款登记」这块什么时候显示
+ * ⭐ 规则：**能关就能看到，不能开就看不到**
+ *   · 服务商（含模拟进入）：永远显示，负责开通
+ *   · 客户 + 付款已开：显示（给客户一个关掉的入口）
+ *   · 客户 + 付款没开：隐藏 —— 没买这项，不给自助开通的口子
+ */
+const showPayoutCard = computed(() =>
+  moduleFlags.loaded &&
+  (isFlowAdmin(currentUser) || moduleFlags.payout === true)
+)
 
 async function onTogglePayout(val) {
   if (!isMaster.value) {

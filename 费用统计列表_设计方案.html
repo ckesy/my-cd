@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>费用统计列表 · 方案</title>
+<style>
+  :root{
+    --bg:#F1F4F8; --card:#fff; --line:#E6ECF3; --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8;
+    --red:#C8102E; --num:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:30px 24px 70px}
+
+  .hd{margin-bottom:24px}
+  h1{margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-.4px}
+  .sub{font-size:12.5px;color:#64748B;line-height:1.8}
+  .sub b{color:#0F172A}
+
+  .scheme{
+    background:#fff;border:1px solid var(--line);border-radius:15px;
+    margin-bottom:22px;overflow:hidden;
+  }
+  .s-hd{display:flex;align-items:center;gap:10px;padding:15px 18px 13px;border-bottom:1px solid #F1F5F9}
+  .s-no{
+    width:24px;height:24px;border-radius:7px;flex:0 0 auto;background:#0F172A;color:#fff;
+    font-size:12.5px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  }
+  .s-name{font-size:14px;font-weight:800}
+  .s-tag{
+    margin-left:auto;font-size:10px;font-weight:700;
+    padding:2px 8px;border-radius:5px;background:#F1F5F9;color:#64748B;
+  }
+  .s-tag.rec{background:#0F172A;color:#fff}
+  .s-desc{padding:12px 18px 0;font-size:12px;color:#64748B;line-height:1.75}
+
+  /* 表格通用 */
+  .sheet{padding:14px 18px 18px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  thead th{
+    background:#F7F9FC;color:#64748B;font-size:11px;font-weight:700;
+    text-align:left;padding:9px 10px;border-bottom:1px solid #E6ECF3;
+    white-space:nowrap;
+  }
+  tbody td{padding:11px 10px;border-bottom:1px solid #F4F6F9;vertical-align:middle}
+  tbody tr:hover{background:#FBFCFE}
+  .num{font-family:var(--num);font-variant-numeric:tabular-nums}
+  .amt{font-size:14px;font-weight:800;letter-spacing:-.2px}
+  .amt.big{font-size:15px}
+  .sub-line{font-size:10.5px;color:#B4BECB;margin-top:2px}
+
+  /* 状态标签 */
+  .st{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:10.5px;font-weight:700;border-radius:5px;padding:2px 8px;
+    white-space:nowrap;
+  }
+  .st::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+  .st.wait{color:#B45309;background:#FFFBEB}
+  .st.pay{color:#1D4ED8;background:#EFF6FF}
+  .st.done{color:#15803D;background:#F0FDF4}
+  .st.no{color:#A00D24;background:#FEF2F4}
+
+  /* 类型标签 */
+  .tp{
+    display:inline-block;font-size:10px;font-weight:600;
+    border-radius:4px;padding:1px 6px;margin-right:4px;
+    background:#F5F7FA;color:#64748B;
+  }
+
+  /* 汇总条 */
+  .sum-bar{
+    display:flex;align-items:center;gap:26px;flex-wrap:wrap;
+    padding:12px 16px;margin-bottom:14px;
+    background:linear-gradient(180deg,#FCFDFE,#F7F9FC);
+    border:1px solid #EDF1F6;border-radius:11px;
+  }
+  .sum-i{display:flex;flex-direction:column;gap:2px}
+  .sum-k{font-size:10px;color:#94A3B8}
+  .sum-v{font-size:16px;font-weight:800;font-family:var(--num);letter-spacing:-.3px}
+  .sum-v.red{color:#C8102E}
+  .sum-v.blue{color:#1D4ED8}
+  .sum-v.green{color:#15803D}
+  .sum-total{margin-left:auto;text-align:right}
+  .sum-total .sum-v{font-size:19px}
+
+  /* 卡片流 */
+  .flow{display:flex;flex-direction:column;gap:9px}
+  .fl-card{
+    display:flex;align-items:center;gap:14px;
+    padding:12px 14px;border:1px solid #E9EEF5;border-radius:10px;
+    background:#fff;
+  }
+  .fl-bar{width:3px;align-self:stretch;border-radius:2px;background:#C8102E;flex:0 0 auto}
+  .fl-main{flex:1;min-width:0}
+  .fl-top{display:flex;align-items:baseline;gap:9px}
+  .fl-amt{font-size:16px;font-weight:800;font-family:var(--num)}
+  .fl-meta{font-size:10.5px;color:#94A3B8;margin-top:3px}
+  .fl-right{text-align:right;flex:0 0 auto}
+
+  /* 分组展开 */
+  .grp{border:1px solid #E9EEF5;border-radius:10px;margin-bottom:9px;overflow:hidden}
+  .grp-hd{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 14px;background:#FAFBFD;border-bottom:1px solid #F1F5F9;
+  }
+  .grp-body{padding:0}
+  .grp-row{
+    display:flex;align-items:center;gap:12px;
+    padding:9px 14px 9px 34px;font-size:11.5px;
+    border-bottom:1px solid #F7F9FC;
+  }
+  .grp-row:last-child{border-bottom:none}
+
+  /* 优缺点 */
+  .pc{
+    display:grid;grid-template-columns:1fr 1fr;gap:14px;
+    padding:14px 18px 16px;border-top:1px solid #F1F5F9;
+  }
+  .pc-box{border-radius:9px;padding:11px 13px;font-size:11.5px;line-height:1.8}
+  .pc-box.p{background:#F0FDF4;color:#166534}
+  .pc-box.c{background:#FFFBEB;color:#92400E}
+  .pc-box b{display:block;font-size:10px;font-weight:800;letter-spacing:.5px;margin-bottom:4px;opacity:.7}
+
+  .tip{
+    margin-top:24px;padding:18px 20px;background:#fff;border:1px solid var(--line);border-radius:14px;
+    font-size:12.5px;color:#475569;line-height:1.95;
+  }
+  .tip h2{margin:0 0 10px;font-size:15px;font-weight:800;color:#0F172A}
+  .tip table{margin-top:10px}
+  .tip td:first-child{font-weight:700}
+  code{font-family:var(--num);font-size:11.5px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hd">
+    <h1>费用统计列表 · 四种方案</h1>
+    <p class="sub">
+      现在这个表是<b>运单视角</b>：一行一趟车，费用只是最后一列。<br>
+      下面四版都换成<b>钱的角度</b>——先看到金额和状态，再往下找它属于哪趟车。<br>
+      数据都是真实的字段（金额、类型、状态、单号、司机、车牌），只是排列方式不同。
+    </p>
+  </div>
+
+  <!-- ============ A ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">A</span>
+      <span class="s-name">运单为行 · 费用列强化</span>
+      <span class="s-tag">改动最小</span>
+    </div>
+    <p class="s-desc">
+      还是「一行一趟车」，但把费用挪到第二列、金额放大、状态做成标签、类型做成小标签。
+      原来 8 列压成 6 列，费用占的面积翻了三倍。
+    </p>
+
+    <div class="sheet">
+      <div class="sum-bar">
+        <div class="sum-i"><span class="sum-k">运单数</span><span class="sum-v">45</span></div>
+        <div class="sum-i"><span class="sum-k">费用合计</span><span class="sum-v">¥62,836.00</span></div>
+        <div class="sum-i"><span class="sum-k">待审</span><span class="sum-v" style="color:#B45309">3 笔</span></div>
+        <div class="sum-i"><span class="sum-k">待打款</span><span class="sum-v blue">6 笔</span></div>
+        <div class="sum-total"><span class="sum-k">已打款</span><span class="sum-v green">36 笔</span></div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:26%">费用</th>
+            <th style="width:16%">费用状态</th>
+            <th style="width:22%">运单 / 任务</th>
+            <th style="width:16%">司机 · 车牌</th>
+            <th style="width:12%">完成时间</th>
+            <th style="width:8%">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="amt num">¥2,880.00</div>
+              <div><span class="tp">过路费</span><span class="tp">加油</span><span class="tp">装卸</span></div>
+            </td>
+            <td><span class="st wait">待审核</span></td>
+            <td>
+              <div>测试抢单</div>
+              <div class="sub-line num">YD202610210001</div>
+            </td>
+            <td>
+              <div>李亚楠</div>
+              <div class="sub-line num">晋A·12345</div>
+            </td>
+            <td class="num" style="color:#94A3B8">10-20 14:32</td>
+            <td><a style="color:#C8102E;text-decoration:none;font-size:11.5px">明细</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="amt num">¥1,280.00</div>
+              <div><span class="tp">加油</span></div>
+            </td>
+            <td><span class="st pay">待打款</span></td>
+            <td>
+              <div>测试抢单</div>
+              <div class="sub-line num">YD202610210008</div>
+            </td>
+            <td>
+              <div>王建国</div>
+              <div class="sub-line num">晋A·67890</div>
+            </td>
+            <td class="num" style="color:#94A3B8">10-19 09:15</td>
+            <td><a style="color:#C8102E;text-decoration:none;font-size:11.5px">明细</a></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="amt num">¥5,898.00</div>
+              <div><span class="tp">过路费</span><span class="tp">维修</span><span class="tp">补贴</span></div>
+            </td>
+            <td><span class="st done">已打款</span></td>
+            <td>
+              <div>测试抢单</div>
+              <div class="sub-line num">YD202610210006</div>
+            </td>
+            <td>
+              <div>张伟</div>
+              <div class="sub-line num">晋A·24680</div>
+            </td>
+            <td class="num" style="color:#94A3B8">10-18 17:40</td>
+            <td><a style="color:#C8102E;text-decoration:none;font-size:11.5px">明细</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>改动最小，用户不用重新学；运单信息天然完整；和现有筛选、导出都能直接复用</div>
+      <div class="pc-box c"><b>缺点</b>还是"一趟车一个金额"，看总量得自己加；类型只能塞几个标签，看不出「这个月加油花了多少」</div>
+    </div>
+  </div>
+
+  <!-- ============ B ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">B</span>
+      <span class="s-name">费用单据为行</span>
+      <span class="s-tag rec">推荐</span>
+    </div>
+    <p class="s-desc">
+      一行 <b>一条费用记录</b>，不是一个运单。司机报了几笔就有几行。
+      这样金额、类型、状态都是"这笔钱"自己的，运单号缩成一行小字跟在下面。
+      财务对账是要一行行过账的，这个粒度才对得上。
+    </p>
+
+    <div class="sheet">
+      <div class="sum-bar">
+        <div class="sum-i"><span class="sum-k">记录数</span><span class="sum-v">128</span></div>
+        <div class="sum-i"><span class="sum-k">费用合计</span><span class="sum-v red">¥62,836.00</span></div>
+        <div class="sum-i"><span class="sum-k">待审核金额</span><span class="sum-v" style="color:#B45309">¥8,240.00</span></div>
+        <div class="sum-i"><span class="sum-k">待打款金额</span><span class="sum-v blue">¥15,680.00</span></div>
+        <div class="sum-total"><span class="sum-k">已打款金额</span><span class="sum-v green">¥38,916.00</span></div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:13%">金额</th>
+            <th style="width:14%">类型</th>
+            <th style="width:11%">状态</th>
+            <th style="width:24%">运单 · 司机</th>
+            <th style="width:18%">上报时间</th>
+            <th style="width:12%">付款方式</th>
+            <th style="width:8%">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="amt big num">¥680.00</span></td>
+            <td><span class="tp">过路费</span></td>
+            <td><span class="st wait">待审核</span></td>
+            <td>
+              <div>李亚楠 <span style="color:#B4BECB">·</span> <span class="num" style="font-size:11px;color:#64748B">晋A·12345</span></div>
+              <div class="sub-line num">YD202610210001</div>
+            </td>
+            <td class="num" style="color:#94A3B8">10-20 14:32</td>
+            <td style="color:#C4CDD9">—</td>
+            <td><a style="color:#C8102E;text-decoration:none;font-size:11.5px">审批</a></td>
+          </tr>
+          <tr>
+            <td><span class="amt big num">¥2,200.00</span></td>
+            <td><span class="tp">加油</span></td>
+            <td><span class="st wait">待审核</span></td>
+            <td>
+              <div>李亚楠 <span style="color:#B4BECB">·</span> <span class="num" style="font-size:11px;color:#64748B">晋A·12345</span></div>
+              <div class="sub-line num">YD202610210001</div>
+            </td>
+            <td class="num" style="color:#94A3B8">10-20 14:35</td>
+            <td style="color:#C4CDD9">—</td>
+            <td><a style="color:#C8102E;text-decoration:none;font-size:11.5px">审批</a></td>
+          </tr>
+          <tr>
+            <td><span class="amt big num">¥1,280.00</span></td>
+            <td><span class="tp">加油</span></td>
+            <td><span class="st pay">待打款</span></td>
+            <td>
+              <div>王建国 <span style="color:#B4BECB">·</span> <span class="num" style="font-size:11px;color:#64748B">晋A·67890</span></div>
+              <div class="sub-line num">YD202610210008</div>
+            </td>
+            <td class="num" style="color:#94A3B8">10-19 09:15</td>
+            <td style="color:#C4CDD9">—</td>
+            <td><a style="color:#C8102E;text-decoration:none;font-size:11.5px">登记</a></td>
+          </tr>
+          <tr>
+            <td><span class="amt big num">¥3,600.00</span></td>
+            <td><span class="tp">维修</span></td>
+            <td><span class="st done">已打款</span></td>
+            <td>
+              <div>张伟 <span style="color:#B4BECB">·</span> <span class="num" style="font-size:11px;color:#64748B">晋A·24680</span></div>
+              <div class="sub-line num">YD202610210006</div>
+            </td>
+            <td class="num" style="color:#94A3B8">10-18 17:40</td>
+            <td><span class="tp" style="background:#EFF6FF;color:#1D4ED8">银行转账</span></td>
+            <td><a style="color:#94A3B8;text-decoration:none;font-size:11.5px">查看</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>粒度对得上财务：一行一笔钱，能按类型汇总、能按状态算总额；审批/登记直接在行上做</div>
+      <div class="pc-box c"><b>缺点</b>同一次运输会出现多行（过路费一行、加油一行），看着比运单表"多"；需要按运单号能筛</div>
+    </div>
+  </div>
+
+  <!-- ============ C ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">C</span>
+      <span class="s-name">运单分组 · 可展开</span>
+      <span class="s-tag">兼顾两边</span>
+    </div>
+    <p class="s-desc">
+      外层一行还是运单，但金额是这趟车的<b>费用合计</b>，前面有个箭头能展开展示每一笔。
+      不展开时像 A，展开后像 B。
+    </p>
+
+    <div class="sheet">
+      <div class="sum-bar">
+        <div class="sum-i"><span class="sum-k">运单数</span><span class="sum-v">45</span></div>
+        <div class="sum-i"><span class="sum-k">费用合计</span><span class="sum-v red">¥62,836.00</span></div>
+        <div class="sum-i"><span class="sum-k">待审</span><span class="sum-v" style="color:#B45309">3 笔</span></div>
+        <div class="sum-total"><span class="sum-k">待打款</span><span class="sum-v blue">6 笔</span></div>
+      </div>
+
+      <div class="grp">
+        <div class="grp-hd">
+          <span style="color:#C4CDD9;font-size:11px">▾</span>
+          <div style="flex:1">
+            <div style="font-size:12.5px;font-weight:700">测试抢单 <span style="color:#B4BECB;font-weight:400">·</span> <span class="num" style="font-size:11px;color:#64748B">YD202610210001</span></div>
+            <div class="sub-line">李亚楠 · 晋A·12345 · 完成于 10-20 14:32</div>
+          </div>
+          <div style="text-align:right;margin-right:16px">
+            <div class="amt num">¥2,880.00</div>
+            <div class="sub-line">3 笔费用</div>
+          </div>
+          <span class="st wait">待审核</span>
+        </div>
+        <div class="grp-body">
+          <div class="grp-row">
+            <span class="amt num" style="font-size:12.5px;width:90px">¥680.00</span>
+            <span class="tp">过路费</span>
+            <span style="color:#94A3B8;flex:1">云南装货点 → 厦门卸货点</span>
+            <span class="st wait">待审核</span>
+          </div>
+          <div class="grp-row">
+            <span class="amt num" style="font-size:12.5px;width:90px">¥2,200.00</span>
+            <span class="tp">加油</span>
+            <span style="color:#94A3B8;flex:1">中国石化 · 92# · 320L</span>
+            <span class="st wait">待审核</span>
+          </div>
+          <div class="grp-row">
+            <span class="amt num" style="font-size:12.5px;width:90px">¥0.00</span>
+            <span class="tp">回单</span>
+            <span style="color:#94A3B8;flex:1">已上传 2 张</span>
+            <span class="st done">已收</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grp">
+        <div class="grp-hd">
+          <span style="color:#C4CDD9;font-size:11px">▸</span>
+          <div style="flex:1">
+            <div style="font-size:12.5px;font-weight:700">测试抢单 <span style="color:#B4BECB;font-weight:400">·</span> <span class="num" style="font-size:11px;color:#64748B">YD202610210008</span></div>
+            <div class="sub-line">王建国 · 晋A·67890 · 完成于 10-19 09:15</div>
+          </div>
+          <div style="text-align:right;margin-right:16px">
+            <div class="amt num">¥1,280.00</div>
+            <div class="sub-line">1 笔费用</div>
+          </div>
+          <span class="st pay">待打款</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>两个视角都照顾到了：不展开时是运单表，展开能看每一笔；运单级汇总天然正确</div>
+      <div class="pc-box c"><b>缺点</b>想看"本月加油总共多少"还是得展开数；分页 + 展开组合时行高不齐，视觉上会跳</div>
+    </div>
+  </div>
+
+  <!-- ============ D ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">D</span>
+      <span class="s-name">卡片流 · 金额主导</span>
+      <span class="s-tag">移动端友好</span>
+    </div>
+    <p class="s-desc">
+      不做表格，一行一张卡片：左边金额最大，右边状态，中间是运单和司机。
+      信息密度低但扫得快，手机上体验最好。
+    </p>
+
+    <div class="sheet">
+      <div class="sum-bar">
+        <div class="sum-i"><span class="sum-k">费用合计</span><span class="sum-v red">¥62,836.00</span></div>
+        <div class="sum-i"><span class="sum-k">待审</span><span class="sum-v" style="color:#B45309">¥8,240.00</span></div>
+        <div class="sum-total"><span class="sum-k">待打款</span><span class="sum-v blue">¥15,680.00</span></div>
+      </div>
+
+      <div class="flow">
+        <div class="fl-card">
+          <span class="fl-bar"></span>
+          <div class="fl-main">
+            <div class="fl-top">
+              <span class="fl-amt num">¥680.00</span>
+              <span class="tp">过路费</span>
+            </div>
+            <div class="fl-meta">YD202610210001 · 李亚楠 · 晋A·12345 · 10-20 14:32</div>
+          </div>
+          <div class="fl-right">
+            <span class="st wait">待审核</span>
+            <div class="sub-line" style="margin-top:5px">审批 →</div>
+          </div>
+        </div>
+
+        <div class="fl-card">
+          <span class="fl-bar" style="background:#3B82F6"></span>
+          <div class="fl-main">
+            <div class="fl-top">
+              <span class="fl-amt num">¥1,280.00</span>
+              <span class="tp">加油</span>
+            </div>
+            <div class="fl-meta">YD202610210008 · 王建国 · 晋A·67890 · 10-19 09:15</div>
+          </div>
+          <div class="fl-right">
+            <span class="st pay">待打款</span>
+            <div class="sub-line" style="margin-top:5px">登记 →</div>
+          </div>
+        </div>
+
+        <div class="fl-card">
+          <span class="fl-bar" style="background:#15803D"></span>
+          <div class="fl-main">
+            <div class="fl-top">
+              <span class="fl-amt num">¥3,600.00</span>
+              <span class="tp">维修</span>
+            </div>
+            <div class="fl-meta">YD202610210006 · 张伟 · 晋A·24680 · 10-18 17:40</div>
+          </div>
+          <div class="fl-right">
+            <span class="st done">已打款</span>
+            <div class="sub-line" style="margin-top:5px">银行转账</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>金额一眼看到；手机上不用横滑；一行能放更多上下文（单号、司机、车牌、时间）</div>
+      <div class="pc-box c"><b>缺点</b>桌面端一屏只放 6~8 条，效率不如表格；不好做列排序、批量勾选</div>
+    </div>
+  </div>
+
+  <div class="tip">
+    <h2>怎么选</h2>
+    <table>
+      <tr><th></th><th>A 运单强化</th><th>B 费用单据</th><th>C 分组展开</th><th>D 卡片流</th></tr>
+      <tr><td>一行代表</td><td>一趟车</td><td><b>一笔钱</b></td><td>一趟车（可展开）</td><td>一笔钱</td></tr>
+      <tr><td>能按类型汇总</td><td>勉强</td><td><b>能</b></td><td>展开后能</td><td>能</td></tr>
+      <tr><td>一行一笔对账</td><td>不行</td><td><b>行</b></td><td>展开后行</td><td>行</td></tr>
+      <tr><td>桌面效率</td><td>高</td><td><b>高</b></td><td>中（行高不齐）</td><td>低</td></tr>
+      <tr><td>改动量</td><td><b>小</b></td><td>中（新的数据源）</td><td>中</td><td>中</td></tr>
+    </table>
+
+    <p style="margin:14px 0 0">
+      <b>我的建议：B</b>。你说的是"费用统计"，那统计单位就该是<b>一笔钱</b>而不是一趟车。
+      B 每行是一笔费用，所以"待审 ¥8,240 / 待付 ¥15,680"这种数字是<b>算出来的真实合计</b>，
+      不是把运单金额加一加。财务对账要的正是这个。
+    </p>
+    <p style="margin:8px 0 0">
+      运单信息没丢：单号、司机、车牌都收在第二列的两行里，还能点单号跳运单详情。
+    </p>
+    <p style="margin:8px 0 0">
+      如果担心"一行变多、看着乱"，可以配一个<b>分组开关</b>：默认按运单折叠（像 C），
+      点开才一行行摊平（像 B）。这样默认视图不乱，真想对账时再摊开。
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

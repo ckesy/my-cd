@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>运营看板 · 全部/车队/单车 三种视角</title>
+<style>
+  :root{
+    --bg:#F1F4F8; --card:#fff; --line:#E6ECF3; --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8;
+    --red:#C8102E; --blue:#1D4ED8; --green:#15803D; --amber:#D97706;
+    --num:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1180px;margin:0 auto;padding:30px 24px 70px}
+
+  .hd{margin-bottom:22px}
+  h1{margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-.4px}
+  .sub{font-size:12.5px;color:#64748B;line-height:1.85}
+  .sub b{color:#0F172A}
+
+  .scheme{background:#fff;border:1px solid var(--line);border-radius:15px;margin-bottom:22px;overflow:hidden}
+  .s-hd{display:flex;align-items:center;gap:10px;padding:15px 18px 13px;border-bottom:1px solid #F1F5F9}
+  .s-no{width:24px;height:24px;border-radius:7px;flex:0 0 auto;background:#0F172A;color:#fff;
+    font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  .s-name{font-size:14px;font-weight:800}
+  .s-tag{margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;background:#F1F5F9;color:#64748B}
+  .s-tag.rec{background:#1D4ED8;color:#fff}
+  .s-desc{padding:12px 18px 0;font-size:12px;color:#64748B;line-height:1.8}
+  .stage{padding:16px 18px 18px}
+
+  /* 顶部切换器 */
+  .bar-hd{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:9px 12px;border:1px solid #EDF1F6;border-radius:9px;background:#FAFBFD;margin-bottom:12px;
+  }
+  .seg{display:flex;gap:2px;background:#EEF2F7;border-radius:7px;padding:2px}
+  .seg span{font-size:10.5px;padding:3px 9px;border-radius:5px;color:#64748B;cursor:default}
+  .seg span.on{background:#fff;color:#0F172A;font-weight:700;box-shadow:0 1px 2px rgba(15,23,42,.08)}
+  .bar-hd .lbl{font-size:10px;color:#B4BECB}
+  .bar-hd .sp{flex:1}
+  .pick{
+    font-size:10.5px;font-weight:700;color:#1D4ED8;
+    background:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;padding:3px 9px;
+  }
+
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px}
+  .kpis.k4{grid-template-columns:repeat(4,1fr)}
+  .kpi{border:1px solid #EDF1F6;border-radius:10px;padding:11px 13px;background:#fff}
+  .kpi.hero{background:linear-gradient(135deg,#1E3A8A,#152C6B);border-color:transparent}
+  .kpi.good{background:#F0FDF4;border-color:#BBF7D0}
+  .kpi-k{font-size:10px;color:#94A3B8}
+  .kpi.hero .kpi-k{color:rgba(255,255,255,.72)}
+  .kpi.good .kpi-k{color:#166534}
+  .kpi-v{font-family:var(--num);font-size:19px;font-weight:800;letter-spacing:-.5px;margin-top:4px}
+  .kpi.hero .kpi-v{color:#fff}
+  .kpi-d{font-size:9.5px;margin-top:3px;color:#94A3B8}
+  .kpi.hero .kpi-d{color:rgba(255,255,255,.6)}
+  .kpi-d.up{color:var(--red)}
+  .kpi-d.down{color:var(--green)}
+
+  .panel{border:1px solid #EDF1F6;border-radius:10px;background:#fff;padding:12px 14px}
+  .p-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .p-t{font-size:11.5px;font-weight:800}
+  .p-s{font-size:9.5px;color:#B4BECB;margin-left:auto}
+  .grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:11px}
+  .grid2e{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  thead th{background:#F7F9FC;color:#475569;font-size:10.5px;font-weight:700;
+    text-align:left;padding:7px 9px;border-bottom:1px solid #E6ECF3;white-space:nowrap}
+  tbody td{padding:8px 9px;border-bottom:1px solid #F4F6F9}
+  .num{font-family:var(--num);font-variant-numeric:tabular-nums}
+  .ta-r{text-align:right}
+  .muted{color:#B4BECB}
+
+  .chart{height:92px}
+  .chart svg{width:100%;height:100%;display:block}
+  .axis-x{display:flex;justify-content:space-between;font-size:9px;color:#B4BECB;margin-top:4px}
+
+  .bars{display:flex;flex-direction:column;gap:7px}
+  .bar-row{display:flex;align-items:center;gap:8px;font-size:10.5px}
+  .bar-n{width:70px;color:#475569;flex:0 0 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar-t{flex:1;height:8px;border-radius:4px;background:#F1F5F9;overflow:hidden}
+  .bar-t i{display:block;height:100%;border-radius:4px}
+  .bar-v{width:60px;text-align:right;font-family:var(--num);font-weight:700;flex:0 0 auto}
+
+  .donut{width:92px;height:92px;border-radius:50%;position:relative;flex:0 0 auto}
+  .donut::after{content:'';position:absolute;inset:21px;background:#fff;border-radius:50%}
+  .donut-c{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:var(--num);font-size:11.5px;font-weight:800;z-index:1}
+  .legend{display:flex;flex-direction:column;gap:5px;font-size:10px;color:#64748B}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .legend i{width:7px;height:7px;border-radius:2px;display:inline-block}
+
+  .hint{
+    font-size:10px;line-height:1.7;color:#64748B;background:#FAFBFD;
+    border-radius:7px;padding:8px 10px;margin-top:10px;
+  }
+  .hint b{color:#0F172A}
+
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:13px;padding:14px 18px 16px;border-top:1px solid #F1F5F9}
+  .pc-box{border-radius:9px;padding:11px 13px;font-size:11px;line-height:1.8}
+  .pc-box.p{background:#F0FDF4;color:#166534}
+  .pc-box.c{background:#FFFBEB;color:#92400E}
+  .pc-box b{display:block;font-size:9.5px;font-weight:800;letter-spacing:.5px;margin-bottom:4px;opacity:.7}
+
+  .tip{margin-top:22px;padding:18px 20px;background:#fff;border:1px solid var(--line);border-radius:14px;
+    font-size:12.5px;color:#475569;line-height:1.95}
+  .tip h2{margin:0 0 10px;font-size:15px;font-weight:800;color:#0F172A}
+  .tip table{margin-top:10px;font-size:11.5px}
+  .tip th{background:#FAFBFD;color:#475569;font-weight:700;padding:7px 9px;text-align:left;font-size:10.5px}
+  .tip td{padding:7px 9px;border-bottom:1px solid #F1F5F9}
+  .tip td:first-child{font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hd">
+    <h1>运营看板 · 三种范围视角</h1>
+    <p class="sub">
+      同一个页面，靠顶部<b>范围切换</b>（全部 / 车队 / 单车）换内容。<b>粒度</b>（日/周/月/季/半年/年）在三种视角下都保留。<br>
+      区别在于：<b>全部</b>看全局结构，<b>车队</b>看队内差异，<b>单车</b>看一台车的历史。
+    </p>
+  </div>
+
+  <!-- ============ 全部 ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">1</span>
+      <span class="s-name">全部 · 全局结构</span>
+      <span class="s-tag">默认</span>
+    </div>
+    <p class="s-desc">
+      回答「整个盘子怎么样」。重点在结构和排行 —— 哪个车队最能跑、哪种费用最吃钱。
+    </p>
+
+    <div class="stage">
+      <div class="bar-hd">
+        <span class="lbl">粒度</span>
+        <div class="seg"><span>日</span><span>周</span><span class="on">月</span><span>季</span><span>半年</span><span>年</span></div>
+        <span class="lbl" style="margin-left:8px">范围</span>
+        <div class="seg"><span class="on">全部</span><span>车队</span><span>单车</span></div>
+        <span class="sp"></span>
+        <span style="font-size:10px;color:#94A3B8">2026-10 · 12 台车 · 4 个车队</span>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi hero"><div class="kpi-k">运单</div><div class="kpi-v">60</div><div class="kpi-d">完成 51 · 在途 9</div></div>
+        <div class="kpi"><div class="kpi-k">总里程</div><div class="kpi-v">24,680</div><div class="kpi-d">km</div></div>
+        <div class="kpi"><div class="kpi-k">费用支出</div><div class="kpi-v" style="color:var(--red)">¥746,681</div><div class="kpi-d up">+8.1%</div></div>
+        <div class="kpi good"><div class="kpi-k">单公里成本</div><div class="kpi-v" style="color:var(--green)">¥30.3</div><div class="kpi-d down">-2.6%</div></div>
+        <div class="kpi"><div class="kpi-k">准时率</div><div class="kpi-v">82.2%</div><div class="kpi-d up">-3.0pp</div></div>
+      </div>
+
+      <div class="grid2">
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">车队对比</span><span class="p-s">按车队 · 单公里成本</span></div>
+          <div class="bars">
+            <div class="bar-row"><span class="bar-n">一队（重载）</span><span class="bar-t"><i style="width:58%;background:#15803D"></i></span><span class="bar-v">¥26.8</span></div>
+            <div class="bar-row"><span class="bar-n">二队（长途）</span><span class="bar-t"><i style="width:71%;background:#22C55E"></i></span><span class="bar-v">¥30.1</span></div>
+            <div class="bar-row"><span class="bar-n">三队（短驳）</span><span class="bar-t"><i style="width:83%;background:#D97706"></i></span><span class="bar-v">¥35.4</span></div>
+            <div class="bar-row"><span class="bar-n">四队（备用）</span><span class="bar-t"><i style="width:100%;background:#C8102E"></i></span><span class="bar-v">¥42.6</span></div>
+          </div>
+          <div class="hint">四队只有 1 台车，成本高是样本少 —— 点进去看具体原因</div>
+        </div>
+
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">费用结构</span></div>
+          <div style="display:flex;align-items:center;gap:14px">
+            <div class="donut" style="background:conic-gradient(#C8102E 0 58%, #15803D 58% 76%, #7C3AED 76% 87%, #1D4ED8 87% 94%, #B45309 94% 100%)">
+              <div class="donut-c">¥74.7万</div>
+            </div>
+            <div class="legend">
+              <span><i style="background:#C8102E"></i>费用上报 58%</span>
+              <span><i style="background:#15803D"></i>补贴 18%</span>
+              <span><i style="background:#7C3AED"></i>过磅 11%</span>
+              <span><i style="background:#1D4ED8"></i>借款 7%</span>
+              <span><i style="background:#B45309"></i>违章 4%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>要点</b>车队行可以点（下钻到该车队），是「全部」和「车队」之间的入口</div>
+      <div class="pc-box c"><b>注意</b>车队只有 1 台车时，排行意义不大，要提示「样本少」</div>
+    </div>
+  </div>
+
+  <!-- ============ 车队 ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">2</span>
+      <span class="s-name">车队 · 队内差异</span>
+      <span class="s-tag rec">最常用</span>
+    </div>
+    <p class="s-desc">
+      选中某个车队后，主体从「车队排行」换成「这个队里每台车的表现」。
+      队长最关心的事：<b>我队里哪台车在拖后腿</b>。
+    </p>
+
+    <div class="stage">
+      <div class="bar-hd">
+        <span class="lbl">粒度</span>
+        <div class="seg"><span>日</span><span>周</span><span class="on">月</span><span>季</span><span>半年</span><span>年</span></div>
+        <span class="lbl" style="margin-left:8px">范围</span>
+        <div class="seg"><span>全部</span><span class="on">车队</span><span>单车</span></div>
+        <span class="pick">二队（长途） · 4 台车 ▾</span>
+        <span class="sp"></span>
+        <span style="font-size:10px;color:#94A3B8">2026-10</span>
+      </div>
+
+      <div class="kpis k4">
+        <div class="kpi hero"><div class="kpi-k">二队运单</div><div class="kpi-v">22</div><div class="kpi-d">4 台车 · 均 5.5 趟</div></div>
+        <div class="kpi"><div class="kpi-k">二队里程</div><div class="kpi-v">9,840</div><div class="kpi-d">km</div></div>
+        <div class="kpi"><div class="kpi-k">二队支出</div><div class="kpi-v" style="color:var(--red)">¥296,000</div><div class="kpi-d up">+6.2%</div></div>
+        <div class="kpi good"><div class="kpi-k">二队单公里</div><div class="kpi-v" style="color:var(--green)">¥30.1</div><div class="kpi-d down">低于全局均值 0.7</div></div>
+      </div>
+
+      <div class="panel" style="margin-bottom:11px">
+        <div class="p-hd"><span class="p-t">队内车辆明细</span><span class="p-s">点任一列排序</span></div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:110px">车辆</th>
+              <th class="ta-r">趟数</th>
+              <th class="ta-r">里程</th>
+              <th class="ta-r">费用</th>
+              <th class="ta-r">单公里成本</th>
+              <th class="ta-r">准时率</th>
+              <th class="ta-r">环比</th>
+              <th>判断</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>晋A·12345</b></td>
+              <td class="ta-r num">7</td>
+              <td class="ta-r num">3,120</td>
+              <td class="ta-r num">¥94,500</td>
+              <td class="ta-r num" style="color:var(--green);font-weight:700">¥30.3</td>
+              <td class="ta-r num">88%</td>
+              <td class="ta-r num" style="color:var(--green)">-3.1%</td>
+              <td style="color:#15803D">稳</td>
+            </tr>
+            <tr>
+              <td><b>晋A·67890</b></td>
+              <td class="ta-r num">6</td>
+              <td class="ta-r num">2,890</td>
+              <td class="ta-r num">¥98,838</td>
+              <td class="ta-r num" style="color:#D97706;font-weight:700">¥34.2</td>
+              <td class="ta-r num">82%</td>
+              <td class="ta-r num" style="color:var(--red)">+5.4%</td>
+              <td style="color:#D97706">偏贵</td>
+            </tr>
+            <tr>
+              <td><b>晋A·13579</b></td>
+              <td class="ta-r num">5</td>
+              <td class="ta-r num">2,180</td>
+              <td class="ta-r num">¥88,944</td>
+              <td class="ta-r num" style="color:var(--red);font-weight:700">¥40.8</td>
+              <td class="ta-r num">74%</td>
+              <td class="ta-r num" style="color:var(--red)">+12.8%</td>
+              <td style="color:#A00D24">要查</td>
+            </tr>
+            <tr>
+              <td><b>晋A·24680</b></td>
+              <td class="ta-r num">4</td>
+              <td class="ta-r num">1,650</td>
+              <td class="ta-r num">¥39,765</td>
+              <td class="ta-r num" style="color:var(--green);font-weight:700">¥24.1</td>
+              <td class="ta-r num">90%</td>
+              <td class="ta-r num" style="color:var(--green)">-1.2%</td>
+              <td style="color:#15803D">最省</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid2e">
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">队内费用构成</span><span class="p-s">¥29.6 万</span></div>
+          <div style="display:flex;align-items:center;gap:14px">
+            <div class="donut" style="background:conic-gradient(#C8102E 0 54%, #15803D 54% 72%, #7C3AED 72% 86%, #1D4ED8 86% 94%, #B45309 94% 100%)">
+              <div class="donut-c">¥29.6万</div>
+            </div>
+            <div class="legend">
+              <span><i style="background:#C8102E"></i>费用上报 54%</span>
+              <span><i style="background:#15803D"></i>补贴 18%</span>
+              <span><i style="background:#7C3AED"></i>过磅 14%</span>
+              <span><i style="background:#1D4ED8"></i>借款 8%</span>
+              <span><i style="background:#B45309"></i>违章 6%</span>
+            </div>
+          </div>
+          <div class="hint">比全局（58% 费用上报）低，说明这个队过磅单多 —— 跑的都是需要过磅的重载</div>
+        </div>
+
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">队内异常</span></div>
+          <div style="font-size:10px;line-height:1.75">
+            <div style="background:#FEF2F4;border-radius:6px;padding:7px 9px;margin-bottom:6px;color:#A00D24">
+              <b>晋A·13579</b> 单公里 ¥40.8，队内最高，环比还涨 12.8%
+            </div>
+            <div style="background:#FFFBEB;border-radius:6px;padding:7px 9px;margin-bottom:6px;color:#92400E">
+              <b>晋A·67890</b> 准时率 82%，有 2 单晚点超 6 小时
+            </div>
+            <div style="background:#EFF6FF;border-radius:6px;padding:7px 9px;color:#1E40AF">
+              <b>晋A·24680</b> 表现最好，可调去跑更远的线
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>要点</b>队长视角：一眼看出哪台车拖后腿；「判断」列直接给结论（稳/偏贵/要查/最省）</div>
+      <div class="pc-box c"><b>注意</b>车队只有 1~2 台车时，明细表信息量不够，可改成卡片式展示</div>
+    </div>
+  </div>
+
+  <!-- ============ 单车 ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">3</span>
+      <span class="s-name">单车 · 一台车的历史</span>
+      <span class="s-tag">深挖</span>
+    </div>
+    <p class="s-desc">
+      选中某台车后，看的不是「现在」，是「这台车一直怎么样」。
+      主体从对比表换成<b>这台车 12 个月的趋势</b> + 它跑的线路 + 它的费用习惯。
+    </p>
+
+    <div class="stage">
+      <div class="bar-hd">
+        <span class="lbl">粒度</span>
+        <div class="seg"><span>日</span><span>周</span><span class="on">月</span><span>季</span><span>半年</span><span>年</span></div>
+        <span class="lbl" style="margin-left:8px">范围</span>
+        <div class="seg"><span>全部</span><span>车队</span><span class="on">单车</span></div>
+        <span class="pick">晋A·13579 · 二队 · 王建国 ▾</span>
+        <span class="sp"></span>
+        <span style="font-size:10px;color:#94A3B8">2026-10</span>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi hero"><div class="kpi-k">本月趟数</div><div class="kpi-v">5</div><div class="kpi-d">队内第 3 / 4</div></div>
+        <div class="kpi"><div class="kpi-k">本月里程</div><div class="kpi-v">2,180</div><div class="kpi-d">km · 均 436/趟</div></div>
+        <div class="kpi"><div class="kpi-k">本月费用</div><div class="kpi-v" style="color:var(--red)">¥88,944</div><div class="kpi-d up">+12.8%</div></div>
+        <div class="kpi" style="background:#FEF2F4;border-color:#FECDD3">
+          <div class="kpi-k" style="color:#A00D24">单公里成本</div>
+          <div class="kpi-v" style="color:#A00D24">¥40.8</div>
+          <div class="kpi-d" style="color:#A00D24">比车队均值高 36%</div>
+        </div>
+        <div class="kpi"><div class="kpi-k">准时率</div><div class="kpi-v" style="color:#D97706">74%</div><div class="kpi-d up">-8pp</div></div>
+      </div>
+
+      <div class="panel" style="margin-bottom:11px">
+        <div class="p-hd"><span class="p-t">成本走势</span><span class="p-s">近 12 个月 · 单公里成本</span></div>
+        <div class="chart">
+          <svg viewBox="0 0 460 92" preserveAspectRatio="none">
+            <!-- 车队均值参考线 -->
+            <line x1="0" y1="62" x2="460" y2="62" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="4" y="58" font-size="8" fill="#94A3B8">车队均值 ¥30.1</text>
+            <!-- 这车的线 -->
+            <polyline points="20,50 58,48 96,44 134,42 172,40 210,38 248,36 286,34 324,32 362,30 400,26 438,22"
+              fill="none" stroke="#C8102E" stroke-width="2.4" stroke-linejoin="round"/>
+            <g fill="#C8102E">
+              <circle cx="20" cy="50" r="2.4"/><circle cx="96" cy="44" r="2.4"/>
+              <circle cx="172" cy="40" r="2.4"/><circle cx="248" cy="36" r="2.4"/>
+              <circle cx="324" cy="32" r="2.4"/><circle cx="438" cy="22" r="2.4"/>
+            </g>
+            <!-- 趋势标注 -->
+            <text x="392" y="16" font-size="9" fill="#C8102E" font-weight="700">↑ 连续 8 个月上升</text>
+          </svg>
+        </div>
+        <div class="axis-x"><span>11月</span><span>1月</span><span>3月</span><span>5月</span><span>7月</span><span>9月</span><span>10月</span></div>
+        <div class="hint">
+          一年前单公里 ¥27.4，现在 ¥40.8，<b>涨了 49%</b>。同期车队均值只涨 6% —— 问题出在这台车自己身上。
+        </div>
+      </div>
+
+      <div class="grid3">
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">它跑什么线</span></div>
+          <div class="bars">
+            <div class="bar-row"><span class="bar-n">厦门→山西</span><span class="bar-t"><i style="width:100%;background:#C8102E"></i></span><span class="bar-v">3 趟</span></div>
+            <div class="bar-row"><span class="bar-n">云南→贵阳</span><span class="bar-t"><i style="width:66%;background:#EA580C"></i></span><span class="bar-v">2 趟</span></div>
+          </div>
+          <div class="hint" style="margin-top:8px">
+            这两条正好是全局准时率最低的两条线（74% / 68%）
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">它的钱花在哪</span></div>
+          <div class="legend" style="gap:7px">
+            <span><i style="background:#C8102E"></i>费用上报 ¥62,400（70%）</span>
+            <span><i style="background:#7C3AED"></i>过磅 ¥14,200（16%）</span>
+            <span><i style="background:#B45309"></i>违章 ¥8,900（10%）</span>
+            <span><i style="background:#15803D"></i>补贴 ¥3,444（4%）</span>
+          </div>
+          <div class="hint" style="margin-top:8px">
+            违章占 10%，队内最高。<b>3 笔违章、扣 9 分</b>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">结论</span></div>
+          <div style="font-size:10px;line-height:1.8;color:#475569">
+            <div style="margin-bottom:5px">
+              <b style="color:#A00D24">这台车在变差</b>：成本连涨 8 个月，主要因为改跑两条慢线 + 违章变多。
+            </div>
+            <div style="margin-bottom:5px">
+              <b style="color:#D97706">建议</b>：换回原来的线路，或查一下是不是换了司机。
+            </div>
+            <div>
+              <b style="color:#15803D">对比</b>：同队的 晋A·24680 单公里只有 ¥24.1，可以调它的排班。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>要点</b>单车视角的核心是<b>和历史比</b>（不是和别的车比）；「结论」面板直接给判断，这是整个看板最值钱的部分</div>
+      <div class="pc-box c"><b>注意</b>数据量少的车（新买、跑得少）趋势不准，要标注样本量</div>
+    </div>
+  </div>
+
+  <div class="tip">
+    <h2>三种视角的分工</h2>
+    <table>
+      <tr><th></th><th>全部</th><th>车队</th><th>单车</th></tr>
+      <tr><td>回答</td><td>盘子怎么样</td><td>队里谁拖后腿</td><td>这台车怎么了</td></tr>
+      <tr><td>主体</td><td>车队排行 + 费用结构</td><td><b>队内车辆明细表</b></td><td><b>12 个月成本走势</b></td></tr>
+      <tr><td>比的对象</td><td>车队之间</td><td>队内车之间</td><td><b>和自己历史比</b></td></tr>
+      <tr><td>主色</td><td>中性</td><td>中性</td><td><b>红（这台车的线）</b></td></tr>
+      <tr><td>谁能看</td><td>老板</td><td>队长</td><td>队长 / 维修</td></tr>
+    </table>
+
+    <p style="margin:14px 0 0">
+      <b>三个视角共用一套骨架</b>：切换器 + KPI 条 + 主体区。只是主体区的内容换。
+      这样实现成本低（一个页面三套内容），用户也不用学三个界面。
+    </p>
+    <p style="margin:8px 0 0">
+      <b>下钻路径</b>：全部 → 点车队 → 车队 → 点车辆 → 单车。
+      面包屑在顶部（`全部 / 二队 / 晋A·13579`），随时能往回退。
+    </p>
+    <p style="margin:8px 0 0">
+      <b>单车视角的红线</b>：和车队均值画在同一张图上（虚线），
+      一眼就能看出「这台车是在变好还是变坏」—— 比看数字快得多。
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

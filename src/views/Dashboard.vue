@@ -94,7 +94,14 @@
           <template v-else-if="route.path === '/flow/canvas'">
             <FlowCanvas />
           </template>
+          <!-- ⭐ 运单统计 -->
+          <template v-else-if="route.path === '/waybill/stats'">
+            <WaybillStats />
+          </template>
           <!-- ⭐ 费用管理 -->
+          <template v-else-if="route.path === '/fee/list'">
+            <FeeList />
+          </template>
           <template v-else-if="route.path === '/fee/stats'">
             <FeeStats />
           </template>
@@ -217,6 +224,8 @@ import OrgManage from '../views/OrgManage.vue'
 // ⭐ 路线管理
 import RouteManage from '../views/RouteManage.vue'
 import FeeStats from '../views/FeeStats.vue'
+import FeeList from '../views/FeeList.vue'
+import WaybillStats from '../views/WaybillStats.vue'
 import FeePayout from '../views/FeePayout.vue'
 import FeeApprovalSetting from '../views/FeeApprovalSetting.vue'
 import FlowCanvas from '../views/FlowCanvas.vue'
@@ -280,6 +289,8 @@ const routePermissionMap = {
   '/waybill': 'waybill',
   '/waybill/create': 'waybill',
   '/waybill/detail': 'waybill',
+  '/waybill/stats': 'waybill',
+  '/fee/list': 'fee_stats',
   '/fee/stats': 'fee_stats',
   // ⭐ 路线管理暂时不做权限限制（新功能，等业务明确后再加 'route'）
   // '/route/manage': 'route',
@@ -328,8 +339,18 @@ const isPermitted = computed(() => {
   if (route.path === '/fee/config') return isMaster.value
   // 付款登记：主账号 + 财务 + 模块已开通（其余人看不到入口，也别让他们直接敲地址）
   if (route.path === '/fee/payout') return (isMaster.value || isFinance.value) && moduleFlags.payout
-  // 费用统计：主账号始终可见；其他人看功能配置
-  if (route.path === '/fee/stats') return isMaster.value || clientPerms.value.includes('fee_stats')
+  // 车队运营报告：主账号始终可见（模块开关由 MODULE_GATE 拦）
+  if (route.path === '/report') {
+    return isMaster.value || clientPerms.value.includes('report')
+  }
+  // 运单统计：跟着运单模块走，主账号始终可见
+  if (route.path === '/waybill/stats') {
+    return isMaster.value || clientPerms.value.includes('waybill')
+  }
+  // 费用统计 / 费用明细：主账号始终可见；其他人看功能配置
+  if (route.path === '/fee/stats' || route.path === '/fee/list') {
+    return isMaster.value || clientPerms.value.includes('fee_stats')
+  }
   const permKey = routePermissionMap[route.path]
   if (!permKey) return true
   return clientPerms.value.includes(permKey)
@@ -433,6 +454,8 @@ const pathLabels = {
   '/report': '车队运营报告',
   '/flow/canvas': '业务流程',
   '/waybill/create': '新建运单',
+  '/waybill/stats': '运单统计',
+  '/fee/list': '费用明细',
   '/fee/stats': '费用统计',
   '/fee/payout': '付款登记',
   '/fee/config': '费用审批设置',
@@ -935,6 +958,13 @@ const goLogin = () => {
 }
 
 /* ⭐ 业务流程画布：整页定高，画布区自己横向滚动 */
+.content-wrapper:has(.fee-list-page) {
+  padding: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
 .content-wrapper:has(.flow-page) {
   padding: 0;
   height: 100%;

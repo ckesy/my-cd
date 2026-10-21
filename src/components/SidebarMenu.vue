@@ -16,7 +16,6 @@
         <span class="menu-label">业务流程</span>
       </el-menu-item>
 
-
       <el-sub-menu v-if="hasPerm('driving_fullmap') || hasPerm('vehicle_fault') || hasPerm('appearance_inspect')"
         index="drive-management">
         <template #title>
@@ -64,8 +63,8 @@
           <span class="menu-label">运输管理</span>
         </template>
         <el-menu-item v-if="hasPerm('waybill')" index="/waybill">运单管理</el-menu-item>
+        <el-menu-item v-if="waybillOn" index="/waybill/stats">运单统计</el-menu-item>
         <el-menu-item v-if="routeOn" index="/route/manage">路线管理</el-menu-item>
-        <el-menu-item v-if="reportOn && hasPerm('report')" index="/report">车队运营报告</el-menu-item>
       </el-sub-menu>
 
       <!-- ⭐ 费用管理：与「运输管理」平级；审批设置只有主账号能看到 -->
@@ -77,13 +76,21 @@
           <span class="menu-label">费用管理</span>
           <span v-if="todoApprove" class="menu-badge" :title="`待我审批 ${todoApprove} 笔`">{{ todoApprove }}</span>
         </template>
+        <el-menu-item v-if="isMaster || hasPerm('fee_stats')" index="/fee/list">费用明细</el-menu-item>
         <el-menu-item v-if="isMaster || hasPerm('fee_stats')" index="/fee/stats">费用统计</el-menu-item>
         <el-menu-item v-if="(isMaster || isFinance) && payoutOn" index="/fee/payout">
           <span class="mi-label">付款登记</span>
           <span v-if="todoPay" class="menu-badge sm" :title="`待付款 ${todoPay} 笔`">{{ todoPay }}</span>
         </el-menu-item>
-        <el-menu-item v-if="isMaster" index="/fee/config">费用审批设置</el-menu-item>
+        <!-- 审批关闭时这项跟着隐藏（没有审批就没必要配置审批规则） -->
+        <el-menu-item v-if="isMaster && approvalOn" index="/fee/config">费用审批设置</el-menu-item>
       </el-sub-menu>
+
+      <!-- ⭐ 车队分析报告：一级菜单，夹在「费用管理」和「基础数据管理」之间 -->
+      <el-menu-item v-if="reportOn && hasPerm('report')" index="/report" class="menu-lv1">
+        <el-icon><DataAnalysis /></el-icon>
+        <span class="menu-label">车队分析报告</span>
+      </el-menu-item>
 
       <el-sub-menu v-if="hasPerm('vehicle_archive') || hasPerm('driver_archive')" index="base-data-management">
         <template #title>
@@ -139,9 +146,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { HomeFilled, Van, Location, DataLine, Tickets, User, Setting, FolderOpened, Wallet, Share } from '@element-plus/icons-vue'
-import { moduleFlags } from '@/utils/modules'
+import { computed, onMounted } from 'vue'
+import { HomeFilled, Van, Location, DataLine, Tickets, User, Setting, FolderOpened, Wallet, Share, DataAnalysis } from '@element-plus/icons-vue'
+import { moduleFlags, approvalOn, ensureApprovalMode, currentUserForModules } from '@/utils/modules'
 
 const props = defineProps({
   activePath: { type: String, required: true },
@@ -170,6 +177,11 @@ const clientPerms = computed(() => {
   const list = currentUser?.permissions?.client
   if (!Array.isArray(list) || list.length === 0) return null  // ⭐ 空数组 / 非数组都全显示
   return list
+})
+
+onMounted(() => {
+  /* 菜单要和画布用同一份审批状态，不然两边对不上 */
+  ensureApprovalMode(currentUserForModules())
 })
 
 const hasPerm = (key) => {

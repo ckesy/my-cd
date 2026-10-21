@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>费用统计 · 三版方案</title>
+<style>
+  :root{
+    --bg:#F1F4F8; --card:#fff; --line:#E6ECF3; --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8;
+    --red:#C8102E; --num:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1160px;margin:0 auto;padding:30px 24px 70px}
+
+  .hd{margin-bottom:22px}
+  h1{margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-.4px}
+  .sub{font-size:12.5px;color:#64748B;line-height:1.85}
+  .sub b{color:#0F172A}
+  .sub code{font-family:var(--num);font-size:11.5px;background:#E8EDF4;padding:1px 5px;border-radius:4px}
+
+  .scheme{background:#fff;border:1px solid var(--line);border-radius:15px;margin-bottom:22px;overflow:hidden}
+  .s-hd{display:flex;align-items:center;gap:10px;padding:15px 18px 13px;border-bottom:1px solid #F1F5F9}
+  .s-no{width:24px;height:24px;border-radius:7px;flex:0 0 auto;background:#0F172A;color:#fff;
+    font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  .s-name{font-size:14px;font-weight:800}
+  .s-tag{margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;background:#F1F5F9;color:#64748B}
+  .s-tag.rec{background:#0F172A;color:#fff}
+  .s-desc{padding:12px 18px 0;font-size:12px;color:#64748B;line-height:1.8}
+  .stage{padding:16px 18px 18px}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:14px}
+  .kpi{border:1px solid #EDF1F6;border-radius:11px;padding:12px 14px;background:#fff}
+  .kpi.hero{background:linear-gradient(135deg,#CE1230,#8E0A20);border-color:transparent}
+  .kpi-k{font-size:10.5px;color:#94A3B8}
+  .kpi.hero .kpi-k{color:rgba(255,255,255,.72)}
+  .kpi-v{font-size:21px;font-weight:800;font-family:var(--num);letter-spacing:-.6px;margin-top:5px}
+  .kpi.hero .kpi-v{color:#fff}
+  .kpi-s{font-size:10px;color:#B4BECB;margin-top:3px}
+  .kpi.hero .kpi-s{color:rgba(255,255,255,.6)}
+
+  .panel{border:1px solid #EDF1F6;border-radius:11px;background:#fff;padding:13px 15px}
+  .p-hd{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+  .p-t{font-size:12px;font-weight:800}
+  .p-s{font-size:10px;color:#B4BECB;margin-left:auto}
+  .two{display:grid;grid-template-columns:1.4fr 1fr;gap:13px}
+  .two-eq{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+
+  .bars{display:flex;flex-direction:column;gap:9px}
+  .bar-row{display:flex;align-items:center;gap:10px;font-size:11px}
+  .bar-n{width:62px;color:#475569;flex:0 0 auto}
+  .bar-t{flex:1;height:9px;border-radius:5px;background:#F1F5F9;overflow:hidden}
+  .bar-t i{display:block;height:100%;border-radius:5px}
+  .bar-v{width:72px;text-align:right;font-family:var(--num);font-weight:700;flex:0 0 auto}
+  .bar-p{width:34px;text-align:right;color:#B4BECB;font-family:var(--num);flex:0 0 auto}
+
+  table{width:100%;border-collapse:collapse;font-size:11.5px}
+  thead th{background:#F7F9FC;color:#475569;font-size:11px;font-weight:700;
+    text-align:left;padding:9px 10px;border-bottom:1px solid #E6ECF3;white-space:nowrap}
+  tbody td{padding:9px 10px;border-bottom:1px solid #F4F6F9}
+  tbody tr:hover{background:#FBFCFE}
+  tbody tr.sum td{background:#FAFBFD;font-weight:800;border-top:2px solid #E6ECF3}
+  .num{font-family:var(--num);font-variant-numeric:tabular-nums}
+  .ta-r{text-align:right}
+  .muted{color:#B4BECB}
+  .dash{color:#DCE3EC}
+
+  .st{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:4px}
+  .st.wait{color:#B45309;background:#FFFBEB}
+  .st.pay{color:#1D4ED8;background:#EFF6FF}
+  .st.done{color:#15803D;background:#F0FDF4}
+  .st.pass{color:#0E7490;background:#ECFEFF}
+
+  .alert{display:flex;align-items:flex-start;gap:7px;padding:8px 10px;border-radius:7px;
+    background:#FFFBEB;font-size:10.5px;color:#92400E;line-height:1.6;margin-bottom:7px}
+  .alert.blue{background:#EFF6FF;color:#1E40AF}
+  .alert.red{background:#FEF2F4;color:#A00D24}
+  .alert-dot{width:5px;height:5px;border-radius:50%;background:currentColor;margin-top:5px;flex:0 0 auto}
+  .alert b{font-weight:800}
+
+  /* 堆叠柱 */
+  .stack{display:flex;align-items:flex-end;gap:14px;height:120px;padding:0 4px}
+  .st-col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;align-items:center}
+  .st-col .seg{width:100%;border-radius:3px}
+  .st-x{font-size:9.5px;color:#B4BECB;margin-top:6px}
+
+  .matrix{
+    margin-top:13px;border-radius:9px;border:1px dashed #DCE3EC;background:#FAFBFD;
+    padding:11px 13px;font-size:11px;line-height:1.85;color:#64748B;
+  }
+  .matrix b{color:#0F172A}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+  .c{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;
+    background:#fff;border:1px solid #E2E8F0;color:#475569}
+  .c.off{background:#F1F5F9;color:#C4CDD9;border-style:dashed}
+
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 18px 16px;border-top:1px solid #F1F5F9}
+  .pc-box{border-radius:9px;padding:11px 13px;font-size:11.5px;line-height:1.8}
+  .pc-box.p{background:#F0FDF4;color:#166534}
+  .pc-box.c{background:#FFFBEB;color:#92400E}
+  .pc-box b{display:block;font-size:10px;font-weight:800;letter-spacing:.5px;margin-bottom:4px;opacity:.7}
+
+  .tip{margin-top:22px;padding:18px 20px;background:#fff;border:1px solid var(--line);border-radius:14px;
+    font-size:12.5px;color:#475569;line-height:1.95}
+  .tip h2{margin:0 0 10px;font-size:15px;font-weight:800;color:#0F172A}
+  .tip table{margin-top:10px}
+  .tip td:first-child{font-weight:700}
+  .tip b{color:#0F172A}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hd">
+    <h1>费用统计 · 三版</h1>
+    <p class="sub">
+      只讲钱。运单只作为「这笔钱是哪趟车花的」的归属标签，不做运单维度的统计。<br>
+      小程序上报的 8 类费用全部纳入：<b>费用上报 / 回单 / 磅单 / 补贴 / 违章 / 超时 / 借款 / 补卡</b>。<br>
+      其中 <b>5 类是钱款</b>（有金额），<b>3 类是非钱款</b>（回单、超时、补卡，只计笔数）。
+    </p>
+  </div>
+
+  <!-- ============ A ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">A</span>
+      <span class="s-name">仪表盘 · 总量 + 结构 + 待办</span>
+      <span class="s-tag rec">推荐</span>
+    </div>
+    <p class="s-desc">第一屏回答三个问题：花了多少、花在哪、卡在哪。左上看结构，右上只放「需要你动手的事」。</p>
+
+    <div class="stage">
+      <div class="kpis">
+        <div class="kpi hero">
+          <div class="kpi-k">本月费用合计</div>
+          <div class="kpi-v">¥62,836</div>
+          <div class="kpi-s">5 类钱款 · 71 笔</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-k">待审核</div>
+          <div class="kpi-v" style="color:#B45309">¥8,240</div>
+          <div class="kpi-s">3 笔 · 最久 2 天</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-k">待打款</div>
+          <div class="kpi-v" style="color:#1D4ED8">¥15,680</div>
+          <div class="kpi-s">6 笔</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-k">已打款</div>
+          <div class="kpi-v" style="color:#15803D">¥38,916</div>
+          <div class="kpi-s">62% 已结清</div>
+        </div>
+      </div>
+
+      <div class="two">
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">钱花在哪</span><span class="p-s">按类型</span></div>
+          <div class="bars">
+            <div class="bar-row"><span class="bar-n">费用上报</span><span class="bar-t"><i style="width:100%;background:#C8102E"></i></span><span class="bar-v">¥36,200</span><span class="bar-p">58%</span></div>
+            <div class="bar-row"><span class="bar-n">补贴</span><span class="bar-t"><i style="width:31%;background:#15803D"></i></span><span class="bar-v">¥11,400</span><span class="bar-p">18%</span></div>
+            <div class="bar-row"><span class="bar-n">过磅</span><span class="bar-t"><i style="width:19%;background:#7C3AED"></i></span><span class="bar-v">¥6,800</span><span class="bar-p">11%</span></div>
+            <div class="bar-row"><span class="bar-n">借款</span><span class="bar-t"><i style="width:12%;background:#1D4ED8"></i></span><span class="bar-v">¥4,200</span><span class="bar-p">7%</span></div>
+            <div class="bar-row"><span class="bar-n">违章</span><span class="bar-t"><i style="width:7%;background:#B45309"></i></span><span class="bar-v">¥2,436</span><span class="bar-p">4%</span></div>
+          </div>
+          <div style="margin-top:12px;padding-top:10px;border-top:1px solid #F1F5F9;font-size:10.5px;color:#94A3B8">
+            另有 <b style="color:#0F172A">31 笔非钱款</b>：回单 15 · 超时 14 · 补卡 2（不计金额）
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">需要处理</span></div>
+          <div class="alert"><span class="alert-dot"></span><span><b>3 笔待审核</b> ¥8,240，最久挂 2 天</span></div>
+          <div class="alert red"><span class="alert-dot"></span><span><b>2 笔违章未处理</b>，累计扣 9 分</span></div>
+          <div class="alert blue"><span class="alert-dot"></span><span><b>1 笔借款逾期</b>，还款日已过 3 天</span></div>
+          <div class="alert"><span class="alert-dot"></span><span><b>6 笔待打款</b> ¥15,680，可随时登记</span></div>
+        </div>
+      </div>
+
+      <div class="matrix">
+        <b>开关联动</b>：
+        <div class="chips">
+          <span class="c">审批开 · 付款开 → 待审 / 已通过 / 待打款 / 已打款 全部显示</span>
+          <span class="c off">审批关 → 无「待审核」</span>
+          <span class="c off">付款关 → 无「待打款 / 已打款」</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>一屏看完总量、结构、待办；非钱款类单独说明，不混进金额里</div>
+      <div class="pc-box c"><b>缺点</b>只有当月视角，看不了「这个月比上个月多花在哪」</div>
+    </div>
+  </div>
+
+  <!-- ============ B ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">B</span>
+      <span class="s-name">类型矩阵 · 八类一行</span>
+      <span class="s-tag">对账最清楚</span>
+    </div>
+    <p class="s-desc">
+      8 种费用各占一行，横着排：笔数、金额、待审、待付、已付、占比。最像财务要的那张表。
+      非钱款类照样占一行，金额列显示「—」，笔数照算。
+    </p>
+
+    <div class="stage">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:14%">费用类型</th>
+            <th style="width:8%" class="ta-r">笔数</th>
+            <th style="width:13%" class="ta-r">金额</th>
+            <th style="width:11%" class="ta-r">待审核</th>
+            <th style="width:11%" class="ta-r">待打款</th>
+            <th style="width:11%" class="ta-r">已打款</th>
+            <th style="width:9%" class="ta-r">占比</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>费用上报</b></td>
+            <td class="ta-r num">68</td>
+            <td class="ta-r num"><b>¥36,200</b></td>
+            <td class="ta-r num" style="color:#B45309">¥3,240</td>
+            <td class="ta-r num" style="color:#1D4ED8">¥9,800</td>
+            <td class="ta-r num" style="color:#15803D">¥23,160</td>
+            <td class="ta-r num">58%</td>
+            <td class="muted">过路费最多</td>
+          </tr>
+          <tr>
+            <td><b>补贴申请</b></td>
+            <td class="ta-r num">8</td>
+            <td class="ta-r num"><b>¥11,400</b></td>
+            <td class="ta-r num" style="color:#B45309">¥2,400</td>
+            <td class="ta-r num" style="color:#1D4ED8">¥3,600</td>
+            <td class="ta-r num" style="color:#15803D">¥5,400</td>
+            <td class="ta-r num">18%</td>
+            <td class="muted">高温 5 · 空驶 3</td>
+          </tr>
+          <tr>
+            <td><b>过磅单</b></td>
+            <td class="ta-r num">12</td>
+            <td class="ta-r num"><b>¥6,800</b></td>
+            <td class="ta-r num" style="color:#B45309">¥1,200</td>
+            <td class="ta-r num" style="color:#1D4ED8">¥1,600</td>
+            <td class="ta-r num" style="color:#15803D">¥4,000</td>
+            <td class="ta-r num">11%</td>
+            <td class="muted">净重合计 386 吨</td>
+          </tr>
+          <tr>
+            <td><b>借款申请</b></td>
+            <td class="ta-r num">4</td>
+            <td class="ta-r num"><b>¥4,200</b></td>
+            <td class="ta-r num" style="color:#B45309">¥0</td>
+            <td class="ta-r num" style="color:#1D4ED8">¥0</td>
+            <td class="ta-r num" style="color:#15803D">¥4,200</td>
+            <td class="ta-r num">7%</td>
+            <td style="color:#A00D24">1 笔逾期未还</td>
+          </tr>
+          <tr>
+            <td><b>违章处理</b></td>
+            <td class="ta-r num">5</td>
+            <td class="ta-r num"><b>¥2,436</b></td>
+            <td class="ta-r num" style="color:#B45309">¥1,400</td>
+            <td class="ta-r num" style="color:#1D4ED8">¥680</td>
+            <td class="ta-r num" style="color:#15803D">¥356</td>
+            <td class="ta-r num">4%</td>
+            <td style="color:#A00D24">2 笔未处理 · 扣 9 分</td>
+          </tr>
+          <tr>
+            <td><b>回单上报</b></td>
+            <td class="ta-r num">15</td>
+            <td class="ta-r num dash">—</td>
+            <td class="ta-r num dash">—</td>
+            <td class="ta-r num dash">—</td>
+            <td class="ta-r num dash">—</td>
+            <td class="ta-r num dash">—</td>
+            <td class="muted">15 张全部已收</td>
+          </tr>
+          <tr>
+            <td><b>超时报备</b></td>
+            <td class="ta-r num">14</td>
+            <td class="ta-r num dash">—</td>
+            <td class="ta-r num dash">—</td>
+            <td class="ta-r num dash">—</td>
+            <td class="ta-r num dash">—</td>
+            <td class="ta-r num dash">—</td>
+            <td class="muted">平均超 3.2 小时</td>
+          </tr>
+          <tr>
+            <td><b>补卡申请</b></td>
+            <td class="ta-r num">2</td>
+            <td class="ta-r num dash">—</td>
+            <td class="ta-r num dash">—</td>
+            <td class="ta-r num dash">—</td>
+            <td class="ta-r num dash">—</td>
+            <td class="ta-r num dash">—</td>
+            <td class="muted">1 张待审</td>
+          </tr>
+          <tr class="sum">
+            <td>合计</td>
+            <td class="ta-r num">128</td>
+            <td class="ta-r num" style="color:#C8102E">¥62,836</td>
+            <td class="ta-r num">¥8,240</td>
+            <td class="ta-r num">¥15,680</td>
+            <td class="ta-r num">¥38,916</td>
+            <td class="ta-r num">100%</td>
+            <td class="muted">钱款 71 笔 · 非钱款 57 笔</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="matrix">
+        <b>开关联动</b>：审批关 → 「待审核」整列隐藏，合计行跟着变；付款关 → 「待打款 / 已打款」两列隐藏。
+        <div class="chips">
+          <span class="c">审批开 · 付款开 → 8 列全显示</span>
+          <span class="c">审批开 · 付款关 → 6 列（笔数/金额/待审/占比/备注）</span>
+          <span class="c">都关 → 4 列（类型/笔数/金额/占比），只剩分类统计</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>结构最清楚，能横着比「补贴多还是过路费多」；非钱款类的备注位能放扣分、净重、逾期这些特色信息</div>
+      <div class="pc-box c"><b>缺点</b>没有时间维度，看不出趋势；一行一个类型，看不到具体某笔</div>
+    </div>
+  </div>
+
+  <!-- ============ C ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">C</span>
+      <span class="s-name">时间轴 · 月度对比</span>
+      <span class="s-tag">看趋势</span>
+    </div>
+    <p class="s-desc">
+      按月份堆叠柱看总量走势，每个月再拆成「待审 / 待付 / 已付」三段。下面配环比表，说清哪类涨了。
+    </p>
+
+    <div class="stage">
+      <div class="panel" style="margin-bottom:13px">
+        <div class="p-hd"><span class="p-t">近 6 个月费用走势</span><span class="p-s">堆叠 = 处理状态</span></div>
+        <div class="stack">
+          <div class="st-col">
+            <div class="seg" style="height:26px;background:#15803D"></div>
+            <div class="seg" style="height:8px;background:#1D4ED8"></div>
+            <div class="seg" style="height:4px;background:#B45309"></div>
+            <span class="st-x">5月</span>
+          </div>
+          <div class="st-col">
+            <div class="seg" style="height:38px;background:#15803D"></div>
+            <div class="seg" style="height:11px;background:#1D4ED8"></div>
+            <div class="seg" style="height:5px;background:#B45309"></div>
+            <span class="st-x">6月</span>
+          </div>
+          <div class="st-col">
+            <div class="seg" style="height:30px;background:#15803D"></div>
+            <div class="seg" style="height:9px;background:#1D4ED8"></div>
+            <div class="seg" style="height:3px;background:#B45309"></div>
+            <span class="st-x">7月</span>
+          </div>
+          <div class="st-col">
+            <div class="seg" style="height:44px;background:#15803D"></div>
+            <div class="seg" style="height:12px;background:#1D4ED8"></div>
+            <div class="seg" style="height:6px;background:#B45309"></div>
+            <span class="st-x">8月</span>
+          </div>
+          <div class="st-col">
+            <div class="seg" style="height:35px;background:#15803D"></div>
+            <div class="seg" style="height:14px;background:#1D4ED8"></div>
+            <div class="seg" style="height:5px;background:#B45309"></div>
+            <span class="st-x">9月</span>
+          </div>
+          <div class="st-col">
+            <div class="seg" style="height:39px;background:#15803D"></div>
+            <div class="seg" style="height:16px;background:#1D4ED8"></div>
+            <div class="seg" style="height:8px;background:#B45309"></div>
+            <span class="st-x">10月</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:10px;padding-top:10px;border-top:1px solid #F1F5F9;font-size:10.5px;color:#64748B">
+          <span><i style="display:inline-block;width:7px;height:7px;border-radius:2px;background:#B45309;margin-right:4px"></i>待审核</span>
+          <span><i style="display:inline-block;width:7px;height:7px;border-radius:2px;background:#1D4ED8;margin-right:4px"></i>待打款</span>
+          <span><i style="display:inline-block;width:7px;height:7px;border-radius:2px;background:#15803D;margin-right:4px"></i>已打款</span>
+          <span style="margin-left:auto">10 月环比 <b style="color:#C8102E">+12.4%</b></span>
+        </div>
+      </div>
+
+      <div class="two-eq">
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">哪类涨了</span><span class="p-s">10 月 vs 9 月</span></div>
+          <table>
+            <thead><tr><th>类型</th><th class="ta-r">本月</th><th class="ta-r">上月</th><th class="ta-r">变化</th></tr></thead>
+            <tbody>
+              <tr><td>费用上报</td><td class="ta-r num">¥36,200</td><td class="ta-r num muted">¥31,400</td><td class="ta-r num" style="color:#C8102E">+15.3%</td></tr>
+              <tr><td>补贴</td><td class="ta-r num">¥11,400</td><td class="ta-r num muted">¥11,800</td><td class="ta-r num" style="color:#15803D">-3.4%</td></tr>
+              <tr><td>过磅</td><td class="ta-r num">¥6,800</td><td class="ta-r num muted">¥5,200</td><td class="ta-r num" style="color:#C8102E">+30.8%</td></tr>
+              <tr><td>借款</td><td class="ta-r num">¥4,200</td><td class="ta-r num muted">¥6,000</td><td class="ta-r num" style="color:#15803D">-30.0%</td></tr>
+              <tr><td>违章</td><td class="ta-r num">¥2,436</td><td class="ta-r num muted">¥1,800</td><td class="ta-r num" style="color:#C8102E">+35.3%</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">异常提醒</span></div>
+          <div class="alert red"><span class="alert-dot"></span><span><b>违章涨 35%</b>：本月 5 笔，扣 9 分，集中在晋A·12345</span></div>
+          <div class="alert"><span class="alert-dot"></span><span><b>过磅涨 31%</b>：跑的都是重载，净重合计比上月多 78 吨</span></div>
+          <div class="alert blue"><span class="alert-dot"></span><span><b>待审金额 2 天没动</b>：¥8,240，建议今天过一遍</span></div>
+        </div>
+      </div>
+
+      <div class="matrix">
+        <b>开关联动</b>：付款关 → 堆叠柱只保留两段（待审 / 已通过），环比表的「待付」相关列隐藏。
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>能看出趋势和异常拐点；环比表直接回答「为什么这个月贵了」</div>
+      <div class="pc-box c"><b>缺点</b>默认没有「现在总共多少」的大数；要选月份才好看，多一步操作</div>
+    </div>
+  </div>
+
+  <div class="tip">
+    <h2>怎么选</h2>
+    <table>
+      <tr><th></th><th>A 仪表盘</th><th>B 类型矩阵</th><th>C 时间轴</th></tr>
+      <tr><td>第一眼看到</td><td>总量 + 待办</td><td>8 类的结构</td><td>6 个月走势</td></tr>
+      <tr><td>对账好不好用</td><td>一般</td><td><b>最好</b></td><td>一般</td></tr>
+      <tr><td>看趋势</td><td>不能</td><td>不能</td><td><b>能</b></td></tr>
+      <tr><td>非钱款类</td><td>一句话带过</td><td><b>各占一行</b></td><td>不体现</td></tr>
+      <tr><td>开关关掉后</td><td>KPI 少几个</td><td><b>整列消失，最自然</b></td><td>堆叠少几段</td></tr>
+    </table>
+
+    <p style="margin:14px 0 0">
+      <b>建议：B 做主表，A 的 KPI 条放最上面。</b>
+      财务打开这个页面第一件事是「这个月花了多少」（KPI 条），第二件事是「钱都花在哪几类」（B 的矩阵）。
+      两个拼在一起就是完整的对账视图。
+    </p>
+    <p style="margin:8px 0 0">
+      C 适合单独做一个「费用趋势」标签页，或者放在仪表盘右下角做小图，不用占整屏。
+    </p>
+    <p style="margin:8px 0 0">
+      <b>开关关掉时 B 表现得最好</b>：列直接消失，表格自然收窄；
+      A 的 KPI 会突然少两块，视觉上空一截。
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

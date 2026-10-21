@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>运单统计 · 三版方案</title>
+<style>
+  :root{
+    --bg:#F1F4F8; --card:#fff; --line:#E6ECF3; --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8;
+    --red:#C8102E; --num:-apple-system,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1160px;margin:0 auto;padding:30px 24px 70px}
+
+  .hd{margin-bottom:22px}
+  h1{margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-.4px}
+  .sub{font-size:12.5px;color:#64748B;line-height:1.85}
+  .sub b{color:#0F172A}
+  .sub code{font-family:var(--num);font-size:11.5px;background:#E8EDF4;padding:1px 5px;border-radius:4px}
+
+  .scheme{background:#fff;border:1px solid var(--line);border-radius:15px;margin-bottom:22px;overflow:hidden}
+  .s-hd{display:flex;align-items:center;gap:10px;padding:15px 18px 13px;border-bottom:1px solid #F1F5F9}
+  .s-no{width:24px;height:24px;border-radius:7px;flex:0 0 auto;background:#0F172A;color:#fff;
+    font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  .s-name{font-size:14px;font-weight:800}
+  .s-tag{margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;background:#F1F5F9;color:#64748B}
+  .s-tag.rec{background:#0F172A;color:#fff}
+  .s-desc{padding:12px 18px 0;font-size:12px;color:#64748B;line-height:1.8}
+  .stage{padding:16px 18px 18px}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:14px}
+  .kpi{border:1px solid #EDF1F6;border-radius:11px;padding:12px 14px;background:#fff}
+  .kpi.hero{background:linear-gradient(135deg,#1E3A8A,#152C6B);border-color:transparent}
+  .kpi-k{font-size:10.5px;color:#94A3B8}
+  .kpi.hero .kpi-k{color:rgba(255,255,255,.72)}
+  .kpi-v{font-size:21px;font-weight:800;font-family:var(--num);letter-spacing:-.6px;margin-top:5px}
+  .kpi.hero .kpi-v{color:#fff}
+  .kpi-s{font-size:10px;color:#B4BECB;margin-top:3px}
+  .kpi.hero .kpi-s{color:rgba(255,255,255,.6)}
+
+  .panel{border:1px solid #EDF1F6;border-radius:11px;background:#fff;padding:13px 15px}
+  .p-hd{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+  .p-t{font-size:12px;font-weight:800}
+  .p-s{font-size:10px;color:#B4BECB;margin-left:auto}
+  .two{display:grid;grid-template-columns:1.3fr 1fr;gap:13px}
+  .two-eq{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+
+  table{width:100%;border-collapse:collapse;font-size:11.5px}
+  thead th{background:#F7F9FC;color:#475569;font-size:11px;font-weight:700;
+    text-align:left;padding:9px 10px;border-bottom:1px solid #E6ECF3;white-space:nowrap}
+  tbody td{padding:9px 10px;border-bottom:1px solid #F4F6F9}
+  tbody tr:hover{background:#FBFCFE}
+  tbody tr.sum td{background:#FAFBFD;font-weight:800;border-top:2px solid #E6ECF3}
+  .num{font-family:var(--num);font-variant-numeric:tabular-nums}
+  .ta-r{text-align:right}
+  .muted{color:#B4BECB}
+
+  /* 状态漏斗 */
+  .funnel{display:flex;flex-direction:column;gap:7px}
+  .fn-row{display:flex;align-items:center;gap:10px;font-size:11px}
+  .fn-n{width:66px;color:#475569;flex:0 0 auto}
+  .fn-t{flex:1;height:22px;border-radius:5px;background:#F1F5F9;overflow:hidden;position:relative}
+  .fn-t i{display:block;height:100%;border-radius:5px}
+  .fn-v{position:absolute;right:8px;top:50%;transform:translateY(-50%);
+    font-family:var(--num);font-size:10.5px;font-weight:800;color:#fff}
+  .fn-p{width:38px;text-align:right;color:#94A3B8;font-family:var(--num);flex:0 0 auto}
+
+  /* 水平条 */
+  .bars{display:flex;flex-direction:column;gap:9px}
+  .bar-row{display:flex;align-items:center;gap:10px;font-size:11px}
+  .bar-n{width:88px;color:#475569;flex:0 0 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar-t{flex:1;height:9px;border-radius:5px;background:#F1F5F9;overflow:hidden}
+  .bar-t i{display:block;height:100%;border-radius:5px}
+  .bar-v{width:52px;text-align:right;font-family:var(--num);font-weight:700;flex:0 0 auto}
+
+  /* 准时率条 */
+  .ontime{display:flex;align-items:center;gap:8px;font-size:11px;margin-bottom:8px}
+  .ot-n{width:70px;color:#475569;flex:0 0 auto}
+  .ot-bar{flex:1;height:10px;border-radius:5px;background:#F1F5F9;position:relative;overflow:hidden}
+  .ot-bar i{display:block;height:100%;border-radius:5px;background:#15803D}
+  .ot-bar i.warn{background:#D97706}
+  .ot-v{width:44px;text-align:right;font-family:var(--num);font-weight:800;flex:0 0 auto}
+
+  /* 热力 */
+  .heat{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .h-cell{
+    aspect-ratio:1;border-radius:4px;background:#F1F5F9;
+    display:flex;align-items:center;justify-content:center;
+    font-size:9px;color:#94A3B8;font-family:var(--num);
+  }
+  .h-cell.l1{background:#DBEAFE;color:#1E40AF}
+  .h-cell.l2{background:#93C5FD;color:#1E3A8A}
+  .h-cell.l3{background:#3B82F6;color:#fff}
+  .h-cell.l4{background:#1D4ED8;color:#fff}
+  .h-legend{display:flex;align-items:center;gap:5px;margin-top:9px;font-size:9.5px;color:#94A3B8}
+  .h-legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+  .alert{display:flex;align-items:flex-start;gap:7px;padding:8px 10px;border-radius:7px;
+    background:#FFFBEB;font-size:10.5px;color:#92400E;line-height:1.6;margin-bottom:7px}
+  .alert.blue{background:#EFF6FF;color:#1E40AF}
+  .alert.red{background:#FEF2F4;color:#A00D24}
+  .alert-dot{width:5px;height:5px;border-radius:50%;background:currentColor;margin-top:5px;flex:0 0 auto}
+  .alert b{font-weight:800}
+
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 18px 16px;border-top:1px solid #F1F5F9}
+  .pc-box{border-radius:9px;padding:11px 13px;font-size:11.5px;line-height:1.8}
+  .pc-box.p{background:#F0FDF4;color:#166534}
+  .pc-box.c{background:#FFFBEB;color:#92400E}
+  .pc-box b{display:block;font-size:10px;font-weight:800;letter-spacing:.5px;margin-bottom:4px;opacity:.7}
+
+  .tip{margin-top:22px;padding:18px 20px;background:#fff;border:1px solid var(--line);border-radius:14px;
+    font-size:12.5px;color:#475569;line-height:1.95}
+  .tip h2{margin:0 0 10px;font-size:15px;font-weight:800;color:#0F172A}
+  .tip table{margin-top:10px}
+  .tip td:first-child{font-weight:700}
+  .tip b{color:#0F172A}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hd">
+    <h1>运单统计 · 三版</h1>
+    <p class="sub">
+      只讲车和活儿。钱不在这里算 —— 那是「费用统计」的事。<br>
+      这里回答：<b>跑了多少趟、完成率如何、谁跑得多、哪条线路慢</b>。
+    </p>
+  </div>
+
+  <!-- ============ A ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">A</span>
+      <span class="s-name">概览 · 总量 + 状态漏斗</span>
+      <span class="s-tag rec">推荐</span>
+    </div>
+    <p class="s-desc">
+      四个核心指标撑住「这个月干了多少活」，右边用漏斗看单子卡在哪个环节，下面看人。
+    </p>
+
+    <div class="stage">
+      <div class="kpis">
+        <div class="kpi hero">
+          <div class="kpi-k">本月运单</div>
+          <div class="kpi-v">45</div>
+          <div class="kpi-s">完成 38 · 在途 5 · 取消 2</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-k">完成率</div>
+          <div class="kpi-v" style="color:#15803D">84.4%</div>
+          <div class="kpi-s">较上月 +2.1%</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-k">总里程</div>
+          <div class="kpi-v">18,426</div>
+          <div class="kpi-s">公里 · 均 409 km/趟</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-k">平均在途</div>
+          <div class="kpi-v">26.4</div>
+          <div class="kpi-s">小时 · 计划 24h</div>
+        </div>
+      </div>
+
+      <div class="two">
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">单子卡在哪</span><span class="p-s">当前状态分布</span></div>
+          <div class="funnel">
+            <div class="fn-row">
+              <span class="fn-n">已完成</span>
+              <span class="fn-t"><i style="width:84%;background:#15803D"></i><span class="fn-v">38</span></span>
+              <span class="fn-p">84%</span>
+            </div>
+            <div class="fn-row">
+              <span class="fn-n">已到达</span>
+              <span class="fn-t"><i style="width:7%;background:#0E7490"></i><span class="fn-v">3</span></span>
+              <span class="fn-p">7%</span>
+            </div>
+            <div class="fn-row">
+              <span class="fn-n">已发车</span>
+              <span class="fn-t"><i style="width:4%;background:#1D4ED8"></i><span class="fn-v">2</span></span>
+              <span class="fn-p">4%</span>
+            </div>
+            <div class="fn-row">
+              <span class="fn-n">待装车</span>
+              <span class="fn-t"><i style="width:2.5%;background:#D97706"></i><span class="fn-v">1</span></span>
+              <span class="fn-p">2%</span>
+            </div>
+            <div class="fn-row">
+              <span class="fn-n">待接单</span>
+              <span class="fn-t"><i style="width:2.5%;background:#B45309"></i><span class="fn-v">1</span></span>
+              <span class="fn-p">2%</span>
+            </div>
+            <div class="fn-row">
+              <span class="fn-n">已取消</span>
+              <span class="fn-t"><i style="width:1%;background:#94A3B8"></i><span class="fn-v">2</span></span>
+              <span class="fn-p">4%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">需要盯的</span></div>
+          <div class="alert red"><span class="alert-dot"></span><span><b>1 单待接单超 6 小时</b>：派给李亚楠，还没确认</span></div>
+          <div class="alert"><span class="alert-dot"></span><span><b>3 单在途超计划</b>：平均晚 4.2 小时</span></div>
+          <div class="alert blue"><span class="alert-dot"></span><span><b>2 单已取消</b>：客户临时改单</span></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:13px">
+        <div class="p-hd"><span class="p-t">谁跑得多</span><span class="p-s">按司机 · 趟数</span></div>
+        <div class="bars">
+          <div class="bar-row"><span class="bar-n">李亚楠</span><span class="bar-t"><i style="width:100%;background:#1D4ED8"></i></span><span class="bar-v">14 趟</span></div>
+          <div class="bar-row"><span class="bar-n">王建国</span><span class="bar-t"><i style="width:78%;background:#3B82F6"></i></span><span class="bar-v">11 趟</span></div>
+          <div class="bar-row"><span class="bar-n">张伟</span><span class="bar-t"><i style="width:64%;background:#60A5FA"></i></span><span class="bar-v">9 趟</span></div>
+          <div class="bar-row"><span class="bar-n">赵强</span><span class="bar-t"><i style="width:50%;background:#93C5FD"></i></span><span class="bar-v">7 趟</span></div>
+          <div class="bar-row"><span class="bar-n">刘洋</span><span class="bar-t"><i style="width:28%;background:#BFDBFE"></i></span><span class="bar-v">4 趟</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>一屏看清产能、卡点、人的分布；漏斗比饼图更直观（能看出流程顺不顺）</div>
+      <div class="pc-box c"><b>缺点</b>只有当月快照，看不了历史；司机排行只看趟数，不看里程和时效</div>
+    </div>
+  </div>
+
+  <!-- ============ B ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">B</span>
+      <span class="s-name">客户与线路 · 矩阵</span>
+      <span class="s-tag">看结构</span>
+    </div>
+    <p class="s-desc">
+      谁给的活最多、每条线路跑得顺不顺。左边客户矩阵（客户 × 月份趟数），右边线路时效。
+    </p>
+
+    <div class="stage">
+      <div class="panel" style="margin-bottom:13px">
+        <div class="p-hd"><span class="p-t">客户 × 月份</span><span class="p-s">数字 = 趟数</span></div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:26%">客户</th>
+              <th class="ta-r">7月</th><th class="ta-r">8月</th><th class="ta-r">9月</th><th class="ta-r">10月</th>
+              <th class="ta-r">合计</th><th class="ta-r">占比</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><b>陕西卡友新能源运输</b></td><td class="ta-r num">8</td><td class="ta-r num">11</td><td class="ta-r num">14</td><td class="ta-r num">18</td><td class="ta-r num"><b>51</b></td><td class="ta-r num">38%</td></tr>
+            <tr><td><b>云南滇运物流</b></td><td class="ta-r num">6</td><td class="ta-r num">7</td><td class="ta-r num">9</td><td class="ta-r num">12</td><td class="ta-r num"><b>34</b></td><td class="ta-r num">25%</td></tr>
+            <tr><td><b>厦门海沧货运</b></td><td class="ta-r num">5</td><td class="ta-r num">5</td><td class="ta-r num">6</td><td class="ta-r num">8</td><td class="ta-r num"><b>24</b></td><td class="ta-r num">18%</td></tr>
+            <tr><td><b>山西焦煤集团</b></td><td class="ta-r num">4</td><td class="ta-r num">3</td><td class="ta-r num">5</td><td class="ta-r num">4</td><td class="ta-r num"><b>16</b></td><td class="ta-r num">12%</td></tr>
+            <tr><td><b>其他 3 家</b></td><td class="ta-r num">2</td><td class="ta-r num">3</td><td class="ta-r num">2</td><td class="ta-r num">3</td><td class="ta-r num"><b>10</b></td><td class="ta-r num">7%</td></tr>
+            <tr class="sum"><td>合计</td><td class="ta-r num">25</td><td class="ta-r num">29</td><td class="ta-r num">36</td><td class="ta-r num"><b style="color:#1D4ED8">45</b></td><td class="ta-r num">135</td><td class="ta-r num">100%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="two-eq">
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">线路准时率</span><span class="p-s">计划 vs 实际</span></div>
+          <div class="ontime"><span class="ot-n">云南→厦门</span><span class="ot-bar"><i style="width:92%"></i></span><span class="ot-v" style="color:#15803D">92%</span></div>
+          <div class="ontime"><span class="ot-n">山西→云南</span><span class="ot-bar"><i style="width:86%"></i></span><span class="ot-v" style="color:#15803D">86%</span></div>
+          <div class="ontime"><span class="ot-n">厦门→山西</span><span class="ot-bar"><i class="warn" style="width:74%"></i></span><span class="ot-v" style="color:#D97706">74%</span></div>
+          <div class="ontime"><span class="ot-n">云南→贵阳</span><span class="ot-bar"><i class="warn" style="width:68%"></i></span><span class="ot-v" style="color:#D97706">68%</span></div>
+          <div style="margin-top:10px;padding-top:9px;border-top:1px solid #F1F5F9;font-size:10.5px;color:#94A3B8">
+            厦门→山西 平均晚 5.8 小时，主要是卸货排队
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">本月出车密度</span><span class="p-s">按天</span></div>
+          <div class="heat">
+            <div class="h-cell l2">1</div><div class="h-cell l1">2</div><div class="h-cell l3">3</div><div class="h-cell l1">4</div><div class="h-cell">5</div><div class="h-cell">6</div><div class="h-cell l2">7</div>
+            <div class="h-cell l3">8</div><div class="h-cell l4">9</div><div class="h-cell l2">10</div><div class="h-cell l1">11</div><div class="h-cell l3">12</div><div class="h-cell">13</div><div class="h-cell l1">14</div>
+            <div class="h-cell l2">15</div><div class="h-cell l1">16</div><div class="h-cell l2">17</div><div class="h-cell l3">18</div><div class="h-cell l1">19</div><div class="h-cell">20</div><div class="h-cell l4">21</div>
+            <div class="h-cell l3">22</div><div class="h-cell l2">23</div><div class="h-cell l1">24</div><div class="h-cell l2">25</div><div class="h-cell l3">26</div><div class="h-cell l1">27</div><div class="h-cell">28</div>
+          </div>
+          <div class="h-legend">
+            <span>少</span>
+            <i style="background:#F1F5F9"></i><i style="background:#DBEAFE"></i><i style="background:#93C5FD"></i><i style="background:#3B82F6"></i><i style="background:#1D4ED8"></i>
+            <span>多</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>客户结构一目了然，能看出依赖度（最大客户占 38%）；线路准时率能定位问题段</div>
+      <div class="pc-box c"><b>缺点</b>没有「单个客户/线路的详情」，要再点一层；热力图表意需要图例</div>
+    </div>
+  </div>
+
+  <!-- ============ C ============ -->
+  <div class="scheme">
+    <div class="s-hd">
+      <span class="s-no">C</span>
+      <span class="s-name">时效分析 · 计划 vs 实际</span>
+      <span class="s-tag">抓异常</span>
+    </div>
+    <p class="s-desc">
+      运单真正的问题都在「晚点」。这一版专门拆时间：每个环节计划多久、实际多久、差在哪。
+    </p>
+
+    <div class="stage">
+      <div class="kpis">
+        <div class="kpi hero">
+          <div class="kpi-k">准时率</div>
+          <div class="kpi-v">82.2%</div>
+          <div class="kpi-s">37 单准时 / 45 单</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-k">平均晚点</div>
+          <div class="kpi-v" style="color:#D97706">+2.4h</div>
+          <div class="kpi-s">8 单晚点</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-k">装货耗时</div>
+          <div class="kpi-v">3.1h</div>
+          <div class="kpi-s">计划 2.5h · +0.6h</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-k">卸货耗时</div>
+          <div class="kpi-v" style="color:#A00D24">5.8h</div>
+          <div class="kpi-s">计划 3h · <b>+2.8h</b></div>
+        </div>
+      </div>
+
+      <div class="two">
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">各环节耗时</span><span class="p-s">计划 vs 实际</span></div>
+          <table>
+            <thead><tr><th>环节</th><th class="ta-r">计划</th><th class="ta-r">实际</th><th class="ta-r">差值</th></tr></thead>
+            <tbody>
+              <tr><td>接单到装车</td><td class="ta-r num muted">2.0h</td><td class="ta-r num">2.6h</td><td class="ta-r num" style="color:#D97706">+0.6</td></tr>
+              <tr><td>装货作业</td><td class="ta-r num muted">2.5h</td><td class="ta-r num">3.1h</td><td class="ta-r num" style="color:#D97706">+0.6</td></tr>
+              <tr><td>在途运输</td><td class="ta-r num muted">14.0h</td><td class="ta-r num">14.3h</td><td class="ta-r num" style="color:#15803D">+0.3</td></tr>
+              <tr><td><b>卸货作业</b></td><td class="ta-r num muted">3.0h</td><td class="ta-r num"><b>5.8h</b></td><td class="ta-r num" style="color:#A00D24"><b>+2.8</b></td></tr>
+              <tr><td>回单上传</td><td class="ta-r num muted">1.0h</td><td class="ta-r num">1.4h</td><td class="ta-r num" style="color:#D97706">+0.4</td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:10px;padding:8px 10px;background:#FEF2F4;border-radius:7px;font-size:10.5px;color:#A00D24;line-height:1.65">
+            <b>卸货环节是主要拖累</b>：比计划多花 2.8 小时，占总晚点的 61%。
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="p-hd"><span class="p-t">晚点集中在哪</span></div>
+          <div class="alert red"><span class="alert-dot"></span><span><b>厦门海沧货运</b>卸货排队，3 单平均晚 5.2h</span></div>
+          <div class="alert"><span class="alert-dot"></span><span><b>厦门→山西</b>线路准时率最低 74%</span></div>
+          <div class="alert blue"><span class="alert-dot"></span><span><b>张伟</b> 3 单晚点，同司机最高</span></div>
+          <div style="margin-top:10px;padding-top:9px;border-top:1px solid #F1F5F9;font-size:10.5px;color:#94A3B8;line-height:1.7">
+            建议：跟厦门海沧谈卸货时段，或在计划时长里给这条线路加 3 小时缓冲
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pc">
+      <div class="pc-box p"><b>优点</b>能直接定位「慢在哪个环节」；比单看准时率有用 —— 知道该改哪里</div>
+      <div class="pc-box c"><b>缺点</b>依赖计划时长/节点时间准不准，数据不实会误导；不看量和钱</div>
+    </div>
+  </div>
+
+  <div class="tip">
+    <h2>怎么选</h2>
+    <table>
+      <tr><th></th><th>A 概览</th><th>B 客户/线路</th><th>C 时效</th></tr>
+      <tr><td>回答的问题</td><td>干了多少、卡在哪</td><td>谁给活、哪条线顺</td><td>为什么晚</td></tr>
+      <tr><td>适合谁看</td><td>调度主管</td><td>老板 / 商务</td><td>调度 / 运营优化</td></tr>
+      <tr><td>数据依赖</td><td>状态 + 趟数</td><td>客户 + 线路</td><td><b>计划时长要准</b></td></tr>
+      <tr><td>一眼看懂</td><td><b>最好</b></td><td>好</td><td>需要点背景知识</td></tr>
+    </table>
+
+    <p style="margin:14px 0 0">
+      <b>建议：A 做默认页，B 和 C 做成两个标签页。</b>
+      默认进来先看「这个月干了多少、卡在哪」，需要钻的时候再切到客户/线路或时效。
+    </p>
+    <p style="margin:8px 0 0">
+      如果只能做一个，做 <b>A</b> —— 它的信息密度最均衡，任何人都能看懂。
+      C 虽然最有洞察，但前提是计划时长填得准；现在很多单子的计划送达时间是拍脑袋定的，那样算出来的「晚点」不准。
+    </p>
+  </div>
+
+</div>
+</body>
+</html>
