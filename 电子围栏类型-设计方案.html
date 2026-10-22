@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>电子围栏 · 类型区分设计方案</title>
+<style>
+  * { box-sizing: border-box; }
+  :root{
+    --brand:#c8102e;
+    --brand-soft:#fdf2f4;
+    --ink:#0F172A;
+    --ink2:#334155;
+    --ink3:#64748B;
+    --ink4:#94A3B8;
+    --line:#E2E8F0;
+    --line2:#EEF2F7;
+    --bg:#F8FAFC;
+    --num-font: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+
+    --pick:#2563EB;  --pick-bg:#EFF4FF;  --pick-line:#BFD4FE;
+    --drop:#0E9F6E;  --drop-bg:#ECFDF5;  --drop-line:#A7E8CE;
+    --warn:#D97706;  --warn-bg:#FFF7ED;  --warn-line:#FBD5A5;
+  }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:#EEF1F5;
+    font-family:-apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    color:var(--ink);
+    padding:28px 20px 64px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:1220px; margin:0 auto; }
+
+  /* ---------- 页头 ---------- */
+  .head{ margin-bottom:22px; }
+  .head h1{ font-size:20px; margin:0 0 6px; letter-spacing:.2px; }
+  .head p{ margin:0; font-size:13px; color:var(--ink3); line-height:1.7; }
+  .head .kbd{
+    display:inline-block; padding:1px 6px; border:1px solid var(--line);
+    background:#fff; border-radius:4px; font-size:12px; color:var(--ink2);
+  }
+
+  /* ---------- 方案切换 ---------- */
+  .switcher{
+    display:flex; gap:8px; margin:22px 0 18px; flex-wrap:wrap;
+    position:sticky; top:0; z-index:30;
+    background:#EEF1F5; padding:10px 0;
+  }
+  .switcher button{
+    font:inherit; font-size:13px; font-weight:700; cursor:pointer;
+    padding:9px 18px; border-radius:9px; border:1px solid var(--line);
+    background:#fff; color:var(--ink2); transition:all .18s; letter-spacing:.2px;
+  }
+  .switcher button:hover{ border-color:#CBD5E1; color:var(--brand); }
+  .switcher button.on{
+    background:var(--brand); border-color:var(--brand); color:#fff;
+    box-shadow:0 6px 16px rgba(200,16,46,.26);
+  }
+  .switcher .spacer{ flex:1; }
+  .switcher .badge-rec{
+    align-self:center; font-size:12px; font-weight:700; color:var(--brand);
+    background:var(--brand-soft); border:1px dashed #F3B7C2; padding:6px 12px; border-radius:20px;
+  }
+
+  .panel{ display:none; }
+  .panel.on{ display:block; animation:fadeUp .34s cubic-bezier(.25,1,.5,1); }
+  @keyframes fadeUp{ from{opacity:0; transform:translateY(10px);} to{opacity:1;transform:none;} }
+
+  /* ---------- 说明条 ---------- */
+  .note{
+    display:flex; gap:10px; align-items:flex-start;
+    background:#fff; border:1px solid var(--line); border-left:3px solid var(--brand);
+    border-radius:10px; padding:13px 16px; margin-bottom:16px;
+  }
+  .note .dot{
+    width:18px; height:18px; border-radius:50%; background:var(--brand-soft); color:var(--brand);
+    font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;
+    flex:0 0 auto; margin-top:1px;
+  }
+  .note b{ font-size:13px; }
+  .note p{ margin:3px 0 0; font-size:12.5px; color:var(--ink3); line-height:1.65; }
+  .note p strong{ color:var(--ink2); }
+
+  /* ---------- 卡片 ---------- */
+  .card{
+    background:#fff; border-radius:12px; padding:16px;
+    box-shadow:0 4px 16px rgba(0,0,0,.045); margin-bottom:14px;
+  }
+  .card-label{
+    font-size:11px; font-weight:800; color:var(--ink4); letter-spacing:1.4px;
+    text-transform:uppercase; margin:0 0 12px; display:flex; align-items:center; gap:8px;
+  }
+  .card-label::after{ content:''; flex:1; height:1px; background:var(--line2); }
+
+  /* ---------- 筛选控件 ---------- */
+  .ctl{
+    height:32px; border:1px solid #DCDFE6; border-radius:8px; background:#fff;
+    font-size:13px; color:var(--ink3); padding:0 11px; display:inline-flex;
+    align-items:center; gap:6px; cursor:pointer; white-space:nowrap;
+  }
+  .ctl:hover{ border-color:#C0C4CC; }
+  .ctl .ph{ color:#A8ABB2; }
+  .ctl .caret{ color:#A8ABB2; font-size:10px; margin-left:2px; }
+  .ctl.w150{ width:150px; } .ctl.w140{ width:140px; }
+  .ctl.w132{ width:132px; } .ctl.w170{ width:170px; }
+  .ctl.w200{ width:200px; }
+
+  .btn{
+    height:32px; padding:0 14px; border-radius:8px; font-size:13px; font-weight:700;
+    display:inline-flex; align-items:center; gap:5px; cursor:pointer; border:1px solid transparent;
+    white-space:nowrap; letter-spacing:.2px;
+  }
+  .btn.primary{ background:var(--brand); color:#fff; box-shadow:0 2px 6px rgba(200,16,46,.22); }
+  .btn.ghost{ background:#fff; border-color:#CBD5E1; color:var(--ink2); }
+  .btn.outline{ background:#fff; border-color:var(--brand); color:var(--brand); }
+  .btn i{ font-style:normal; font-size:12px; opacity:.9; }
+
+  .row1{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .btns{ margin-left:auto; display:flex; gap:9px; }
+
+  /* ---------- 类型 Tab（方案 A） ---------- */
+  .type-tabs{ display:inline-flex; gap:6px; background:#F1F5F9; padding:4px; border-radius:10px; }
+  .type-tabs .t{
+    height:30px; padding:0 14px; border-radius:7px; font-size:13px; font-weight:700;
+    color:var(--ink3); display:inline-flex; align-items:center; gap:7px; cursor:pointer;
+    transition:all .18s; border:1px solid transparent;
+  }
+  .type-tabs .t:hover{ color:var(--ink); }
+  .type-tabs .t .n{
+    font-family:var(--num-font); font-size:11.5px; font-weight:800;
+    background:#E2E8F0; color:var(--ink3); padding:1px 6px; border-radius:20px; min-width:20px; text-align:center;
+  }
+  .type-tabs .t.on{ background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(15,23,42,.1); }
+  .type-tabs .t.on .n{ background:var(--ink); color:#fff; }
+  .type-tabs .t.on.pk{ color:var(--pick); } .type-tabs .t.on.pk .n{ background:var(--pick); }
+  .type-tabs .t.on.dp{ color:var(--drop); } .type-tabs .t.on.dp .n{ background:var(--drop); }
+  .type-tabs .t.on.wn{ color:var(--warn); } .type-tabs .t.on.wn .n{ background:var(--warn); }
+  .type-tabs .t .sq{ width:7px; height:7px; border-radius:2px; }
+
+  /* ---------- 分段控件（方案 C） ---------- */
+  .seg{ display:inline-flex; border:1px solid #DCDFE6; border-radius:8px; overflow:hidden; height:32px; background:#fff; }
+  .seg .s{
+    padding:0 12px; font-size:13px; font-weight:700; color:var(--ink3);
+    display:inline-flex; align-items:center; gap:6px; cursor:pointer; border-right:1px solid #EDEFF2;
+  }
+  .seg .s:last-child{ border-right:0; }
+  .seg .s:hover{ background:#F8FAFC; }
+  .seg .s.on{ background:var(--brand); color:#fff; }
+  .seg .s.on .sq{ background:#fff !important; }
+  .seg .s .sq{ width:7px; height:7px; border-radius:2px; }
+
+  /* ---------- 表格 ---------- */
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  thead th{
+    background:#F1F5F9; color:#475569; font-size:12px; font-weight:700;
+    padding:10px 12px; text-align:center; border-bottom:2px solid var(--line);
+    letter-spacing:.3px; white-space:nowrap;
+  }
+  tbody td{
+    padding:13px 12px; text-align:center; border-bottom:1px solid var(--line2);
+    color:var(--ink2); font-size:13px;
+  }
+  tbody tr:hover td{ background:#FDF6F7; }
+  tbody tr:last-child td{ border-bottom:0; }
+  .muted{ color:var(--ink4); font-size:12px; }
+  .num{ font-family:var(--num-font); font-variant-numeric:tabular-nums; }
+  .time{ font-family:var(--num-font); font-size:12.5px; color:var(--ink3); font-variant-numeric:tabular-nums; }
+  .link{ color:var(--brand); font-weight:700; font-size:12.5px; cursor:pointer; }
+  .link.grey{ color:var(--ink3); }
+  .link:hover{ text-decoration:underline; }
+
+  /* 名称单元格 —— 方案 A：色条染色 + 文字标签 */
+  .nmA{ display:inline-flex; align-items:center; gap:8px; max-width:100%; }
+  .nmA .bar{ width:3px; height:16px; border-radius:2px; flex:0 0 auto; }
+  .nmA .nm{ font-size:13px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tagT{
+    display:inline-flex; align-items:center; height:18px; padding:0 6px; border-radius:4px;
+    font-size:10.5px; font-weight:800; letter-spacing:.3px; flex:0 0 auto;
+  }
+  .tagT.pk{ background:var(--pick-bg); color:var(--pick); border:1px solid var(--pick-line); }
+  .tagT.dp{ background:var(--drop-bg); color:var(--drop); border:1px solid var(--drop-line); }
+  .tagT.wn{ background:var(--warn-bg); color:var(--warn); border:1px solid var(--warn-line); }
+
+  /* 名称单元格 —— 方案 B：色点 + 单字 */
+  .nmB{ display:inline-flex; align-items:center; gap:7px; }
+  .nmB .dt{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
+  .nmB .dt.pk{ background:var(--pick); box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+  .nmB .dt.dp{ background:var(--drop); box-shadow:0 0 0 3px rgba(14,159,110,.12); }
+  .nmB .dt.wn{ background:var(--warn); box-shadow:0 0 0 3px rgba(217,119,6,.12); }
+  .nmB .nm{ font-weight:700; color:var(--ink); }
+
+  /* 名称单元格 —— 方案 C：图标徽标 */
+  .nmC{ display:inline-flex; align-items:center; gap:8px; }
+  .nmC .ic{
+    width:20px; height:20px; border-radius:6px; display:flex; align-items:center;
+    justify-content:center; font-size:11px; font-weight:800; flex:0 0 auto;
+  }
+  .nmC .ic.pk{ background:var(--pick-bg); color:var(--pick); border:1px solid var(--pick-line); }
+  .nmC .ic.dp{ background:var(--drop-bg); color:var(--drop); border:1px solid var(--drop-line); }
+  .nmC .ic.wn{ background:var(--warn-bg); color:var(--warn); border:1px solid var(--warn-line); }
+  .nmC .nm{ font-weight:700; color:var(--ink); }
+
+  /* 类型列：圆点 + 文字 */
+  .dotTxt{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; }
+  .dotTxt .d{ width:6px; height:6px; border-radius:50%; }
+  .dotTxt.pk{ color:var(--pick); } .dotTxt.pk .d{ background:var(--pick); }
+  .dotTxt.dp{ color:var(--drop); } .dotTxt.dp .d{ background:var(--drop); }
+  .dotTxt.wn{ color:var(--warn); } .dotTxt.wn .d{ background:var(--warn); }
+
+  .shape-tag{ display:inline-block; padding:2px 9px; border-radius:11px; font-size:11.5px; font-weight:700; background:#DBEAFE; color:#1E40AF; border:1px solid #93C5FD; }
+  .shape-tag.district{ background:#EDE9FE; color:#5B21B6; border-color:#C4B5FD; }
+
+  .foot{ display:flex; align-items:center; justify-content:space-between; padding-top:14px; border-top:1px solid var(--line); margin-top:12px; }
+  .foot .total{ font-size:13px; font-weight:700; color:var(--ink2); }
+  .pager{ display:flex; gap:5px; align-items:center; font-size:12.5px; color:var(--ink3); }
+  .pager .p{ min-width:26px; height:26px; border-radius:6px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; font-weight:700; }
+  .pager .p.on{ background:var(--brand); color:#fff; }
+
+  /* ---------- 表单（弹窗片段） ---------- */
+  .form-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:14px 18px; }
+  .fi{ display:flex; flex-direction:column; gap:6px; }
+  .fi.full{ grid-column:1 / -1; }
+  .fi label{ font-size:12.5px; font-weight:700; color:var(--ink2); }
+  .fi label .req{ color:var(--brand); margin-left:2px; }
+  .inp{
+    height:32px; border:1px solid #DCDFE6; border-radius:8px; background:#fff;
+    font-size:13px; padding:0 11px; display:flex; align-items:center; color:var(--ink);
+  }
+  .inp.err{ border-color:var(--brand); box-shadow:0 0 0 2px rgba(200,16,46,.1); }
+  .errmsg{ font-size:11.5px; color:var(--brand); font-weight:600; }
+  .hint{ font-size:11.5px; color:var(--ink4); }
+
+  /* 类型选择：卡片单选（方案 A / C 共用） */
+  .type-cards{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .tc{
+    border:1px solid var(--line); border-radius:10px; padding:11px 12px; cursor:pointer;
+    background:#fff; transition:all .18s; position:relative;
+  }
+  .tc:hover{ border-color:#CBD5E1; transform:translateY(-1px); }
+  .tc .top{ display:flex; align-items:center; gap:8px; }
+  .tc .ic{
+    width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:800; flex:0 0 auto;
+  }
+  .tc .tt{ font-size:13px; font-weight:800; color:var(--ink); }
+  .tc .ds{ font-size:11.5px; color:var(--ink4); margin-top:5px; line-height:1.5; }
+  .tc .ck{
+    position:absolute; top:9px; right:9px; width:15px; height:15px; border-radius:50%;
+    border:1.5px solid #DCDFE6; display:flex; align-items:center; justify-content:center;
+    font-size:9px; color:transparent;
+  }
+  .tc.pk .ic{ background:var(--pick-bg); color:var(--pick); }
+  .tc.dp .ic{ background:var(--drop-bg); color:var(--drop); }
+  .tc.wn .ic{ background:var(--warn-bg); color:var(--warn); }
+  .tc.on{ border-width:1.5px; }
+  .tc.pk.on{ border-color:var(--pick); background:linear-gradient(180deg,#F7FAFF,#fff); box-shadow:0 4px 14px rgba(37,99,235,.13); }
+  .tc.dp.on{ border-color:var(--drop); background:linear-gradient(180deg,#F5FEF9,#fff); box-shadow:0 4px 14px rgba(14,159,110,.13); }
+  .tc.wn.on{ border-color:var(--warn); background:linear-gradient(180deg,#FFFCF7,#fff); box-shadow:0 4px 14px rgba(217,119,6,.13); }
+  .tc.pk.on .ck{ border-color:var(--pick); background:var(--pick); color:#fff; }
+  .tc.dp.on .ck{ border-color:var(--drop); background:var(--drop); color:#fff; }
+  .tc.wn.on .ck{ border-color:var(--warn); background:var(--warn); color:#fff; }
+
+  /* 类型选择：radio（方案 B） */
+  .radio-line{ display:flex; gap:20px; align-items:center; height:32px; }
+  .rl{ display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--ink2); font-weight:600; cursor:pointer; }
+  .rl .rd{ width:14px; height:14px; border-radius:50%; border:1.5px solid #DCDFE6; display:flex; align-items:center; justify-content:center; }
+  .rl.on .rd{ border-color:var(--brand); }
+  .rl.on .rd::after{ content:''; width:7px; height:7px; border-radius:50%; background:var(--brand); }
+  .rl.on{ color:var(--ink); font-weight:700; }
+
+  /* 类型选择：大号色块条（方案 C） */
+  .type-bars{ display:grid; grid-template-columns:repeat(3,1fr); gap:0; border-radius:10px; overflow:hidden; border:1px solid var(--line); }
+  .tb{
+    padding:12px 10px; text-align:center; cursor:pointer; background:#fff;
+    border-right:1px solid var(--line); transition:all .18s;
+  }
+  .tb:last-child{ border-right:0; }
+  .tb .tt{ font-size:13px; font-weight:800; color:var(--ink2); display:flex; align-items:center; justify-content:center; gap:6px; }
+  .tb .ds{ font-size:11px; color:var(--ink4); margin-top:4px; }
+  .tb:hover{ background:#FAFBFC; }
+  .tb.pk.on{ background:var(--pick); } .tb.dp.on{ background:var(--drop); } .tb.wn.on{ background:var(--warn); }
+  .tb.on .tt, .tb.on .ds{ color:#fff; }
+  .tb.on .ds{ opacity:.82; }
+  .tb .sq{ width:7px; height:7px; border-radius:2px; }
+
+  /* 名称实时预览 */
+  .preview-box{
+    margin-top:12px; border:1px dashed #D8DEE7; border-radius:10px; padding:11px 13px;
+    background:#FCFDFE; display:flex; align-items:center; gap:12px;
+  }
+  .preview-box .pl{ font-size:11px; font-weight:800; color:var(--ink4); letter-spacing:.8px; }
+  .preview-box .pv{ display:flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--line); border-radius:7px; padding:5px 11px; }
+
+  /* ---------- 对比表 ---------- */
+  .cmp{ width:100%; border-collapse:collapse; font-size:12.5px; background:#fff; border-radius:12px; overflow:hidden; }
+  .cmp th{ background:#F1F5F9; color:#475569; font-size:11.5px; font-weight:800; padding:11px 12px; text-align:left; border-bottom:2px solid var(--line); }
+  .cmp td{ padding:11px 12px; border-bottom:1px solid var(--line2); vertical-align:top; line-height:1.6; color:var(--ink2); }
+  .cmp td:first-child{ font-weight:800; color:var(--ink); white-space:nowrap; }
+  .cmp tr:last-child td{ border-bottom:0; }
+  .cmp .yes{ color:#0E9F6E; font-weight:700; }
+  .cmp .no{ color:#94A3B8; }
+  .cmp .mid{ color:#D97706; font-weight:700; }
+  .cmp .rec{ display:inline-block; font-size:10.5px; font-weight:800; color:#fff; background:var(--brand); padding:2px 7px; border-radius:20px; margin-left:6px; }
+
+  .legend{ display:flex; gap:18px; flex-wrap:wrap; margin-top:14px; font-size:12px; color:var(--ink3); }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .legend .sw{ width:9px; height:9px; border-radius:2px; }
+
+  h3.sec{ font-size:13.5px; margin:22px 0 10px; color:var(--ink); display:flex; align-items:center; gap:8px; }
+  h3.sec .no{
+    width:19px; height:19px; border-radius:5px; background:var(--ink); color:#fff;
+    font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>电子围栏 · 围栏类型（装货 / 卸货 / 提醒）设计稿</h1>
+    <p>
+      三个方案均包含：<span class="kbd">列表筛选</span> + <span class="kbd">名称前类型标识</span> + <span class="kbd">新建/编辑必选类型</span>。
+      差异只在「用哪种控件、把类型放在哪儿」。品牌色 <b style="color:#c8102e">#c8102e</b> 保持不变。
+    </p>
+  </div>
+
+  <div class="switcher" id="sw">
+    <button class="on" data-t="A">方案 A · 类型 Tab</button>
+    <button data-t="B">方案 B · 下拉 + 色点</button>
+    <button data-t="C">方案 C · 分段 + 独立列</button>
+    <button data-t="D">方案对比 &amp; 结论</button>
+    <div class="spacer"></div>
+    <div class="badge-rec">推荐 A 的列表 + C 的类型选择条</div>
+  </div>
+
+  <!-- ============ 方案 A ============ -->
+  <div class="panel on" id="pA">
+    <div class="note">
+      <div class="dot">A</div>
+      <div>
+        <b>思路：把「类型」当主筛选维度，用带数量的 Tab 摆在最显眼处。</b>
+        <p>类型只有 3 个值，天然适合 Tab。带数量能一眼看出「装货围栏是不是还没建全」，这是下拉框做不到的。筛选区变两行，换来的是分类一目了然。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-label">列表页 · 筛选区</p>
+      <div class="row1" style="margin-bottom:10px;">
+        <div class="type-tabs">
+          <div class="t on"><span class="sq" style="background:#0F172A"></span>全部<span class="n">15</span></div>
+          <div class="t pk"><span class="sq" style="background:var(--pick)"></span>装货围栏<span class="n">5</span></div>
+          <div class="t dp"><span class="sq" style="background:var(--drop)"></span>卸货围栏<span class="n">4</span></div>
+          <div class="t wn"><span class="sq" style="background:var(--warn)"></span>提醒围栏<span class="n">6</span></div>
+        </div>
+        <div class="btns">
+          <div class="btn primary"><i>⌕</i>搜索</div>
+          <div class="btn ghost"><i>↻</i>重置</div>
+          <div class="btn primary"><i>＋</i>新增</div>
+          <div class="btn outline"><i>↓</i>导出</div>
+        </div>
+      </div>
+      <div class="row1">
+        <div class="ctl w150"><span class="ph">请选择所属车队</span><span class="caret">▾</span></div>
+        <div class="ctl w132"><span class="ph">请选择围栏形状</span><span class="caret">▾</span></div>
+        <div class="ctl w200"><span class="ph">请输入围栏名称</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-label">列表页 · 表格（名称前：类型色条 + 文字标签）</p>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:26%">围栏名称</th>
+            <th style="width:16%">所属机构</th>
+            <th>围栏形状</th>
+            <th>围栏参数</th>
+            <th style="width:22%">地址信息</th>
+            <th>更新时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="text-align:left">
+              <div class="nmA"><span class="bar" style="background:linear-gradient(180deg,#60A5FA,#2563EB)"></span><span class="tagT pk">装货</span><span class="nm">云南装货点</span></div>
+            </td>
+            <td>管理员名下车辆</td>
+            <td><span class="shape-tag">圆形</span></td>
+            <td class="num">1000 米</td>
+            <td class="muted">云南省昆明市华山街道云南省...</td>
+            <td class="time">2026-10-16 23:15:27</td>
+            <td><span class="link">编辑</span> &nbsp; <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left">
+              <div class="nmA"><span class="bar" style="background:linear-gradient(180deg,#34D399,#0E9F6E)"></span><span class="tagT dp">卸货</span><span class="nm">厦门卸货点</span></div>
+            </td>
+            <td>管理员名下车辆</td>
+            <td><span class="shape-tag">圆形</span></td>
+            <td class="num">1000 米</td>
+            <td class="muted">福建省厦门市思明区筼筜街道厦门...</td>
+            <td class="time">2026-10-16 23:15:30</td>
+            <td><span class="link">编辑</span> &nbsp; <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left">
+              <div class="nmA"><span class="bar" style="background:linear-gradient(180deg,#FBBF24,#D97706)"></span><span class="tagT wn">提醒</span><span class="nm">超速围栏-合肥</span></div>
+            </td>
+            <td>山西卡友新能源运输...</td>
+            <td><span class="shape-tag district">行政区划</span></td>
+            <td class="num">区划 140700</td>
+            <td class="muted">晋中市</td>
+            <td class="time">2026-10-15 05:27:06</td>
+            <td><span class="link">编辑</span> &nbsp; <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left">
+              <div class="nmA"><span class="bar" style="background:linear-gradient(180deg,#60A5FA,#2563EB)"></span><span class="tagT pk">装货</span><span class="nm">南京装货点</span></div>
+            </td>
+            <td>山西卡友新能源运输...</td>
+            <td><span class="shape-tag">圆形</span></td>
+            <td class="num">1000 米</td>
+            <td class="muted">江苏省南京市玄武区玄武门街道南京...</td>
+            <td class="time">2026-10-16 23:09:19</td>
+            <td><span class="link">编辑</span> &nbsp; <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left">
+              <div class="nmA"><span class="bar" style="background:linear-gradient(180deg,#34D399,#0E9F6E)"></span><span class="tagT dp">卸货</span><span class="nm">上海卸货点</span></div>
+            </td>
+            <td>山西卡友新能源运输...</td>
+            <td><span class="shape-tag">圆形</span></td>
+            <td class="num">1000 米</td>
+            <td class="muted">上海市黄浦区南京东路街道上海人民...</td>
+            <td class="time">2026-10-16 23:09:34</td>
+            <td><span class="link">编辑</span> &nbsp; <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left">
+              <div class="nmA"><span class="bar" style="background:linear-gradient(180deg,#FBBF24,#D97706)"></span><span class="tagT wn">提醒</span><span class="nm">测试围栏</span></div>
+            </td>
+            <td>管理员名下车辆</td>
+            <td><span class="shape-tag">圆形</span></td>
+            <td class="num">1000 米</td>
+            <td class="muted">—</td>
+            <td class="time">2026-10-15 04:14:24</td>
+            <td><span class="link">编辑</span> &nbsp; <span class="link grey">删除</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="foot">
+        <div class="total">共 15 条</div>
+        <div class="pager">
+          <span>10条/页 ▾</span>
+          <span class="p">‹</span><span class="p on">1</span><span class="p">2</span><span class="p">›</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-label">新建 / 编辑 · 类型选择（卡片单选，必选）</p>
+      <div class="fi full" style="margin-bottom:14px;">
+        <label>围栏类型<span class="req">*</span></label>
+        <div class="type-cards">
+          <div class="tc pk on">
+            <div class="ck">✓</div>
+            <div class="top"><div class="ic">装</div><div class="tt">装货围栏</div></div>
+            <div class="ds">运单「装货地」下拉只显示本类</div>
+          </div>
+          <div class="tc dp">
+            <div class="ck">✓</div>
+            <div class="top"><div class="ic">卸</div><div class="tt">卸货围栏</div></div>
+            <div class="ds">运单「卸货地」下拉只显示本类</div>
+          </div>
+          <div class="tc wn">
+            <div class="ck">✓</div>
+            <div class="top"><div class="ic">铃</div><div class="tt">提醒围栏</div></div>
+            <div class="ds">只用于进出提醒，不出现在运单</div>
+          </div>
+        </div>
+        <div class="preview-box">
+          <span class="pl">列表效果预览</span>
+          <div class="pv">
+            <div class="nmA"><span class="bar" style="background:linear-gradient(180deg,#60A5FA,#2563EB)"></span><span class="tagT pk">装货</span><span class="nm">云南装货点</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="fi"><label>电子围栏名称<span class="req">*</span></label><div class="inp">云南装货点</div></div>
+        <div class="fi"><label>所属机构<span class="req">*</span></label><div class="inp"><span class="ph" style="color:#A8ABB2">请选择所属车队</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 方案 B ============ -->
+  <div class="panel" id="pB">
+    <div class="note">
+      <div class="dot">B</div>
+      <div>
+        <b>思路：改动最小。类型只是一个普通筛选条件，跟「围栏形状」并列。</b>
+        <p>列表里靠<b>彩色圆点</b>区分，鼠标悬浮有 tooltip 文字说明；表单用和「围栏形状」同款的 radio，学习成本为零。缺点是色点表达力弱，新用户不一定知道蓝点 = 装货。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-label">列表页 · 筛选区（仍是单行）</p>
+      <div class="row1">
+        <div class="ctl w140"><span class="ph">请选择所属车队</span><span class="caret">▾</span></div>
+        <div class="ctl w140"><span style="color:var(--ink)">装货围栏</span><span class="caret">▾</span></div>
+        <div class="ctl w132"><span class="ph">请选择围栏形状</span><span class="caret">▾</span></div>
+        <div class="ctl w170"><span class="ph">请输入围栏名称</span></div>
+        <div class="btns">
+          <div class="btn primary"><i>⌕</i>搜索</div>
+          <div class="btn ghost"><i>↻</i>重置</div>
+          <div class="btn primary"><i>＋</i>新增</div>
+          <div class="btn outline"><i>↓</i>导出</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-label">列表页 · 表格（名称前：彩色圆点）</p>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:26%">围栏名称</th>
+            <th style="width:16%">所属机构</th>
+            <th>围栏形状</th>
+            <th>围栏参数</th>
+            <th style="width:22%">地址信息</th>
+            <th>更新时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="text-align:left"><div class="nmB"><span class="dt pk"></span><span class="nm">云南装货点</span></div></td>
+            <td>管理员名下车辆</td><td><span class="shape-tag">圆形</span></td><td class="num">1000 米</td>
+            <td class="muted">云南省昆明市华山街道云南省...</td><td class="time">2026-10-16 23:15:27</td>
+            <td><span class="link">编辑</span> &nbsp; <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left"><div class="nmB"><span class="dt dp"></span><span class="nm">厦门卸货点</span></div></td>
+            <td>管理员名下车辆</td><td><span class="shape-tag">圆形</span></td><td class="num">1000 米</td>
+            <td class="muted">福建省厦门市思明区筼筜街道厦门...</td><td class="time">2026-10-16 23:15:30</td>
+            <td><span class="link">编辑</span> &nbsp; <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left"><div class="nmB"><span class="dt wn"></span><span class="nm">超速围栏-合肥</span></div></td>
+            <td>山西卡友新能源运输...</td><td><span class="shape-tag district">行政区划</span></td><td class="num">区划 140700</td>
+            <td class="muted">晋中市</td><td class="time">2026-10-15 05:27:06</td>
+            <td><span class="link">编辑</span> &nbsp; <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left"><div class="nmB"><span class="dt pk"></span><span class="nm">南京装货点</span></div></td>
+            <td>山西卡友新能源运输...</td><td><span class="shape-tag">圆形</span></td><td class="num">1000 米</td>
+            <td class="muted">江苏省南京市玄武区玄武门街道南京...</td><td class="time">2026-10-16 23:09:19</td>
+            <td><span class="link">编辑</span> &nbsp; <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left"><div class="nmB"><span class="dt dp"></span><span class="nm">上海卸货点</span></div></td>
+            <td>山西卡友新能源运输...</td><td><span class="shape-tag">圆形</span></td><td class="num">1000 米</td>
+            <td class="muted">上海市黄浦区南京东路街道上海人民...</td><td class="time">2026-10-16 23:09:34</td>
+            <td><span class="link">编辑</span> &nbsp; <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left"><div class="nmB"><span class="dt wn"></span><span class="nm">测试围栏</span></div></td>
+            <td>管理员名下车辆</td><td><span class="shape-tag">圆形</span></td><td class="num">1000 米</td>
+            <td class="muted">—</td><td class="time">2026-10-15 04:14:24</td>
+            <td><span class="link">编辑</span> &nbsp; <span class="link grey">删除</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="foot">
+        <div class="total">共 15 条</div>
+        <div class="pager"><span>10条/页 ▾</span><span class="p">‹</span><span class="p on">1</span><span class="p">2</span><span class="p">›</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-label">新建 / 编辑 · 类型选择（radio，与「围栏形状」同款）</p>
+      <div class="form-grid">
+        <div class="fi full">
+          <label>围栏类型<span class="req">*</span></label>
+          <div class="radio-line">
+            <span class="rl on"><span class="rd"></span>装货围栏</span>
+            <span class="rl"><span class="rd"></span>卸货围栏</span>
+            <span class="rl"><span class="rd"></span>提醒围栏</span>
+          </div>
+          <div class="hint">必选，未选择时无法提交</div>
+        </div>
+        <div class="fi full">
+          <label>围栏形状</label>
+          <div class="radio-line">
+            <span class="rl on"><span class="rd"></span>圆形</span>
+            <span class="rl"><span class="rd"></span>多边形</span>
+            <span class="rl"><span class="rd"></span>线形</span>
+            <span class="rl"><span class="rd"></span>行政区划</span>
+          </div>
+        </div>
+        <div class="fi"><label>电子围栏名称<span class="req">*</span></label><div class="inp">云南装货点</div></div>
+        <div class="fi"><label>所属机构<span class="req">*</span></label><div class="inp"><span style="color:#A8ABB2">请选择所属车队</span></div></div>
+      </div>
+      <div class="preview-box">
+        <span class="pl">列表效果预览</span>
+        <div class="pv"><div class="nmB"><span class="dt pk"></span><span class="nm">云南装货点</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 方案 C ============ -->
+  <div class="panel" id="pC">
+    <div class="note">
+      <div class="dot">C</div>
+      <div>
+        <b>思路：类型既在名称前有图标，也单独占一列，信息最全、可排序。</b>
+        <p>筛选用紧凑的分段按钮（比 Tab 省一半宽度，能塞回一行）。表格多一列「围栏类型」，好处是以后想按类型排序、或者导出 Excel 时类型是独立列，不用再解析名称。代价是多一列，窄屏会挤。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-label">列表页 · 筛选区（单行，分段控件）</p>
+      <div class="row1">
+        <div class="seg">
+          <div class="s on"><span class="sq" style="background:#0F172A"></span>全部</div>
+          <div class="s"><span class="sq" style="background:var(--pick)"></span>装货</div>
+          <div class="s"><span class="sq" style="background:var(--drop)"></span>卸货</div>
+          <div class="s"><span class="sq" style="background:var(--warn)"></span>提醒</div>
+        </div>
+        <div class="ctl w140"><span class="ph">请选择所属车队</span><span class="caret">▾</span></div>
+        <div class="ctl w170"><span class="ph">请输入围栏名称</span></div>
+        <div class="btns">
+          <div class="btn primary"><i>⌕</i>搜索</div>
+          <div class="btn ghost"><i>↻</i>重置</div>
+          <div class="btn primary"><i>＋</i>新增</div>
+          <div class="btn outline"><i>↓</i>导出</div>
+        </div>
+      </div>
+      <div class="row1" style="margin-top:10px;">
+        <div class="hint">形状筛选收进「更多条件 ▾」，因为使用频率低 — 也可以保留在第一行</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-label">列表页 · 表格（名称前图标 + 独立类型列）</p>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:23%">围栏名称</th>
+            <th>围栏类型</th>
+            <th style="width:15%">所属机构</th>
+            <th>围栏形状</th>
+            <th>围栏参数</th>
+            <th style="width:19%">地址信息</th>
+            <th>更新时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="text-align:left"><div class="nmC"><span class="ic pk">装</span><span class="nm">云南装货点</span></div></td>
+            <td><span class="dotTxt pk"><span class="d"></span>装货围栏</span></td>
+            <td>管理员名下车辆</td><td><span class="shape-tag">圆形</span></td><td class="num">1000 米</td>
+            <td class="muted">云南省昆明市华山街道云南省...</td><td class="time">2026-10-16 23:15:27</td>
+            <td><span class="link">编辑</span> <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left"><div class="nmC"><span class="ic dp">卸</span><span class="nm">厦门卸货点</span></div></td>
+            <td><span class="dotTxt dp"><span class="d"></span>卸货围栏</span></td>
+            <td>管理员名下车辆</td><td><span class="shape-tag">圆形</span></td><td class="num">1000 米</td>
+            <td class="muted">福建省厦门市思明区筼筜街道厦门...</td><td class="time">2026-10-16 23:15:30</td>
+            <td><span class="link">编辑</span> <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left"><div class="nmC"><span class="ic wn">铃</span><span class="nm">超速围栏-合肥</span></div></td>
+            <td><span class="dotTxt wn"><span class="d"></span>提醒围栏</span></td>
+            <td>山西卡友新能源运输...</td><td><span class="shape-tag district">行政区划</span></td><td class="num">区划 140700</td>
+            <td class="muted">晋中市</td><td class="time">2026-10-15 05:27:06</td>
+            <td><span class="link">编辑</span> <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left"><div class="nmC"><span class="ic pk">装</span><span class="nm">南京装货点</span></div></td>
+            <td><span class="dotTxt pk"><span class="d"></span>装货围栏</span></td>
+            <td>山西卡友新能源运输...</td><td><span class="shape-tag">圆形</span></td><td class="num">1000 米</td>
+            <td class="muted">江苏省南京市玄武区玄武门街道南京...</td><td class="time">2026-10-16 23:09:19</td>
+            <td><span class="link">编辑</span> <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left"><div class="nmC"><span class="ic dp">卸</span><span class="nm">上海卸货点</span></div></td>
+            <td><span class="dotTxt dp"><span class="d"></span>卸货围栏</span></td>
+            <td>山西卡友新能源运输...</td><td><span class="shape-tag">圆形</span></td><td class="num">1000 米</td>
+            <td class="muted">上海市黄浦区南京东路街道上海人民...</td><td class="time">2026-10-16 23:09:34</td>
+            <td><span class="link">编辑</span> <span class="link grey">删除</span></td>
+          </tr>
+          <tr>
+            <td style="text-align:left"><div class="nmC"><span class="ic wn">铃</span><span class="nm">测试围栏</span></div></td>
+            <td><span class="dotTxt wn"><span class="d"></span>提醒围栏</span></td>
+            <td>管理员名下车辆</td><td><span class="shape-tag">圆形</span></td><td class="num">1000 米</td>
+            <td class="muted">—</td><td class="time">2026-10-15 04:14:24</td>
+            <td><span class="link">编辑</span> <span class="link grey">删除</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="foot">
+        <div class="total">共 15 条</div>
+        <div class="pager"><span>10条/页 ▾</span><span class="p">‹</span><span class="p on">1</span><span class="p">2</span><span class="p">›</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-label">新建 / 编辑 · 类型选择（大号色块条，强引导）</p>
+      <div class="fi full" style="margin-bottom:14px;">
+        <label>围栏类型<span class="req">*</span></label>
+        <div class="type-bars">
+          <div class="tb pk on"><div class="tt"><span class="sq" style="background:#fff"></span>装货围栏</div><div class="ds">起点 · 运单装货地</div></div>
+          <div class="tb dp"><div class="tt"><span class="sq" style="background:var(--drop)"></span>卸货围栏</div><div class="ds">终点 · 运单卸货地</div></div>
+          <div class="tb wn"><div class="tt"><span class="sq" style="background:var(--warn)"></span>提醒围栏</div><div class="ds">仅进出提醒</div></div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="fi"><label>电子围栏名称<span class="req">*</span></label><div class="inp">云南装货点</div></div>
+        <div class="fi"><label>所属机构<span class="req">*</span></label><div class="inp"><span style="color:#A8ABB2">请选择所属车队</span></div></div>
+      </div>
+      <div class="preview-box">
+        <span class="pl">列表效果预览</span>
+        <div class="pv"><div class="nmC"><span class="ic pk">装</span><span class="nm">云南装货点</span></div></div>
+        <div class="pv"><span class="dotTxt pk"><span class="d"></span>装货围栏</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 对比 ============ -->
+  <div class="panel" id="pD">
+    <div class="card" style="padding:0; overflow:hidden;">
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th style="width:15%">维度</th>
+            <th style="width:29%">方案 A · 类型 Tab</th>
+            <th style="width:28%">方案 B · 下拉 + 色点</th>
+            <th style="width:28%">方案 C · 分段 + 独立列</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>筛选控件</td>
+            <td>带数量 Tab，独立一行</td>
+            <td>普通下拉，跟形状并列</td>
+            <td>分段按钮，可压回一行</td>
+          </tr>
+          <tr>
+            <td>名称前标识</td>
+            <td class="yes">色条染色 + 「装货」文字标签</td>
+            <td class="mid">纯彩色圆点（需 tooltip）</td>
+            <td class="yes">图标方块 + 独立类型列</td>
+          </tr>
+          <tr>
+            <td>一眼可读性</td>
+            <td class="yes">最强，标签有字</td>
+            <td class="no">最弱，靠颜色记忆</td>
+            <td class="yes">强，双处冗余</td>
+          </tr>
+          <tr>
+            <td>能否看到各类数量</td>
+            <td class="yes">能，Tab 上带数字</td>
+            <td class="no">不能</td>
+            <td class="no">不能（可加分段后数字）</td>
+          </tr>
+          <tr>
+            <td>筛选区行数</td>
+            <td class="mid">2 行（多占 42px）</td>
+            <td class="yes">1 行不变</td>
+            <td class="yes">1 行（形状收进「更多」）</td>
+          </tr>
+          <tr>
+            <td>表格列数</td>
+            <td class="yes">不变（8 列）</td>
+            <td class="yes">不变（8 列）</td>
+            <td class="mid">+1 列（9 列，窄屏挤）</td>
+          </tr>
+          <tr>
+            <td>表单控件</td>
+            <td>三张卡片，带用途说明</td>
+            <td>radio，最省事</td>
+            <td>大号色块，点击面积最大</td>
+          </tr>
+          <tr>
+            <td>改动量</td>
+            <td>中（列表 + 表单一套样式）</td>
+            <td class="yes">小（几乎只加字段）</td>
+            <td>中偏大（多一列 + 分段样式）</td>
+          </tr>
+          <tr>
+            <td>适合场景</td>
+            <td>围栏会持续增长、要快速切换视角</td>
+            <td>只想先跑通类型字段</td>
+            <td>导出报表、要按类型排序统计</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="sec"><span class="no">✓</span>我的建议：A 的列表 + C 的类型选择条</h3>
+    <div class="note" style="border-left-color:#0E9F6E;">
+      <div class="dot" style="background:#ECFDF5;color:#0E9F6E">→</div>
+      <div>
+        <b>列表用 Tab（带数量），表单用大号色块条，名称前用「色条 + 文字标签」。</b>
+        <p>
+          原因：围栏类型只有 3 个值且数量少，Tab 带数字能直接暴露「装货围栏只建了 5 个，卸货 4 个，是不是还缺」这种业务问题；
+          下拉框把选项藏起来，反而要多点一次才知道有什么。<br>
+          名称前的文字标签是必须的 —— 光靠颜色不够直观，加两个字成本很低，但司机/调度看一眼就懂。
+        </p>
+      </div>
+    </div>
+
+    <h3 class="sec"><span class="no">!</span>三个方案都要一起解决的问题</h3>
+    <div class="card">
+      <table class="cmp">
+        <tbody>
+          <tr>
+            <td style="width:16%">历史数据</td>
+            <td>现在库里有 15 条围栏没有类型。建议：给字段默认值 <b>提醒围栏</b>（最安全：不会误进运单下拉），
+              并在 Tab 上开一个「未分类」项，方便你一次性补标。如果全部硬塞默认值又不可筛，以后就再也分不清哪些是补过的。</td>
+          </tr>
+          <tr>
+            <td>一个围栏既装又卸</td>
+            <td>现在只有单选。实际业务里同一厂区常常既收货又发货。可选做法：① 建两条围栏（名称要错开，如「XX厂-装」「XX厂-卸」）；
+              ② 字段存数组允许多选（但运单下拉的过滤逻辑要改成「包含」）。<b>建议先单选</b>，等真遇到再升级，字段用英文 key 便于扩展。</td>
+          </tr>
+          <tr>
+            <td>数据字段</td>
+            <td>新建字段 <code>fence_type</code>，值存 <code>pickup / delivery / alert</code>（英文 key，中文只用于展示）。
+              这样以后加第 4 种类型、或者小程序/大屏端复用，都不用改数据。</td>
+          </tr>
+          <tr>
+            <td>编辑页必选</td>
+            <td>编辑老围栏时类型为空 → 编辑弹窗打开后也要强制选，否则「保存修改」按钮 disabled 并提示。不要只在新增时校验。</td>
+          </tr>
+          <tr>
+            <td class="yes">顺带能修的坑</td>
+            <td>运单新建页的「装货地 / 卸货地」下拉现在是 <b>全部围栏混在一起</b>（两处 <code>fenceList</code> 未过滤）。
+              有了类型字段后，装货地下拉只显示装货围栏 + 提醒围栏（或只显示装货），能直接消灭「选错围栏导致里程算错」的问题。
+              这个改动很小，建议一起做。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="legend">
+      <span><span class="sw" style="background:var(--pick)"></span>装货围栏 #2563EB</span>
+      <span><span class="sw" style="background:var(--drop)"></span>卸货围栏 #0E9F6E</span>
+      <span><span class="sw" style="background:var(--warn)"></span>提醒围栏 #D97706</span>
+      <span style="color:var(--ink4)">三个色都避开了品牌红 #c8102e，不会跟「删除/主按钮」混淆</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const sw = document.getElementById('sw');
+  const panels = { A: 'pA', B: 'pB', C: 'pC', D: 'pD' };
+  sw.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-t]');
+    if (!b) return;
+    sw.querySelectorAll('button[data-t]').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    Object.values(panels).forEach(id => document.getElementById(id).classList.remove('on'));
+    document.getElementById(panels[b.dataset.t]).classList.add('on');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // 表单类型选择交互 demo
+  document.querySelectorAll('.type-cards').forEach(g => {
+    g.querySelectorAll('.tc').forEach(c => {
+      c.addEventListener('click', () => {
+        g.querySelectorAll('.tc').forEach(x => x.classList.remove('on'));
+        c.classList.add('on');
+        const pv = g.parentElement.querySelector('.preview-box .pv .nmA');
+        if (pv) {
+          const kind = c.classList.contains('pk') ? 'pk' : c.classList.contains('dp') ? 'dp' : 'wn';
+          const label = { pk: '装货', dp: '卸货', wn: '提醒' }[kind];
+          const grad = { pk: 'linear-gradient(180deg,#60A5FA,#2563EB)', dp: 'linear-gradient(180deg,#34D399,#0E9F6E)', wn: 'linear-gradient(180deg,#FBBF24,#D97706)' }[kind];
+          pv.querySelector('.bar').style.background = grad;
+          const t = pv.querySelector('.tagT');
+          t.className = 'tagT ' + kind;
+          t.textContent = label;
+        }
+      });
+    });
+  });
+
+  document.querySelectorAll('.type-bars').forEach(g => {
+    g.querySelectorAll('.tb').forEach(c => {
+      c.addEventListener('click', () => {
+        g.querySelectorAll('.tb').forEach(x => x.classList.remove('on'));
+        c.classList.add('on');
+        const box = g.parentElement.parentElement.querySelector('.preview-box');
+        if (!box) return;
+        const kind = c.classList.contains('pk') ? 'pk' : c.classList.contains('dp') ? 'dp' : 'wn';
+        const label = { pk: '装货', dp: '卸货', wn: '提醒' }[kind];
+        const short = { pk: '装', dp: '卸', wn: '铃' }[kind];
+        const ic = box.querySelector('.nmC .ic');
+        ic.className = 'ic ' + kind; ic.textContent = short;
+        const dt = box.querySelector('.dotTxt');
+        dt.className = 'dotTxt ' + kind;
+        dt.innerHTML = '<span class="d"></span>' + label + '围栏';
+      });
+    });
+  });
+
+  // Tab / 分段 demo
+  document.querySelectorAll('.type-tabs').forEach(g => {
+    g.querySelectorAll('.t').forEach(t => t.addEventListener('click', () => {
+      g.querySelectorAll('.t').forEach(x => x.classList.remove('on'));
+      t.classList.add('on');
+    }));
+  });
+  document.querySelectorAll('.seg').forEach(g => {
+    g.querySelectorAll('.s').forEach(t => t.addEventListener('click', () => {
+      g.querySelectorAll('.s').forEach(x => x.classList.remove('on'));
+      t.classList.add('on');
+    }));
+  });
+  document.querySelectorAll('.radio-line').forEach(g => {
+    g.querySelectorAll('.rl').forEach(t => t.addEventListener('click', () => {
+      g.querySelectorAll('.rl').forEach(x => x.classList.remove('on'));
+      t.classList.add('on');
+    }));
+  });
+</script>
+</body>
+</html>

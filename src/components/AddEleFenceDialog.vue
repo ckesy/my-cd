@@ -25,6 +25,24 @@
       <div class="form-panel">
         <el-form :model="form" :rules="rules" ref="formRef" label-position="top" size="default" class="stagger-form"
           status-icon>
+          <!-- ⭐ 围栏类型（必选）：装货 / 卸货 / 提醒 -->
+          <el-form-item label="围栏类型" prop="fence_type" class="fence-type-item">
+            <div class="fence-type-cards">
+              <div v-for="t in FENCE_TYPE_OPTIONS" :key="t.key" class="ft-card" :class="[t.key, { on: form.fence_type === t.key }]"
+                :title="t.desc" @click="handlePickType(t.key)">
+                <div class="ft-check">✓</div>
+                <div class="ft-ic">{{ t.short }}</div>
+                <div class="ft-tt">{{ t.label }}</div>
+              </div>
+            </div>
+            <div class="ft-hint">
+              <template v-if="form.fence_type === 'pickup'">装货围栏：运单里只能选到「装货地」</template>
+              <template v-else-if="form.fence_type === 'delivery'">卸货围栏：运单里只能选到「卸货地」</template>
+              <template v-else-if="form.fence_type === 'alert'">提醒围栏：只做进出提醒，不出现在运单下拉</template>
+              <template v-else>请选择类型，选好后列表名称前会显示对应标识</template>
+            </div>
+          </el-form-item>
+
           <el-form-item label="围栏形状">
             <el-radio-group v-model="form.shape" @change="handleShapeChange" :disabled="isEdit">
               <el-radio label="circle">圆形</el-radio>
@@ -316,6 +334,7 @@ const form = reactive({
   name: '',
   org: '',
   attr: '',
+  fence_type: '',
   radius: 1000,
   bufferradius: 50,
   center: '',
@@ -328,6 +347,21 @@ const form = reactive({
   lastActionTime: '',
   lastActionText: '',
 })
+
+/* ============================================================
+   ⭐ 围栏类型：pickup 装货 / delivery 卸货 / alert 提醒
+   值存英文 key（以后加类型、小程序/大屏复用都不用改数据）
+   ============================================================ */
+const FENCE_TYPE_OPTIONS = [
+  { key: 'pickup', label: '装货围栏', short: '装', desc: '运单「装货地」下拉只显示装货围栏' },
+  { key: 'delivery', label: '卸货围栏', short: '卸', desc: '运单「卸货地」下拉只显示卸货围栏' },
+  { key: 'alert', label: '提醒围栏', short: '铃', desc: '只用于进出提醒，不出现在运单' },
+]
+
+const handlePickType = (key) => {
+  form.fence_type = key
+  formRef.value?.validateField('fence_type').catch(() => { })
+}
 
 const validateName = async (rule, value, callback) => {
   if (!value) { callback(new Error('请输入围栏名称')); return }
@@ -401,6 +435,7 @@ const rules = {
   name: [{ required: true, validator: validateName, trigger: 'blur' }],
   org: [{ required: true, message: '请选择所属机构', trigger: 'change' }],
   attr: [{ required: true, message: '请选择围栏属性', trigger: 'change' }],
+  fence_type: [{ required: true, message: '请选择围栏类型', trigger: 'change' }],
 }
 
 const radiusMarks = { 50: '50m', 5000: '5km', 10000: '10km', 25000: '25km', 50000: '50km' }
@@ -634,6 +669,8 @@ const loadEditData = () => {
   form.name = d.name || ''
   form.org = d.org || ''
   form.attr = d.attr || d.desc || ''
+  // ⭐ 老围栏没有类型时按「提醒围栏」兜底（与数据库默认值一致）
+  form.fence_type = d.fence_type || 'alert'
   form.radius = d.radius || 1000
   form.bufferradius = d.bufferradius || 50
   form.center = d.center || ''
@@ -1121,7 +1158,7 @@ const handleClose = () => {
   visible.value = false
   formRef.value?.resetFields()
   Object.assign(form, {
-    shape: 'circle', name: '', org: '', attr: '',
+    shape: 'circle', name: '', org: '', attr: '', fence_type: '',
     radius: 1000, bufferradius: 50, center: '',
     points: '', pointsDisplay: '', province: '', city: '', adcode: '',
     location: '', lastActionTime: '', lastActionText: '',
@@ -1138,12 +1175,50 @@ const handleClose = () => {
 // ============================================================
 // 提交表单
 // ============================================================
+/* ⭐ 降级容错：fence_type 列还没建（迁移未执行）时剥字段重试，别让保存直接失败 */
+const isMissingTypeCol = (err) => {
+  const msg = String((err && (err.message || err.details || err.hint)) || '').toLowerCase()
+  return msg.includes('fence_type') &&
+    (msg.includes('column') || msg.includes('schema cache') || msg.includes('does not exist'))
+}
+
+const insertFenceRow = async (payload) => {
+  let res = await supabase.from('ele_fences').insert(payload).select('id').single()
+  if (res.error && isMissingTypeCol(res.error)) {
+    console.warn('[围栏] fence_type 列不存在，剔除该字段重试')
+    ElMessage.warning('围栏类型字段还没生效，请先执行 sql/2026-10-22_ele_fence_type.sql')
+    const retry = { ...payload }
+    delete retry.fence_type
+    res = await supabase.from('ele_fences').insert(retry).select('id').single()
+  }
+  return res
+}
+
+const updateFenceRow = async (payload, gfid) => {
+  let res = await supabase.from('ele_fences').update(payload).eq('gfid', gfid)
+  if (res.error && isMissingTypeCol(res.error)) {
+    console.warn('[围栏] fence_type 列不存在，剔除该字段重试')
+    ElMessage.warning('围栏类型字段还没生效，请先执行 sql/2026-10-22_ele_fence_type.sql')
+    const retry = { ...payload }
+    delete retry.fence_type
+    res = await supabase.from('ele_fences').update(retry).eq('gfid', gfid)
+  }
+  return res
+}
+
 const submitForm = (isContinue) => {
   formRef.value.validate(async (valid) => {
     if (!valid) return
 
     if (nameExists.value) {
       ElMessage.error(`围栏名称「${form.name}」已存在，请修改后重试`)
+      return
+    }
+
+    // ⭐ 类型必选（input 类控件不会自动触发 change 校验，这里再兜一次）
+    if (!form.fence_type) {
+      ElMessage.warning('请先选择围栏类型（装货 / 卸货 / 提醒）')
+      formRef.value?.validateField('fence_type').catch(() => { })
       return
     }
 
@@ -1213,6 +1288,7 @@ const submitForm = (isContinue) => {
         shape: form.shape,
         org: finalOrg,
         attr: form.attr,
+        fence_type: form.fence_type || 'alert',
         location: form.location,
         owner_account: myAccount,
         updated_at: now,
@@ -1235,15 +1311,11 @@ const submitForm = (isContinue) => {
       let dbRecordId = null
 
       if (!isEdit.value) {
-        const { data: dbData, error: dbErr } = await supabase
-          .from('ele_fences')
-          .insert({
-            ...dbPayload,
-            gfid: null,
-            created_at: now,
-          })
-          .select('id')
-          .single()
+        const { data: dbData, error: dbErr } = await insertFenceRow({
+          ...dbPayload,
+          gfid: null,
+          created_at: now,
+        })
 
         if (dbErr) {
           console.error('数据库写入失败：', dbErr)
@@ -1350,10 +1422,7 @@ const submitForm = (isContinue) => {
           console.warn('[新增围栏] 高德返回没有 gfid')
         }
       } else if (isEdit.value) {
-        const { error: dbErr } = await supabase
-          .from('ele_fences')
-          .update(dbPayload)
-          .eq('gfid', props.editData.gfid)
+        const { error: dbErr } = await updateFenceRow(dbPayload, props.editData.gfid)
         if (dbErr) {
           console.error('数据库更新失败：', dbErr)
           ElMessage.warning('信息暂时没有同步成功哈～～')
@@ -1602,6 +1671,140 @@ const submitForm = (isContinue) => {
 .form-panel::-webkit-scrollbar-thumb {
   background: #CBD5E1;
   border-radius: 2px;
+}
+
+/* ============================================================
+   ⭐ 围栏类型卡片单选（装货 / 卸货 / 提醒）
+   颜色与列表页保持一致，且都避开品牌红 #c8102e
+   ============================================================ */
+.fence-type-item :deep(.el-form-item__label) {
+  font-weight: 700;
+}
+
+.fence-type-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.ft-card {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px 6px 8px;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
+  min-height: 34px;
+}
+
+.ft-card:hover {
+  transform: translateY(-1px);
+  border-color: #CBD5E1;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.07);
+}
+
+.ft-ic {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.ft-tt {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+
+/* 选中标记：右上角一个小对勾（不带圆底，避免一行布局下与文字挤） */
+.ft-check {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  width: auto;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+  color: transparent;
+  transition: color 0.18s;
+}
+
+/* 各类型配色 */
+.ft-card.pickup .ft-ic {
+  background: #EFF4FF;
+  color: #2563EB;
+}
+
+.ft-card.delivery .ft-ic {
+  background: #ECFDF5;
+  color: #0E9F6E;
+}
+
+.ft-card.alert .ft-ic {
+  background: #FFF7ED;
+  color: #D97706;
+}
+
+.ft-card.pickup.on {
+  border-color: #2563EB;
+  background: linear-gradient(180deg, #F7FAFF, #FFFFFF);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.13);
+}
+
+.ft-card.delivery.on {
+  border-color: #0E9F6E;
+  background: linear-gradient(180deg, #F5FEF9, #FFFFFF);
+  box-shadow: 0 4px 14px rgba(14, 159, 110, 0.13);
+}
+
+.ft-card.alert.on {
+  border-color: #D97706;
+  background: linear-gradient(180deg, #FFFCF7, #FFFFFF);
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.13);
+}
+
+.ft-card.pickup.on .ft-check {
+  color: #2563EB;
+}
+
+.ft-card.delivery.on .ft-check {
+  color: #0E9F6E;
+}
+
+.ft-card.alert.on .ft-check {
+  color: #D97706;
+}
+
+.ft-hint {
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #94A3B8;
+}
+
+/* 未选类型（校验失败）时给卡片描边，避免只靠 label 下方的红字 */
+.fence-type-item.is-error .ft-card:not(.on) {
+  border-color: #F87171;
 }
 
 .stagger-form :deep(.el-form-item) {

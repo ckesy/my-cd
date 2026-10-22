@@ -26,23 +26,17 @@
           end-placeholder="结束日期"
           value-format="YYYY-MM-DD"
           unlink-panels
-          style="width: 240px"
+          style="width: 230px"
         />
-        <el-select v-model="searchForm.org" placeholder="所属机构" clearable style="width: 140px">
-          <el-option label="机构A" value="A" />
-          <el-option label="机构B" value="B" />
-        </el-select>
-        <el-select v-model="searchForm.source" placeholder="运单来源" clearable style="width: 130px">
-          <el-option label="来源1" value="1" />
-          <el-option label="来源2" value="2" />
-        </el-select>
-        <el-input v-model="searchForm.waybillNo" placeholder="运单编号" clearable style="width: 150px" />
-        <el-input v-model="searchForm.receiveNo" placeholder="接单编号" clearable style="width: 150px" />
-        <el-input v-model="searchForm.plate" placeholder="车牌号码" clearable style="width: 130px" />
-        <el-input v-model="searchForm.driver" placeholder="司机姓名" clearable style="width: 120px" />
+        <el-input v-model="searchForm.waybillNo" placeholder="运单编号" clearable style="width: 140px" />
+        <!-- ⭐ 「发起人」= waybills.creator（谁建的这条运单） -->
+        <el-input v-model="searchForm.creator" placeholder="发起人" clearable style="width: 110px" />
+        <el-input v-model="searchForm.plate" placeholder="承运车辆" clearable style="width: 120px" />
+        <el-input v-model="searchForm.driver" placeholder="司机姓名" clearable style="width: 110px" />
 
-        <!-- ⭐ 待我审批：只看当前审批节点是我的上报（按运单汇总） -->
-        <button class="mine-chip" :class="{ on: onlyMine }" @click="toggleMine">
+        <!-- ⭐ 待我审批：只看当前审批节点是我的上报（按运单汇总）
+             ⚠️ 只在「业务流程 → 费用审批」开着时才出现；关掉审批就没有"待审"这回事 -->
+        <button v-if="auditOn" class="mine-chip" :class="{ on: onlyMine }" @click="toggleMine">
           <el-icon><Bell /></el-icon>
           <span>待我审批</span>
           <span class="mine-n" :class="{ zero: !myPendingCount }">{{ myPendingCount }}</span>
@@ -60,7 +54,7 @@
     </div>
 
     <!-- ⭐ 待我审批筛选态：明确「现在看到的是子集」+ 一键清除 -->
-    <div v-if="onlyMine" class="mine-bar fade-up">
+    <div v-if="auditOn && onlyMine" class="mine-bar fade-up">
       <span class="mine-bar-ic"><el-icon><Bell /></el-icon></span>
       <span class="mine-bar-t">只看<b>待我审批</b>的运单 · 共 {{ myPendingCount }} 笔上报</span>
       <span class="mine-bar-x" @click="toggleMine">清除筛选</span>
@@ -336,8 +330,8 @@
                   <template #default="{ row }">
                     <div v-if="feeOf(row)" class="fee-cell">
                       <span class="fee-total">¥{{ feeOf(row).total.toFixed(2) }}</span>
-                      <span v-if="feeOf(row).mine" class="fee-badge is-mine" title="只看待我审批的运单" @click="showMine">待我审 {{ feeOf(row).mine }}</span>
-                      <span v-else-if="feeOf(row).pending" class="fee-badge">待审 {{ feeOf(row).pending }}</span>
+                      <span v-if="auditOn && feeOf(row).mine" class="fee-badge is-mine" title="只看待我审批的运单" @click="showMine">待我审 {{ feeOf(row).mine }}</span>
+                      <span v-else-if="auditOn && feeOf(row).pending" class="fee-badge">待审 {{ feeOf(row).pending }}</span>
                     </div>
                     <span v-else class="fee-none">—</span>
                   </template>
@@ -425,6 +419,7 @@ import {
 import dayjs from 'dayjs'
 import { supabase } from '@/utils/supabase'
 import { canApproveReport as canApproveReportShared } from '@/utils/feeTodo'
+import { approvalOn, ensureApprovalMode, currentUserForModules } from '@/utils/modules'
 
 const router = useRouter()
 const route = useRoute()
@@ -502,11 +497,9 @@ const setActive = (index) => {
 // 搜索表单
 // ============================================================
 const searchForm = reactive({
-  org: '',
-  source: '',
   waybillNo: '',
-  receiveNo: '',
-  plate: '',
+  creator: '',      // 发起人（waybills.creator）
+  plate: '',        // 承运车辆（匹配 waybills.vehicle）
   driver: '',
 })
 const dateRange = ref([])
@@ -545,8 +538,6 @@ const DEFAULT_COLUMNS = [
   { prop: 'vehicle', label: '承运车辆', visible: true, fixed: false, minWidth: 120, align: 'center' },
   { prop: 'driver', label: '承运司机', visible: true, fixed: false, minWidth: 120, align: 'center' },
   { prop: 'carryQuantity', label: '承运数量', visible: true, fixed: false, minWidth: 100, align: 'center' },
-  { prop: 'receiveNo', label: '接单编号', visible: true, fixed: false, minWidth: 130, align: 'center' },
-  { prop: 'source', label: '运单来源', visible: true, fixed: false, minWidth: 100, align: 'center' },
   { prop: 'creator', label: '发起人', visible: true, fixed: false, minWidth: 100, align: 'center' },
   { prop: 'createTime', label: '创建运单时间', visible: true, fixed: false, minWidth: 170, align: 'center' },
   /* ⭐ 费用列放在最末，与操作列一起右侧固定，横向滚动时始终可见 */
@@ -843,11 +834,19 @@ const applyIsolation = (query) => {
 // ⭐ 待我审批
 //   取「审核中」的上报 → 按 flow/current_level 判断当前节点是不是我
 //   → 拿 waybill_no 在**查询层**过滤（分页与 total 才准）
+// ⚠️ 总闸是「业务流程 → 费用审批」开关（fee_approval_configs.mode）：
+//    关掉审批后不存在"待审"这回事，入口不显示、也不去查库。
 // ============================================================
+const auditOn = computed(() => approvalOn.value)
 const onlyMine = ref(route.query.mine === '1')
 const myPendingCount = ref(0)
 
 const fetchPendingMine = async () => {
+  /* 审批关了：不查库、数字归零（历史"审核中"的单子也不再冒出入口） */
+  if (!auditOn.value) {
+    myPendingCount.value = 0
+    return []
+  }
   let q = supabase
     .from('reports')
     .select('id,waybill_no,type,amount,status,current_level,flow')
@@ -863,6 +862,7 @@ const fetchPendingMine = async () => {
 }
 
 const toggleMine = async () => {
+  if (!auditOn.value) return
   onlyMine.value = !onlyMine.value
   /* 待我审批与状态胶囊互斥：开了就回到「全部」，免得两个条件交叉出空表 */
   if (onlyMine.value) stats.value.forEach((it, i) => { it.active = i === 0 })
@@ -881,6 +881,14 @@ watch(() => route.query.mine, (v) => {
   onlyMine.value = on
   if (on) stats.value.forEach((it, i) => { it.active = i === 0 })
   currentPage.value = 1
+  fetchData()
+})
+
+/* 审批开关被关掉（业务流程画布那边）→ 退出「待我审批」，否则会留一个空列表 */
+watch(auditOn, (on) => {
+  if (on || !onlyMine.value) return
+  onlyMine.value = false
+  router.replace({ path: '/waybill', query: {} })
   fetchData()
 })
 
@@ -922,10 +930,9 @@ const fetchData = async () => {
     query = query.or('is_recurring.is.null,is_recurring.eq.false,trip_seq.eq.1')
 
     if (searchForm.waybillNo) query = query.ilike('waybill_no', '%' + searchForm.waybillNo + '%')
-    if (searchForm.receiveNo) query = query.ilike('receive_no', '%' + searchForm.receiveNo + '%')
+    if (searchForm.creator) query = query.ilike('creator', '%' + searchForm.creator + '%')
     if (searchForm.plate) query = query.ilike('vehicle', '%' + searchForm.plate + '%')
     if (searchForm.driver) query = query.ilike('driver', '%' + searchForm.driver + '%')
-    if (searchForm.source) query = query.eq('source', searchForm.source)
     if (dateRange.value && dateRange.value.length === 2) {
       const start = dateRange.value[0]
       const end = dateRange.value[1]
@@ -1062,7 +1069,7 @@ const loadFeeSummary = async (rows) => {
 
 const handleSearch = () => { currentPage.value = 1; fetchData() }
 const handleReset = () => {
-  Object.assign(searchForm, { org: '', source: '', waybillNo: '', receiveNo: '', plate: '', driver: '' })
+  Object.assign(searchForm, { waybillNo: '', creator: '', plate: '', driver: '' })
   dateRange.value = []
   currentPage.value = 1
   fetchData()
@@ -1083,8 +1090,7 @@ const handleExport = () => {
     '计划装货时间': r.pickup_time || '', '计划送达时间': r.plan_time || '',
     '货物名称': r.cargo, '货物数量': r.quantity, '运费': r.freight,
     '承运车辆': r.vehicle || '', '承运司机': r.driver || '',
-    '承运数量': r.carry_quantity || 0, '接单编号': r.receive_no || '',
-    '运单来源': r.source || '',
+    '承运数量': r.carry_quantity || 0,
     '发起人': r.creator || '',
     '创建时间': r.create_time || '',
     '拒单原因': r.reject_reason || '', '拒单补充说明': r.reject_note || '',
@@ -1181,6 +1187,12 @@ if (needOrgFilter.value && myOrgName.value) {
 // ============================================================
 onMounted(async () => {
   document.addEventListener('keydown', onEscKeydown)
+  /* ⭐ 审批开关来自「业务流程」画布：先读回来再取数，避免「待我审批」入口闪一下 */
+  await ensureApprovalMode(currentUserForModules())
+  if (!auditOn.value && onlyMine.value) {
+    onlyMine.value = false
+    router.replace({ path: '/waybill', query: {} })
+  }
   if (isCustomer && isSubAccount) await loadMyOrgInfo()
   fetchData()
 })

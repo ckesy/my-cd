@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>车队管理系统 · 业务流程与业务规则</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: #F5F7FA; color: #0F172A; -webkit-font-smoothing: antialiased;
+    font-size: 13px; line-height: 1.6;
+  }
+  :root {
+    --ink:#0F172A; --sub:#64748B; --mute:#94A3B8; --hair:#E2E8F0;
+    --brand:#c8102e; --soft:#F7F9FC;
+  }
+
+  /* ---------- 外壳 ---------- */
+  .shell { display: flex; align-items: flex-start; max-width: 1560px; margin: 0 auto; }
+
+  .nav {
+    position: sticky; top: 0; flex: 0 0 252px; height: 100vh; overflow-y: auto;
+    padding: 26px 14px 40px 22px; border-right: 1px solid var(--hair); background: #fff;
+  }
+  .nav-t { font-size: 11px; font-weight: 800; letter-spacing: 1.2px; color: var(--mute); margin: 0 0 12px; }
+  .nav a {
+    display: flex; align-items: baseline; gap: 8px; text-decoration: none;
+    padding: 7px 9px; border-radius: 7px; color: #475569; font-size: 12.5px; font-weight: 600;
+    margin-bottom: 2px; transition: .14s; border-left: 2px solid transparent;
+  }
+  .nav a:hover { background: #F7F9FC; color: var(--ink); }
+  .nav a.on { background: #FEF2F3; color: var(--brand); border-left-color: var(--brand); }
+  .nav a i { font-style: normal; font-size: 10px; color: var(--mute); font-weight: 700; min-width: 14px; }
+  .nav a.on i { color: var(--brand); }
+
+  .main { flex: 1; min-width: 0; padding: 0 40px 80px; }
+
+  /* ---------- 头部 ---------- */
+  .hd { padding: 44px 0 26px; border-bottom: 1px solid var(--hair); margin-bottom: 8px; }
+  .hd .kick { font-size: 11.5px; font-weight: 700; color: var(--brand); letter-spacing: 1.6px; margin-bottom: 10px; }
+  .hd h1 { font-size: 27px; font-weight: 800; margin: 0 0 10px; letter-spacing: -.3px; }
+  .hd p { margin: 0; color: var(--sub); font-size: 13.5px; max-width: 780px; }
+  .hd .meta { display: flex; gap: 18px; margin-top: 18px; flex-wrap: wrap; }
+  .hd .meta span { font-size: 12px; color: var(--mute); }
+  .hd .meta b { color: #334155; font-weight: 700; }
+
+  /* ---------- 章节 ---------- */
+  .sec { padding: 34px 0 8px; }
+  .sec-h { display: flex; align-items: flex-start; gap: 13px; margin-bottom: 6px; }
+  .sec-n {
+    flex: 0 0 auto; width: 25px; height: 25px; border-radius: 8px; background: var(--ink); color: #fff;
+    font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-top: 2px;
+  }
+  .sec-h h2 { font-size: 18.5px; font-weight: 800; margin: 0; letter-spacing: -.2px; }
+  .sec-h .sub { font-size: 12.5px; color: var(--sub); margin-top: 3px; }
+  .sec-desc { color: var(--sub); font-size: 13px; margin: 10px 0 16px; padding-left: 38px; }
+  .sec-desc b { color: #334155; font-weight: 700; }
+
+  .roles { display: flex; gap: 7px; flex-wrap: wrap; padding-left: 38px; margin-bottom: 20px; }
+  .role {
+    display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px;
+    border-radius: 6px; background: #fff; border: 1px solid var(--hair);
+    font-size: 11.5px; font-weight: 600; color: #475569;
+  }
+  .role i { width: 6px; height: 6px; border-radius: 50%; display: block; }
+
+  /* ---------- 阶段时间轴 ---------- */
+  .stages { padding-left: 38px; }
+  .stage { position: relative; padding-left: 40px; padding-bottom: 20px; }
+  .stage::before {
+    content: ''; position: absolute; left: 13px; top: 30px; bottom: 0; width: 2px;
+    background: linear-gradient(#E2E8F0, #EDF1F6);
+  }
+  .stage:last-child::before { display: none; }
+  .stage:last-child { padding-bottom: 4px; }
+  .stage .dot {
+    position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11.5px; font-weight: 800; color: #fff; background: var(--dc, #475569);
+    box-shadow: 0 2px 6px rgba(15,23,42,.14);
+  }
+  .stage-h { display: flex; align-items: baseline; gap: 9px; margin-bottom: 9px; flex-wrap: wrap; }
+  .stage-h b { font-size: 14px; font-weight: 800; }
+  .stage-h .who {
+    font-size: 10.5px; font-weight: 700; color: var(--dc, #475569);
+    background: var(--dbg, #F1F5F9); padding: 2px 6px; border-radius: 4px;
+  }
+  .stage-h .note { font-size: 12px; color: var(--mute); }
+
+  /* ---------- 步骤 ---------- */
+  .steps { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; }
+  .st {
+    background: #fff; border: 1px solid var(--hair); border-radius: 8px;
+    padding: 8px 11px; flex: 0 0 auto; min-width: 96px; max-width: 196px;
+    box-shadow: 0 1px 2px rgba(15,23,42,.03);
+  }
+  .st b { display: block; font-size: 12.5px; font-weight: 700; color: #1E293B; line-height: 1.45; }
+  .st span { display: block; font-size: 11.5px; color: var(--mute); margin-top: 2px; line-height: 1.45; }
+  .st.sys { background: #F8FAFC; border-style: dashed; }
+  .st.sys b { color: #475569; font-weight: 600; }
+  .ar {
+    flex: 0 0 26px; display: flex; align-items: center; justify-content: center;
+    color: #B6C2D2; font-size: 13px; font-weight: 700;
+  }
+
+  /* ---------- 分支 ---------- */
+  .branch { display: grid; gap: 7px; margin-top: 7px; }
+  .br {
+    display: flex; align-items: flex-start; gap: 9px; padding: 8px 11px; border-radius: 8px;
+    border: 1px solid var(--hair); background: #fff; font-size: 12.5px;
+  }
+  .br .k {
+    flex: 0 0 auto; min-width: 46px; text-align: center;
+    font-size: 10.5px; font-weight: 800; padding: 2px 6px; border-radius: 4px;
+    margin-top: 1px; white-space: nowrap;
+  }
+  .br .v { color: #334155; }
+  .br .v b { color: #0F172A; font-weight: 700; }
+  .br.ok { border-color: #C6E9D8; background: #F6FDF9; }
+  .br.ok .k { background: #DCFCE7; color: #15803D; }
+  .br.no { border-color: #FBD9C4; background: #FFFBF7; }
+  .br.no .k { background: #FFEDD5; color: #C2410C; }
+  .br.warn { border-color: #FBE3B4; background: #FFFDF5; }
+  .br.warn .k { background: #FEF3C7; color: #92400E; }
+  .br.info { border-color: #D3E3FB; background: #F7FAFF; }
+  .br.info .k { background: #DBEAFE; color: #1D4ED8; }
+
+  /* 判断节点 */
+  .decide {
+    display: inline-flex; align-items: center; gap: 7px; margin: 8px 0 6px;
+    font-size: 12px; font-weight: 700; color: #92400E;
+  }
+  .decide::before {
+    content: '?'; width: 17px; height: 17px; border-radius: 4px; background: #FEF3C7;
+    color: #B45309; font-size: 11px; font-weight: 800; display: flex;
+    align-items: center; justify-content: center; transform: rotate(45deg);
+  }
+  .decide span { transform: none; }
+
+  /* ---------- 规则卡 ---------- */
+  .rules {
+    padding-left: 38px; margin-top: 18px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 10px;
+  }
+  .rule-group { background: #fff; border: 1px solid var(--hair); border-radius: 10px; padding: 12px 14px; }
+  .rule-group h4 {
+    margin: 0 0 8px; font-size: 11.5px; font-weight: 800; letter-spacing: .6px;
+    color: var(--rc, #475569); display: flex; align-items: center; gap: 6px;
+  }
+  .rule-group h4::before { content: ''; width: 3px; height: 11px; border-radius: 2px; background: var(--rc, #475569); }
+  .rule-group ol { margin: 0; padding-left: 17px; }
+  .rule-group li { font-size: 12.5px; color: #334155; margin-bottom: 5px; line-height: 1.6; }
+  .rule-group li:last-child { margin-bottom: 0; }
+  .rule-group li b { color: #0F172A; font-weight: 700; }
+  .rule-group li em { font-style: normal; color: #B91C1C; font-weight: 600; }
+
+  /* ---------- 状态流转条 ---------- */
+  .states { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-left: 38px; margin: 4px 0 18px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px;
+    border-radius: 7px; font-size: 12px; font-weight: 700; border: 1px solid transparent;
+  }
+  .pill i { width: 6px; height: 6px; border-radius: 50%; }
+  .pill.s-wait { background: #FFF7ED; color: #C2410C; border-color: #FDE0C2; }
+  .pill.s-run  { background: #EFF6FF; color: #1D4ED8; border-color: #CFE0FB; }
+  .pill.s-ok   { background: #F0FDF4; color: #15803D; border-color: #C9EBD5; }
+  .pill.s-end  { background: #F8FAFC; color: #64748B; border-color: #E2E8F0; }
+  .pill.s-bad  { background: #FEF2F2; color: #B91C1C; border-color: #FBD5D5; }
+  .st-ar { color: #C3CEDC; font-size: 12px; font-weight: 700; }
+
+  /* ---------- 说明块 ---------- */
+  .tip {
+    margin: 14px 0 0 38px; padding: 10px 13px; border-radius: 9px;
+    background: #FFFDF5; border: 1px solid #FBE3B4; font-size: 12.5px; color: #78350F;
+  }
+  .tip b { color: #92400E; }
+  .tip.note { background: #F7FAFF; border-color: #D3E3FB; color: #1E3A8A; }
+  .tip.note b { color: #1D4ED8; }
+
+  /* ---------- 总览图 ---------- */
+  .overview {
+    background: #fff; border: 1px solid var(--hair); border-radius: 14px;
+    padding: 22px 22px 18px; margin: 24px 0 6px; box-shadow: 0 2px 10px rgba(15,23,42,.04);
+  }
+  .overview h3 { margin: 0 0 4px; font-size: 13.5px; font-weight: 800; }
+  .overview p { margin: 0 0 18px; font-size: 12px; color: var(--mute); }
+  .ov-flow { display: flex; align-items: flex-start; gap: 0; overflow-x: auto; padding-bottom: 6px; }
+  .ov {
+    flex: 0 0 auto; width: 118px; text-align: center; position: relative;
+  }
+  .ov .cir {
+    width: 34px; height: 34px; border-radius: 11px; margin: 0 auto 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; color: #fff; background: var(--oc, #475569);
+  }
+  .ov b { display: block; font-size: 12px; font-weight: 700; }
+  .ov span { display: block; font-size: 10.5px; color: var(--mute); margin-top: 1px; line-height: 1.4; }
+  .ov-line {
+    flex: 1 1 22px; min-width: 18px; height: 2px; margin-top: 16px;
+    background: linear-gradient(90deg, #DDE4ED, #CBD5E1);
+  }
+  .ov-foot {
+    margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--hair);
+    display: flex; gap: 22px; flex-wrap: wrap; font-size: 11.5px; color: var(--sub);
+  }
+  .ov-foot b { color: #334155; font-weight: 700; }
+
+  /* ---------- 规则速查表 ---------- */
+  table.rt { width: 100%; border-collapse: collapse; margin-left: 0; font-size: 12.5px; background: #fff; }
+  table.rt th {
+    text-align: left; font-size: 11px; font-weight: 800; color: #475569; letter-spacing: .5px;
+    padding: 9px 11px; background: #F7F9FC; border-bottom: 1px solid var(--hair); white-space: nowrap;
+  }
+  table.rt td { padding: 9px 11px; border-bottom: 1px solid #F1F5F9; color: #334155; vertical-align: top; }
+  table.rt td.cat { background: #FAFBFD; vertical-align: middle; border-right: 1px solid #F1F5F9; white-space: nowrap; }
+  table.rt td.cat b { color: var(--brand); font-weight: 800; font-size: 12px; letter-spacing: .3px; }
+  table.rt td b { color: #0F172A; font-weight: 700; }
+  table.rt tr:hover td { background: #FCFDFE; }
+  .tbl-wrap { padding-left: 38px; border: 1px solid var(--hair); border-radius: 10px; overflow: hidden; background: #fff; }
+  .tbl-wrap table.rt { margin: 0; }
+
+  @media print {
+    .nav { display: none; }
+    .main { padding: 0; }
+    .shell { display: block; }
+    .sec { break-inside: avoid; }
+  }
+  @media (max-width: 1100px) {
+    .nav { display: none; }
+    .main { padding: 0 20px 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <nav class="nav" id="nav">
+    <p class="nav-t">业务目录</p>
+  </nav>
+
+  <main class="main">
+
+    <div class="hd">
+      <div class="kick">业务手册 · 2026-10</div>
+      <h1>车队管理系统 · 业务流程与业务规则</h1>
+      <p>只讲业务：一件事由谁发起、按什么顺序走、满足什么条件才能往下走、走不通时去哪里。不含技术实现细节。</p>
+      <div class="meta">
+        <span>业务流程 <b>9</b> 条</span>
+        <span>业务角色 <b>6</b> 类</span>
+        <span>业务规则 <b>70+</b> 条</span>
+        <span>更新时间 <b>2026-10-22</b></span>
+      </div>
+    </div>
+
+    <!-- ============ 总览 ============ -->
+    <div class="overview">
+      <h3>一张图看懂：一趟货从下单到收钱</h3>
+      <p>主干流程 8 个环节，中间任何一环出问题都有对应的处理去向（见第 1 章的分支说明）。</p>
+      <div class="ov-flow">
+        <div class="ov" style="--oc:#2563EB"><div class="cir">1</div><b>建单派单</b><span>调度发起</span></div>
+        <div class="ov-line"></div>
+        <div class="ov" style="--oc:#D97706"><div class="cir">2</div><b>司机接单</b><span>接 / 拒</span></div>
+        <div class="ov-line"></div>
+        <div class="ov" style="--oc:#0E9F6E"><div class="cir">3</div><b>到场装货</b><span>围栏内打卡</span></div>
+        <div class="ov-line"></div>
+        <div class="ov" style="--oc:#0891B2"><div class="cir">4</div><b>确认发车</b><span>开始计里程</span></div>
+        <div class="ov-line"></div>
+        <div class="ov" style="--oc:#7C3AED"><div class="cir">5</div><b>在途运输</b><span>实时跟踪</span></div>
+        <div class="ov-line"></div>
+        <div class="ov" style="--oc:#0E9F6E"><div class="cir">6</div><b>到场卸货</b><span>围栏内打卡</span></div>
+        <div class="ov-line"></div>
+        <div class="ov" style="--oc:#15803D"><div class="cir">7</div><b>确认完成</b><span>运单结单</span></div>
+        <div class="ov-line"></div>
+        <div class="ov" style="--oc:#c8102e"><div class="cir">8</div><b>费用结算</b><span>报账→审批→打款</span></div>
+      </div>
+      <div class="ov-foot">
+        <span><b>参与角色：</b>服务商运营 · 客户主账号 · 调度 · 司机 · 财务 · 老板</span>
+        <span><b>两个入口：</b>调度用电脑端，司机用手机小程序</span>
+      </div>
+    </div>
+
+    <!-- ============ 1 ============ -->
+    <section class="sec" id="s1">
+      <div class="sec-h">
+        <div class="sec-n">1</div>
+        <div>
+          <h2>运单主线：一趟货怎么跑完</h2>
+          <div class="sub">系统里所有事情都是围绕这条线转的，其他流程都是它的分支或配套</div>
+        </div>
+      </div>
+      <div class="sec-desc">
+        <b>谁发起：</b>调度在电脑端建单并派出去，司机在手机上接单和上报节点，系统自动记录时间与位置。
+      </div>
+      <div class="roles">
+        <span class="role"><i style="background:#2563EB"></i>调度（电脑端）</span>
+        <span class="role"><i style="background:#D97706"></i>司机（小程序）</span>
+        <span class="role"><i style="background:#0E9F6E"></i>系统自动</span>
+      </div>
+
+      <div class="stages">
+
+        <div class="stage" style="--dc:#2563EB;--dbg:#EFF6FF">
+          <div class="dot">1</div>
+          <div class="stage-h"><b>建单并派出去</b><span class="who">调度</span><span class="note">运单从这里开始</span></div>
+          <div class="steps">
+            <div class="st"><b>选客户</b><span>可带出联系人</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>选装货地 / 卸货地</b><span>从电子围栏里选</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>填货物与数量</b><span>可带出单价</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>选派给谁</b><span>司机 / 车辆 / 车队</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>设计划装货与送达时间</b><span>可"上一趟+1天"</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>发布</b><span>生成运单号</span></div>
+          </div>
+          <div class="branch">
+            <div class="br info"><span class="k">系统</span><span class="v">自动算好<b>计划里程</b>和<b>计划用时</b>，把运单送进被派人的任务清单，并给对方发一条派单提醒。</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#D97706;--dbg:#FFF7ED">
+          <div class="dot">2</div>
+          <div class="stage-h"><b>司机接单</b><span class="who">司机</span><span class="note">运单状态：待接单</span></div>
+          <div class="decide"><span>这趟能不能接？</span></div>
+          <div class="branch">
+            <div class="br ok"><span class="k">能接</span><span class="v">司机点「接单」→ 运单进入 <b>待装车</b>，并记下接单人和接单时间。</span></div>
+            <div class="br no"><span class="k">不能接</span><span class="v">必须<b>选一个原因</b>（车辆故障 / 时间冲突 / 路线不熟 / 其他并写明）→ 运单进入 <b>待重新指派</b> → 回到调度手里改派。</span></div>
+          </div>
+          <div class="tip"><b>注意：</b>常驻任务和派给整个车队的任务不能拒单 —— 不接就放着让别人接。</div>
+        </div>
+
+        <div class="stage" style="--dc:#0E9F6E;--dbg:#F0FDF4">
+          <div class="dot">3</div>
+          <div class="stage-h"><b>到场装货</b><span class="who">司机</span><span class="note">必须人在装货围栏里</span></div>
+          <div class="steps">
+            <div class="st"><b>到达装货地</b><span>车辆定位判定</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>点「装车完成」</b><span>系统核对是否在围栏内</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>运单变「装车完成」</b><span>记录装车完成时间</span></div>
+          </div>
+          <div class="branch">
+            <div class="br warn"><span class="k">打不了卡</span><span class="v">围栏画偏了、定位漂移时，调度可临时关掉这单的打卡要求，但要<b>留下是谁、什么时候、为什么关的</b>，事后再打开。</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#0891B2;--dbg:#ECFEFF">
+          <div class="dot">4</div>
+          <div class="stage-h"><b>确认发车</b><span class="who">司机</span><span class="note">运单状态：已发车</span></div>
+          <div class="steps">
+            <div class="st"><b>点「确认发车」</b><span>运单变「已发车」</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>开始计算已行驶</b><span>从这一刻起算，不是从接单起算</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#7C3AED;--dbg:#FAF5FF">
+          <div class="dot">5</div>
+          <div class="stage-h"><b>在途运输</b><span class="who">系统自动</span><span class="note">调度和客户都能看</span></div>
+          <div class="steps">
+            <div class="st"><b>实时位置</b><span>地图上看车在哪</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>进度条</b><span>已走 / 还剩多少公里</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>预计到达</b><span>按剩余里程估算</span></div>
+          </div>
+          <div class="branch">
+            <div class="br warn"><span class="k">估算失效</span><span class="v">车辆定位超过 <b>30 分钟</b>没更新，就不显示预计到达，只提示"定位已停更"，避免给出错误的到达时间。</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#0E9F6E;--dbg:#F0FDF4">
+          <div class="dot">6</div>
+          <div class="stage-h"><b>到场卸货</b><span class="who">司机</span><span class="note">必须人在卸货围栏里</span></div>
+          <div class="steps">
+            <div class="st"><b>点「确认到达」</b><span>系统核对卸货围栏</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>运单变「已到达」</b><span>记录到达时间</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#15803D;--dbg:#F0FDF4">
+          <div class="dot">7</div>
+          <div class="stage-h"><b>确认完成</b><span class="who">司机</span><span class="note">运单状态：已完成</span></div>
+          <div class="steps">
+            <div class="st"><b>点「完成」</b><span>运单结单，记录完成时间</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>这趟结束</b><span>车辆、司机释放，可接下一单</span></div>
+          </div>
+          <div class="tip note"><b>两种运输节点模式：</b>「极简」只有 接单 → 完成 两步（短驳、场内倒运常用）；「详细」才有 装车完成 / 确认发车 / 确认到达 三个中间节点（长途干线用）。建单时选定，中途不能改。</div>
+        </div>
+
+        <div class="stage" style="--dc:#c8102e;--dbg:#FEF2F3">
+          <div class="dot">8</div>
+          <div class="stage-h"><b>费用结算</b><span class="who">司机报 / 财务付</span><span class="note">详见第 5 章</span></div>
+          <div class="steps">
+            <div class="st"><b>司机上报费用</b><span>油费、过路、磅单…</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>逐级审批</b><span>调度 → 财务 → 老板</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>登记打款</b><span>留付款凭据</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="rules">
+        <div class="rule-group" style="--rc:#2563EB">
+          <h4>状态怎么变</h4>
+          <ol>
+            <li>一条运单在同一时刻只有一个状态，共 9 个：<b>待接单 / 待重新指派 / 待装车 / 装车中 / 装车完成 / 已发车 / 已到达 / 已完成 / 已取消</b>。</li>
+            <li>正常路径：待接单 → 待装车 → 装车完成 → 已发车 → 已到达 → 已完成。</li>
+            <li>「装车中」是早期遗留状态，正常流程不再产生，只在看老数据时会遇到。</li>
+            <li>完成和取消都是终态，不能再往回改，只能补录费用。</li>
+          </ol>
+        </div>
+        <div class="rule-group" style="--rc:#B91C1C">
+          <h4>谁能动这条单</h4>
+          <ol>
+            <li>只有<b>被派到的人</b>能接单和上报节点；别人在任务清单里根本看不到。</li>
+            <li>派给车队时，该车队<b>及其下级车队</b>的司机都能看到、都能抢，谁先接算谁的。</li>
+            <li>已被同事接走的单，<em>10 分钟内</em>还会显示但标注"已被接走"，不告诉是谁接的。</li>
+            <li>调度只能在「待接单 / 待重新指派」时改派，已接单的不能直接换人。</li>
+            <li>取消运单需要说明原因，已完成的运单不能取消。</li>
+          </ol>
+        </div>
+        <div class="rule-group" style="--rc:#C2410C">
+          <h4>一车一人只能干一件事</h4>
+          <ol>
+            <li>同一辆车、同一个司机，<b>同一时间只能有一条没跑完的运单</b>。</li>
+            <li>「没跑完」= 待装车 / 装车中 / 装车完成 / 已发车 / 已到达。</li>
+            <li>「待接单」还不算占用 —— 因为还没接，可以改派给别人。</li>
+            <li>司机拒单后，这辆车立刻释放，别的单可以派给他。</li>
+            <li>这条规矩在建单时不拦，<em>在司机接单那一刻才拦</em>，提示"该车还有未结束的运输记录"。</li>
+          </ol>
+        </div>
+        <div class="rule-group" style="--rc:#0E9F6E">
+          <h4>打卡（到场证明）</h4>
+          <ol>
+            <li>「装车完成」要在<b>装货地围栏</b>里点，「确认到达」要在<b>卸货地围栏</b>里点。</li>
+            <li>判断依据是<b>车辆的定位</b>，不是手机定位 —— 人到了车没到不算。</li>
+            <li>一单派了多辆车时，不做围栏打卡校验（无法判断是哪辆车）。</li>
+            <li>围栏画的是行政区划时，系统无法判断，直接放行并留一条说明。</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 2 ============ -->
+    <section class="sec" id="s2">
+      <div class="sec-h">
+        <div class="sec-n">2</div>
+        <div>
+          <h2>常驻任务：固定线路天天跑</h2>
+          <div class="sub">一条任务管一个周期内的 N 趟，司机每趟单独接</div>
+        </div>
+      </div>
+      <div class="sec-desc">
+        <b>典型场景：</b>厂区到码头每天 4 趟、包月倒运。<b>和普通运单的区别：</b>普通单是一单跑一次，常驻任务是一单跑很多次，次数或时间到了自动收口。
+      </div>
+      <div class="roles">
+        <span class="role"><i style="background:#2563EB"></i>调度（电脑端）</span>
+        <span class="role"><i style="background:#D97706"></i>司机（小程序）</span>
+      </div>
+
+      <div class="stages">
+        <div class="stage" style="--dc:#2563EB;--dbg:#EFF6FF">
+          <div class="dot">1</div>
+          <div class="stage-h"><b>建一条常驻任务</b><span class="who">调度</span></div>
+          <div class="steps">
+            <div class="st"><b>照常填运单信息</b><span>线路、货物、装卸地</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>打开「常驻」</b><span>这条单就变成一个周期任务</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>选计算方式</b><span>按时间 或 按次数</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>发布</b><span>自动生成组号，状态"生效中"</span></div>
+          </div>
+          <div class="branch">
+            <div class="br info"><span class="k">按时间</span><span class="v">设<b>开始日期</b>和<b>结束日期</b>，在这段时间内可以无限接，到期自动停。</span></div>
+            <div class="br info"><span class="k">按次数</span><span class="v">设<b>总趟数上限</b>，例如 30 趟，跑完即止，跟日期无关。</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#D97706;--dbg:#FFF7ED">
+          <div class="dot">2</div>
+          <div class="stage-h"><b>司机每趟「接一趟」</b><span class="who">司机</span><span class="note">不是接整条任务，是接其中一趟</span></div>
+          <div class="decide"><span>现在能不能接这趟？</span></div>
+          <div class="branch">
+            <div class="br ok"><span class="k">可以</span><span class="v">任务在有效期内、额度没用完、任务没暂停 → 接单成功，<b>生成一趟新的运单</b>，之后按普通运单流程跑。</span></div>
+            <div class="br no"><span class="k">不可以</span><span class="v">提示「还没到开始时间 / 已过有效期 / 已暂停 / 次数已用尽（已用 28/30）」。</span></div>
+            <div class="br no"><span class="k">抢慢了</span><span class="v">额度是<b>所有司机共享</b>的，同时有两个人接，后到的提示「额度刚好被别人用完，请刷新」。</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#0E9F6E;--dbg:#F0FDF4">
+          <div class="dot">3</div>
+          <div class="stage-h"><b>每趟照常跑完</b><span class="who">司机</span></div>
+          <div class="steps">
+            <div class="st"><b>接一趟</b><span>生成一趟运单</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>装货 → 发车 → 到达</b><span>同普通运单</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>完成这一趟</b><span>累计已完成趟数</span></div>
+          </div>
+          <div class="tip"><b>注意：</b>常驻的每一趟都<b>没有计划时间</b>（因为是临时排的），所以在运单详情里不会显示"计划 vs 实际"的对比，只有实际发生的时间。</div>
+        </div>
+
+        <div class="stage" style="--dc:#475569;--dbg:#F1F5F9">
+          <div class="dot">4</div>
+          <div class="stage-h"><b>任务怎么收口</b><span class="who">系统 / 调度</span></div>
+          <div class="branch">
+            <div class="br ok"><span class="k">自动结束</span><span class="v">按次数：<b>次数用满</b> 且 最后一趟已跑完 → 整条任务置「已结束」。按时间：过了结束日期 → 置「已结束」。</span></div>
+            <div class="br warn"><span class="k">手动操作</span><span class="v">调度可「暂停」「恢复」「提前结束」。<b>只要还有一趟在跑，这三个操作都不允许</b>，要先等那趟跑完。</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rules">
+        <div class="rule-group" style="--rc:#2563EB">
+          <h4>列表里怎么看</h4>
+          <ol>
+            <li>一个常驻任务在运单列表里<b>只占一行</b>，显示"执行中"，不会因为某一趟完成就显示已完成。</li>
+            <li>点开这一行能看到它一共跑了几趟、哪趟在跑、哪趟被拒过。</li>
+            <li>司机端也是按任务展示，展开才看到自己的历次趟次。</li>
+          </ol>
+        </div>
+        <div class="rule-group" style="--rc:#C2410C">
+          <h4>为什么不让你随便改</h4>
+          <ol>
+            <li>常驻的趟次<b>不能拒单</b> —— 拒了额度就浪费了，只能不接。</li>
+            <li>趟次<b>不能在小程序里改派或删除</b>，要回电脑端处理。</li>
+            <li>删除一条常驻任务 = 把它名下所有趟次一起删掉，需谨慎。</li>
+            <li>建单时<b>不检查</b>额度够不够、日期合不合理，这些都在<b>司机接单那一刻</b>才检查 —— 这样调度可以先建好，等真正开始跑再约束。</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 3 ============ -->
+    <section class="sec" id="s3">
+      <div class="sec-h">
+        <div class="sec-n">3</div>
+        <div>
+          <h2>分车承运：一单货拆给几辆车</h2>
+          <div class="sub">也叫子母车 / 多车承运，每条腿独立跑、独立结算</div>
+        </div>
+      </div>
+      <div class="sec-desc">
+        <b>典型场景：</b>30 吨货，2 辆车各拉 15 吨，一起去同一个卸货地。<b>核心约束：</b>拆出去的量加起来必须等于总量。
+      </div>
+
+      <div class="stages">
+        <div class="stage" style="--dc:#2563EB;--dbg:#EFF6FF">
+          <div class="dot">1</div>
+          <div class="stage-h"><b>建单时拆量</b><span class="who">调度</span></div>
+          <div class="steps">
+            <div class="st"><b>指派方式选「多辆车」</b><span>或「多个司机」</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>每辆车填承运量</b><span>和这辆车对应的运费</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>系统核对合计</b><span>必须等于货物总量</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>发布</b><span>每辆车各拿到一趟</span></div>
+          </div>
+          <div class="branch">
+            <div class="br no"><span class="k">对不上</span><span class="v">合计和总量不一致时<b>不允许发布</b>，提示差了多少。允许 <b>0.01</b> 的尾差（分账时的四舍五入）。</span></div>
+            <div class="br info"><span class="k">自动平摊</span><span class="v">没手动改过的那些车，系统把「剩余量」平均分给它们，保证总量守恒。</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#7C3AED;--dbg:#FAF5FF">
+          <div class="dot">2</div>
+          <div class="stage-h"><b>每辆车各跑各的</b><span class="who">各车司机</span></div>
+          <div class="steps">
+            <div class="st"><b>各自接单</b><span>只看到自己那一趟</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>各自装货 / 发车 / 到达</b><span>各报各的节点</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>各自完成</b><span>互不影响</span></div>
+          </div>
+          <div class="branch">
+            <div class="br warn"><span class="k">某车拒单</span><span class="v">只有这一趟变成「待重新指派」，其他车照常跑，整单不会卡住。</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#15803D;--dbg:#F0FDF4">
+          <div class="dot">3</div>
+          <div class="stage-h"><b>整单什么时候算完成</b><span class="who">系统自动</span></div>
+          <div class="branch">
+            <div class="br ok"><span class="k">全部完成</span><span class="v">所有车都完成后，整单变「已完成」。</span></div>
+            <div class="br warn"><span class="k">跑完 + 拒单</span><span class="v">剩下的车都完成、其余都是拒单，也算整单收尾 —— 因为不可能再等了。</span></div>
+            <div class="br info"><span class="k">还有在跑</span><span class="v">只要有一辆车没结束，整单就显示"执行中"。</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rules">
+        <div class="rule-group" style="--rc:#7C3AED">
+          <h4>什么算分车承运</h4>
+          <ol>
+            <li>必须同时满足：<b>不是常驻任务</b> + <b>拆成 2 趟以上</b> + <b>每趟派的是司机或车辆</b>。</li>
+            <li>只要其中有一趟是<b>派给车队</b>，整单就不按分车承运处理，退回普通单逻辑。</li>
+            <li>分车承运的单，车牌和司机在列表里统一显示"多种"，要看明细得展开。</li>
+          </ol>
+        </div>
+        <div class="rule-group" style="--rc:#B91C1C">
+          <h4>占用与可见性</h4>
+          <ol>
+            <li>判断"车有没有空"时看<b>所有在跑的趟次</b>；判断"司机有没有空"时只看<b>他自己那一趟</b>，避免两个司机互相挡住。</li>
+            <li>每个司机只能看到自己那一趟，看不到别人的进度。</li>
+            <li>详情页可以按车切换，一辆车一条时间轴。</li>
+            <li>费用也按趟报、按趟审，最后一趟车的费用不影响其他车。</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4 ============ -->
+    <section class="sec" id="s4">
+      <div class="sec-h">
+        <div class="sec-n">4</div>
+        <div>
+          <h2>派单、改派与拒单</h2>
+          <div class="sub">三种派法，三种后果，别混着用</div>
+        </div>
+      </div>
+
+      <div class="stages">
+        <div class="stage" style="--dc:#2563EB;--dbg:#EFF6FF">
+          <div class="dot">A</div>
+          <div class="stage-h"><b>三种派单方式，区别在哪</b><span class="who">调度</span></div>
+          <div class="branch">
+            <div class="br info"><span class="k">派司机</span><span class="v">指定到人。@张三 接了就完事。<b>适合固定司机。</b>拒单由他自己拒。</span></div>
+            <div class="br info"><span class="k">派车辆</span><span class="v">指定到车。谁开这辆车谁就能接（车绑定了哪个司机就谁来）。<b>适合车比人固定的场景。</b></span></div>
+            <div class="br info"><span class="k">派车队</span><span class="v">指定到机构。该车队及其下级车队的<b>所有司机都能看到、都能抢</b>，先到先得。<b>适合运力池调度。</b></span></div>
+          </div>
+          <div class="tip"><b>注意：</b>派车队时<b>不能拒单</b>（因为不是派给某个人的），并且这种单不能按分车承运处理。</div>
+        </div>
+
+        <div class="stage" style="--dc:#D97706;--dbg:#FFF7ED">
+          <div class="dot">B</div>
+          <div class="stage-h"><b>改派的规则</b><span class="who">调度</span></div>
+          <div class="decide"><span>现在这条单能不能改派？</span></div>
+          <div class="branch">
+            <div class="br ok"><span class="k">能改</span><span class="v">运单在<b>待接单</b>或<b>待重新指派</b> → 可以换人/换车/换车队。改完状态<b>回到「待接单」</b>，原来那个人就看不到了。</span></div>
+            <div class="br no"><span class="k">不能改</span><span class="v">已经接了（待装车及以后）→ 不允许直接换人。要么让司机跑完，要么走取消/异常流程。</span></div>
+          </div>
+          <div class="tip"><b>为什么改派要退回「待接单」：</b>如果保留"待重新指派"，新司机在任务清单里根本看不到这条单 —— 退回待接单才是"重新挂出来让人接"。</div>
+        </div>
+
+        <div class="stage" style="--dc:#B91C1C;--dbg:#FEF2F3">
+          <div class="dot">C</div>
+          <div class="stage-h"><b>拒单之后发生了什么</b><span class="who">司机 → 调度</span></div>
+          <div class="steps">
+            <div class="st"><b>司机拒单</b><span>必须选原因 + 可补充说明</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>运单变「待重新指派」</b><span>记录拒单次数与原因</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>调度收到提醒</b><span>在列表里能看到这单卡住了</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>重新指派</b><span>换人 → 回到待接单</span></div>
+          </div>
+          <div class="branch">
+            <div class="br warn"><span class="k">原因选项</span><span class="v">车辆故障 / 时间冲突 / 路线不熟 / 其他。"其他"<b>必须写明</b>，否则提交不了。</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rules">
+        <div class="rule-group" style="--rc:#475569">
+          <h4>任务清单的可见规则（司机端）</h4>
+          <ol>
+            <li>只看得到<b>最近 90 天</b>的单，更早的归档不展示。</li>
+            <li>「待重新指派」的单<b>不出现在司机端</b> —— 那是调度要处理的。</li>
+            <li>常驻任务按"组"展示，只列<b>自己的趟次</b>；组长没派给自己，整组都不显示。</li>
+            <li>被同事抢走的单，10 分钟内还留着并标注"已被接走"，10 分钟后彻底消失。</li>
+            <li>管理员身份的单（没归属到具体客户）要靠"名字唯一匹配"才认领，重名时分不清就<b>不给接</b>，避免接错。</li>
+          </ol>
+        </div>
+        <div class="rule-group" style="--rc:#C2410C">
+          <h4>改派与编辑的连带影响</h4>
+          <ol>
+            <li>改派后，<b>原来那条指派记录被整体替换</b>，不是追加一条。</li>
+            <li>调度在电脑端"编辑运单"也会把状态打回「待接单」，等于变相重新派单。</li>
+            <li>编辑不会重算计划里程和坐标 —— 换了装卸地要重新发布或重新规划路线。</li>
+            <li>两人同时改同一条单，后保存的会失败并提示"刚被改过，请刷新"。</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5 ============ -->
+    <section class="sec" id="s5">
+      <div class="sec-h">
+        <div class="sec-n">5</div>
+        <div>
+          <h2>费用：从司机报账到财务打款</h2>
+          <div class="sub">8 类费用，3 级审批，2 个开关控制整条链路走不走</div>
+        </div>
+      </div>
+      <div class="sec-desc">
+        <b>谁发起：</b>司机在小程序上报，调度/财务/老板在电脑端审，财务打款。<b>前提：</b>这趟单必须已经接单，而且确实是派给这个司机的。
+      </div>
+      <div class="roles">
+        <span class="role"><i style="background:#D97706"></i>司机（上报）</span>
+        <span class="role"><i style="background:#2563EB"></i>调度（一级审）</span>
+        <span class="role"><i style="background:#0E9F6E"></i>财务（二级审 / 打款）</span>
+        <span class="role"><i style="background:#c8102e"></i>老板（终审）</span>
+      </div>
+
+      <div class="stages">
+        <div class="stage" style="--dc:#D97706;--dbg:#FFF7ED">
+          <div class="dot">1</div>
+          <div class="stage-h"><b>司机上报一笔费用</b><span class="who">司机</span></div>
+          <div class="steps">
+            <div class="st"><b>选运单</b><span>只能选自己的单</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>选费用类型</b><span>8 类，见下</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>填金额与说明</b><span>费用类要逐笔填明细</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>上传凭证</b><span>部分类型必传</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>提交</b><span>进入「审核中」</span></div>
+          </div>
+          <div class="branch">
+            <div class="br info"><span class="k">钱款类</span><span class="v"><b>费用报销、补贴、借款、违章</b> —— 这 4 类计入费用总额，参与统计。</span></div>
+            <div class="br info"><span class="k">单据类</span><span class="v"><b>磅单、超时报备、回单、油卡补录</b> —— 这 4 类只记笔数和业务信息，<b>不计入金额</b>，避免总额虚高。</span></div>
+          </div>
+          <div class="tip"><b>必传凭证的三种：</b>磅单（要过磅照片）、超时报备（要现场照片）、违章（要处罚决定书）。其余类型可以不传，但建议传。</div>
+        </div>
+
+        <div class="stage" style="--dc:#2563EB;--dbg:#EFF6FF">
+          <div class="dot">2</div>
+          <div class="stage-h"><b>逐级审批</b><span class="who">调度 → 财务 → 老板</span></div>
+          <div class="steps">
+            <div class="st"><b>一级：发单人</b><span>通常是调度</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>二级：财务</b><span>没配财务就直接到老板</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>三级：老板终审</b><span>金额大或财务要求时才有</span></div>
+          </div>
+          <div class="decide"><span>这笔要走到老板那里吗？</span></div>
+          <div class="branch">
+            <div class="br ok"><span class="k">金额达标</span><span class="v">单笔金额 <b>≥ 设定的阈值（默认 5000 元）</b> → 财务审完后自动送老板终审。</span></div>
+            <div class="br ok"><span class="k">财务主动送</span><span class="v">财务觉得有问题，可以点「送老板终审」，不管金额多少。</span></div>
+            <div class="br info"><span class="k">不用送</span><span class="v">金额没到阈值，且财务直接通过 → 审批结束。</span></div>
+          </div>
+          <div class="branch">
+            <div class="br no"><span class="k">驳回</span><span class="v">必须写原因（缺凭证 / 金额与票据不符 / 运单号不符 / 重复上报 / 超过规定期限 / 其他）→ 状态变「已驳回」。</span></div>
+            <div class="br warn"><span class="k">重新提交</span><span class="v">司机改完再交，<b>按当前配置从头走一遍审批</b>，不会接着上次的进度。</span></div>
+          </div>
+          <div class="tip"><b>跳过规则：</b>① 自己报的单，跳过自己那一级；② 一级设成"免审"就直送财务；③ 没配财务角色，二级自动顶到老板；④ 同一个人不会在两级里出现两次。</div>
+        </div>
+
+        <div class="stage" style="--dc:#0E9F6E;--dbg:#F0FDF4">
+          <div class="dot">3</div>
+          <div class="stage-h"><b>财务登记打款</b><span class="who">财务</span><span class="note">状态：待打款 / 已通过</span></div>
+          <div class="steps">
+            <div class="st"><b>进「付款登记」</b><span>看到所有待付的单</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>填付款信息</b><span>方式、时间、流水号</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>上传付款凭据</b><span>截图或回单，最多 5 张</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>确认付款</b><span>状态变「已打款」</span></div>
+          </div>
+          <div class="branch">
+            <div class="br warn"><span class="k">付错了</span><span class="v">可以「撤销付款」，必须选原因（金额付错 / 重复付款 / 收款人不对 / 账户信息有误 / 其他）→ 这笔<b>回到待付款清单</b>，重新付一次。</span></div>
+            <div class="br info"><span class="k">批量</span><span class="v">可以勾选多笔一起登记付款，但<b>单笔 ≥ 5000 元的不能批量</b>，必须逐笔确认。</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rules">
+        <div class="rule-group" style="--rc:#c8102e">
+          <h4>两个开关决定这条链路走不走</h4>
+          <ol>
+            <li><b>审批开关</b>（由主账号控制）：全开 / 全关 / 每单自定义。关掉后上报即通过，不产生审批链。</li>
+            <li><b>付款开关</b>：关掉后整个"付款登记"菜单都不出现，费用停在"已通过"。</li>
+            <li>两者有依赖：<b>审批关掉，付款也不能用</b>（钱都没审，谈不上付）；但审批开着，付款可以单独关。</li>
+            <li>「自定义」模式下，调度可以在建单时单独把这单设成免审。</li>
+            <li>改了配置<b>只影响之后提交的单</b>，已经在审的按当时的流程走完。</li>
+          </ol>
+        </div>
+        <div class="rule-group" style="--rc:#2563EB">
+          <h4>谁能审、谁能付</h4>
+          <ol>
+            <li>审批：只认<b>当前这一级指定的审批人</b>；老板那一级由主账号兜底。</li>
+            <li>付款：只有<b>主账号</b>或<b>角色名里带"财务"的人</b>能登记。</li>
+            <li>列表上的"待我审批"只统计<b>轮到我这一级</b>的单，不是全部在审的单。</li>
+            <li>审批关掉时，"待我审批"数字直接归零，不显示红点。</li>
+            <li>子账号即使有页面权限，也不一定能审 —— 取决于是否被配成审批人。</li>
+          </ol>
+        </div>
+        <div class="rule-group" style="--rc:#C2410C">
+          <h4>金额与统计口径</h4>
+          <ol>
+            <li>费用类金额 = <b>各条明细金额相加</b>，由系统重新算一遍，不信任手填的合计。</li>
+            <li>磅单净重 = 毛重 − 皮重，必须毛重 > 皮重。</li>
+            <li>超时分钟数 = 实际时间 − 计划时间，实际必须晚于计划。</li>
+            <li>费用统计<b>按上报时间</b>归月，不是按审批或打款时间，所以会出现"本月报的单下月才付"。</li>
+            <li>环比是<b>和等长的上一段时间</b>比，不是"上个自然月"。</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 6 ============ -->
+    <section class="sec" id="s6">
+      <div class="sec-h">
+        <div class="sec-n">6</div>
+        <div>
+          <h2>电子围栏与到车提醒</h2>
+          <div class="sub">先画圈，再定规矩，最后才会有提醒</div>
+        </div>
+      </div>
+      <div class="sec-desc">
+        <b>三件事：</b>围栏是"圈"，提醒是"规矩"，事件是"结果"。只有前两件都配好了，才会有事件产生。
+      </div>
+
+      <div class="stages">
+        <div class="stage" style="--dc:#2563EB;--dbg:#EFF6FF">
+          <div class="dot">1</div>
+          <div class="stage-h"><b>画一个围栏</b><span class="who">调度 / 运营</span></div>
+          <div class="steps">
+            <div class="st"><b>选类型</b><span>装货 / 卸货 / 提醒</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>选形状</b><span>圆 / 多边形 / 路线 / 行政区</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>在地图上画</b><span>点选或拖拽</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>起名保存</b><span>名称不能重复</span></div>
+          </div>
+          <div class="branch">
+            <div class="br info"><span class="k">圆</span><span class="v">点一个中心，拖动半径（50 米 ~ 50 公里）。<b>厂区、仓库最常用。</b></span></div>
+            <div class="br info"><span class="k">多边形</span><span class="v">连续点几个角、双击结束，至少 3 个点。<b>不规则厂区。</b></span></div>
+            <div class="br info"><span class="k">路线</span><span class="v">画一条线再给个宽度（1~300 米）。<b>管道、专用通道。</b></span></div>
+            <div class="br info"><span class="k">行政区</span><span class="v">直接选省市區。<b>只能看不能改，也无法用来打卡判定。</b></span></div>
+          </div>
+          <div class="tip"><b>为什么要先选类型：</b>建单选装货地时只列"装货"类围栏，选卸货地只列"卸货"类，避免选错导致里程和打卡全错。</div>
+        </div>
+
+        <div class="stage" style="--dc:#D97706;--dbg:#FFF7ED">
+          <div class="dot">2</div>
+          <div class="stage-h"><b>定提醒规矩</b><span class="who">调度 / 运营</span></div>
+          <div class="steps">
+            <div class="st"><b>选要盯的围栏</b><span>只列"提醒"类</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>设超速规则</b><span>默认 80 km/h</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>设停留规则</b><span>几次 / 多久 / 多大范围</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>设生效时段</b><span>默认 05:00–23:00</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>保存</b><span>覆盖式保存</span></div>
+          </div>
+          <div class="branch">
+            <div class="br warn"><span class="k">不选围栏</span><span class="v">等于<b>全域提醒</b>（所有车都盯），保存前会二次确认。</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#0E9F6E;--dbg:#F0FDF4">
+          <div class="dot">3</div>
+          <div class="stage-h"><b>产生提醒事件</b><span class="who">系统自动</span></div>
+          <div class="branch">
+            <div class="br info"><span class="k">超速</span><span class="v">车速超过阈值 → 记一段超速。连续超速<b>间隔 5 分钟以上</b>就算新的一段，不合并。</span></div>
+            <div class="br info"><span class="k">停留</span><span class="v">车在某个范围内停够时长 → 记一次停留，同时看次数是否超限。</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#7C3AED;--dbg:#FAF5FF">
+          <div class="dot">4</div>
+          <div class="stage-h"><b>查事件、看明细</b><span class="who">调度 / 运营</span></div>
+          <div class="steps">
+            <div class="st"><b>按时间 / 车辆筛</b><span>默认查近期</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>看汇总</b><span>多少段、多少车、最高速</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>点开明细</b><span>速度曲线 / 停留轨迹</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>导出</b><span>给车队做考核</span></div>
+          </div>
+          <div class="tip note"><b>看数顺序：</b>先在「提醒设置」确认规则是开的，再去「提醒事件查询」看结果 —— 规则没配，查什么都是空的。</div>
+        </div>
+      </div>
+
+      <div class="rules">
+        <div class="rule-group" style="--rc:#c8102e">
+          <h4>围栏这几条别踩</h4>
+          <ol>
+            <li>围栏名称<b>同一个客户下不能重名</b>，因为建单选的是"名字"。</li>
+            <li>围栏<b>画好之后不能改形状</b>，只能改名和改类型。画错了删掉重画。</li>
+            <li>改名会同步到提醒设置里，不会导致提醒失效。</li>
+            <li>删围栏时如果云端删除失败，本地仍会删掉，并提示"云端可能残留"。</li>
+            <li>三类围栏的颜色是固定的：装货蓝、卸货绿、提醒橙。</li>
+          </ol>
+        </div>
+        <div class="rule-group" style="--rc:#475569">
+          <h4>提醒能做到什么、不能做什么</h4>
+          <ol>
+            <li>目前只有两种：<b>超速</b>和<b>停留</b>。没有"进出围栏提醒"。</li>
+            <li>没有按星期生效、没有指定接收人、没有绑定"只盯某几辆车"。</li>
+            <li>子账号只能看不能改。</li>
+            <li>事件列表顶部的统计卡是<b>全量统计，不跟着筛选变</b>；导出也是全量，不是当前筛选结果。</li>
+            <li>数据缓存 5 分钟，刚改完规则可能不会立刻体现。</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 7 ============ -->
+    <section class="sec" id="s7">
+      <div class="sec-h">
+        <div class="sec-n">7</div>
+        <div>
+          <h2>档案：客户、货物、车辆、司机</h2>
+          <div class="sub">建档一次，建单时自动带出，少填多对</div>
+        </div>
+      </div>
+
+      <div class="stages">
+        <div class="stage" style="--dc:#2563EB;--dbg:#EFF6FF">
+          <div class="dot">1</div>
+          <div class="stage-h"><b>客户档案</b><span class="who">调度 / 客服</span></div>
+          <div class="steps">
+            <div class="st"><b>建客户</b><span>名称、负责人、电话、地区</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>上传合同</b><span>选填，5MB 以内</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>加联系人</b><span>可以加多个</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>给联系人定角色</b><span>装货 / 卸货 / 两端都管</span></div>
+          </div>
+          <div class="branch">
+            <div class="br info"><span class="k">两端都管</span><span class="v">标成"唯一"的联系人，建单时装货和卸货<b>两边都能带出来</b>。</span></div>
+            <div class="br info"><span class="k">只管一端</span><span class="v">标"装货"的人只出现在装货侧，标"卸货"的只在卸货侧。</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#0E9F6E;--dbg:#F0FDF4">
+          <div class="dot">2</div>
+          <div class="stage-h"><b>货物档案</b><span class="who">调度 / 商务</span></div>
+          <div class="steps">
+            <div class="st"><b>建货物</b><span>名称 + 计量单位</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>加计费规则</b><span>含税 / 不含税单价</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>选计价方式</b><span>按公里 / 按吨 / 按趟…</span></div>
+          </div>
+          <div class="branch">
+            <div class="br info"><span class="k">按公里</span><span class="v">运费 = 里程 × 单价（适合长途）</span></div>
+            <div class="br info"><span class="k">按数量</span><span class="v">运费 = 数量 × 单价（按吨/件/箱/车）</span></div>
+            <div class="br info"><span class="k">按趟 / 人工</span><span class="v">一口价，或干脆让调度手填</span></div>
+          </div>
+          <div class="tip"><b>建单时：</b>选中货物 → 带出单位和单价 → 立刻自动算出运费。调度如果手动改了运费，系统就不再自动覆盖。</div>
+        </div>
+
+        <div class="stage" style="--dc:#7C3AED;--dbg:#FAF5FF">
+          <div class="dot">3</div>
+          <div class="stage-h"><b>车辆与司机档案</b><span class="who">车队管理</span></div>
+          <div class="steps">
+            <div class="st"><b>建车辆</b><span>车牌、VIN、燃料、所属机构</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>建司机</b><span>姓名、手机号、所属机构</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>互相绑定</b><span>车绑司机 / 司机绑车</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>开通小程序账号</b><span>用手机号当账号</span></div>
+          </div>
+          <div class="branch">
+            <div class="br warn"><span class="k">绑定的作用</span><span class="v">派"车辆"时，系统按这辆车绑定的司机去判断谁能接、谁该看到。绑错了就派不到人。</span></div>
+            <div class="br info"><span class="k">批量导入</span><span class="v">车辆、司机都支持 Excel 导入。<b>只要有一行填错，整批都不导入</b>，避免导入一半。</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rules">
+        <div class="rule-group" style="--rc:#2563EB">
+          <h4>建档时的规矩</h4>
+          <ol>
+            <li>司机<b>姓名和手机号必填</b>，手机号在本公司内不能重复。</li>
+            <li>客户名称可以重名，系统只提示不拦（现实中确实有同名公司）。</li>
+            <li>车辆的原所属机构不能直接清空，要先换到别的机构。</li>
+            <li>车辆和司机的绑定是<b>双向的</b>：在车那边加司机，司机那边也会出现这辆车。</li>
+            <li>删除司机时，他的小程序账号一起停用。</li>
+          </ol>
+        </div>
+        <div class="rule-group" style="--rc:#C2410C">
+          <h4>带入建单的规矩</h4>
+          <ol>
+            <li>某个角色<b>只有 1 个联系人</b> → 自动填上；<b>有多个</b> → 留空让调度自己选。</li>
+            <li>带出联系人时，只有对方留了电话才会覆盖发货/收货电话，不会把已填的号码清空。</li>
+            <li>"唯一"联系人被带到一端后，另一端如果还是空的，会跟着复制过去；另一端已选人就不动。</li>
+            <li>档案里没有对应角色的人 → 提示"该客户暂无装货联系人"，不阻断建单。</li>
+            <li>货物带了单价但数量为 0 或单价为 0 → 运费不自动算，留空让调度填。</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 8 ============ -->
+    <section class="sec" id="s8">
+      <div class="sec-h">
+        <div class="sec-n">8</div>
+        <div>
+          <h2>组织、账号与权限开通</h2>
+          <div class="sub">服务商开客户 → 客户建组织 → 建账号 → 配功能</div>
+        </div>
+      </div>
+      <div class="roles">
+        <span class="role"><i style="background:#c8102e"></i>服务商运营</span>
+        <span class="role"><i style="background:#2563EB"></i>客户主账号</span>
+        <span class="role"><i style="background:#7C3AED"></i>子账号</span>
+      </div>
+
+      <div class="stages">
+        <div class="stage" style="--dc:#c8102e;--dbg:#FEF2F3">
+          <div class="dot">1</div>
+          <div class="stage-h"><b>服务商开通一个客户</b><span class="who">服务商运营</span></div>
+          <div class="steps">
+            <div class="st"><b>建客户</b><span>公司名 + 联系人</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>系统自动建根组织</b><span>这家公司的顶层</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>系统自动建主账号</b><span>给账号和初始密码</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>配置开通哪些功能</b><span>运单 / 路线 / 常驻 / 付款 / 报表</span></div>
+          </div>
+          <div class="tip"><b>这一步是"开户"：</b>不给功能，客户登录进去什么都看不到；给了功能才有对应的菜单。</div>
+        </div>
+
+        <div class="stage" style="--dc:#2563EB;--dbg:#EFF6FF">
+          <div class="dot">2</div>
+          <div class="stage-h"><b>客户在自己下面建组织</b><span class="who">主账号</span></div>
+          <div class="steps">
+            <div class="st"><b>在根组织下加分公司</b><span>一级</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>在分公司下加车队</b><span>二级、三级…</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>把车辆、司机归到车队</b><span>归属决定谁看得到</span></div>
+          </div>
+          <div class="branch">
+            <div class="br no"><span class="k">不能删</span><span class="v">组织下面还有子组织 → 不允许删。<b>先把车辆移走</b>才能删。</span></div>
+            <div class="br warn"><span class="k">改名会连带</span><span class="v">组织改名后，归属这个组织的车辆也跟着改成新名字。</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#7C3AED;--dbg:#FAF5FF">
+          <div class="dot">3</div>
+          <div class="stage-h"><b>建子账号并配权限</b><span class="who">主账号</span></div>
+          <div class="steps">
+            <div class="st"><b>建账号</b><span>姓名、手机号、所属组织</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>选角色</b><span>调度 / 财务 / 车队长…</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>勾功能</b><span>能看哪些菜单</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>交出账号密码</b><span>首次登录后自行改</span></div>
+          </div>
+          <div class="branch">
+            <div class="br info"><span class="k">角色</span><span class="v">角色决定"默认能干什么"，可以再单独给某个人加减功能。</span></div>
+            <div class="br warn"><span class="k">主账号专属</span><span class="v"><b>系统管理、费用审批设置</b>这两块任何子账号都勾不上，只有主账号能进。</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#0E9F6E;--dbg:#F0FDF4">
+          <div class="dot">4</div>
+          <div class="stage-h"><b>司机账号走另一条路</b><span class="who">车队管理</span></div>
+          <div class="steps">
+            <div class="st"><b>司机档案里开通账号</b><span>用手机号当账号</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>司机只能登小程序</b><span>不能登电脑端</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>只能看到派给自己的单</b><span>看不到别人的</span></div>
+          </div>
+          <div class="tip"><b>两个角色别搞混：</b>「调度」是员工，用电脑端；「司机」是运力，用小程序。司机档案里开通的是小程序账号，不是在用户管理里新建一个人。</div>
+        </div>
+      </div>
+
+      <div class="rules">
+        <div class="rule-group" style="--rc:#7C3AED">
+          <h4>权限这条线怎么判</h4>
+          <ol>
+            <li>看到菜单，不代表能进页面；能进页面，也不代表能操作。三层依次判断。</li>
+            <li>客户开通了哪几个功能模块，就只出现哪几块菜单 —— 直接敲网址也进不去。</li>
+            <li>子账号默认继承角色权限，主账号再单独加减。</li>
+            <li>主账号永远拥有全部权限，不受勾选影响。</li>
+            <li>组织层级越低，看到的数据越少：二级车队账号只看自己车队的人和车。</li>
+          </ol>
+        </div>
+        <div class="rule-group" style="--rc:#475569">
+          <h4>数据隔离</h4>
+          <ol>
+            <li>每个客户的数据互相看不到，靠"归属账号"隔离。</li>
+            <li>管理员身份的单（无归属）所有人可见，但操作时要靠名字唯一性确认归属。</li>
+            <li>子账号能看到的范围 = 自己组织 <b>及下级组织</b>。</li>
+            <li>客户档案、货物档案也按客户隔离，互相不可见。</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 9 ============ -->
+    <section class="sec" id="s9">
+      <div class="sec-h">
+        <div class="sec-n">9</div>
+        <div>
+          <h2>实时监控与运营报表</h2>
+          <div class="sub">看当下（车在哪）和看过去（跑得怎么样）</div>
+        </div>
+      </div>
+
+      <div class="stages">
+        <div class="stage" style="--dc:#0891B2;--dbg:#ECFEFF">
+          <div class="dot">1</div>
+          <div class="stage-h"><b>看当下：车在哪、在干什么</b><span class="who">调度</span></div>
+          <div class="steps">
+            <div class="st"><b>选机构</b><span>左侧组织树</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>看车辆状态</b><span>行驶 / 静止 / 离线</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>按任务筛</b><span>在途 / 待装 / 空闲</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>点车看详情</b><span>位置、任务、司机</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>看轨迹</b><span>这趟怎么走的</span></div>
+          </div>
+          <div class="branch">
+            <div class="br info"><span class="k">行驶</span><span class="v">车辆通电且有速度。</span></div>
+            <div class="br info"><span class="k">静止</span><span class="v">车辆通电但速度为 0。</span></div>
+            <div class="br info"><span class="k">离线</span><span class="v">车辆断电，或定位取不到。</span></div>
+          </div>
+          <div class="tip note"><b>只有车牌是唯一一辆车的运单才能画实时位置。</b>一单派了多辆车（显示"多种""2 辆"）时，地图上不显示轨迹，因为不知道该跟哪一辆。</div>
+        </div>
+
+        <div class="stage" style="--dc:#2563EB;--dbg:#EFF6FF">
+          <div class="dot">2</div>
+          <div class="stage-h"><b>看过去：日 / 周 / 月报</b><span class="who">车队长 / 运营</span></div>
+          <div class="steps">
+            <div class="st"><b>选周期</b><span>日 / 周 / 月 / 自定义</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>选车辆</b><span>一台或多台</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>看指标</b><span>里程、电耗/油耗、运行时长</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>导出</b><span>给甲方或内部考核</span></div>
+          </div>
+          <div class="branch">
+            <div class="br warn"><span class="k">查不到数</span><span class="v">东风平台的能耗数据<b>延迟 1 天</b>，当天和昨天常常查不到，属正常。页面上会提示"改查前 1 天"。</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#c8102e;--dbg:#FEF2F3">
+          <div class="dot">3</div>
+          <div class="stage-h"><b>看经营：综合报表</b><span class="who">运营 / 老板</span></div>
+          <div class="steps">
+            <div class="st"><b>出车日历</b><span>一个月里哪几天没出车</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>异常车清单</b><span>电耗高 / 里程低 / 闲置多</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>效率象限</b><span>谁跑得多又省</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>车队排行</b><span>Top10</span></div>
+            <div class="ar">→</div>
+            <div class="st"><b>车辆矩阵</b><span>逐日对比</span></div>
+          </div>
+          <div class="branch">
+            <div class="br info"><span class="k">异常判定</span><span class="v">电耗排在前 15% 偏高、里程不到中位数的 35%、运行占比不到 18% —— 命中任一即进异常清单。</span></div>
+            <div class="br info"><span class="k">象限分档</span><span class="v">横轴日均里程、纵轴百公里电耗，取中位数分界 → 高利用低耗（标杆）、高利用高耗、低利用低耗、低利用高耗。</span></div>
+          </div>
+        </div>
+
+        <div class="stage" style="--dc:#0E9F6E;--dbg:#F0FDF4">
+          <div class="dot">4</div>
+          <div class="stage-h"><b>看单票：能耗报告与车队报告</b><span class="who">运营</span></div>
+          <div class="branch">
+            <div class="br info"><span class="k">能耗报告</span><span class="v">按单车单月出一份报告：日里程与电耗、分路段、驾驶行为、六维评分（能耗/出勤/车速/技巧/路面/车况）、帕累托。</span></div>
+            <div class="br info"><span class="k">车队运营报告</span><span class="v">按日/周/月/季/半年/年，看准时率、单公里成本、车辆分档（最省 / 稳 / 偏贵 / 要查 / 样本少）。</span></div>
+          </div>
+          <div class="tip"><b>准时怎么算：</b>实际用时 ≤ 计划用时 × <b>1.15</b> 就算准时（留 15% 容差）。</div>
+        </div>
+      </div>
+
+      <div class="rules">
+        <div class="rule-group" style="--rc:#0891B2">
+          <h4>读数前先确认口径</h4>
+          <ol>
+            <li>系统里有<b>三套里程</b>：计划里程（建单时算的）、实际行驶（车辆上报）、里程表读数。报表用的不一定是你以为的那个。</li>
+            <li>运单统计里的"在途"是<b>已接单到已到达</b>，不含待接单；车队报告里的"在途"是<b>没完成也没取消</b>，两者不一样。</li>
+            <li>平均车速有时是平台给的区间值，有时是逐日平均再平均，长短路混在一起会失真。</li>
+            <li>百公里电耗要<b>用实际电耗 ÷ 实际里程</b>算，平台自带的一个汇总字段一直是 0.02，不能用。</li>
+            <li>报告里的排名条长度是<b>视觉映射</b>（最短 50%），不代表真实占比。</li>
+          </ol>
+        </div>
+        <div class="rule-group" style="--rc:#475569">
+          <h4>目前还看不到的</h4>
+          <ol>
+            <li><b>驾驶行为报表</b>还是占位页，只有入口没有内容。</li>
+            <li>充电次数、加油次数、电池电量、充电时长 —— 都还没有。</li>
+            <li>能耗报告目前是演示数据，真实取数还没接上。</li>
+            <li>车队运营报告没有导出和图表图片，结论只能看页面。</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 速查 ============ -->
+    <section class="sec" id="s10">
+      <div class="sec-h">
+        <div class="sec-n">10</div>
+        <div>
+          <h2>业务规则速查表</h2>
+          <div class="sub">被问到"为什么不行"的时候，先在这里找答案</div>
+        </div>
+      </div>
+
+      <div class="tbl-wrap" style="margin-top:16px">
+        <table class="rt">
+          <thead>
+            <tr><th style="width:96px">场景</th><th style="width:310px">规则</th><th>为什么 / 结果</th></tr>
+          </thead>
+          <tbody>
+            <tr><td rowspan="5" class="cat"><b>建单</b></td><td>装货地、卸货地必选</td><td>没地点就算不出计划里程，也做不了打卡判定</td></tr>
+            <tr><td>承运量合计必须等于货物总量</td><td>允许 0.01 尾差；否则拆量对不上，结算会扯皮</td></tr>
+            <tr><td>一个任务只能挂一个货物</td><td>要拉两种货请建两个任务</td></tr>
+            <tr><td>计划送达可以早于装货，系统不拦</td><td>已知缺口，填错了要靠人检查</td></tr>
+            <tr><td>极简模式强制不做打卡</td><td>只有两步的单没有"到场"这个概念</td></tr>
+
+            <tr><td rowspan="5" class="cat"><b>接单</b></td><td>同一辆车同一时间只能有一条未结束的单</td><td>防止一辆车被派两个活</td></tr>
+            <tr><td>同一个司机同一时间只能有一条未结束的单</td><td>防止一个人被派两个活</td></tr>
+            <tr><td>待接单不算占用</td><td>还没接的单可以自由改派</td></tr>
+            <tr><td>派车队的单不能拒</td><td>不是派给某个人的，不接就放着</td></tr>
+            <tr><td>常驻的趟次不能拒</td><td>拒了额度就浪费</td></tr>
+
+            <tr><td rowspan="2" class="cat"><b>改派</b></td><td>只有待接单 / 待重新指派能改</td><td>已接单的换人要先把原单处理掉</td></tr>
+            <tr><td>改完状态回到待接单</td><td>否则新司机在任务清单里看不到</td></tr>
+
+            <tr><td rowspan="4" class="cat"><b>打卡</b></td><td>装车完成必须在装货围栏内</td><td>用车辆定位判断，不是手机定位</td></tr>
+            <tr><td>确认到达必须在卸货围栏内</td><td>同上</td></tr>
+            <tr><td>围栏画成"行政区"时不做校验</td><td>系统判断不了，放行并留说明</td></tr>
+            <tr><td>多车单一律不校验</td><td>不知道该跟哪辆车</td></tr>
+
+            <tr><td rowspan="4" class="cat"><b>常驻</b></td><td>次数额度是所有司机共享的</td><td>先到先得，后到的提示"额度已用完"</td></tr>
+            <tr><td>额度用完不会立刻结束</td><td>等最后一趟跑完才收口</td></tr>
+            <tr><td>有趟次在跑时不能暂停 / 结束 / 删</td><td>先把在跑的跑完</td></tr>
+            <tr><td>趟次没有计划时间</td><td>临时排的，所以不显示计划 vs 实际</td></tr>
+
+            <tr><td rowspan="2" class="cat"><b>分车</b></td><td>混入车队指派就不是分车承运</td><td>按普通单处理，车牌显示"多种"</td></tr>
+            <tr><td>全部完成或 完成+拒单 才收尾</td><td>不可能再等了</td></tr>
+
+            <tr><td rowspan="5" class="cat"><b>费用</b></td><td>必须已接单才能上报</td><td>待接单 / 待重新指派 / 已取消都不行</td></tr>
+            <tr><td>只有 4 类钱款计入总额</td><td>单据类只记笔数，避免总额虚高</td></tr>
+            <tr><td>金额 ≥ 5000 要老板终审</td><td>阈值可配，配 0 表示不按金额触发</td></tr>
+            <tr><td>单笔 ≥ 5000 不能批量审批</td><td>大额必须逐笔看</td></tr>
+            <tr><td>驳回后重提从头走审批</td><td>不接着上次的进度</td></tr>
+
+            <tr><td rowspan="3" class="cat"><b>付款</b></td><td>只有主账号或财务能登记</td><td>其它人看不到"付款登记"菜单</td></tr>
+            <tr><td>审批关了，付款也不能用</td><td>钱没审过，谈不上付；但付款可以单独关</td></tr>
+            <tr><td>撤销后回到待付款</td><td>重新付一次，原付款信息保留可查</td></tr>
+
+            <tr><td rowspan="3" class="cat"><b>权限</b></td><td>系统管理 / 费用审批设置仅主账号</td><td>子账号任何角色都勾不上</td></tr>
+            <tr><td>司机不能登电脑端</td><td>司机用小程序，员工用电脑端</td></tr>
+            <tr><td>没开通的功能模块，敲网址也进不去</td><td>菜单不显示 + 页面拦住</td></tr>
+
+            <tr><td class="cat"><b>组织</b></td><td>有下级组织的不能删</td><td>先把子组织和车辆挪走</td></tr>
+
+            <tr><td rowspan="2" class="cat"><b>报表</b></td><td>能耗数据延迟 1 天</td><td>当天/昨天查不到属正常</td></tr>
+            <tr><td>多车单不画实时轨迹</td><td>不知道该跟哪辆车</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tip" style="margin-top:18px">
+        <b>使用建议：</b>把这份当"业务说明书"给新同事看 —— 第 1 章讲一条单怎么跑，第 2~4 章讲三种特殊派单形态，第 5 章讲钱怎么走，第 6~9 章讲配套功能。被业务方问"为什么不能这么操作"时，直接查第 10 章。
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // 目录
+  const SECTIONS = [
+    ['s1', '运单主线：一趟货怎么跑完'],
+    ['s2', '常驻任务：固定线路天天跑'],
+    ['s3', '分车承运：一单货拆给几辆车'],
+    ['s4', '派单、改派与拒单'],
+    ['s5', '费用：从报账到打款'],
+    ['s6', '电子围栏与到车提醒'],
+    ['s7', '档案：客户/货物/车辆/司机'],
+    ['s8', '组织、账号与权限'],
+    ['s9', '实时监控与运营报表'],
+    ['s10', '业务规则速查表'],
+  ];
+  const nav = document.getElementById('nav');
+  nav.innerHTML += SECTIONS.map(([id, t], i) =>
+    `<a href="#${id}" data-id="${id}"><i>${String(i + 1).padStart(2, '0')}</i><span>${t}</span></a>`
+  ).join('');
+
+  // 滚动高亮
+  const links = [...nav.querySelectorAll('a')];
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(a => a.classList.toggle('on', a.dataset.id === e.target.id));
+      }
+    });
+  }, { rootMargin: '-10% 0px -75% 0px', threshold: 0 });
+  SECTIONS.forEach(([id]) => { const el = document.getElementById(id); if (el) obs.observe(el); });
+
+  // 平滑滚动
+  nav.addEventListener('click', e => {
+    const a = e.target.closest('a');
+    if (!a) return;
+    e.preventDefault();
+    const el = document.getElementById(a.dataset.id);
+    if (el) window.scrollTo({ top: el.offsetTop - 16, behavior: 'smooth' });
+  });
+</script>
+</body>
+</html>

@@ -26,7 +26,7 @@
                 <span>费用待办</span>
                 <span class="tp-refresh" @click="loadTodo">刷新</span>
               </div>
-              <div class="tp-row" @click="goTodo('approve')">
+              <div v-if="auditOn" class="tp-row" @click="goTodo('approve')">
                 <span class="tp-ic wait">审</span>
                 <div class="tp-m"><b>待我审批</b><em>当前审批节点是我</em></div>
                 <span class="tp-n">{{ todo.approve }}</span>
@@ -230,7 +230,7 @@ import FeePayout from '../views/FeePayout.vue'
 import FeeApprovalSetting from '../views/FeeApprovalSetting.vue'
 import FlowCanvas from '../views/FlowCanvas.vue'
 import { fetchFeeTodo, isPayer } from '@/utils/feeTodo'
-import { moduleFlags, ensureModuleFlags } from '@/utils/modules'
+import { moduleFlags, ensureModuleFlags, approvalOn, ensureApprovalMode, currentUserForModules } from '@/utils/modules'
 
 const route = useRoute()
 const router = useRouter()
@@ -374,15 +374,20 @@ const goHome = () => router.push('/dashboard')
 // ============================================================
 const todoOpen = ref(false)
 const todo = ref({ approve: 0, pay: 0 })
+/* ⭐ 审批总开关（业务流程画布）关掉后，待办面板里不该再有「待我审批」这一行 */
+const auditOn = computed(() => approvalOn.value)
 const canPayFee = computed(() => isPayer(currentUser) && moduleFlags.payout === true)
 const todoTotal = computed(() =>
-  Number(todo.value.approve || 0) + (canPayFee.value ? Number(todo.value.pay || 0) : 0)
+  (auditOn.value ? Number(todo.value.approve || 0) : 0)
+  + (canPayFee.value ? Number(todo.value.pay || 0) : 0)
 )
 
 const loadTodo = async () => {
   if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
   /* 模块开关先就位：付款登记没开通时，待付款这一项不该出现 */
   await ensureModuleFlags(currentUser)
+  /* 审批开关同样先就位，否则铃铛可能先闪出一个待审数字 */
+  await ensureApprovalMode(currentUserForModules())
   todo.value = await fetchFeeTodo(currentUser)
 }
 

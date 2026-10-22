@@ -35,9 +35,9 @@
           </div>
           <div class="as-fee-v">¥{{ money(feeSummary.total) }}</div>
           <div class="as-fee-r">
-            <span>待审 {{ feePendingTotal }}</span>
+            <span v-if="feeApprovalEnabled">待审 {{ feePendingTotal }}</span>
             <span>已通过 {{ feeSummary.approved }}</span>
-            <span>已付款 ¥{{ money(feeSummary.paid) }}</span>
+            <span v-if="payoutUsable">已付款 ¥{{ money(feeSummary.paid) }}</span>
           </div>
         </div>
 
@@ -548,37 +548,23 @@
               </div>
 
               <template v-for="node in legTimelineNodes" :key="node.key">
-                <!-- 「已接单」分组标题 -->
-                <div v-if="node.isGroup" class="lg-group" :class="'is-' + node.state">
-                  <span class="lg-group-label">{{ node.label }}</span>
-                  <span class="lg-group-time">{{ node.timeText }}</span>
-                  <span class="lg-group-operator" v-if="node.operator">{{ node.operator }}</span>
+                <!-- 「已接单」= 时间刻度，不是节点 -->
+                <div v-if="node.isGroup" class="tl-sec" :class="'is-' + node.state">
+                  <span class="tl-sec-k">{{ node.label }}</span>
+                  <span class="tl-sec-v">{{ node.timeText }}</span>
+                  <span class="tl-sec-line"></span>
+                  <span class="tl-sec-op" v-if="node.operator" :title="node.operator">{{ node.operator }}</span>
                 </div>
 
-                <!-- 普通节点 -->
-                <div
-                  v-else
-                  class="lg-node"
-                  :class="['is-' + node.state, node.indent ? 'is-sub' : 'is-root']"
-                >
-                  <span class="lg-node-dot"></span>
-                  <div class="lg-node-body">
-                    <div class="lg-node-label">
-                      <span class="lg-node-name">{{ node.label }}</span>
-                      <span class="lg-node-badge" v-if="node.state === 'active'">进行中</span>
-                      <span class="lg-node-badge is-done" v-else-if="node.state === 'done'">已完成</span>
+                <div v-else class="tl-node" :class="'is-' + node.state">
+                  <span class="tl-rail"><i class="tl-dot"></i></span>
+                  <div class="tl-main">
+                    <div class="tl-row">
+                      <span class="tl-name">{{ node.label }}</span>
+                      <span class="tl-badge" v-if="node.state === 'active'">进行中</span>
+                      <span class="tl-time" :class="'is-' + node.state">{{ nodeTimeText(node) }}</span>
                     </div>
-                    <div class="lg-node-time">
-                      <span>进入 <b>{{ fmtTime(node.enterAt) }}</b></span>
-                      <span class="lg-node-sep">·</span>
-                      <span>
-                        完成
-                        <b v-if="node.doneAt">{{ fmtTime(node.doneAt) }}</b>
-                        <b v-else-if="node.state === 'active'" class="lg-running">{{ node.stayText }}</b>
-                        <b v-else class="lg-pending">--</b>
-                      </span>
-                    </div>
-                    <div class="lg-node-remark" v-if="node.remark">{{ node.remark }}</div>
+                    <div class="tl-sub" v-if="nodeSubText(node)">{{ nodeSubText(node) }}</div>
                   </div>
                 </div>
               </template>
@@ -601,35 +587,6 @@
 
       <!-- ===== 普通运单 ===== -->
       <template v-else>
-
-      <!-- 一级状态筛选 -->
-      <div class="lg-filter-bar">
-        <button
-          v-for="f in topFilters"
-          :key="f.key"
-          class="lg-pill"
-          :class="{ active: statusFilter === f.key }"
-          @click="setStatusFilter(f.key)"
-        >
-          <span>{{ f.label }}</span>
-          <em v-if="f.count > 0">{{ f.count }}</em>
-        </button>
-      </div>
-
-      <!-- 二级筛选：已接单下的四个节点 -->
-      <div class="lg-sub-bar" v-if="statusFilter === 'accepted'">
-        <span class="lg-sub-branch">已接单</span>
-        <span class="lg-sub-connector"></span>
-        <button
-          v-for="s in subFilters"
-          :key="s.key"
-          class="lg-seg"
-          :class="{ active: subFilter === s.key }"
-          @click="subFilter = s.key"
-        >
-          {{ s.label }}<em v-if="s.count > 0">{{ s.count }}</em>
-        </button>
-      </div>
 
       <!-- ⭐ 实际进度：计划 vs 实际双条 + 剩余里程 / 剩余时间 / 预计到达 -->
       <div class="lg-progress-card" v-if="activeRecord">
@@ -663,8 +620,7 @@
         </div>
       </div>
       <div class="lg-empty" v-else-if="filteredRecords.length === 0">
-        <span class="lg-empty-text">该筛选条件下暂无运输记录</span>
-        <el-button size="small" plain @click="setStatusFilter('all')">查看全部</el-button>
+        <span class="lg-empty-text">这条运单还没有运输记录</span>
       </div>
 
       <!-- 地图 + 节点时间轴 -->
@@ -726,37 +682,24 @@
             </div>
 
             <template v-for="node in timelineNodes" :key="node.key">
-              <!-- 「已接单」分组标题 -->
-              <div v-if="node.isGroup" class="lg-group" :class="'is-' + node.state">
-                <span class="lg-group-label">{{ node.label }}</span>
-                <span class="lg-group-time">{{ node.timeText }}</span>
-                <span class="lg-group-operator" v-if="node.operator">{{ node.operator }}</span>
+              <!-- 「已接单」= 时间刻度，不是节点：一条线 + 时间，别做得像张卡片 -->
+              <div v-if="node.isGroup" class="tl-sec" :class="'is-' + node.state">
+                <span class="tl-sec-k">{{ node.label }}</span>
+                <span class="tl-sec-v">{{ node.timeText }}</span>
+                <span class="tl-sec-line"></span>
+                <span class="tl-sec-op" v-if="node.operator" :title="node.operator">{{ node.operator }}</span>
               </div>
 
-              <!-- 普通节点 -->
-              <div
-                v-else
-                class="lg-node"
-                :class="['is-' + node.state, node.indent ? 'is-sub' : 'is-root']"
-              >
-                <span class="lg-node-dot"></span>
-                <div class="lg-node-body">
-                  <div class="lg-node-label">
-                    <span class="lg-node-name">{{ node.label }}</span>
-                    <span class="lg-node-badge" v-if="node.state === 'active'">进行中</span>
-                    <span class="lg-node-badge is-done" v-else-if="node.state === 'done'">已完成</span>
+              <!-- 普通节点：一条竖轴串起来，右侧统一放「进入时间」，副行放停留时长 + 说明 -->
+              <div v-else class="tl-node" :class="'is-' + node.state">
+                <span class="tl-rail"><i class="tl-dot"></i></span>
+                <div class="tl-main">
+                  <div class="tl-row">
+                    <span class="tl-name">{{ node.label }}</span>
+                    <span class="tl-badge" v-if="node.state === 'active'">进行中</span>
+                    <span class="tl-time" :class="'is-' + node.state">{{ nodeTimeText(node) }}</span>
                   </div>
-                  <div class="lg-node-time">
-                    <span>进入 <b>{{ fmtTime(node.enterAt) }}</b></span>
-                    <span class="lg-node-sep">·</span>
-                    <span>
-                      完成
-                      <b v-if="node.doneAt">{{ fmtTime(node.doneAt) }}</b>
-                      <b v-else-if="node.state === 'active'" class="lg-running">{{ node.stayText }}</b>
-                      <b v-else class="lg-pending">--</b>
-                    </span>
-                  </div>
-                  <div class="lg-node-remark" v-if="node.remark">{{ node.remark }}</div>
+                  <div class="tl-sub" v-if="nodeSubText(node)">{{ nodeSubText(node) }}</div>
                 </div>
               </div>
             </template>
@@ -786,7 +729,9 @@
           <span>本单费用</span>
           <b>¥{{ money(feeSummary.total) }}</b>
         </div>
-        <div class="fee-stat">
+        <!-- ⭐ 这三块都跟「业务流程」上的开关走：
+             待我审批 → 费用审批开关；已付款 → 付款记录模块（审批关时连带收起） -->
+        <div v-if="feeApprovalEnabled" class="fee-stat">
           <span>待我审批</span>
           <b class="is-warn">{{ feePendingCount }}</b>
         </div>
@@ -794,17 +739,22 @@
           <span>已通过</span>
           <b class="is-ok">{{ feeSummary.approved }}</b>
         </div>
-        <div class="fee-stat">
+        <div v-if="payoutUsable" class="fee-stat">
           <span>已付款</span>
           <b>¥{{ money(feeSummary.paid) }}</b>
         </div>
         <div class="fee-strip-right">
+          <!-- ⭐ 跟「业务流程 → 费用审批」开关联动：关掉后这里直接说"没开启" -->
           <el-tag v-if="feeApprovalEnabled" size="small" type="success" effect="plain">费用审批已开启</el-tag>
-          <el-tag v-else size="small" type="info" effect="plain">本单免审</el-tag>
+          <el-tag v-else-if="feeApprovalOff" size="small" type="info" effect="plain">本单免审</el-tag>
+          <el-tag v-else size="small" type="info" effect="plain">费用审批未开启</el-tag>
           <el-select v-model="feeFilter" size="small" style="width: 118px">
             <el-option label="全部" value="all" />
-            <el-option label="待我审批" value="mine" />
-            <el-option label="审核中" value="审核中" />
+            <!-- 审批关着就不该有「待我审批 / 审核中」这两个筛选项 -->
+            <template v-if="feeApprovalEnabled">
+              <el-option label="待我审批" value="mine" />
+              <el-option label="审核中" value="审核中" />
+            </template>
             <el-option label="已通过" value="已通过" />
             <el-option label="已驳回" value="已驳回" />
           </el-select>
@@ -1031,7 +981,7 @@ import app, { supabase } from '@/utils/supabase'
 import { signGet } from '@/utils/cos'
 import { unitFull } from '@/utils/units'
 import { isPayer } from '@/utils/feeTodo'
-import { moduleFlags, ensureModuleFlags } from '@/utils/modules'
+import { moduleFlags, ensureModuleFlags, approvalOn, ensureApprovalMode, currentUserForModules } from '@/utils/modules'
 import PaymentDialog from '@/components/PaymentDialog.vue'
 import PaymentVouchers from '@/components/PaymentVouchers.vue'
 import dayjs from 'dayjs'
@@ -1244,8 +1194,6 @@ const statusStyle = (status) => {
 const mainRecord = ref(null)        // 当前详情页主体运单
 const records = ref([])             // 运输记录（非常驻任务只有 1 条）
 const activeRecordNo = ref('')
-const statusFilter = ref('all')
-const subFilter = ref('all')
 const loadingLogistics = ref(false)
 const refreshedAtText = ref('--')
 
@@ -1443,52 +1391,10 @@ const parseStatusLog = (rec) => parseList(rec && rec.status_log)
 const logNode = (log, status) =>
   log.find(x => x && String(x.status || '').trim() === status) || null
 
-// ---------- 两级筛选 ----------
-const TOP_FILTER_DEFS = [
-  { key: 'all', label: '全部' },
-  { key: 'pending', label: '待接单' },
-  { key: 'accepted', label: '已接单' },
-  { key: 'done', label: '已完成' },
-  { key: 'cancelled', label: '已取消' },
-  { key: 'reassign', label: '待重新指派' },
-]
-const matchesTop = (key, status) => {
-  const s = String(status || '').trim()
-  if (key === 'all') return true
-  if (key === 'pending') return s === '待接单'
-  if (key === 'accepted') return ACCEPTED_STATUSES.includes(s)
-  if (key === 'done') return s === '已完成'
-  if (key === 'cancelled') return s === '已取消'
-  if (key === 'reassign') return s === '待重新指派'
-  return true
-}
-const topFilters = computed(() =>
-  TOP_FILTER_DEFS.map(d => ({
-    ...d,
-    count: records.value.filter(r => matchesTop(d.key, r.status)).length,
-  }))
-)
-const subFilters = computed(() => {
-  const base = records.value.filter(r => matchesTop('accepted', r.status))
-  return [{ key: 'all', label: '全部', count: base.length }].concat(
-    ACCEPTED_STATUSES.map(k => ({
-      key: k,
-      label: k,
-      count: base.filter(r => String(r.status || '').trim() === k).length,
-    }))
-  )
-})
-const filteredRecords = computed(() => {
-  let list = records.value.filter(r => matchesTop(statusFilter.value, r.status))
-  if (statusFilter.value === 'accepted' && subFilter.value !== 'all') {
-    list = list.filter(r => String(r.status || '').trim() === subFilter.value)
-  }
-  return list
-})
-const setStatusFilter = (key) => {
-  statusFilter.value = key
-  subFilter.value = 'all'
-}
+// ---------- 运输记录 ----------
+/* 状态筛选行已按用户要求去掉（2026-10-22）：一条运单下面的运输记录直接全量展示，
+   只在多于一条时给切换卡片，不再让用户先筛后看。 */
+const filteredRecords = computed(() => records.value)
 const selectRecord = (rec) => { activeRecordNo.value = rec.waybill_no }
 
 const recordMetaText = (rec) => {
@@ -1742,6 +1648,32 @@ const buildTimelineNodes = (rec, opts) => {
 const reverseNodes = (list) => (list || []).slice().reverse()
 
 const timelineNodes = computed(() => buildTimelineNodes(activeRecord.value))
+
+/* 节点右上的主时间：统一放「进入该节点的时间」。
+   完成时间不再单列 —— 倒序排列后它就是上一行的进入时间，重复写反而乱，
+   时长改成副行的「停留 X」表达。 */
+const nodeTimeText = (n) => {
+  if (!n) return ''
+  if (n.state === 'pending') return '待开始'
+  if (n.state === 'active') return n.enterAt ? '进入 ' + fmtTime(n.enterAt) : '进行中'
+  if (n.state === 'cancelled') return n.enterAt ? fmtTime(n.enterAt) : ''
+  return n.enterAt ? fmtTime(n.enterAt) : ''
+}
+
+/* 副行：停留时长 + 这个节点的业务说明 */
+const nodeSubText = (n) => {
+  if (!n) return ''
+  const parts = []
+  if (n.state === 'pending') return n.remark || ''
+  if (n.state === 'active') {
+    if (n.stayText) parts.push(n.stayText)
+  } else if (n.enterAt && n.doneAt) {
+    const ms = dayjs(n.doneAt).valueOf() - dayjs(n.enterAt).valueOf()
+    if (!isNaN(ms) && ms >= 0) parts.push('停留 ' + fmtDuration(ms))
+  }
+  if (n.remark) parts.push(n.remark)
+  return parts.join(' · ')
+}
 
 // ---------- 地图 ----------
 let wbMap = null
@@ -2142,10 +2074,19 @@ const feeReports = ref([])
 const feeLoading = ref(false)
 const feeFilter = ref('all')
 const feeError = ref('')
-const feeApprovalEnabled = ref(true)
+/* 运单级：这单被单独设成免审（waybills.fee_approval = 'off'） */
+const feeApprovalOff = ref(false)
+/* ⭐ 是否走审批 = 业务流程里的「费用审批」总开关 AND 本单没被单独免审
+   关掉任何一边都不该出现「待我审批 / 审核中」这类入口 */
+const feeApprovalEnabled = computed(() => approvalOn.value && !feeApprovalOff.value)
 /* ⭐ 默认全部展开：只记「被手动收起」的那几条，新数据进来即恢复全展开 */
 const collapsedFee = ref([])
 const isFeeOpen = (r) => !collapsedFee.value.includes(String(r.id))
+
+/* 审批关掉后，之前停在「待我审批 / 审核中」的筛选值就失效了，回到「全部」 */
+watch(feeApprovalEnabled, (on) => {
+  if (!on && ['mine', '审核中'].includes(feeFilter.value)) feeFilter.value = 'all'
+})
 const toggleFee = (r) => {
   const k = String(r.id)
   const i = collapsedFee.value.indexOf(k)
@@ -2248,6 +2189,11 @@ const stepText = (st) => {
   return '待处理'
 }
 
+/* ⭐ 付款记录能不能用 = 模块开关 AND 审批没关
+   （业务流程画布上审批一关，付款记录会连带折叠；页面口径必须一致，
+     否则会出现「审批没开却能登记付款」这种矛盾） */
+const payoutUsable = computed(() => moduleFlags.payout === true && approvalOn.value)
+
 const feeSummary = computed(() => {
   let total = 0
   let paid = 0
@@ -2261,8 +2207,13 @@ const feeSummary = computed(() => {
   return { total, paid, approved }
 })
 
-const feePendingCount = computed(() => feeReports.value.filter((r) => canApprove(r)).length)
-const feePendingTotal = computed(() => feeReports.value.filter((r) => r.status === '审核中').length)
+/* 待我审批 / 待审：审批没开就恒为 0（历史"审核中"的旧单子也不再冒出红点） */
+const feePendingCount = computed(() =>
+  feeApprovalEnabled.value ? feeReports.value.filter((r) => canApprove(r)).length : 0
+)
+const feePendingTotal = computed(() =>
+  feeApprovalEnabled.value ? feeReports.value.filter((r) => r.status === '审核中').length : 0
+)
 
 /* ===== 左侧摘要 ===== */
 const asideStatus = computed(
@@ -2310,7 +2261,7 @@ async function loadFeeReports() {
       .order('create_time', { ascending: false })
     if (error) throw error
     feeReports.value = Array.isArray(data) ? data : []
-    if (mainRecord.value && mainRecord.value.fee_approval === 'off') feeApprovalEnabled.value = false
+    feeApprovalOff.value = !!(mainRecord.value && mainRecord.value.fee_approval === 'off')
     collapsedFee.value = []
     loadImageUrls(feeReports.value)
   } catch (e) {
@@ -2450,13 +2401,14 @@ const voucherTitle = ref('付款凭据')
 const canPay = (r) => {
   if (!r || !['已通过', '待打款'].includes(r.status)) return false
   if (!hasAmount(r.type)) return false
-  return isPayer(currentUser) && moduleFlags.payout
+  return isPayer(currentUser) && payoutUsable.value
 }
 
-const canRevoke = (r) => !!r && r.status === '已打款' && isPayer(currentUser) && moduleFlags.payout
+const canRevoke = (r) => !!r && r.status === '已打款' && isPayer(currentUser) && payoutUsable.value
 const voucherCount = (r) => (Array.isArray(r?.payment?.images) ? r.payment.images.length : 0)
 
 const openPay = (r) => {
+  if (!approvalOn.value) return ElMessage.warning('费用审批未开启，无需登记付款')
   if (!moduleFlags.payout) return ElMessage.warning('付款登记未开通，请先在费用审批设置里打开')
   if (!canPay(r)) return ElMessage.warning('只有主账号或财务可以登记付款')
   payTargets.value = [r]
@@ -2779,6 +2731,9 @@ onMounted(async () => {
   if (isCustomer && isSubAccount) await loadMyOrgInfo()
   /* ⭐ 付款登记是可配置模块：先确认开关，避免直接深链进来看到禁用入口 */
   ensureModuleFlags(currentUser)
+  /* ⭐ 费用审批开关来自「业务流程」画布：这个页面是独立路由，没有左侧菜单帮它预热，
+     必须自己读一次，否则深链进来会一直显示「费用审批已开启」 */
+  ensureApprovalMode(currentUserForModules())
   loadWaybill()
   // ⭐ 深链：/waybill/detail?waybill_no=xxx&tab=fee
   const tabQ = String(route.query.tab || '')
@@ -2883,7 +2838,7 @@ onMounted(async () => {
 .reject-key {
   flex-shrink: 0;
   width: 60px;
-  color: #94A3B8;
+  color: #64748B;
 }
 .reject-val {
   color: #1E293B;
@@ -2925,7 +2880,7 @@ onMounted(async () => {
 }
 .hint-text {
   font-size: 12px;
-  color: #94A3B8;
+  color: #64748B;
   margin-left: 12px;
   font-weight: 500;
 }
@@ -3265,7 +3220,7 @@ onMounted(async () => {
   background: transparent;
   font-size: 14px;
   font-weight: 600;
-  color: #94A3B8;
+  color: #64748B;
   cursor: pointer;
   transition: color 0.2s;
   font-family: inherit;
@@ -3294,7 +3249,7 @@ onMounted(async () => {
 .detail-tabs-hint {
   margin-left: auto;
   font-size: 12px;
-  color: #94A3B8;
+  color: #64748B;
   font-family: 'Courier New', monospace;
 }
 
@@ -3303,46 +3258,6 @@ onMounted(async () => {
    ============================================================ */
 .lg-panel { padding-bottom: 8px; }
 
-/* ---- 一级筛选 ---- */
-.lg-filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 12px 16px;
-  margin-bottom: 10px;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-}
-.lg-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 26px;
-  padding: 0 12px;
-  border-radius: 13px;
-  border: 1px solid transparent;
-  background: #F1F5F9;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-.lg-pill:hover { background: #E2E8F0; }
-.lg-pill.active { background: #FCEBEB; color: #A32D2D; border-color: #E24B4A; }
-.lg-pill em {
-  font-style: normal;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 0 5px;
-  border-radius: 8px;
-  background: #ffffff;
-  color: inherit;
-  opacity: 0.85;
-}
 /* ===== ⭐ 刷新工具条（常驻与普通共用） ===== */
 .lg-toolbar {
   display: flex;
@@ -3353,50 +3268,15 @@ onMounted(async () => {
 }
 .lg-updated {
   font-size: 12px;
-  color: #94A3B8;
-  font-family: 'Courier New', monospace;
+  color: #64748B;
+  font-family: var(--num-font, sans-serif);
+  font-variant-numeric: tabular-nums;
 }
 .lg-refresh-icon {
   margin-right: 4px;
   font-size: 13px;
   vertical-align: -2px;
 }
-
-/* ---- 已接单二级筛选 ---- */
-.lg-sub-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 10px 16px;
-  margin-bottom: 10px;
-  background: #ffffff;
-  border-radius: 12px;
-  border-left: 3px solid var(--brand-primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-}
-.lg-sub-branch { font-size: 12px; font-weight: 700; color: #A32D2D; }
-.lg-sub-connector { width: 14px; height: 1px; background: #E2E8F0; }
-.lg-seg {
-  height: 24px;
-  padding: 0 12px;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  background: #F8FAFC;
-  color: #64748B;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-.lg-seg:hover { background: #F1F5F9; }
-.lg-seg.active {
-  background: #ffffff;
-  border-color: #E2E8F0;
-  color: #0F172A;
-  font-weight: 600;
-}
-.lg-seg em { font-style: normal; margin-left: 4px; font-size: 11px; color: #94A3B8; }
 
 /* ---- 运输记录卡片 ---- */
 .lg-records {
@@ -3454,7 +3334,7 @@ onMounted(async () => {
   white-space: nowrap;
 }
 .lg-record-route i { font-style: normal; color: var(--brand-primary); margin: 0 2px; }
-.lg-record-meta { margin-top: 4px; font-size: 11.5px; color: #94A3B8; }
+.lg-record-meta { margin-top: 4px; font-size: 11.5px; color: #64748B; }
 .lg-record-flag {
   position: absolute;
   top: -1px;
@@ -3477,7 +3357,7 @@ onMounted(async () => {
   border: 1px dashed #E2E8F0;
   border-radius: 12px;
 }
-.lg-empty-text { font-size: 13px; color: #94A3B8; }
+.lg-empty-text { font-size: 13px; color: #64748B; }
 
 /* ---- 地图 + 时间轴 ---- */
 .lg-main { display: flex; gap: 12px; align-items: stretch; }
@@ -3542,7 +3422,7 @@ onMounted(async () => {
 .lg-vc-mono {
   font-family: 'Courier New', monospace;
   font-size: 11.5px;
-  color: #94A3B8;
+  color: #64748B;
 }
 .lg-legend {
   position: absolute;
@@ -3610,7 +3490,101 @@ onMounted(async () => {
   border-bottom: 1px solid #F1F5F9;
 }
 .lg-tl-title { font-size: 13px; font-weight: 700; color: #0F172A; }
-.lg-tl-body { flex: 1; overflow-y: auto; padding: 12px 16px 6px 16px; }
+/* ---- 节点时间轴 ----
+   版式目标：一条竖轴串起来，每行只有「节点名 …… 进入时间」+ 一行很淡的副说明。
+   状态靠圆点颜色表达，不再用文字徽标重复节点名（避免出现「已完成 已完成」）。 */
+.lg-tl-body { flex: 1; overflow-y: auto; padding: 10px 14px 14px; }
+
+/* 「已接单」时间刻度：不是节点，是一条线 + 时间 */
+.tl-sec {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 19px;          /* 和节点文字对齐（rail 9 + gap 10） */
+  margin: 2px 0 10px;
+  max-width: 520px;
+}
+.tl-sec-k { font-size: 12px; font-weight: 700; color: #475569; flex: 0 0 auto; }
+.tl-sec-v {
+  font-size: 12px; color: #64748B; flex: 0 0 auto;
+  font-family: var(--num-font, sans-serif);
+  font-variant-numeric: tabular-nums;
+}
+.tl-sec-line { flex: 1; height: 1px; background: #E2E8F0; }
+.tl-sec-op {
+  flex: 0 0 auto; max-width: 96px;
+  font-size: 11.5px; color: #64748B;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* 节点 */
+.tl-node { position: relative; display: flex; gap: 10px; padding-bottom: 13px; max-width: 520px; }
+/* 竖轴：从圆点下方连到下一个节点 */
+.tl-node::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 14px;
+  bottom: 0;
+  width: 1px;
+  background: #E8EEF5;
+}
+.tl-node:last-child { padding-bottom: 2px; }
+.tl-node:last-child::before { display: none; }
+
+.tl-rail { flex: 0 0 auto; width: 9px; }
+.tl-dot {
+  display: block;
+  width: 9px; height: 9px;
+  margin-top: 4px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  background: #fff;
+  border: 2px solid #CBD5E1;
+}
+.tl-node.is-done .tl-dot { background: #0F6E56; border-color: #0F6E56; }
+.tl-node.is-active .tl-dot {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 4px rgba(var(--brand-rgb), .14);
+}
+.tl-node.is-cancelled .tl-dot { background: #94A3B8; border-color: #94A3B8; }
+
+.tl-main { flex: 1; min-width: 0; }
+.tl-row { display: flex; align-items: baseline; gap: 7px; }
+.tl-name {
+  font-size: 13.5px; font-weight: 600; color: #0F172A;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tl-node.is-pending .tl-name { color: #64748B; font-weight: 500; }
+.tl-badge {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  font-size: 10.5px; font-weight: 700;
+  border-radius: 8px;
+  background: #FCEBEB; color: #A32D2D;
+}
+.tl-time {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  font-family: var(--num-font, sans-serif);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.1px;
+}
+.tl-time.is-active { color: var(--brand-primary); }
+.tl-time.is-pending { color: #94A3B8; font-weight: 500; }
+.tl-time.is-done { color: #0F6E56; }
+
+.tl-sub {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #64748B;
+  word-break: break-all;
+}
 .lg-tl-foot {
   flex-shrink: 0;
   padding: 10px 16px;
@@ -3624,84 +3598,11 @@ onMounted(async () => {
   gap: 8px;
   font-size: 12px;
   line-height: 1.9;
-  color: #94A3B8;
+  color: #64748B;
 }
 .lg-foot-line b { color: #334155; font-weight: 600; }
-.lg-mono { font-family: 'Courier New', monospace; font-size: 11.5px; }
+.lg-mono { font-family: var(--num-font, sans-serif); font-size: 12px; font-variant-numeric: tabular-nums; }
 
-/* ---- 已接单分组标题 ---- */
-.lg-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 10px 0 8px 0;
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: #F8FAFC;
-  border-left: 3px solid #CBD5E1;
-}
-.lg-group.is-active { background: #FCEBEB; border-left-color: var(--brand-primary); }
-.lg-group.is-done { background: #F1F5F9; border-left-color: #0F6E56; }
-.lg-group-label { font-size: 12.5px; font-weight: 700; color: #0F172A; }
-.lg-group-time { font-size: 11.5px; color: #64748B; }
-.lg-group-operator { margin-left: auto; font-size: 11.5px; color: #94A3B8; }
-
-/* ---- 节点 ---- */
-.lg-node {
-  position: relative;
-  display: flex;
-  gap: 10px;
-  padding: 6px 0 10px 0;
-}
-.lg-node.is-sub {
-  margin-left: 5px;
-  padding-left: 14px;
-  border-left: 1px dashed #E2E8F0;
-}
-.lg-node-dot {
-  flex: 0 0 auto;
-  width: 9px;
-  height: 9px;
-  margin-top: 4px;
-  border-radius: 50%;
-  background: #ffffff;
-  border: 2px solid #CBD5E1;
-}
-.lg-node.is-done .lg-node-dot { background: #0F6E56; border-color: #0F6E56; }
-.lg-node.is-active .lg-node-dot {
-  background: var(--brand-primary);
-  border-color: var(--brand-primary);
-  box-shadow: 0 0 0 4px rgba(var(--brand-rgb), 0.14);
-}
-.lg-node.is-cancelled .lg-node-dot { background: #94A3B8; border-color: #94A3B8; }
-.lg-node-body { flex: 1; min-width: 0; }
-.lg-node-label { display: flex; align-items: center; gap: 6px; }
-.lg-node-name { font-size: 12.5px; font-weight: 600; color: #0F172A; }
-.lg-node.is-pending .lg-node-name { color: #94A3B8; font-weight: 500; }
-.lg-node-badge {
-  padding: 1px 6px;
-  font-size: 10px;
-  font-weight: 700;
-  border-radius: 8px;
-  background: #FCEBEB;
-  color: #A32D2D;
-}
-.lg-node-badge.is-done { background: #E1F5EE; color: #0F6E56; }
-.lg-node-time {
-  margin-top: 3px;
-  font-size: 11.5px;
-  line-height: 1.7;
-  color: #94A3B8;
-}
-.lg-node-time b {
-  font-family: 'Courier New', monospace;
-  font-weight: 600;
-  color: #475569;
-}
-.lg-node-sep { margin: 0 5px; }
-.lg-running { color: var(--brand-primary) !important; }
-.lg-pending { color: #CBD5E1 !important; }
-.lg-node-remark { margin-top: 2px; font-size: 11px; color: #B4B2A9; }
 
 .lg-reassign {
   margin-bottom: 10px;
@@ -3820,7 +3721,7 @@ onMounted(async () => {
 .rec-task-hint {
   flex: 1 0 100%;
   font-size: 11.5px;
-  color: #94a3b8;
+  color: #64748B;
   line-height: 1.6;
 }
 
@@ -3886,7 +3787,7 @@ onMounted(async () => {
 .lg-gantt-times {
   margin-left: auto;
   font-size: 11.5px;
-  color: #94a3b8;
+  color: #64748B;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -3912,7 +3813,7 @@ onMounted(async () => {
   gap: 5px;
 }
 .lg-map-focus { margin-left: auto; color: #334155; }
-.lg-map-tip { color: #94a3b8; }
+.lg-map-tip { color: #64748B; }
 .lg-map-clear {
   margin-left: 6px;
   padding: 1px 8px;
@@ -3974,7 +3875,7 @@ onMounted(async () => {
 }
 .lg-vc-extra {
   font-style: normal;
-  color: #94a3b8;
+  color: #64748B;
 }
 .lg-legs-head {
   display: flex;
@@ -3990,12 +3891,12 @@ onMounted(async () => {
 }
 .lg-legs-sub {
   font-size: 11.5px;
-  color: #94a3b8;
+  color: #64748B;
 }
 .lg-legs-hint {
   margin-left: auto;
   font-size: 11.5px;
-  color: #94a3b8;
+  color: #64748B;
 }
 /* 趟次色点：甘特行、右侧页签、地图轨迹同一颜色 */
 .lg-leg-dot {
@@ -4040,7 +3941,7 @@ onMounted(async () => {
 .fee-stat span {
   display: block;
   font-size: 12px;
-  color: #94A3B8;
+  color: #64748B;
   margin-bottom: 3px;
 }
 
@@ -4099,7 +4000,7 @@ onMounted(async () => {
 
 .fee-empty span {
   font-size: 12.5px;
-  color: #94A3B8;
+  color: #64748B;
 }
 
 .fee-report {
@@ -4171,12 +4072,12 @@ onMounted(async () => {
 
 .fr-meta {
   font-size: 12.5px;
-  color: #94A3B8;
+  color: #64748B;
   margin-top: 3px;
 }
 
 .fr-arrow {
-  color: #CBD5E1;
+  color: #94A3B8;
   font-size: 14px;
   transition: transform .2s;
 }
@@ -4199,7 +4100,7 @@ onMounted(async () => {
 
 .fr-col-title {
   font-size: 12px;
-  color: #94A3B8;
+  color: #64748B;
   margin-bottom: 8px;
 }
 
@@ -4226,7 +4127,7 @@ onMounted(async () => {
 
 .fr-none {
   font-size: 13px;
-  color: #94A3B8;
+  color: #64748B;
 }
 
 .fr-imgs {
@@ -4247,7 +4148,7 @@ onMounted(async () => {
 .fr-note {
   margin-top: 9px;
   font-size: 12.5px;
-  color: #94A3B8;
+  color: #64748B;
   line-height: 1.7;
 }
 
@@ -4290,7 +4191,7 @@ onMounted(async () => {
   display: block;
   font-style: normal;
   font-size: 12px;
-  color: #94A3B8;
+  color: #64748B;
   margin-top: 2px;
 }
 
@@ -4308,7 +4209,7 @@ onMounted(async () => {
 .fr-hint {
   margin-right: auto;
   font-size: 12px;
-  color: #94A3B8;
+  color: #64748B;
 }
 
 .fr-reject {
@@ -4521,7 +4422,7 @@ onMounted(async () => {
 
 .as-sub {
   font-size: 11px;
-  color: #94a3b8;
+  color: #64748B;
 }
 
 .as-row {
@@ -4539,7 +4440,7 @@ onMounted(async () => {
 }
 
 .as-row span {
-  color: #94a3b8;
+  color: #64748B;
   flex: 0 0 auto;
 }
 
@@ -4569,7 +4470,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   font-size: 10.5px;
-  color: #94a3b8;
+  color: #64748B;
 }
 
 .as-fee-v {
@@ -4591,7 +4492,7 @@ onMounted(async () => {
 
 .as-hint {
   font-size: 10px;
-  color: #94a3b8;
+  color: #64748B;
   line-height: 1.7;
   padding: 0 2px;
 }

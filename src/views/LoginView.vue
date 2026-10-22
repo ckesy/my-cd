@@ -276,6 +276,31 @@ const handleLogin = async () => {
     }
 
     // ============================================================
+    // ⭐⭐⭐ 5.1 主账号：公司全称从 organizations 的根机构取
+    //   主账号自己没有 org_id（org_id 是子账号才有的归属），但 organizations
+    //   里有 owner_account = 本账号的根节点。不查这一步，「个人设置」里的
+    //   公司名称就是空的（显示 —）。
+    // ============================================================
+    if (!isAdmin && !isSubAccount && userData.account) {
+      try {
+        const { data: rootOrg } = await supabase
+          .from('organizations')
+          .select('name, level, is_root')
+          .eq('owner_account', userData.account)
+          .order('level', { ascending: true })
+          .limit(1)
+        if (rootOrg && rootOrg[0] && rootOrg[0].name) {
+          orgName = String(rootOrg[0].name).trim()
+          orgLevel = Number(rootOrg[0].level) || 1
+          isRootOrg = orgLevel === 1
+          console.log('[登录] ✅ 主账号公司名:', orgName, '| level =', orgLevel)
+        }
+      } catch (err) {
+        console.warn('[登录] 查询主账号公司名失败（放行）:', err)
+      }
+    }
+
+    // ============================================================
     // 6️⃣ 组装 account
     // ============================================================
     const customerName = masterUser?.name || userData.name || ''
@@ -295,6 +320,9 @@ const handleLogin = async () => {
       orgId: userData.org_id,
       org: orgName,           // ⭐ 真实机构名（从 organizations 读）
       orgName,                // ⭐ 新加
+      /* ⭐ 昵称（2026-10-22）：主账号可自定义，界面优先显示它 */
+      nickname: userData.nickname || '',
+      displayName: userData.nickname || userData.name || '',
       orgLevel,               // ⭐ 新加
       isRootOrg,              // ⭐ 新加
       customerId: isAdmin ? undefined : userData.id,

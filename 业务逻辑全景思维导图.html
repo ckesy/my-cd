@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>东风车队管理系统 · 业务逻辑全景思维导图</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: #F5F7FA; color: #0F172A; overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  :root {
+    --ink: #0F172A; --sub: #64748B; --mute: #94A3B8;
+    --line: #CBD5E1; --card: #FFFFFF; --hair: #E2E8F0;
+    --brand: #c8102e; --soft: #F7F9FC;
+  }
+
+  /* ---------- header ---------- */
+  .hd {
+    position: fixed; inset: 0 0 auto 0; height: 62px; z-index: 30;
+    display: flex; align-items: center; gap: 14px; padding: 0 18px;
+    background: rgba(255,255,255,.92); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--hair);
+  }
+  .hd-logo { width: 4px; height: 26px; border-radius: 2px; background: var(--brand); flex: 0 0 auto; }
+  .hd-t { font-size: 15px; font-weight: 800; letter-spacing: .2px; white-space: nowrap; }
+  .hd-s { font-size: 11.5px; color: var(--mute); white-space: nowrap; margin-left: -6px; }
+  .grow { flex: 1; }
+
+  .search {
+    position: relative; width: 260px; flex: 0 0 auto;
+  }
+  .search input {
+    width: 100%; height: 32px; border-radius: 8px; border: 1px solid var(--hair);
+    background: var(--soft); padding: 0 30px 0 30px; font-size: 12.5px; color: var(--ink);
+    outline: none; transition: .15s;
+  }
+  .search input:focus { background: #fff; border-color: #b9c4d4; box-shadow: 0 0 0 3px rgba(200,16,46,.06); }
+  .search .ic { position: absolute; left: 9px; top: 8px; width: 15px; height: 15px; opacity: .45; }
+  .search .cnt {
+    position: absolute; right: 8px; top: 6px; font-size: 11px; color: var(--mute);
+    background: #fff; padding: 1px 5px; border-radius: 5px; border: 1px solid var(--hair);
+  }
+
+  .btns { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+  .btn {
+    height: 32px; padding: 0 11px; border-radius: 8px; border: 1px solid var(--hair);
+    background: #fff; color: #475569; font-size: 12px; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; transition: .14s;
+  }
+  .btn:hover { border-color: #b9c4d4; color: var(--ink); background: #FCFDFE; }
+  .btn:active { transform: translateY(.5px); }
+  .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.primary:hover { background: #a80d26; border-color: #a80d26; color: #fff; }
+  .btn svg { width: 13px; height: 13px; }
+
+  /* ---------- domain chips ---------- */
+  .chips {
+    position: fixed; left: 0; right: 0; top: 62px; height: 42px; z-index: 25;
+    display: flex; align-items: center; gap: 6px; padding: 0 18px; overflow-x: auto;
+    background: rgba(247,249,252,.94); border-bottom: 1px solid var(--hair);
+    scrollbar-width: none;
+  }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: 0 0 auto; height: 26px; padding: 0 10px 0 8px; border-radius: 7px;
+    border: 1px solid var(--hair); background: #fff; font-size: 11.5px; font-weight: 600;
+    color: #475569; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: .14s;
+  }
+  .chip:hover { border-color: #b9c4d4; color: var(--ink); }
+  .chip.on { background: #fff; border-color: currentColor; }
+  .chip i { width: 7px; height: 7px; border-radius: 2px; display: block; }
+  .chip b { font-weight: 700; color: var(--mute); font-size: 10.5px; }
+
+  /* ---------- stage ---------- */
+  #stage {
+    position: fixed; inset: 104px 0 26px 0; overflow: hidden; cursor: grab;
+    background-image: radial-gradient(circle at 1px 1px, #dbe2ec 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+  #stage.drag { cursor: grabbing; }
+  #canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+  #edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+
+  /* ---------- node ---------- */
+  .node {
+    position: absolute; border-radius: 9px; cursor: pointer;
+    display: flex; align-items: flex-start; gap: 8px;
+    transition: box-shadow .15s, border-color .15s, background .15s;
+    user-select: none;
+  }
+  .node .txt { white-space: pre-wrap; word-break: break-word; line-height: 1.4; }
+  .node .tag {
+    display: inline-block; width: 14px; height: 14px; line-height: 14px; text-align: center;
+    font-style: normal; font-size: 9.5px; font-weight: 800; border-radius: 4px;
+    margin-right: 5px; vertical-align: 1px; letter-spacing: 0;
+  }
+  .node .knob {
+    flex: 0 0 auto; width: 12px; min-height: 12px; margin-top: 2px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: #94A3B8; font-weight: 700;
+  }
+  .node .knob.has {
+    width: 13px; height: 13px; border-radius: 4px; border: 1px solid #D5DEE9;
+    background: #fff; color: #64748B; line-height: 1;
+  }
+  .node.has-kids:hover .knob.has { border-color: #94A3B8; color: var(--ink); }
+
+  /* depth 0 */
+  .d0 { background: #0F172A; color: #fff; padding: 12px 16px; box-shadow: 0 8px 22px rgba(15,23,42,.22); }
+  .d0 .txt { font-size: 14px; font-weight: 800; letter-spacing: .2px; }
+  .d0 .knob.has { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.3); color: #fff; }
+
+  /* depth 1 */
+  .d1 { background: #fff; padding: 10px 13px 10px 15px; box-shadow: 0 2px 10px rgba(15,23,42,.07); border: 1px solid var(--hair); }
+  .d1::before { content:''; position:absolute; left:0; top:8px; bottom:8px; width:3.5px; border-radius: 0 3px 3px 0; background: var(--dc, #c8102e); }
+  .d1 .txt { font-size: 13px; font-weight: 800; letter-spacing: .1px; }
+
+  /* depth 2 */
+  .d2 { background: #fff; padding: 8px 11px; border: 1px solid var(--hair); box-shadow: 0 1px 4px rgba(15,23,42,.04); }
+  .d2 .txt { font-size: 12.5px; font-weight: 700; color: #1E293B; }
+
+  /* depth 3+ */
+  .d3 { background: #FFFFFF; padding: 6px 10px; border: 1px solid #E7EDF4; box-shadow: 0 1px 3px rgba(15,23,42,.03); }
+  .d3 .txt { font-size: 12px; font-weight: 500; color: #334155; line-height: 1.45; }
+  .d3 .knob { display: none; }
+  .d3::before {
+    content: ''; position: absolute; left: -7px; top: 13px;
+    width: 3px; height: 3px; border-radius: 50%; background: #C3CEDC;
+  }
+
+  .node.sel { box-shadow: 0 0 0 2px rgba(200,16,46,.55), 0 4px 14px rgba(200,16,46,.14); border-color: #e8a3ae !important; z-index: 5; }
+  .node.hit { background: #FFF7E6; border-color: #F5C26B; }
+  .node.hit .txt { color: #92400E; }
+  .node.dim { opacity: .34; }
+
+  /* ---------- footer ---------- */
+  .ft {
+    position: fixed; left: 0; right: 0; bottom: 0; height: 26px; z-index: 30;
+    display: flex; align-items: center; gap: 14px; padding: 0 16px;
+    background: rgba(255,255,255,.94); border-top: 1px solid var(--hair);
+    font-size: 11px; color: var(--mute);
+  }
+  .ft b { color: #475569; font-weight: 700; }
+  .ft .dot { width: 3px; height: 3px; border-radius: 50%; background: #CBD5E1; }
+
+  /* ---------- legend ---------- */
+  .legend {
+    position: fixed; right: 16px; bottom: 40px; z-index: 20;
+    background: #fff; border: 1px solid var(--hair); border-radius: 10px;
+    padding: 9px 11px; box-shadow: 0 6px 18px rgba(15,23,42,.07); font-size: 11px;
+    display: none; grid-template-columns: auto auto; gap: 6px 12px; align-items: center;
+  }
+  .legend.on { display: grid; }
+  .legend i { width: 9px; height: 9px; border-radius: 3px; display: block; }
+
+  /* ---------- breadcrumb ---------- */
+  .crumb {
+    position: fixed; left: 16px; bottom: 40px; z-index: 20; max-width: 62vw;
+    background: #fff; border: 1px solid var(--hair); border-radius: 10px;
+    padding: 8px 12px; box-shadow: 0 6px 18px rgba(15,23,42,.07);
+    font-size: 11.5px; color: var(--sub); display: none; align-items: center; gap: 8px;
+  }
+  .crumb.on { display: flex; }
+  .crumb b { color: var(--ink); font-weight: 700; }
+  .crumb em { font-style: normal; color: #94A3B8; }
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <div class="hd-logo"></div>
+  <div class="hd-t">业务逻辑全景</div>
+  <div class="hd-s" id="subtitle">Web 36 页 · 18 组件 · 云函数 7 个 · 20+ 表</div>
+  <div class="grow"></div>
+  <div class="search">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/>
+    </svg>
+    <input id="q" placeholder="搜索业务规则…" autocomplete="off" spellcheck="false">
+    <span class="cnt" id="qcnt"></span>
+  </div>
+  <div class="btns">
+    <button class="btn" id="btnExpand" title="展开所有层级">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16M4 12h16"/></svg>展开
+    </button>
+    <button class="btn" id="btnCollapse" title="收起所有子项，回到业务域总览">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16"/></svg>收起
+    </button>
+    <button class="btn" id="btnFit" title="适配窗口">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>适配
+    </button>
+    <button class="btn" id="btnLegend" title="图例">图例</button>
+    <button class="btn primary" id="btnMd" title="导出为 Markdown">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg>导出
+    </button>
+  </div>
+</div>
+
+<div class="chips" id="chips"></div>
+
+<div id="stage">
+  <div id="canvas">
+    <svg id="edges"></svg>
+    <div id="nodes"></div>
+  </div>
+</div>
+
+<div class="crumb" id="crumb"></div>
+
+<div class="legend" id="legend">
+  <i style="background:#c8102e"></i><span>业务域主干</span>
+  <i style="background:#FEE2E2;color:#B91C1C;text-align:center;font-size:8px;line-height:9px">✓</i><span>校验 / 拦截条件</span>
+  <i style="background:#DBEAFE;color:#1D4ED8;text-align:center;font-size:8px;line-height:9px">ƒ</i><span>计算公式</span>
+  <i style="background:#DCFCE7;color:#15803D;text-align:center;font-size:8px;line-height:9px">≡</i><span>枚举 / 状态机</span>
+  <i style="background:#FFEDD5;color:#C2410C;text-align:center;font-size:8px;line-height:9px">!</i><span>坑 / 已知缺口</span>
+  <i style="background:#F3E8FF;color:#7E22CE;text-align:center;font-size:8px;line-height:9px">K</i><span>权限判定</span>
+  <i style="background:#CFFAFE;color:#0E7490;text-align:center;font-size:8px;line-height:9px">↔</i><span>外部接口</span>
+  <i style="background:#E2E8F0;color:#475569;text-align:center;font-size:8px;line-height:9px">◐</i><span>口径 / 单位</span>
+  <i style="background:#E8EDF4;color:#334155;text-align:center;font-size:8px;line-height:9px">§</i><span>通用规则</span>
+</div>
+
+<div class="ft">
+  <span>可见 <b id="stat">—</b> / <b id="statAll">—</b> 个逻辑点</span><span class="dot"></span>
+  <span><b id="statDepth">—</b> 层</span><span class="dot"></span>
+  <span id="zoom">100%</span><span class="dot"></span>
+  <span>点击节点折叠/展开 · 双击节点展开到叶子并放大 · 拖拽平移 · Ctrl/⌘ + 滚轮缩放 · 双击空白复位</span>
+  <span class="grow"></span>
+  <span>依据 src/ 全量源码 + deploy/cloudfunctions-20261020 + sql/</span>
+</div>
+
+<script>
+/* ==================================================================
+   数据：业务逻辑树
+   写法：字符串 = 叶子；[标题, 子数组]；[标题, 标签, 子数组]
+   标签：校验 / 公式 / 枚举 / 坑 / 权限 / 接口 / 口径
+   ================================================================== */
+const DATA = [
+  ['系统底座与权限', [
+    ['登录与身份', [
+      ['匿名登录：main.js 启动即 ensureAnonymousLogin，成功后再查 vehicles 探活'],
+      ['以前只在登录页鉴权 → 书签直进业务页时登录态过期，整站查询全失败、列表像"没数据"', '坑'],
+      ['Web 登录：账号或手机号 → users 表，密码明文比对（非 hash）', '坑'],
+      ['验证码登录是纯 UI：不发短信、登录时不校验验证码内容', '坑'],
+      ['校验顺序：账号存在 → 密码 → status=1 → 角色 → 权限合并 → 机构 → 跳转'],
+      ['角色三态：admin / customer / 子账号（isSubAccount = owner_account 非空且 ≠ account）'],
+      ['权限合并：roles.permissions ∪ users.permissions，子账号强制剔除 system'],
+      ['主账号权限覆盖：customers.permissions.client 非空时直接覆盖合并结果'],
+      ['司机账号禁止登 Web（role_id 空 + 有 owner_account）→ 提示改用小程序', '权限'],
+      ['财务账号登录闸门：审批关 + 付款模块关 → 直接拒绝登录', '权限'],
+      ['落盘：currentUser 与 originalUser 双写 localStorage（结构完全一致）'],
+      ['跳转分流：admin → /portal 入口选择页，customer → /dashboard'],
+      ['管理员模拟客户：originalUser.role=admin 且 currentUser.role=customer'],
+      ['模拟退出只清 originalUser → 角色回落，回 /portal'],
+      ['小程序登录 login-by-account：认证失败统一返回 code 500（不是 401）', '坑'],
+      ['单设备登录 user_sessions：一账号一行 token，返回 previous 设备名'],
+      ['员工需 mp_login_enabled=true 才能登小程序；司机需 waybill 模块已开通'],
+      ['登录返回 tabs/homeUrl/financeUrl/canFinance，前端据此渲染底栏'],
+    ]],
+    ['权限体系（三道闸）', [
+      ['功能点清单 config/permissions.js：9 个模块 + 20 个功能 key'],
+      ['菜单闸 SidebarMenu.hasPerm：clientPerms 为空数组时"不过滤"（全显示）'],
+      ['页面闸 Dashboard.isPermitted：clientPerms 为空数组时"拒绝访问"', '坑'],
+      ['两道闸对空数组的处理相反，历史权限数据缺失时靠这个兜底'],
+      ['模块闸 MODULE_GATE：直接敲 URL 也会被模块开关拦住'],
+      ['硬规则：/flow/canvas 与 /fee/config 仅主账号，不看权限 key'],
+      ['运营三张报表（综合/能耗/驾驶行为）共用同一个 operation key'],
+      ['系统管理模块 adminOnly；费用审批设置是 item 级 adminOnly（任何角色勾不上）', '权限'],
+      ['档案管理、路线管理暂不挂权限（挂上会因历史数据缺失导致整组菜单消失）', '坑'],
+      ['角色功能配置：FunctionPermissionDialog 自动禁用 adminOnly 与 system'],
+      ['tenant_modules 5 个模块：waybill / route / recurring / payout / report'],
+      ['依赖折叠 foldDeps：父模块关 → 子模块内存强制关，不写库', '口径'],
+      ['模块读表失败 → 全开降级 + failed 标记（不因网络抖动锁死业务）'],
+      ['模块配置白名单：payout.method/note、report.caliber、recurring.pattern'],
+      ['客户只能开关"服务商配置过（库里有记录）"的模块'],
+    ]],
+    ['组织与账号', [
+      ['organizations：id / parent_id / level / is_root / name / code / description'],
+      ['根节点判定：is_root=true 或 level=1 或 parent_id 为空，三者任一'],
+      ['新增组织：level = 父级 level + 1；父级不存在则强制当根'],
+      ['客户不能在根层级建组织 → 拦截「您不能在根层级创建组织」', '校验'],
+      ['customer_id 继承：优先父节点，其次当前登录客户'],
+      ['改父级或层级 → 递归重写全部子孙 level'],
+      ['组织改名 → 同步 vehicles 里同名 org/org_id（失败只 warn 不回滚）'],
+      ['删除组织：有子组织直接拦截；有车辆则先释放 org/org_id 再删', '校验'],
+      ['删除不校验"是否有用户"；上级下拉只排除自己、不排除子孙 → 可成环', '坑'],
+      ['users：account / name / phone / email / org_id / role_id / password / status'],
+      ['子账号没有独立字段，靠 owner_account 非空判定'],
+      ['orgLevel 不落 users，登录时按 org_id 反查 organizations.level'],
+      ['重置密码固定为 123456；删除用户无任何业务拦截', '坑'],
+      ['管理端账号：admins 表 + users 表双写，手机号占用检查只查主账号'],
+      ['新建客户三件套：customers + 根组织(level=1,is_root) + 主账号 users', '规则'],
+      ['客户停用：同时改 customers.status 与 users.status（车辆数据保留）'],
+      ['删除客户：释放车辆 → 删组织 → 删 customers → 只删主账号 users'],
+    ]],
+    ['前端外壳（Dashboard）', [
+      ['Dashboard.vue 是壳：左侧菜单 + 顶栏 + 标签页 + 30 多个 v-else-if 路由分发'],
+      ['侧栏默认 64px，hover 浮层展开 220px；pinned 才真占位，存 localStorage'],
+      ['标签页按访问路径追加，关当前页优先跳右邻、再左邻、兜底 /dashboard'],
+      ['未保存拦截：仅 /waybill/create 且 isDirty 时弹「继续编辑 / 放弃」'],
+      ['费用待办铃铛：60s 轮询，页面 visibilityState=hidden 时跳过'],
+      ['页面高度约定：根节点不写 100vh，用 calc(100vh - 101px) 扣外壳', '规则'],
+      ['含表格页面：卡片 flex:1 + el-table height="100%" → 表格内滚、页面不动'],
+      ['主内容区 el-dialog 必须 append-to-body（.content-wrapper 的 transform 会把 fixed 变相对定位）', '坑'],
+      ['全屏必须去祖先 transform：.content-wrapper:has(.full.is-fs){transform:none!important}', '坑'],
+      ['el-dialog 根元素就是传入的 class，:deep(.my-dialog .el-dialog) 永不命中', '坑'],
+    ]],
+    ['换肤 / 单位 / 表工具', [
+      ['12 套主题：沉稳 6（石墨/藏青/墨绿/靛紫/深青/炭黑）+ 明快 6（天蓝/湖蓝/青绿/薄荷/珊瑚/紫罗兰）'],
+      ['每套四档色 main / hover / light / dark；状态色用 color-mix 从 main 派生'],
+      ['CSS 变量：--brand-primary / --brand-rgb / hover / light / dark'],
+      ['主题存 customers.theme（账号级），子账号继承主账号 → 全家视觉统一'],
+      ['启动先应用 localStorage 缓存防闪，有登录态再拉远端覆盖'],
+      ['列不存在（42703）打 theme_col_missing 标记，避免每次刷新发必失败请求'],
+      ['单位四组：重量 / 体积 / 包装件数 / 大件集装箱；默认「吨」'],
+      ['里程与时间刻意不进货物单位（防建单把数量选成"小时"）', '规则'],
+      ['别名归一：方/立方/m3→立方米，t→吨，个/只/pcs→件，托/板→托盘'],
+      ['计价单位 8 种 + basis：元/km(distance)、元/吨|件|箱|车(quantity)、元/趟(fixed)、元/小时|天(manual)'],
+      ['运费公式：里程×单价 / 数量×单价 / 直接取单价 / 需人工填写', '公式'],
+      ['TableTools 四件套统一组件：刷新 / 密度 / 列设置 / 全屏（全屏只给状态，样式页面自己加）', '规则'],
+      ['动态列坑：el-table-column 外层包 template v-for 会被拆 Fragment 导致列注册不上', '坑'],
+    ]],
+  ]],
+
+  ['基础数据档案', [
+    ['车辆档案', [
+      ['字段：plate / vin / nickname / org / driver / fuel_type / vehicle_type / usage'],
+      ['扩展：sub_vehicle（子母车）/ trailer（挂车）/ purchase_date / insurance_date'],
+      ['燃料枚举：燃油车 / 燃气车 / 纯电动 / 氢燃料', '枚举'],
+      ['原值有机构时不允许清空（select 的 clearable 随之关闭）', '校验'],
+      ['司机字段存逗号串，≤2 人用「；」连接，>2 显示「已选 N 名司机」'],
+      ['导入模板 10 列；任一行校验失败 → 整批不导入，最多列 20 条错误', '校验'],
+      ['导入按 plate 在本租户内 upsert；客户导入写 customer_id，只有二级机构才写 org'],
+      ['导出用 ExcelJS，表头红底白字 #C8102E，14 列'],
+      ['子账号看不到「导入」按钮；批量删除仅管理员可见', '权限'],
+      ['vin 是车辆与实时定位服务的唯一关联键（车牌 → vin → lostlocation）', '接口'],
+      ['列表查询隔离：客户 customer_id + 二级机构 org（level=1 的子账号等同主账号）'],
+    ]],
+    ['司机档案', [
+      ['字段：driver_name / org / gender / age / license_type / phone / bound_vehicle'],
+      ['新增必填：姓名 + 手机号；手机号在本租户范围内查重并阻断', '校验'],
+      ['gender 与 license_type 是自由文本输入，无枚举（可任意填）', '坑'],
+      ['小程序账号 = users 表里 account 等于司机手机号的那一行（role_id 为空）'],
+      ['开通/改密 syncDriverUserAccount：密码 ≥6 位且两次一致', '校验'],
+      ['账号已被其他租户使用 / 是管理员账号 / 是主账号 → 三种明确报错'],
+      ['账号同步失败不回滚档案，只提示「档案已更新，但小程序账号同步失败」'],
+      ['删除司机同时清理 users 里对应手机号账号'],
+      ['导入模板 8 列，按 phone upsert；二级机构强制覆盖 org=本机构'],
+      ['子账号对新增/编辑/删除/导入/绑定车辆全部拦截', '权限'],
+    ]],
+    ['车辆 ⇄ 司机双向同步', [
+      ['vehicles.driver（逗号串）⇄ drivers.bound_vehicle（逗号串）互为镜像', '规则'],
+      ['车辆侧保存 → 反转成「司机 → 车牌列表」写回 drivers.bound_vehicle'],
+      ['司机侧保存 → 反转成「车牌 → 司机串」写回 vehicles.driver'],
+      ['未被任何车引用的司机/车会被置空'],
+      ['同步按 driver_name / plate 文本匹配，不带 customer_id → 跨租户同名会互相覆盖', '坑'],
+      ['车辆档案的司机下拉拉的是全库 drivers，未按 customer_id 过滤', '坑'],
+    ]],
+    ['客户档案', [
+      ['字段：org_name / name / manager / manager_phone / province / city / status / remark'],
+      ['org_id 由 org_name 反查后 String() 存入（本项目 ID 是整数）'],
+      ['合同附件：FileReader 转 base64 存 contract_data，单文件 ≤5MB', '校验'],
+      ['元数据：contract_name / contract_type / contract_size / has_contract'],
+      ['contractTouched 脏标记：没动过合同就不写大字段，避免重复上传'],
+      ['列表不查 contract_data，预览时才按 id 回查（防列表被大字段拖慢）'],
+      ['联系人：person_type（联系人 / 员工）+ roles（装货 / 卸货 / 唯一）'],
+      ['roles 互斥：勾「唯一」清空其他；勾装货/卸货先剔除「唯一」', '规则'],
+      ['手机号校验 /^[0-9\-+\s]{6,20}$/'],
+      ['同名客户只提示不阻断；无「同客户同角色唯一」约束', '坑'],
+      ['删客户先删联系人再删档案（子表有 ON DELETE CASCADE）'],
+      ['uuid 类型错误时剥掉 customer_id / org_id 重试（降级容错）'],
+    ]],
+    ['客户档案 → 建单带入', [
+      ['联系人池：含「唯一」→ 收发两端都可选；否则按侧匹配装货/卸货'],
+      ['同角色只有 1 个联系人 → 自动选中；多个 → 留空让用户选', '规则'],
+      ['「唯一」镜像：另一端未选时才把客户+联系人一起复制过去，已选则尊重用户'],
+      ['仅当联系人 phone 非空才覆盖发货/收货电话，不会清空手填号码'],
+      ['三种提示：已带入电话 / 已清除关联（电话保留）/ 该客户无对应角色联系人'],
+      ['档案表不存在时整段静默降级，不影响发运单'],
+      ['落库：customer_archive_id（装货优先）+ 4 个联系人姓名/电话字段'],
+    ]],
+    ['货物档案与计费规则', [
+      ['cargo_archives：name / unit / status / remark'],
+      ['cargo_rules：name / price_tax / price_no_tax / price_unit / updated_by'],
+      ['price_no_tax 仅用于对账展示，不参与运算'],
+      ['只有 1 条规则时自动选中；多条留空让用户选；已选失效则清空', '规则'],
+      ['带入货物档案 → 名称/单位/规则/单价全部回填，autoFreight=true 立即重算运费'],
+      ['手改运费 → autoFreight=false，之后不再被自动覆盖', '规则'],
+      ['清规则只清 rule/price，保留货物名称与单位'],
+      ['运费计算：里程取该货物所属任务的 planInfo.distance，无则 0 → 返回 null'],
+      ['单价 ≤0 或数量 ≤0 → 一律返回 null（不自动填 0）'],
+      ['删除货物档案先删 cargo_rules 再删主表'],
+    ]],
+    ['导入导出通用约定', [
+      ['模板表头固定中文；日期列必须 YYYY-MM-DD', '校验'],
+      ['导入前整批校验，任一行失败整批回滚（不做部分成功）'],
+      ['去重键：车辆按 plate、司机按 phone，已存在则 update 否则 insert'],
+      ['导出文件名带时间戳；CSV 加 \\ufeff BOM 防 Excel 中文乱码', '规则'],
+      ['管理端车辆导出目前是占位「导出功能开发中」', '坑'],
+    ]],
+  ]],
+
+  ['运单运输核心', [
+    ['建单：表单结构', [
+      ['运输节点二选一：极简（接单→完成）/ 详细（接单→装车完成→发车→到达→完成）', '枚举'],
+      ['装卸货地打卡开关仅「详细」模式显示；极简强制 check_in_required=false'],
+      ['多任务卡片：每个任务独立装卸地/计划时间/路线/联系人'],
+      ['多货物卡片：名称 / 数量 / 单位 / 运费 / 绑定任务'],
+      ['多指派卡片：method + 绑定任务 + items（target + 承运量 + 承运运费）'],
+      ['删除任务时其货物与指派自动改挂到第一个任务', '规则'],
+      ['「按上一趟 +1 天」：读同组上一趟计划时间各加 1 天'],
+      ['路线绑定时装卸货控件 disabled，显示「来自路线」角标'],
+      ['取消路线只清路线字段，装/卸货地保留'],
+      ['运输模式默认「极简」；打卡开关默认 true'],
+    ]],
+    ['建单校验（validateForm 9 条）', [
+      ['单任务 + 多货物 → 「一个任务只能对应一个货物信息，请添加任务重试」', '校验'],
+      ['任务N 装货地点未选择 / 卸货地点未选择'],
+      ['任务N 的货物M 名称未填写（纯空格也算空）'],
+      ['货物数量 / 运费不能为负数'],
+      ['任务N 的指派方式未选择 / 第M个司机、车辆、车队未选择'],
+      ['分车承运守恒：承运量合计必须等于货物总量，容差 0.01', '校验'],
+      ['缺口：不校验「计划到达 ≥ 计划装货」', '坑'],
+      ['缺口：不校验装货地 ≠ 卸货地', '坑'],
+      ['缺口：totalQty=0 时跳过守恒校验（carrySum>0 才判）'],
+    ]],
+    ['指派方式与展示降级', [
+      ['method 只有 3 个值：driver 指派司机 / vehicle 指派车辆 / team 指派车队', '枚举'],
+      ['路线不进 assignments：路线是任务级绑定（routeId + planIdx）', '规则'],
+      ['落库摘要降级：多指派卡片 → vehicle/driver 都写「多种」', '口径'],
+      ['单卡片多条目 → vehicle=「N辆」driver=「--」，或 driver=「N人」vehicle=「--」'],
+      ['车辆列：多腿去重 ≤2 用「、」连接，>2 显示「N 辆」，0 显示「--」'],
+      ['司机列：司机项 ≤2 用「、」，>2 显示「N 人」，无司机项回退车辆文案'],
+      ['pickVehiclePlate 只取 method=vehicle 的 target；恰好 1 个才返回，否则读 rec.vehicle 并排除「多种/N辆/--」'],
+      ['只有单车牌才能画实时位置与轨迹（多车牌一律退化）', '规则'],
+    ]],
+    ['承运量与运费分配算法', [
+      ['按 taskId 分组：该任务货物合计 vs 该任务指派 items', '公式'],
+      ['finalQty = max(0, 货物总量 − 已手改量之和)；再平分给未手改条目'],
+      ['承运运费同理：finalFrt 平分给未手改条目'],
+      ['修改承运量即置 _manual=true，不再参与自动分配'],
+      ['toFixed(2) 会产生 0.01 级尾差 → 守恒校验统一用 >0.01 容差', '坑'],
+      ['即使只有 1 个条目也会执行分配（可能把空值写 0）'],
+    ]],
+    ['发布落库', [
+      ['运单号 = YD + YYYYMMDD + 4 位当日序号（先查最大号 +1，无并发保护）', '坑'],
+      ['receive_no = RC + 时间戳后 6 位 + 3 位随机'],
+      ['cargo 字段是货物名「、」拼接；quantity/freight 为求和；剩余量写 0'],
+      ['source=手动，status=待接单，create_time 用 ISO'],
+      ['owner_account：管理员为 null，客户为 masterAccount||account'],
+      ['assigned_orgs：team 指派 target 去重 + 二级子账号自身机构名'],
+      ['插入报错含 column/字段/dose not exist → 剥掉 25 个新字段重试一次', '规则'],
+      ['被剥离字段：常驻 8 + 运输模式 2 + 规划里程 2 + 坐标 4 + trip_seq + 客户档案 2 + 联系人 4 + 计费 3'],
+      ['派单提醒：取前 10 个运单号火忘式调 wx-notify{assigned}，失败不阻断'],
+      ['成功提示「运单发布成功！共生成 N 条运单」'],
+    ]],
+    ['计划里程与时长（高德）', [
+      ['只在「发布」时调一次驾车规划，后续刷新不再调高德', '规则'],
+      ['起终点 = 围栏中心坐标（circle 取 center，polygon/polyline 取首点）'],
+      ['AMap.Driving policy = LEAST_TIME，超时 10 秒'],
+      ['plan_distance = 米 / 1000 保留 2 位；plan_duration = 秒 / 60 取整', '公式'],
+      ['坐标同步落库 pickup_lng/lat、delivery_lng/lat'],
+      ['规划失败 → 两个字段写 null，进度条显示「缺少规划里程/时长」'],
+      ['围栏名反查不到坐标时，只有文本含 省/市/区/路/街/道/号/镇/村 才走高德地理编码', '规则'],
+    ]],
+    ['常驻任务创建', [
+      ['is_recurring=true + recurring_group_no（CZ + 日期 + 序号）'],
+      ['按时间：起止必填，结束必须晚于开始；默认 now ~ now+30 天', '校验'],
+      ['按次数：次数上限 ≥1，写 recurring_max_count'],
+      ['recurring_status 默认「生效中」；recurring_accepted_count 初始 0'],
+      ['建单页不校验额度与有效期，接单时才由云函数校验', '规则'],
+      ['续建沿用同一组号，trip_seq = 组内最大 +1'],
+      ['弹窗用草稿对象，点取消不破坏已保存设置'],
+    ]],
+    ['运单列表', [
+      ['10 个状态胶囊：全部 / 待接单 / 待重新指派 / 待装车 / 装车中 / 装车完成 / 已发车 / 已到达 / 已完成 / 已取消', '枚举'],
+      ['胶囊单选互斥，点胶囊会强制退出「待我审批」并清空搜索条件'],
+      ['筛选全部下推到查询层，保证分页与 total 准确'],
+      ['隔离三层：admin 不过滤 / owner_account / 二级机构 assigned_orgs ilike 或 org'],
+      ['orgLevel 缺失时按 organizations.id 反查 name/level 兜底'],
+      ['常驻去重：查询加 or(is_recurring null, false, trip_seq=1)，一个组只留组主', '规则'],
+      ['显示状态口径：已暂停→已暂停；已结束→已结束；有接单→执行中；否则待接单', '口径'],
+      ['常驻任务不会因为某一趟完成就显示已完成'],
+      ['分车承运行显示「N 趟」按钮，展开汇总 done/running/rejected'],
+      ['isMultiLegRow：非常驻 + items≥2 + 全部 method 为 driver/vehicle（混 team 就不算）'],
+      ['删除仅 4 个状态：待接单 / 已完成 / 已取消 / 待重新指派', '校验'],
+      ['常驻行删除按 recurring_group_no 整组删'],
+      ['导出仅当前页 20 列 CSV，状态用原始 status（不是任务级 displayStatus）', '坑'],
+      ['费用列：一次 in 查询 reports，累计 amount + 待我审 N 计数'],
+      ['待我审批：reports 审核中 + canApproveReport 命中，计数按上报条数不是运单数'],
+      ['统计胶囊用原始 status 计数，会把常驻各趟次都算进去（与列表口径不一致）', '坑'],
+      ['默认 20 条/页，可选 20/30/50，无列排序 UI'],
+    ]],
+    ['运单详情', [
+      ['三个 Tab：运单信息（只读 disabled）/ 物流状态 / 费用情况，带红点提示'],
+      ['支持深链 ?waybill_no=xxx&tab=info|logistics|fee'],
+      ['左侧摘要卡常驻：状态、装卸地、货物摘要、车辆司机、费用汇总'],
+      ['节点时间轴倒序渲染，最新节点在最上（2026-10-20 拍板）', '规则'],
+      ['节点取值：先读行字段，回退 status_log 里同 status 的 time'],
+      ['「节点完成时间」= 下一个节点的进入时间（链路没有独立完成事件）', '口径'],
+      ['停留时长 = 下一节点进入时间 − 本节点进入时间；进行中则用 now'],
+      ['分车承运禁用 log 兜底（noLog），否则会算进别的腿的时间'],
+      ['历史兼容：无 finish_time 但已完成的单，用 arrive_time 当完成时间'],
+      ['极简模式裁剪：除待装车外，没真走过的节点不渲染'],
+      ['legacy 节点（装车中）只有 entered 或当前节点才显示'],
+      ['已接单是分组刻度不是节点：一条线 + 接单时间 + 接单人'],
+      ['取消节点 remark = 「取消原因：X」；完成节点 remark = 「司机完成后结单」'],
+      ['地图只读、手动刷新不轮询（避免持续打东风接口）'],
+      ['滚轮缩放关闭（scrollWheel=false），避免页面无法上下滚动', '坑'],
+      ['AMap 2.0 marker 用 hide()/show()，setVisible() 不生效', '坑'],
+      ['drawSeq 递增做竞态保护，旧请求返回直接丢弃'],
+    ]],
+    ['动作链状态机（云函数权威）', [
+      ['9 个状态，其中 5 个执行态：待装车/装车中/装车完成/已发车/已到达', '枚举'],
+      ['极简动作链：accept → finish；详细：accept → confirmLoad → confirmDepart → confirmArrive → finish'],
+      ['accept / claim → 待装车，写 accept_time + accept_by'],
+      ['claim 语义同 accept，但 PATCH 带 status=待接单，命中 0 行返回「手慢了，已被其他司机接走」'],
+      ['reject → 待重新指派，写 reject_time/reason/note/by，reject_count+1'],
+      ['confirmLoad → 装车完成，写 load_end_time，校验装货地围栏', '校验'],
+      ['confirmDepart → 已发车，写 depart_time，无围栏校验'],
+      ['confirmArrive → 已到达，写 arrive_time，校验卸货地围栏', '校验'],
+      ['finish → 已完成，写 finish_time；极简与详细都可用'],
+      ['setVehicle / setPlanTime 是补写动作：不改状态、不写 status_log 时间'],
+      ['setVehicle 允许到「已完成」；setPlanTime 故意不含「待接单」'],
+      ['规则 mode=detail 且运单是极简 → 409「该运单的运输节点为极简，不需要上报节点」', '校验'],
+      ['ACTION_ALIASES 兼容旧名：complete→finish、loadEnd→confirmLoad、depart→confirmDepart'],
+      ['status_log 每次读全量写全量，截断保留最后 100 条'],
+      ['reject 原因预设：车辆故障 / 时间冲突 / 路线不熟 / 其他（其他必填说明）'],
+    ]],
+    ['动作前置校验链（22 道）', [
+      ['① 模块闸门 tenant_modules.waybill 未开 → 403'],
+      ['② account 非空，否则 400 未登录'],
+      ['③ 非「接一趟」必须有运单 id；action 必须在 TRANSITIONS'],
+      ['④ 拒单原因校验（reason 必填，其他需 note ≤200 字）'],
+      ['⑤ 计划时间格式与先后校验（送达不能早于装货）'],
+      ['⑥ users 账号必须存在 → 否则 403 未找到用户记录'],
+      ['⑦ drivers 档案必须存在（phone 匹配）→ 否则 403 未找到司机档案'],
+      ['⑧ 运单存在性 404'],
+      ['⑨ 客户隔离：owner_account 为空或等于我的主账号，否则 403 无权操作'],
+      ['⑩ 指派归属 isAssignedToDriver：driver 比姓名、vehicle 比绑定车牌、team 比本机构及全部祖先机构'],
+      ['⑪ 管理员单靠名称消歧：必须「唯一归属我所在客户」才认，否则保守拒绝'],
+      ['⑫ 子母车必须找到「我这条腿」，否则 403 每人只跑自己那份'],
+      ['⑬ 抢单归属守卫：非多腿且 accept_by 有值且不是我 → 403 已被其他司机接走'],
+      ['⑭ 改计划时间前置：这趟必须已被接走'],
+      ['⑮ 拒单禁用：常驻趟次、含 team 指派的单都不允许拒单', '规则'],
+      ['⑯ 状态校验：当前状态必须在 rule.from 里，否则 409'],
+      ['⑰ 运输模式校验：极简不能上报详细节点'],
+      ['⑱ 围栏打卡校验（仅 confirmLoad / confirmArrive 且详细模式且开关未关）'],
+      ['⑲ 同车同司机占用校验（仅 accept / claim）'],
+      ['⑳ 常驻接单闸门（仅 accept / claim）'],
+      ['㉑ 传入车牌必须属于本人 bound_vehicle'],
+      ['㉒ 绑定多辆车时必须选「本次用哪辆车」，否则 400 + need_vehicle + plates'],
+    ]],
+    ['打卡校验与围栏几何', [
+      ['装车完成校验装货地围栏（waybills.pickup），确认到达校验卸货地（waybills.delivery）', '规则'],
+      ['check_in_required=false 直接跳过，remark「运单已临时关闭装卸货地打卡」'],
+      ['围栏按 name 精确查 ele_fences（未按 owner_account 过滤 → 跨租户同名会串）', '坑'],
+      ['shape=district 跳过校验并写 remark（行政区划无法本地判定）'],
+      ['circle：haversine(车辆点, center) ≤ radius，球面距离 R=6371008.8m', '公式'],
+      ['polygon：射线法 pointInPolygon，需要 ≥3 点（隐式闭合，不强制首尾重复）', '公式'],
+      ['polyline：点到各线段最短距离 ≤ bufferradius，用等距投影近似（×111320 m/度）', '公式'],
+      ['几何数据不完整（返回 null）→ 放行并写 remark，不阻断业务'],
+      ['定位取数：chassisNo = VIN 后 8 位，循环今/昨/前天，单次 8s 超时，取 sendTime 最新'],
+      ['多车单不校验围栏（车牌为「多种/N辆/--」时 pickVehiclePlate 返回空）'],
+      ['子母车取「我这趟的车」：event.vehicle → leg_vehicle → 车腿 target → 单绑定车'],
+      ['Web 端可临时关闭打卡：写 check_in_off_by/time/remark 留痕，建议事后恢复'],
+      ['关闭弹窗文案限定场景：围栏坐标不准、定位漂移等打不了卡的兜底'],
+    ]],
+    ['同车 / 同司机并发占用', [
+      ['占用白名单：待装车 / 装车中 / 装车完成 / 已发车 / 已到达', '枚举'],
+      ['不能用黑名单：待接单尚未接单不算占用；待重新指派视为已释放', '口径'],
+      ['查询范围：同 owner_account（管理员单为 null），排除自身 id'],
+      ['命中提示「车辆 X 还有未结束的运输记录（YD… · 状态），请先完成或取消后再接单」'],
+      ['分车承运按腿判：车牌看所有跑动腿，司机只看我这条腿（避免一单两人互挡）'],
+      ['只在接单/抢单时校验，建单页不做占用校验', '坑'],
+      ['查询失败直接放行 + warn（不因偶发错误挡业务）'],
+    ]],
+    ['常驻接单闸门', [
+      ['recurring_status=已结束 → 「该常驻任务已结束」'],
+      ['recurring_status=已暂停 → 「已暂停，暂时不能接单」'],
+      ['time 模式：未到开始时间 → 尚未生效；超过结束时间 → 已过有效期', '校验'],
+      ['count 模式：used ≥ recurring_max_count → 次数已用尽（used/max）'],
+      ['used 口径 = 组内 accept_time 非空 或 status 属于 6 个已接状态的条数', '口径'],
+      ['不读 recurring_accepted_count 冗余值（查询失败才回退它）'],
+      ['用满额度时不在接单时置「已结束」，等最后一趟 finish 后再收口'],
+    ]],
+    ['常驻「接一趟」', [
+      ['入参 group_no，不需要运单 id（与普通动作分叉处理）'],
+      ['组主归属校验 + 组主必须指派给我，否则 403'],
+      ['count 模式用 CAS 抢公共额度：读 count → 条件 PATCH 写 seen+1，最多重试 4 次', '规则'],
+      ['额度抢失败文案「手慢了，额度刚好被别人用完，请刷新后再试」'],
+      ['优先接手组内挂着的「待接单且 accept_by 为空」趟次（CAS 条件更新）'],
+      ['接手失败改新建，不提示「被抢先」'],
+      ['新建趟次复制 18 个字段白名单（任务名/装卸地/坐标/里程时长/货物/指派/模式/打卡/备注）'],
+      ['pickup_time 与 plan_time 强制写 null（常驻趟次不带计划时间）', '规则'],
+      ['trip_seq = max(组主, 全组) + attempt + 1'],
+      ['建趟失败回滚额度（宁可少卖不可超发）'],
+      ['收口判定：组内无执行中趟次 且（次数用满 或 已过期）→ 整组置已结束'],
+    ]],
+    ['分车承运（子母车）', [
+      ['判定：非常驻 + 腿数 ≥2 + 全部 leg method 为 driver/vehicle（混入 team 就不算）', '规则'],
+      ['每条腿的状态与时间写在 assignments[].items[] 上：leg_status / leg_vehicle / leg_*_time'],
+      ['assignments 是 jsonb，必须整列覆盖（读 → 改我这条 → 写回）', '坑'],
+      ['腿状态读取：leg_status → 历史兼容（driver 且 accept_by 匹配则用行级）→ 待接单'],
+      ['行级聚合：全待接单→待接单；全已完成→已完成；全待重新指派→待重新指派'],
+      ['已完成 + 待重新指派 之和等于总数 → 也算已完成（任务收尾）', '公式'],
+      ['无 running 且无 done → 待接单；其余 → 待装车'],
+      ['accept_time 取最早接单腿；finish_time 取最晚完成腿'],
+      ['CAS 用行级 status 当版本号，失败重读重试最多 3 次'],
+      ['3 次仍失败 → 409「手慢了，这趟刚好被别人改过，请刷新后再试」'],
+    ]],
+    ['拒单 / 改派 / 编辑', [
+      ['常驻趟次不能拒单，车队指派的任务不能拒单（不接就放着让别人接）', '规则'],
+      ['改派仅允许 待接单 / 待重新指派，其它状态 409'],
+      ['改派落库是整体替换 assignments 为单条，不是追加'],
+      ['改派后状态强制回「待接单」（待重新指派不回退则司机端看不到）'],
+      ['编辑保存同样仅两个状态，保存后状态回待接单'],
+      ['编辑不重算坐标、不写客户档案与联系人字段', '坑'],
+      ['两者都用 CAS：id + status 原值，0 行 → 「刚被改过，请刷新后重试」'],
+      ['常驻趟次在小程序端禁改禁删，提示回 Web 处理'],
+    ]],
+    ['进度与 ETA', [
+      ['已行驶里程从「确认发车」depart_time 起算，不从接单起算', '口径'],
+      ['剩余里程 = plan_distance − 已行驶，小于 0 按 0 计并标「已超规划里程」', '公式'],
+      ['剩余时间 = plan_duration × (剩余里程 ÷ 规划里程)', '公式'],
+      ['预计到达 = 现在 + 剩余时间'],
+      ['定位停更 > 30 分钟 → stale=true，界面不给 ETA，只显示「定位停更」', '规则'],
+      ['轨迹缓存 25 秒（key = vin|beginAt），超时重新拉'],
+      ['轨迹抽稀上限 2000 点（等间隔 + 强制保留最后一点）'],
+      ['无单车牌 / 无 VIN / 无定位 → 各自明确文案，不画图不估算'],
+      ['车辆状态推断：gap>30min → 离线；否则 speed>0 行驶 / 停车'],
+      ['track/history 超时 20s，成功码 code===1 且 data 为数组'],
+    ]],
+    ['常驻甘特图', [
+      ['同一 recurring_group_no 下全部趟次，按 trip_seq 再 create_time 排序'],
+      ['周期最多渲染 92 天，超过截断', '规则'],
+      ['起止优先取任务有效期，缺失则用组内 accept_time/create_time 极值兜底'],
+      ['一天多趟取「最活跃」状态：loading > ready > transit > pending > done > cancelled', '口径'],
+      ['无趟次的日期：未来 → 未开始浅灰；过去 → 缺趟红斜纹', '规则'],
+      ['今日格子双层描边高亮；多趟显示数字角标'],
+      ['准点判定：与 plan_time 差 ≤15 分钟为准点，否则晚/早 H 时 M 分'],
+      ['耗时柱状只画近 12 趟，≥ 最大值 90% 标红'],
+      ['按次数常驻无周期范围 → 提示「进度看上面历次完成情况」'],
+      ['点格子下钻到该天所有趟次的进度条'],
+    ]],
+  ]],
+
+  ['实时监控与电子围栏', [
+    ['全图监控（FullMap）', [
+      ['固定全屏容器 + 左侧浮层车辆树（宽度 220–440 可拖拽，可整块收起）'],
+      ['4 个状态胶囊：全部 / 行驶 / 静止 / 离线，再点一次回全部'],
+      ['任务 chips 5 个：全部 / 有任务 / 在途 / 待装 / 空闲'],
+      ['组织树按 organizations.parent_id 真建树，机构优先铺开、本机构车辆在后'],
+      ['每机构默认最多 6 台，超出显示「还有 N 台车」；搜索时全量展开'],
+      ['车辆分页阈值 6 台、展开状态存 sessionStorage'],
+      ['marker 用 show()/hide() 控制显隐，不重建；筛选变化只重算可见集合', '规则'],
+      ['无自动轮询，只有手动「刷新定位」；3 分钟缓存写入但读缓存分支是死代码', '坑'],
+      ['取定位并发 15 路，单条失败不阻断，失败车灰显但仍留在列表'],
+      ['无定位车不生成 marker，点击列表提示「暂无定位数据，请稍后刷新」'],
+      ['每次重排后 setFitView，上边留 120px 给顶栏'],
+      ['沉浸态：隐藏 marker、画路线生长动画 + 流光、HUD 4 指标 + 4 节点轴'],
+      ['沉浸态当前节点映射：待接单/待装车/装车完成→接单，已发车→1，已到达→2，已完成→3'],
+      ['沉浸态路线优先高德规划，失败退直线，再失败退车辆当前点'],
+      ['测距工具：点击加点 60ms 节流，右键结束当前段，面板显示段数与总距离'],
+      ['全屏不是浏览器 API，只是切 class + 两次 map.resize()', '坑'],
+    ]],
+    ['车辆状态判定', [
+      ['accStatus 含「开」→ speed>0 行驶，否则静止', '规则'],
+      ['accStatus 含「关」或未知 → 离线'],
+      ['没有任何时间阈值：3 天前的行驶数据只要 ACC 开就判行驶', '坑'],
+      ['定位获取任一步失败 → status=离线、hasLocation=false、location=定位获取失败'],
+      ['VIN 长度 < 8 直接失败（reason=VIN 长度不足）'],
+      ['dayOffset 提示「昨天的数据 / 前天的数据」'],
+      ['排序权重：行驶 1 / 静止 2 / 离线 3 / 无定位 4'],
+    ]],
+    ['位置取数链路', [
+      ['vehicles.plate + vin → POST dongfeng-lostlocation { vin }', '接口'],
+      ['超时 8000ms；要求 code===1 且 data 为非空数组'],
+      ['取 time 最新点；lng/lat 为 0 或 NaN → 经纬度无效'],
+      ['返回 address 字段实际是「纬度,经度」，要真地址得走高德逆编码', '坑'],
+      ['运单进度另走 track/history（carId=完整 VIN，20s 超时，code===1）'],
+      ['实时位置兜底也用它：POST {vin}，8s 超时，按 accStatus 推状态'],
+    ]],
+    ['车辆与任务关联', [
+      ['活跃状态 7 个：待接单/待重新指派/待装车/装车中/装车完成/已发车/已到达', '枚举'],
+      ['查询 limit 400，客户加 owner_account'],
+      ['车牌解析优先 assignments 里 method=vehicle 的 target'],
+      ['assignments 无结果才退回 waybills.vehicle，并排除 --/多种/N辆/N人', '规则'],
+      ['同车多单取状态权重最高那条（已到达 5 > 已发车 4 > 装车完成 3 …）'],
+      ['状态归一：装车中→待装车，待重新指派→待接单'],
+      ['chip 分组：在途=已发车∪已到达；待装=待接单∪待装车∪装车完成；空闲=无任务'],
+      ['marker 下方挂状态徽标，任务车 zIndex 6 / 普通车 1'],
+    ]],
+    ['围栏设置（四形状）', [
+      ['类型 fence_type：pickup 装货 / delivery 卸货 / alert 提醒（英文 key，默认 alert）', '枚举'],
+      ['形状 shape：circle 圆 / polygon 多边形 / polyline 线形 / district 行政区划', '枚举'],
+      ['圆：点击地图取圆心，半径 50–50000 米，拖动圆边调整'],
+      ['多边形：连续点击、双击结束，至少 3 点，提交时自动闭合首尾', '校验'],
+      ['线形：至少 2 点，额外 bufferradius 1–300 米'],
+      ['行政区划：选省市区，按 adcode 加载边界，只读展示无编辑器'],
+      ['名称正则 ^[\\u4e00-\\u9fa5a-zA-Z0-9_-]+$，≤128 字，客户内唯一', '校验'],
+      ['名称查重 500ms 防抖 + 失焦立即校验 + 提交前再兜一次'],
+      ['先写 ele_fences 拿 id → 调高德 → 成功回填 gfid；新增失败则删库回滚', '规则'],
+      ['编辑态形状不可改'],
+      ['改名同步提醒配置里的 fence_name（按 fence_id 下标对齐替换）'],
+      ['Tab 计数基于「类型以外的筛选条件」，否则选中某类后其他 Tab 变 0', '规则'],
+      ['删除调高德删除接口，errcode 0/10000/20003 都视为成功'],
+      ['fence_type 列缺失时剥字段重试并提示执行迁移脚本'],
+      ['建单页装/卸下拉目前仍混全部围栏（待老数据标注完类型再开过滤）', '坑'],
+    ]],
+    ['提醒设置', [
+      ['只有两类规则：speeding 超速 / staying 停留（没有进出围栏提醒）', '枚举'],
+      ['超速阈值滑杆 30–120 km/h，步长 5，默认 80', '校验'],
+      ['停留次数 1–20 次，默认 1；时长 1–120 分钟，默认 30；半径 5–500 米，默认 200'],
+      ['生效时段默认 05:00:00 – 23:00:00；不校验先后顺序'],
+      ['绑定围栏多选；空数组 = 全域提醒（提交前二次确认）', '规则'],
+      ['围栏来源只取 fence_type=alert 的围栏'],
+      ['保存是先删后插（覆盖式）：DELETE 两类 → INSERT 两条'],
+      ['二级及以下子账号只读：开关不可点、保存拦截', '权限'],
+      ['缺口：无星期、无接收人、无车辆/组织绑定、无进出方向', '坑'],
+      ['fence_gfid 恒为 null，提醒判断靠云函数按 fence_id 回查'],
+    ]],
+    ['提醒事件查询', [
+      ['链路：读启用配置 → 拉车辆 → 拉围栏 → 调云函数计算', '接口'],
+      ['超速云函数 dongfeng-overspeed-check：阈值 + 车辆 + 围栏 + 时段'],
+      ['超速分段：连续超速点间隔 > 5 分钟即切新段'],
+      ['停留云函数 dongfeng-stay-check：时长 + 半径 + 时段'],
+      ['统计卡（段数/车辆数/最高速/总时长）基于全量，不随筛选变化', '坑'],
+      ['统计卡点击只切高亮，不会真正筛选', '坑'],
+      ['缓存 5 分钟，key 含用户档位与日期区间；首次进页面强制拉取'],
+      ['导出 xlsx 导出的是全量，不遵守当前筛选与分页', '坑'],
+      ['空态引导去「提醒设置」配置阈值与围栏'],
+    ]],
+    ['超速 / 停留详情', [
+      ['超速：4 张卡（最高/平均速度、持续时长、超速点数）+ 速度曲线 SVG'],
+      ['曲线 y 轴范围 = [minV-pad, maxV+pad]，pad = max(5, 差值×15%)'],
+      ['阈值线按比例映射；超阈值 +10 的点加高亮样式'],
+      ['地址兜底三级：段地址 → 段中心逆编码 → 逐点逆编码（并发 3）'],
+      ['高德 Geocoder 最多等 3 秒，不可用则显示经纬度 5 位小数'],
+      ['停留：地图画半径虚线圈 + 轨迹线 + 编号 marker'],
+      ['停留中心取第一个停留点，zoom 17；跨度过大改 setFitView'],
+      ['底部时间线点击某点 → 地图定位并高亮该 marker'],
+    ]],
+  ]],
+
+  ['路线管理', [
+    ['路线表单', [
+      ['必填：所属机构 / 装货点 / 卸货点 / 路线名称', '校验'],
+      ['装卸点存 ele_fences.name（不是地址）'],
+      ['一键交换装卸点（两者都空时警告无法交换）'],
+      ['路线名称可一键生成为「装货点-卸货点」'],
+      ['提交校验顺序固定：机构 → 装货点 → 卸货点 → 名称'],
+      ['二级子账号新增时强制 org = 本机构'],
+      ['org_id 按 org 名在组织列表反查，查不到写 null'],
+    ]],
+    ['方案与途经点', [
+      ['plans 结构：name / type(auto|manual) / waypoints[] / distance / duration / toll / polyline'],
+      ['方案至少 1 个，删除时提示「至少保留一个方案」'],
+      ['方案配色 8 色固定池，按首次出现顺序分配，增删不重排', '规则'],
+      ['途经点可手填或地图选点（逆地理编码取 formattedAddress，失败回退经纬度）'],
+      ['测距进行中点地图会先停止测距', '规则'],
+      ['保存时过滤空点：value 非空或 lng/lat 非空'],
+    ]],
+    ['规划与折线', [
+      ['起终点：围栏 center（circle）或 points 首点（polygon/polyline），失败走高德编码'],
+      ['驾车规划 policy=LEAST_TIME，途经点编码失败则静默丢弃该点'],
+      ['distance = 米/1000 保留 1 位；duration 格式化为「H小时M分」；toll 取整数元'],
+      ['折线抽稀：Douglas-Peucker eps=0.0004 度（约 44 米）', '公式'],
+      ['结果 > 1200 点再等间隔抽稀，强制保留最后一点'],
+      ['编码格式 "lng,lat;lng,lat"，5 位小数（约 1 米精度）'],
+      ['打开弹窗即自动规划（装/卸点都有时延迟 200ms 执行）'],
+      ['一键规划全部：逐个静默规划，统计成功数并提示「记得点保存」'],
+      ['只读模式（查看路线）同样自动规划但不落库'],
+    ]],
+    ['测距工具', [
+      ['距离用 AMap.LngLat.distance 球面计算'],
+      ['<1000m 显示 1 位小数 + m，否则 2 位小数 + km'],
+      ['点击加点 60ms 节流，右键结算当前段并开新段', '规则'],
+      ['鼠标移动画虚线预览 + 「+距离」气泡，requestAnimationFrame 合并'],
+      ['面板显示路段数与总距离'],
+    ]],
+  ]],
+
+  ['费用管理', [
+    ['8 类费用上报', [
+      ['expense 费用上报 / weigh 磅单 / subsidy 补贴 / violation 违章', '枚举'],
+      ['overtime 超时报备 / receipt 回单 / loan 借款 / cardfix 补卡'],
+      ['钱款类只有 4 个：expense / subsidy / loan / violation', '口径'],
+      ['expense 金额 = Σ items.amount，由服务端重算不信前端', '公式'],
+      ['weigh：net = gross − tare，必须 ≥1 张凭证；毛重必须大于皮重', '校验'],
+      ['overtime：duration = 实际 − 计划（分钟），必须 ≥1 张现场照', '校验'],
+      ['violation：必须上传处罚决定书照片，记录扣分'],
+      ['receipt / weigh / overtime 都必须 ≥1 张图，其余类型凭证非必填'],
+      ['凭证统一上限 9 张，单条 name ≤60'],
+      ['expense 明细 item：name ≤30 / amount 两位 / date ≤10 / note ≤60'],
+      ['上报前置：运单必须已接单（待接单/待重新指派/已取消都拒绝）', '校验'],
+      ['指派软校验：assignments 命中 → 或 driver 是聚合值（多种/N人）→ 或 driver 包含我'],
+      ['归属校验：waybills.owner_account 为空或等于我的主账号'],
+      ['兼容两套凭证字段：key（COS 直传）与 fileID（旧云存储）'],
+    ]],
+    ['审批流配置', [
+      ['mode 三态：on 全局开启 / off 全局关闭 / custom 自定义', '枚举'],
+      ['custom：custom_default（新单默认开/关）+ allow_creator_toggle（允许发单人改单票）'],
+      ['threshold 默认 5000：决定「要不要送老板终审」，不是「要不要审批」', '口径'],
+      ['阈值按单笔费用合计判断；驳回后金额改了重新判断'],
+      ['一级：l1_mode=self 由我审 / skip 免审直送；可指定 l1_user_id'],
+      ['二级：财务（role_type=finance 或角色名含「财务」）；无财务则自动顶到主账号'],
+      ['三级：主账号，金额 ≥ 阈值 或 require_owner 时触发'],
+      ['同一人不重复出现在两级；本人上报跳过自己这一级'],
+      ['运单级免审 fee_approval=off 只在 mode=custom 时生效', '规则'],
+      ['配置只影响之后提交的上报，在途单按提交时 flow 快照走完'],
+      ['付款模块开关 tenant_modules.payout；能关就能看到，不能开就看不到'],
+      ['审批关 → 付款记录不可用（画布里级联一起关）'],
+      ['保存只写 fee_approval_configs.upsert(onConflict owner_account)'],
+    ]],
+    ['审批状态机', [
+      ['状态：审核中 / 已通过 / 已驳回 / 待打款 / 已打款', '枚举'],
+      ['提交：免审且 pay_required → 待打款；免审且无需付款 → 已通过；否则审核中'],
+      ['pay_required 是提交时快照，事后开模块不会让历史单涌入待付款', '规则'],
+      ['approve 中间节点 → 审核中并推进 current_level'],
+      ['approve 末级 → pay_required ? 待打款 : 已通过'],
+      ['escalate 仅 current_level ≥2 可发，补一个 level=3 的 owner 节点', '校验'],
+      ['reject → current_level=0、reject_count+1、reason 落库'],
+      ['resubmit 按当前配置重建审批链，从第一级重走'],
+      ['CAS 并发控制：id + status + current_level，0 行 → 409 已被处理'],
+      ['日志 report_approval_logs：approve / reject / escalate / resubmit / pay / unpay'],
+      ['批量审批 ≤50 笔，单笔 ≥¥5000 不允许批量（服务端复查金额）', '校验'],
+      ['canApproveReport：当前节点 approver_id 是我，或 role=owner 且我是主账号'],
+      ['驳回原因预设 6 项：缺凭证 / 金额不符 / 运单号不符 / 重复上报 / 超期 / 其它'],
+    ]],
+    ['费用列表', [
+      ['一行一趟车聚合（按 waybill_no），金额为所有上报之和'],
+      ['主状态按优先级取第一个命中：有待审就显示待审', '口径'],
+      ['状态是开关投影：审批开/关 × 付款开/关 → 4 套文案', '口径'],
+      ['费用单元格：¥总额 + 「N 笔待审」黄标 + 类型 chip'],
+      ['凭证展示必须先 signGet 换临时链接（reports.images 存 {key,name,size}）', '规则'],
+      ['签名缓存 50 分钟（COS 1h 有效留 10 分钟余量）'],
+      ['不跨费用项汇总图片：一笔费用一张卡，卡内放该笔凭证'],
+      ['明细抽屉动作条随状态变化：驳回 / 通过 / 通过并付款 / 去付款'],
+      ['列表页的审批是简化版：只改 status，不改 flow、不写日志、不校验节点', '坑'],
+      ['列表页动作无权限门槛（能进页面就能点）', '坑'],
+    ]],
+    ['付款登记', [
+      ['可付条件：status ∈ (已通过, 待打款) + isPayer + payout 模块已开', '规则'],
+      ['isPayer = 主账号/admin，或 roleName 含「财务」'],
+      ['付款方式 5 种：银行转账 / 微信 / 支付宝 / 现金 / 其他'],
+      ['付款时间必填，默认现在；流水号 ≤40；备注 ≤80'],
+      ['凭据 ≤5 个、单文件 ≤10MB、同名同大小去重', '校验'],
+      ['凭证非必填，但会提示「建议留一张截图」'],
+      ['上传路径 reports/payment/YYYYMM/{时间戳}-{随机}.{ext}'],
+      ['条件更新 status in (已通过,待打款) 防重复打款，0 行则提示刷新'],
+      ['付款快照 payment{method,at,serial,note,images,by,paid_at}'],
+      ['撤销原因 5 项 + 补充说明，写 revoked_at/by/reason 并回退状态'],
+      ['前端撤销回「已通过」，云函数撤销回「待打款」→ 口径不一致', '坑'],
+      ['PaymentDialog 未 import supabase → 运行时 ReferenceError', '坑'],
+    ]],
+    ['费用统计', [
+      ['8 类 × 金额/笔数 + 状态拆分（待审核/待打款/已打款）+ 环比', '口径'],
+      ['只有钱款 4 类计入金额，非钱款只计笔数（避免总额虚高）', '公式'],
+      ['对比区间 = 与当前区间等长且紧邻其前'],
+      ['环比：上期为 0 且本期 >0 → 显示「新增」'],
+      ['已付款率 = 已打款金额 / 总额'],
+      ['备注列按类型差异化：未处理笔数/扣分、净重吨数、逾期未还、张数'],
+      ['审批关隐藏「待审核」KPI 与列；付款关隐藏「待打款/已打款」'],
+      ['时间口径统一用 create_time（跨月付款会错位）', '坑'],
+    ]],
+    ['费用待办', [
+      ['审批数：approvalOn 为真才统计，且只算「当前节点是我」'],
+      ['待付款数：isPayer 且 payout 模块开，只算钱款类'],
+      ['审批开关关闭时直接返回 0（避免红点挂着点进去空列表）', '规则'],
+      ['顶栏铃铛 60 秒轮询 + 路由变化刷新 + 页面隐藏跳过'],
+      ['角标 >99 显示 99+；审批挂父级菜单，付款挂付款登记子项'],
+    ]],
+  ]],
+
+  ['运营报表', [
+    ['综合报表（工作台）', [
+      ['双模式：工作台 / 明细表，模式存 localStorage'],
+      ['12 列栅格 + 2 行，7 个 tile 可拖拽排序、可恢复默认', '规则'],
+      ['布局按账号持久化（op_board_layout_{masterAccount}）'],
+      ['每个 tile 可独立设时间口径（月/日/区间），否则跟随全局'],
+      ['全局时间口径终点固定为「昨天」，不含今天', '口径'],
+      ['时间快捷：本月 / 近 7 天 / 上周 / 自定义'],
+      ['① 逐日日历：单台车 × 单月 × 每日，5 档色阶按当月分位', '公式'],
+      ['日历色阶是「相对当月自身分布」，不是固定阈值'],
+      ['② 异常待办：电耗 > 车队 P85 / 里程 < 中位数 35% / 运行占比 < 18%', '公式'],
+      ['异常排序 h 优先于 m，最多 40 条'],
+      ['③ 效率象限：X=日均里程，Y=百公里电耗，中线取中位数'],
+      ['象限命名：低效·低利用 / 低效·高利用 / 高效·低利用 / 高效·高利用（标杆）'],
+      ['④ 车队排行：Top10，条宽映射到 50%–100%（视觉映射不是真实占比）', '坑'],
+      ['排行均值线取全量车队算术平均，不是 Top10 平均'],
+      ['⑤ 车辆矩阵：最多 12 台 × 7 天，按机构分组'],
+      ['矩阵取「最近更新的 12 台」，不是全量（部分车永远不出现）', '坑'],
+      ['⑥ 运行剖面：24h 出车段 / 下电段，下电 > 5 小时标橙', '规则'],
+      ['⑦ 周节律：7 天 × 星期 × 小时的平均在途车辆数'],
+      ['节律色阶必须用 CSS 变量字符串，不能在 computed 里 getComputedStyle（换肤不重算）', '坑'],
+      ['数据源 A：vehicle_daily_stats 逐日缓存表'],
+      ['数据源 B：直连东风 tripAnalysisOil 区间聚合'],
+      ['覆盖率判定：缓存行数 >0 且覆盖区间包含请求区间'],
+      ['并发池：区间 8 路 / 日窗口 6 路 / 日历 6 路 / 剖面 6 路'],
+      ['inflight Map 按 key 去重，同一区间只发一次请求'],
+      ['同步按钮触发云函数 opStatsSync（days=2），完成后整页重载'],
+      ['1 天延迟探测：从区间终点用第一台车逐日探活，最多回退 4 天', '规则'],
+      ['探测只认第一台车，该车停驶会导致整个 7 天窗口错位', '坑'],
+    ]],
+    ['综合报表（明细表）', [
+      ['四种周期：日报 / 周报 / 月报 / 自定义；周报固定周一到周日'],
+      ['上限裁剪：结束时间不得超过今天，起止倒置自动纠正', '校验'],
+      ['18 列：累计里程 / 累计电耗 / 百公里电耗 / 行驶里程 / 行驶电耗'],
+      ['续：运行起止 / 驾驶时长 / 运行时长 / 下电时长 / 平均车速 / 燃料 / 在线状态 / 位置'],
+      ['驾驶时长 = 运行时长（业务口径一致）'],
+      ['下电时长 = 时间跨度 − 运行时长，负值归 0', '公式'],
+      ['累计里程 = track/history 当天 mileage 最大值 / 1000（保留 1 位）', '公式'],
+      ['里程表缓存 10 分钟，失败返回 null 显示 --'],
+      ['缓存命中的行先出表，后台再补累计里程 + 在线状态 + 位置'],
+      ['全表无能耗数据 → 提示「东风平台通常有 1 天延迟」+「改查前 1 天」'],
+      ['导出只导当前可见列，CSV 带 BOM'],
+      ['fetchDailyStats 未传 customerId，隔离完全依赖已加载车辆清单', '坑'],
+    ]],
+    ['能耗报告', [
+      ['任务表 energy_report_tasks，一任务一行，report_data jsonb 整包存'],
+      ['任务编号 = 14 位时间戳 + 4 位随机（字符集去掉易混的 l/o/0/1）'],
+      ['燃料 4 类 / 任务类型 4 类 / 状态 4 态（成功/生成中/待生成/失败）', '枚举'],
+      ['新建任务默认 status=待生成；任务类型依赖燃料类型（换燃料清空类型）'],
+      ['详情 7 图：日里程×电耗 / 强度×电耗 / 分路段 / 分布环形 / 驾驶行为 / 六维雷达 / 帕累托'],
+      ['日里程折线不设 0 基线，用 ±2 窗口（否则看成直线）', '坑'],
+      ['六维评分：能耗水平 / 出勤率 / 车速控制 / 驾驶技巧 / 路面结构 / 车况', '公式'],
+      ['能耗分 = 100 − (百公里电耗 − 115) × 2.2，统一 clamp 到 35–98'],
+      ['车速分 = 100 − |平均车速 − 55| × 1.2（55 km/h 最优）'],
+      ['百公里电耗必须现算 fuel/km×100，hundredSumTravelFuel 恒 0.02 不可用', '坑'],
+      ['单位换算：米→km、Wh→kWh、分钟→h、m/s ×3.6→km/h', '公式'],
+      ['真实取数接口尚未接入，report_data 目前是演示数据', '坑'],
+      ['列表页未做租户隔离（所有人看到同一批任务）', '坑'],
+    ]],
+    ['驾驶行为报表', [
+      ['目前是占位页，79 行零逻辑', '坑'],
+      ['文案承诺将统计急加速 / 急减速 / 超速 / 怠速并形成司机评分'],
+      ['唯一已量化的驾驶行为在能耗报告里（次数/千公里）'],
+      ['真实超速判定只存在于电子围栏超速提醒，不在本报表'],
+    ]],
+    ['运单统计', [
+      ['数据源 waybills，按 create_time 过滤，上限 5000 行（超限静默截断）', '坑'],
+      ['概览：运单量 / 完成数 / 取消数 / 在途 / 完成率 / 总里程 / 平均里程'],
+      ['总里程用 plan_distance 求和（计划里程，不是实际行驶）', '口径'],
+      ['在途用 5 状态白名单（待接单与待重新指派不算在途）'],
+      ['平均在途 = avg(arrive_time − depart_time)，无样本显示 —'],
+      ['状态漏斗最小占比 1%（保证小比例可见）', '规则'],
+      ['司机排行取 Top5，条宽相对第一名'],
+      ['客户分布按 customer_archive_name 兜底「未指定客户」'],
+      ['线路表现按 pickup|delivery 聚合，Top10'],
+      ['四环节时效：接单→装车→发车→到达→完成，相邻节点差'],
+      ['出车密度热力按 create_time 日期计数，最多 31 格'],
+      ['热力网格固定 7 列，按自然日顺序排列、不按星期对齐', '规则'],
+    ]],
+    ['车队运营报告', [
+      ['6 档粒度：日/周/月/季/半年/年，各自默认区间 14/84/365/730/1460/1825 天'],
+      ['三视角：全部 / 车队 / 单车，车队来自 vehicles.org'],
+      ['车牌解析降级：assignments 车指派 → vehicle/plate → 「多车」'],
+      ['准时率 = 实际时长 ≤ plan_duration × 1.15（容差 15%）', '公式'],
+      ['库里没有计划到达时间，用「发车 + 高德时长」推'],
+      ['单公里成本 = 费用 / 里程；里程为 0 时显示 —'],
+      ['环比：上期为 0 且本期 >0 → 显示「上月无数据」（比 +100% 诚实）', '规则'],
+      ['车辆判定：最省 / 稳 / 偏贵 / 要查 / 样本少 / 分车（按中位数分档）'],
+      ['单车结论最多 3 条：成本对比 / 违章 / 准时率 / 可参考标杆车'],
+      ['在途口径是「非已完成且非已取消」，与运单统计的白名单不一致', '坑'],
+      ['无导出、无凭证图片、无 PDF（结论只在页面上）', '坑'],
+    ]],
+    ['通用口径陷阱', [
+      ['三套里程：plan_distance（计划）/ tripMileage（东风实际）/ 里程表读数', '口径'],
+      ['两套在途定义：5 状态白名单 vs 非完成非取消'],
+      ['两套区间平均车速：东风区间值 vs 逐日算术平均（长短路混算失真）'],
+      ['hundredSumTravelFuel 恒 0.02，任何地方都必须现算'],
+      ['充电次数 / 加油次数 / SOC / 充电时长：全项目未实现', '坑'],
+      ['面积图 area 与散点图 scatter 在 svgCharts 里已实现但无调用方'],
+      ['图表统一用 svgCharts + SvgPlot，项目已删除 echarts', '规则'],
+    ]],
+  ]],
+
+  ['业务流程画布', [
+    ['节点与语义', [
+      ['费用泳道：司机上报(report_fee) → 费用审批(audit) → 付款记录(payout)'],
+      ['audit 节点是特殊节点：没有 module 字段，enabled = approvalMode !== "off"', '规则'],
+      ['payout 节点有 module=payout，受 tenant_modules 控制'],
+      ['普通步骤节点跟随 waybill 模块的生效状态'],
+      ['连线会跳过未开通节点 → 流程在画布上直接断开', '规则'],
+    ]],
+    ['开关联动', [
+      ['关闭审批 → 级联关掉付款记录模块，并提示「同时关掉了付款记录」', '规则'],
+      ['重新打开审批不会自动回开付款记录，只提示可以单独开启'],
+      ['停用模块需二次确认，并显示影响：N 笔费用待审 / N 笔待付款'],
+      ['approvalGated：审批关时 payout 任何人都开不了（admin 也不行）', '权限'],
+      ['车队运营报告不受审批开关影响（报表统计运输数据不是钱）'],
+      ['关闭按钮仅管理员可见，非管理员显示「需联系运营人员开启」'],
+    ]],
+    ['三种视角', [
+      ['管理员：全部节点渲染，关闭的节点不变灰，但连线断开'],
+      ['管理员「预览客户视角」：关闭节点变灰，位置不动'],
+      ['真实客户：只渲染已开通节点，关闭的收进左侧「未开通 · N 项」池'],
+      ['审批关闭时 audit 节点会进未开通池（曾因只认 module 而整节点消失）', '坑'],
+      ['wireKey 用 uid+enabled 拼 key 强制重建连线，保证启停立刻可见'],
+    ]],
+  ]],
+
+  ['云函数（小程序端后端）', [
+    ['函数清单与基础设施', [
+      ['waybill-action：司机动作链 + 常驻接一趟（1888 行，最核心）'],
+      ['waybill-detail：单条运单详情 + 指派人 + 动作链（只读）'],
+      ['waybill-list：司机任务中心 + 常驻按组聚合'],
+      ['waybill-admin：小程序管理端 10 个 action'],
+      ['login-by-account：账号密码登录 + 权限/模块/会话'],
+      ['report-action：8 类上报 + 审批 + 付款 + 财务端'],
+      ['opStatsSync：按「车 × 天」同步东风能耗，写 vehicle_daily_stats'],
+      ['全部零依赖 Node，自建 PostgREST 访问（不引 SDK）'],
+      ['匿名 token 缓存到 exp−5min；401 自动换 token 重试一次', '规则'],
+      ['模块闸门查表异常时直接放行（不因迁移问题挡死业务）'],
+      ['Web 端禁止 callFunction（匿名登录会 EXCEED_AUTHORITY）', '权限'],
+    ]],
+    ['归属识别（三份复制）', [
+      ['assignments 解析：driver 比姓名 / vehicle 比绑定车牌 / team 比机构名'],
+      ['组织树祖先集合：逐级上溯 parent_id，guard<30 防环', '规则'],
+      ['管理员单（owner_account 为空）靠名称唯一归属消歧'],
+      ['重名无法消歧时保守不认（宁可拒绝也不越权）'],
+      ['waybill-action / detail / list 三份逻辑必须同步，无共享模块', '坑'],
+    ]],
+    ['waybill-list 细则', [
+      ['候选窗口：90 天 / 300 条内存过滤（大客户可能漏单）', '坑'],
+      ['排除「待重新指派」状态，不展示给司机'],
+      ['被同事抢走 → 10 分钟窗口内返回 taken_by_other，绝不暴露承接人', '规则'],
+      ['常驻按组聚合：组主必须指派给我，否则整组不展示'],
+      ['组主 trip_seq=1 被删 → 整组不展示'],
+      ['聚合只含「我的趟次」，组内别人的趟次只给 hasOtherTrips'],
+      ['no user / no driver 时返回空列表而非报错'],
+    ]],
+    ['waybill-admin 细则', [
+      ['仅 role_id 非空的员工可用（司机账号进不来）'],
+      ['save 校验 7 条：装卸地/货物/承运人/方式/target/承运量守恒'],
+      ['编辑与改派都仅限待接单 / 待重新指派，保存后状态回待接单', '规则'],
+      ['常驻趟次禁改禁删（提示回 Web 处理）'],
+      ['recurringOp：pause/end/remove 都要求无在跑趟次；resume 随时可'],
+      ['remove 只允许 4 个状态，CAS 删除'],
+      ['pending 不限日期，只取待接单/待重新指派且非常驻'],
+      ['routes 返回的 polyline 抽样到 600 点'],
+      ['dayCounts 按 create_time 自然日（+08:00）'],
+    ]],
+    ['report-action 细则', [
+      ['11 个 action：create/resubmit/detail/review/pending/list/bootstrap/pay/unpay/paidList/batchReview'],
+      ['金额服务端重算：expense 求和，其余钱款类取 event.amount'],
+      ['buildFlow 三级生成 + 相邻同人去重 + 重排 level'],
+      ['财务权限位：fee_audit / fee_pay / fee_stats（主账号与 finance 角色全给）'],
+      ['付款条件必须是 待打款 且 pay_required=true（云函数比 Web 严）'],
+      ['resubmit 未判断 pay_required，重提会直接落已通过', '坑'],
+      ['批量审批大额阈值硬编码 5000，与配置 threshold 脱钩', '坑'],
+      ['认证与业务错误都用 code 500/403，前端靠 message 区分'],
+    ]],
+  ]],
+
+  ['数据模型与迁移', [
+    ['表清单（按域）', [
+      ['租户账号：users / customers / organizations / roles / user_sessions'],
+      ['模块：tenant_modules（owner_account + module_key 唯一）'],
+      ['运力：vehicles / drivers / ele_fences / routes'],
+      ['运单：waybills（40+ 字段，含常驻/节点时间/多腿/坐标）'],
+      ['档案：customer_archives / customer_contacts / cargo_archives / cargo_rules'],
+      ['费用：reports / report_approval_logs / fee_approval_configs'],
+      ['统计：vehicle_daily_stats / op_stats_sync_log / energy_report_tasks'],
+      ['围栏提醒：ele_fence_alerts（客户级，无 org 字段）'],
+    ]],
+    ['关键约束与索引', [
+      ['vehicle_daily_stats：UNIQUE(vin, stat_date)，upsert 靠这个', '规则'],
+      ['tenant_modules：UNIQUE(owner_account, module_key)'],
+      ['energy_report_tasks：task_no UNIQUE'],
+      ['waybills 常驻组号部分索引：WHERE recurring_group_no IS NOT NULL'],
+      ['ele_fences.fence_type CHECK IN (pickup, delivery, alert)'],
+      ['reports：waybill_no / owner / status 三个索引'],
+      ['customer_contacts / cargo_rules 对主子表都是 ON DELETE CASCADE'],
+    ]],
+    ['授权模式（重点）', [
+      ['新表必须带授权段，否则 Web 匿名登录报 permission denied', '坑'],
+      ['结尾统一 GRANT SELECT,INSERT,UPDATE,DELETE TO anon,authenticated', '规则'],
+      ['再执行 pg_notify(pgrst, reload schema) 让 PostgREST 刷新'],
+      ['现象：SELECT 通（列表 0 条）、写被拒 → 就是没授权'],
+      ['部分表 DISABLE ROW LEVEL SECURITY，隔离全在应用层', '规则'],
+      ['organizations.id / customers.id 是整数：新表引用一律 text + 写入前 String()', '坑'],
+      ['声明成 uuid 会报 invalid input syntax for type uuid: "5"'],
+      ['roles 表只授 SELECT / UPDATE（不允许随意增删）'],
+    ]],
+    ['迁移脚本（16 个）', [
+      ['10-16：waybills 一次性加 30 个字段（常驻+节点+模式+坐标）'],
+      ['10-16：清理历史僵尸运单（诊断/备份/三方案，默认全注释）'],
+      ['10-17：user_sessions 单设备会话表 + RLS 全放行'],
+      ['10-17：users 加 mp_login_enabled（默认 false）'],
+      ['10-18：货物档案 cargo_archives / cargo_rules'],
+      ['10-18：计费单位 price_unit + 运单快照 + 历史单位归一'],
+      ['10-18：客户档案 customer_archives / customer_contacts + 运单 6 列'],
+      ['10-18：修误建成 uuid 的 customer_id / org_id 为 text'],
+      ['10-18：补 anon 授权，修 permission denied'],
+      ['10-18：vehicle_daily_stats + op_stats_sync_log'],
+      ['10-19：energy_report_tasks + 11 条演示数据'],
+      ['10-20：模块化收口（config / role_type / pay_required / 回填 waybill=true）'],
+      ['10-22：customers 加 theme（账号级皮肤）'],
+      ['10-22：ele_fences 加 fence_type + CHECK + 索引 + 历史刷 alert'],
+      ['10-22：vehicles / waybills 加 fleet_name + 索引'],
+      ['verify_2026-10-20：只读自检（列存在性/模块行/在途单/权限位）'],
+    ]],
+    ['写代码必守的降级规则', [
+      ['写新字段要降级容错：列不存在时剥字段重试', '规则'],
+      ['范例：stripRecurringFields / stripNewFields / insertArchive'],
+      ['识别错误的关键词：column / 字段 / does not exist / PGRST204 / 42703'],
+      ['剥字段重试后要 toast 提示「数据库尚未支持 X，已按普通运单发布」'],
+      ['查询首屏失败重试 1 次（等 900ms，匿名登录态未就绪）'],
+    ]],
+  ]],
+];
+
+/* ==================================================================
+   渲染引擎
+   ================================================================== */
+const TAGS = {
+  '校验': { sym:'✓', bg:'#FEE2E2', fg:'#B91C1C' },
+  '公式': { sym:'ƒ', bg:'#DBEAFE', fg:'#1D4ED8' },
+  '枚举': { sym:'≡', bg:'#DCFCE7', fg:'#15803D' },
+  '坑':   { sym:'!', bg:'#FFEDD5', fg:'#C2410C' },
+  '权限': { sym:'K', bg:'#F3E8FF', fg:'#7E22CE' },
+  '接口': { sym:'↔', bg:'#CFFAFE', fg:'#0E7490' },
+  '口径': { sym:'◐', bg:'#E2E8F0', fg:'#475569' },
+  '规则': { sym:'§', bg:'#E8EDF4', fg:'#334155' },
+};
+const TAG_W = 19;
+const DCOLORS = ['#c8102e','#2563EB','#0E9F6E','#D97706','#7C3AED','#0891B2','#DB2777','#475569','#65A30D','#EA580C'];
+
+const PAD = 32, VGAP = 7, HGAP = 46;
+const FONTS = { 0:'800 14px', 1:'800 13px', 2:'700 12.5px', 3:'500 12px' };
+const WIDTHS = { 0:300, 1:240, 2:220, 3:268 };
+const LINEH  = { 0:22, 1:20, 2:19, 3:18.5 };
+const MCTX = document.createElement('canvas').getContext('2d');
+const FF = '"PingFang SC","Microsoft YaHei",system-ui,sans-serif';
+
+function wrapText(text, maxW, fontPx, firstW) {
+  MCTX.font = fontPx + ' ' + FF;
+  const lines = []; let cur = ''; let limit = firstW || maxW;
+  for (const ch of text) {
+    if (MCTX.measureText(cur + ch).width > limit && cur) {
+      lines.push(cur); cur = ch; limit = maxW;
+    } else cur += ch;
+  }
+  if (cur) lines.push(cur);
+  return lines.length ? lines : [''];
+}
+
+let uid = 0;
+const nodeMap = new Map();
+let root = null;
+
+function build(arr, parent, depth, path, domain) {
+  const out = [];
+  arr.forEach((item, i) => {
+    let title, tag = '', kids = [];
+    if (typeof item === 'string') title = item;
+    else {
+      title = item[0];
+      if (Array.isArray(item[1])) kids = item[1];
+      else { tag = item[1] || ''; kids = item[2] || []; }
+    }
+    const dom = depth === 1 ? DCOLORS[i % DCOLORS.length] : domain;
+    const node = { id: 'n' + (++uid), t: title, tag, c: [], parent, depth, path, domain: dom };
+    node.c = build(kids, node, depth + 1, path.concat(title), dom);
+    nodeMap.set(node.id, node);
+    out.push(node);
+  });
+  return out;
+}
+
+const collapsed = new Set();
+let selected = null;
+let searchQ = '';
+
+let stage, canvas, edgesEl, nodesEl, crumbEl;
+let tx = 0, ty = 0, scale = 1;
+let bbox = { w: 0, h: 0 };
+
+function isOpen(n, searchOpen) {
+  if (searchOpen && searchOpen.has(n.id)) return true;
+  return !collapsed.has(n.id);
+}
+
+function render() {
+  const q = searchQ.trim().toLowerCase();
+  const hits = new Set();
+  const searchOpen = new Set();
+  if (q) {
+    nodeMap.forEach(n => {
+      if (n.t.toLowerCase().includes(q)) {
+        hits.add(n.id);
+        let p = n.parent;
+        while (p) { searchOpen.add(p.id); p = p.parent; }
+      }
+    });
+  }
+
+  // ---- measure ----
+  const visible = [];
+  const links = [];
+  function walk(n) {
+    const d = Math.min(n.depth, 3);
+    const w = WIDTHS[d];
+    const padX = d === 0 ? 32 : d === 1 ? 28 : d === 2 ? 22 : 20;
+    const knobW = d >= 3 ? 0 : 21;
+    const innerW = w - padX - knobW;
+    const lines = wrapText(n.t, innerW, FONTS[d], n.tag ? innerW - TAG_W : innerW);
+    const padY = d === 0 ? 24 : d === 1 ? 20 : d === 2 ? 16 : 12;
+    const h = padY + lines.length * LINEH[d];
+    n._w = w; n._h = h; n._lines = lines; n._d = d;
+    visible.push(n);
+    const kids = isOpen(n, searchOpen) ? n.c : [];
+    n._kids = kids;
+    if (!kids.length) { n._subH = h; return; }
+    let sum = 0;
+    kids.forEach((k, i) => {
+      walk(k);
+      sum += k._subH;
+      const gap = k.depth === 1 ? 26 : VGAP;
+      if (i < kids.length - 1) sum += gap;
+      links.push([n, k]);
+    });
+    n._subH = Math.max(h, sum);
+  }
+  walk(root);
+
+  function place(n, x, top) {
+    n._x = x;
+    n._top = top;
+    n._bottom = top + n._subH;
+    // 顶部对齐：内容很多时父节点不会被推到子树正中（否则展开后父节点自己跑到屏幕外）
+    n._y = top;
+    let cy = top;
+    n._kids.forEach(k => {
+      place(k, x + n._w + HGAP, cy);
+      cy += k._subH + (k.depth === 1 ? 26 : VGAP);
+    });
+  }
+  place(root, PAD, PAD);
+
+  // ---- bbox ----
+  let maxX = 0, maxY = 0;
+  visible.forEach(n => {
+    maxX = Math.max(maxX, n._x + n._w);
+    maxY = Math.max(maxY, n._y + n._h);
+  });
+  bbox = { w: maxX + PAD, h: maxY + PAD };
+  canvas.style.width = bbox.w + 'px';
+  canvas.style.height = bbox.h + 'px';
+  edgesEl.setAttribute('width', bbox.w);
+  edgesEl.setAttribute('height', bbox.h);
+  edgesEl.setAttribute('viewBox', '0 0 ' + bbox.w + ' ' + bbox.h);
+
+  // ---- edges ----
+  const groups = new Map();
+  links.forEach(([a, b]) => {
+    if (!groups.has(a)) groups.set(a, []);
+    groups.get(a).push(b);
+  });
+  let ep = '';
+  groups.forEach((kids, a) => {
+    const x1 = a._x + a._w, y1 = a._y + a._h / 2;
+    const col = a.depth === 0 ? '#c8102e' : (a.domain || '#94A3B8');
+    const sw = a.depth === 0 ? 1.8 : a.depth === 1 ? 1.4 : 1.2;
+    const op = a.depth === 0 ? .5 : a.depth === 1 ? .44 : .4;
+
+    if (a.depth >= 2) {
+      // 树干式：父→干线、一条竖干、干线→各子（避免多条重叠成色块）
+      const tx0 = x1 + 14;
+      const ys = kids.map(k => k._y + k._h / 2);
+      let d = 'M' + x1 + ' ' + y1 + ' H' + tx0;
+      d += ' M' + tx0 + ' ' + Math.min(...ys) + ' V' + Math.max(...ys);
+      kids.forEach((k, i) => {
+        d += ' M' + tx0 + ' ' + ys[i] + ' H' + k._x;
+      });
+      ep += '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + sw +
+            '" stroke-opacity="' + op + '" stroke-linejoin="round"/>';
+    } else if (a.depth === 1) {
+      const dx = Math.max(16, (kids[0]._x - x1) * 0.48);
+      kids.forEach(k => {
+        const y2 = k._y + k._h / 2;
+        ep += '<path d="M' + x1 + ' ' + y1 + ' C' + (x1 + dx) + ' ' + y1 + ',' + (k._x - dx) + ' ' + y2 + ',' + k._x + ' ' + y2 +
+              '" fill="none" stroke="' + col + '" stroke-width="' + sw +
+              '" stroke-opacity="' + op + '" stroke-linecap="round"/>';
+      });
+    } else {
+      // 根 → 业务域：肘形主干
+      const mx = x1 + 26;
+      kids.forEach(k => {
+        const y2 = k._y + k._h / 2;
+        ep += '<path d="M' + x1 + ' ' + y1 + ' H' + mx + ' V' + y2 + ' H' + k._x +
+              '" fill="none" stroke="' + col + '" stroke-width="' + sw +
+              '" stroke-opacity="' + op + '" stroke-linejoin="round"/>';
+      });
+    }
+  });
+  edgesEl.innerHTML = ep;
+
+  // ---- nodes ----
+  let html = '';
+  visible.forEach(n => {
+    const d = n._d;
+    const cls = ['node', 'd' + d];
+    if (n.c.length) cls.push('has-kids');
+    if (selected === n.id) cls.push('sel');
+    if (q) cls.push(hits.has(n.id) ? 'hit' : 'dim');
+    let style = 'left:' + n._x + 'px;top:' + n._y + 'px;width:' + n._w + 'px;min-height:' + n._h + 'px;';
+    if (d === 1) style += '--dc:' + n.domain + ';';
+    const knob = n.c.length
+      ? '<span class="knob has">' + (collapsed.has(n.id) && !(searchOpen.has(n.id)) ? '+' : '−') + '</span>'
+      : '<span class="knob"></span>';
+    const tg = n.tag && TAGS[n.tag] ? TAGS[n.tag] : null;
+    const tag = tg
+      ? '<em class="tag" style="background:' + tg.bg + ';color:' + tg.fg + '">' + tg.sym + '</em>'
+      : '';
+    const text = n._lines.map((l, i) => escapeHtml(l)).join('\n');
+    html += '<div class="' + cls.join(' ') + '" style="' + style + '" data-id="' + n.id + '" title="' +
+            escapeAttr(n.t) + (n.c.length ? '　（' + n.c.length + ' 个子项）' : '') + '">' +
+            knob + '<div class="txt">' + tag + text + '</div></div>';
+  });
+  nodesEl.innerHTML = html;
+
+  document.getElementById('stat').textContent = visible.length;
+  document.getElementById('statDepth').textContent = (function () { let m = 0; visible.forEach(n => m = Math.max(m, n.depth)); return m + 1; })();
+  document.getElementById('zoom').textContent = Math.round(scale * 100) + '%';
+  document.getElementById('qcnt').textContent = q ? (hits.size || '0') : '';
+  updateCrumb();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function escapeAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function applyTransform() {
+  canvas.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+  document.getElementById('zoom').textContent = Math.round(scale * 100) + '%';
+}
+
+function fit() {
+  const r = stage.getBoundingClientRect();
+  if (!bbox.w || !bbox.h) return;
+  const s = Math.min((r.width - 70) / bbox.w, (r.height - 54) / bbox.h, 1);
+  scale = Math.max(0.42, s);
+  if (bbox.h * scale > r.height - 40) {
+    tx = Math.max(40, (r.width - bbox.w * scale) / 2);
+    ty = 18;
+  } else {
+    tx = (r.width - bbox.w * scale) / 2;
+    ty = (r.height - bbox.h * scale) / 2;
+  }
+  applyTransform();
+}
+
+function centerOn(id, animate) {
+  const n = nodeMap.get(id);
+  if (!n || n._x == null) return;
+  const r = stage.getBoundingClientRect();
+  const cx = (n._x + n._w / 2) * scale;
+  const cy = (n._y + n._h / 2) * scale;
+  tx = r.width / 2 - cx;
+  ty = r.height / 2 - cy;
+  applyTransform();
+}
+
+function screenOf(n) {
+  return { x: n._x * scale + tx, y: n._y * scale + ty };
+}
+
+/* ---------- 交互 ---------- */
+let drag = null, moved = false;
+
+function initInteraction() {
+  nodesEl.addEventListener('click', e => {
+    const el = e.target.closest('.node');
+    if (!el) return;
+    const id = el.dataset.id;
+    const n = nodeMap.get(id);
+    if (!n) return;
+    if (moved) { moved = false; return; }
+
+    if (n.c.length) {
+      const willOpen = collapsed.has(id);
+      if (n.depth === 1 && willOpen) {
+        // 手风琴：一次只看一个业务域的完整子树，避免纵向被推到几万像素
+        root.c.forEach(sib => { if (sib.id !== id) collapsed.add(sib.id); });
+      }
+      if (willOpen) collapsed.delete(id); else collapsed.add(id);
+      selected = id;
+      render();
+      focusBlock(n);
+    } else {
+      selected = id;
+      render();
+    }
+  });
+
+  nodesEl.addEventListener('dblclick', e => {
+    const el = e.target.closest('.node');
+    if (!el) return;
+    e.stopPropagation();
+    expandSubtree(el.dataset.id);
+  });
+
+  stage.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    if (e.target.closest('.node')) return;
+    drag = { x: e.clientX, y: e.clientY, tx, ty };
+    moved = false;
+    stage.classList.add('drag');
+  });
+  window.addEventListener('mousemove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+    tx = drag.tx + dx; ty = drag.ty + dy;
+    applyTransform();
+  });
+  window.addEventListener('mouseup', () => {
+    drag = null;
+    stage.classList.remove('drag');
+    setTimeout(() => { moved = false; }, 30);
+  });
+
+  stage.addEventListener('wheel', e => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const r = stage.getBoundingClientRect();
+      const mx = e.clientX - r.left, my = e.clientY - r.top;
+      const next = Math.min(2.2, Math.max(0.2, scale * (e.deltaY > 0 ? 0.92 : 1.08)));
+      const k = next / scale;
+      tx = mx - (mx - tx) * k;
+      ty = my - (my - ty) * k;
+      scale = next;
+      applyTransform();
+    } else {
+      tx -= e.deltaX;
+      ty -= e.deltaY;
+      applyTransform();
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  stage.addEventListener('dblclick', e => {
+    if (e.target.closest('.node')) return;
+    fit();
+  });
+
+  window.addEventListener('resize', () => { render(); applyTransform(); });
+}
+
+function focusBlock(n) {
+  // 横向：能放下就居中，放不下就左对齐；纵向：把该域子树顶到视口上沿（上留一点上下文）
+  const r = stage.getBoundingClientRect();
+  const w = bbox.w * scale;
+  tx = w < r.width - 40 ? (r.width - w) / 2 : 22;
+  ty = 26 - (n._top - 40) * scale;
+  applyTransform();
+}
+
+function expandSubtree(id) {
+  const n = nodeMap.get(id);
+  if (!n) return;
+  if (n.depth === 1) root.c.forEach(sib => { if (sib.id !== id) collapsed.add(sib.id); });
+  const stack = [n];
+  while (stack.length) {
+    const cur = stack.pop();
+    collapsed.delete(cur.id);
+    cur.c.forEach(k => stack.push(k));
+  }
+  render();
+  if (scale < 0.78) { scale = 1; }   // 双击 = 放大到可读比例再看细节
+  focusBlock(n);
+}
+
+function updateCrumb() {
+  if (!selected) { crumbEl.classList.remove('on'); return; }
+  const n = nodeMap.get(selected);
+  if (!n) { crumbEl.classList.remove('on'); return; }
+  const chain = n.path.slice(-3).map(escapeHtml).join(' <em>›</em> ');
+  const kids = n.c.length ? '<em>·</em> ' + n.c.length + ' 个子项' : '';
+  crumbEl.innerHTML = chain + (chain ? ' <em>·</em> ' : '') + '<b>' + escapeHtml(n.t) + '</b> ' + kids;
+  crumbEl.classList.add('on');
+}
+
+/* ---------- 工具栏 ---------- */
+function initToolbar() {
+  document.getElementById('btnExpand').onclick = () => {
+    collapsed.clear();
+    render();
+    document.getElementById('btnFit').click();
+  };
+  document.getElementById('btnCollapse').onclick = () => {
+    collapsed.clear();
+    nodeMap.forEach(n => { if (n.depth >= 1) collapsed.add(n.id); });
+    render(); fit();
+  };
+  document.getElementById('btnFit').onclick = () => { render(); fit(); };
+  document.getElementById('btnLegend').onclick = () => {
+    document.getElementById('legend').classList.toggle('on');
+  };
+  document.getElementById('btnMd').onclick = exportMarkdown;
+
+  const qEl = document.getElementById('q');
+  let timer = null;
+  qEl.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      searchQ = qEl.value;
+      const before = selected;
+      render();
+      const q = searchQ.trim().toLowerCase();
+      if (q) {
+        let first = null;
+        nodeMap.forEach(n => { if (!first && n.t.toLowerCase().includes(q)) first = n.id; });
+        if (first) { selected = first; render(); centerOn(first); }
+      } else {
+        applyTransform();
+      }
+    }, 160);
+  });
+  qEl.addEventListener('keydown', e => { if (e.key === 'Escape') { qEl.value = ''; searchQ = ''; render(); } });
+}
+
+function exportMarkdown() {
+  let out = '# 东风车队管理系统 · 业务逻辑全景\n\n';
+  out += '> 依据 src/ 全量 Web 源码、deploy/cloudfunctions-20261020 云函数、sql/ 迁移脚本整理。\n\n';
+  function walk(n, lv) {
+    out += '  '.repeat(lv) + '- ' + n.t + (n.tag ? '  `' + n.tag + '`' : '') + '\n';
+    n.c.forEach(k => walk(k, lv + 1));
+  }
+  root.c.forEach(n => walk(n, 0));
+  const blob = new Blob([out], { type: 'text/markdown;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '业务逻辑全景.md';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+
+/* ---------- 域导航 ---------- */
+function initChips() {
+  const box = document.getElementById('chips');
+  box.innerHTML = root.c.map((n, i) => {
+    const c = DCOLORS[i % DCOLORS.length];
+    return '<button class="chip" data-id="' + n.id + '"><i style="background:' + c + '"></i>' +
+           escapeHtml(n.t) + ' <b>' + countLeaves(n) + '</b></button>';
+  }).join('');
+  box.addEventListener('click', e => {
+    const b = e.target.closest('.chip');
+    if (!b) return;
+    box.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    const id = b.dataset.id;
+    const n = nodeMap.get(id);
+    collapsed.delete(id);
+    root.c.forEach(sib => { if (sib.id !== id) collapsed.add(sib.id); });
+    selected = id;
+    render();
+    focusBlock(n);
+  });
+}
+
+function countLeaves(n) {
+  if (!n.c.length) return 1;
+  return n.c.reduce((s, k) => s + countLeaves(k), 0);
+}
+
+function applyHash() {
+  const m = /[#?&]d=?(\d+)/.exec(location.href || '');
+  if (!m) return;
+  const idx = Math.min(root.c.length - 1, Math.max(0, parseInt(m[1], 10) - 1));
+  const n = root.c[idx];
+  if (!n) return;
+  expandSubtree(n.id);
+  const chips = document.querySelectorAll('#chips .chip');
+  chips.forEach(x => x.classList.remove('on'));
+  if (chips[idx]) chips[idx].classList.add('on');
+}
+
+/* ---------- boot ---------- */
+function boot() {
+  stage = document.getElementById('stage');
+  canvas = document.getElementById('canvas');
+  edgesEl = document.getElementById('edges');
+  nodesEl = document.getElementById('nodes');
+  crumbEl = document.getElementById('crumb');
+
+  root = {
+    id: 'root', t: '东风车队管理系统 · 业务逻辑全景', tag: '', c: [], parent: null,
+    depth: 0, path: [], domain: '#c8102e'
+  };
+  root.c = build(DATA, root, 1, [], '#c8102e');
+  nodeMap.set('root', root);
+
+  // 默认只展开一级业务域，点开即看子模块
+  collapsed.clear();
+  if (!/expand=all/.test(location.href)) {
+    nodeMap.forEach(n => { if (n.depth >= 1) collapsed.add(n.id); });
+  }
+
+  const total = countLeaves(root);
+  document.getElementById('statAll').textContent = total;
+  document.getElementById('subtitle').textContent = 'Web 36 页 · 18 组件 · 云函数 7 个 · 20+ 表 · ' + total + ' 个逻辑点';
+
+  initChips();
+  initInteraction();
+  initToolbar();
+  render();
+  fit();
+  applyHash();
+}
+
+boot();
+</script>
+</body>
+</html>

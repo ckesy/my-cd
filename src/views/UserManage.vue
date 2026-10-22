@@ -324,83 +324,57 @@
         <div class="org-view-body" v-loading="orgLoading">
           <el-tree v-if="orgTreeData.length > 0" ref="orgTreeRef" :data="orgTreeData" node-key="key" :props="treeProps"
             :default-expand-all="orgExpandAll" :filter-node-method="filterOrgNode" :expand-on-click-node="false"
-            class="org-tree">
+            :indent="0" class="org-tree">
             <template #default="{ node, data }">
+              <!-- ⭐ 统一成 5 列栅格：图标 | 名称(含副信息) | 车辆 | 司机 | 状态
+                   三种节点行都按同一套列渲染，横向才对得齐；
+                   账号 / 角色 / 项数这类副信息收进「名称」列，不再各自占一列。 -->
               <div class="tree-node" :class="'type-' + data.type">
-                <template v-if="data.type === 'root'">
-                  <span class="node-icon root-icon"><el-icon>
-                      <OfficeBuilding />
-                    </el-icon></span>
-                  <span class="node-label">{{ data.label }}</span>
-                  <span class="node-count">{{ data.children?.length || 0 }} 个组织</span>
-                  <span class="node-vehicles" :class="{ empty: !data.vehicleCount }">
-                    <el-icon v-if="data.vehicleCount > 0">
-                      <Van />
-                    </el-icon>
-                    {{ data.vehicleCount > 0 ? `${data.vehicleCount} 辆` : '暂无车辆' }}
-                  </span>
-                  <span class="node-drivers" :class="{ empty: !data.driverCount }">
-                    <el-icon v-if="data.driverCount > 0">
-                      <Avatar />
-                    </el-icon>
-                    {{ data.driverCount > 0 ? `${data.driverCount} 名` : '暂无司机' }}
-                  </span>
-                </template>
-
-                <template v-else-if="data.type === 'org'">
-                  <span class="node-icon org-icon"><el-icon>
-                      <OfficeBuilding />
-                    </el-icon></span>
-                  <span class="node-label">{{ data.label }}</span>
-                  <span class="node-count">{{ data.children?.length || 0 }} 项</span>
-                  <span class="node-vehicles" :class="{ empty: !data.vehicleCount }">
-                    <el-icon v-if="data.vehicleCount > 0">
-                      <Van />
-                    </el-icon>
-                    {{ data.vehicleCount > 0 ? `${data.vehicleCount} 辆` : '暂无车辆' }}
-                  </span>
-                  <span class="node-drivers" :class="{ empty: !data.driverCount }">
-                    <el-icon v-if="data.driverCount > 0">
-                      <Avatar />
-                    </el-icon>
-                    {{ data.driverCount > 0 ? `${data.driverCount} 名` : '暂无司机' }}
-                  </span>
-                </template>
-
-                <template v-else-if="data.type === 'fleet'">
-                  <span class="node-icon fleet-icon"><el-icon>
-                      <Van />
-                    </el-icon></span>
-                  <span class="node-label">{{ data.label }}</span>
-                  <span class="node-count">{{ data.children?.length || 0 }} 个用户</span>
-                </template>
-
-                <template v-else-if="data.type === 'user'">
-                  <span class="node-icon user-icon" :class="{ admin: data.isAdmin }">
+                <!-- ⭐ 层级缩进收在图标列内部（el-tree 用 :indent="0" 关掉了整行缩进）：
+                     这样图标随层级右移、看得见层次，而后面 4 列位置完全固定，
+                     虚线对齐条才能跨层级连成一条竖线。 -->
+                <span class="node-ic" :style="{ paddingLeft: ((node.level || 1) - 1) * 16 + 'px' }">
+                  <span class="node-icon" :class="{ admin: data.isAdmin }">
                     <el-icon>
-                      <component :is="data.isAdmin ? UserFilled : User" />
+                      <component :is="iconOfNode(data)" />
                     </el-icon>
                   </span>
-                  <span class="node-label">{{ data.label }}</span>
-                  <span class="node-account">{{ data.account }}</span>
-                  <span class="node-role" :class="{ admin: data.isAdmin }">{{ data.roleName }}</span>
-                  <span class="node-vehicles" :class="{ empty: !data.vehicleCount }">
+                </span>
+
+                <span class="node-main">
+                  <span class="node-label" :title="data.label">{{ data.label }}</span>
+                  <template v-if="data.type === 'user'">
+                    <span class="node-account">{{ data.account }}</span>
+                    <span class="node-role" :class="{ admin: data.isAdmin }">{{ data.roleName }}</span>
+                    <span v-if="data.ownerName" class="node-owner">由 {{ data.ownerName }} 创建</span>
+                  </template>
+                  <span v-else class="node-count">{{ countTextOf(data) }}</span>
+                </span>
+
+                <!-- 每列都包一层 .node-col（虚线挂在容器上）：
+                     即使这一行没有该字段，列和虚线也要占位，
+                     否则机构行 / 车队行会把竖线打断。 -->
+                <span class="node-col">
+                  <span v-if="data.type !== 'fleet'" class="node-vehicles" :class="{ empty: !data.vehicleCount }">
                     <el-icon v-if="data.vehicleCount > 0">
                       <Van />
                     </el-icon>
                     {{ data.vehicleCount > 0 ? `${data.vehicleCount} 辆` : '暂无车辆' }}
                   </span>
-                  <span class="node-drivers" :class="{ empty: !data.driverCount }">
+                </span>
+                <span class="node-col">
+                  <span v-if="data.type !== 'fleet'" class="node-drivers" :class="{ empty: !data.driverCount }">
                     <el-icon v-if="data.driverCount > 0">
                       <Avatar />
                     </el-icon>
                     {{ data.driverCount > 0 ? `${data.driverCount} 名` : '暂无司机' }}
                   </span>
-                  <span class="status-tag mini" :class="data.status === 1 ? 'on' : 'off'">
+                </span>
+                <span class="node-col is-last">
+                  <span v-if="data.type === 'user'" class="status-tag mini" :class="data.status === 1 ? 'on' : 'off'">
                     {{ data.status === 1 ? '启用' : '禁用' }}
                   </span>
-                  <span v-if="data.ownerName" class="node-owner">由 {{ data.ownerName }} 创建</span>
-                </template>
+                </span>
               </div>
             </template>
           </el-tree>
@@ -641,7 +615,7 @@ import {
   Search, Refresh, CirclePlus, Operation, Setting, FullScreen, Close,
   EditPen, Lock, Key, RefreshLeft, ArrowUp, ArrowDown, List, Share,
   User, UserFilled, Document, Select, CircleClose, Grid, Rank,
-  DArrowLeft, DArrowRight, OfficeBuilding, Van, InfoFilled,
+  DArrowLeft, DArrowRight, OfficeBuilding, Van, InfoFilled, Avatar,
   Expand, Fold, Delete,
 } from '@element-plus/icons-vue'
 import { supabase } from '@/utils/supabase'
@@ -1054,6 +1028,21 @@ const orgExpandAll = ref(true)
 const orgSearchKeyword = ref('')
 const treeProps = { children: 'children', label: 'label' }
 
+/* 组织树节点：图标与副信息文案（模板里统一一套结构，避免四种节点各写一遍而错位） */
+const iconOfNode = (d) => {
+  if (!d) return User
+  if (d.type === 'root' || d.type === 'org') return OfficeBuilding
+  if (d.type === 'fleet') return Van
+  return d.isAdmin ? UserFilled : User
+}
+const countTextOf = (d) => {
+  const n = (d && Array.isArray(d.children) && d.children.length) || 0
+  if (!d) return ''
+  if (d.type === 'fleet') return n + ' 个用户'
+  if (d.type === 'org') return n + ' 项'
+  return n + ' 个组织'
+}
+
 const loadOrgTree = async () => {
   orgLoading.value = true
   try {
@@ -1199,6 +1188,10 @@ const loadOrgTree = async () => {
       })
       .map(u => buildUserNode(u))
 
+    /* ⭐ 直属本机构的用户排在子机构**前面**：
+       否则「root 直属用户」紧跟在子机构块的末尾，看上去像是那个机构的成员，
+       缩进却差一级（4 个用户 L2、机构里的用户 L3），视觉上就是"没对齐"。
+       先直属、再下钻，层级关系一眼能看出来。 */
     let tree = []
 
     if (isCustomer) {
@@ -1208,7 +1201,7 @@ const loadOrgTree = async () => {
         label: root.name,
         vehicleCount: recursiveVehicleByOrg[String(root.id)] || 0,
         driverCount: directDriverByOrgName[String(root.name || '').trim()] || 0,
-        children: [...buildOrgChildren(root.id), ...rootDirectUsers],
+        children: [...rootDirectUsers, ...buildOrgChildren(root.id)],
       }))
     } else {
       tree = rootOrgs.map(root => ({
@@ -1217,7 +1210,7 @@ const loadOrgTree = async () => {
         label: root.name,
         vehicleCount: recursiveVehicleByOrg[root.id] || 0,
         driverCount: directDriverByOrgName[String(root.name || '').trim()] || 0,
-        children: [...buildOrgChildren(root.id), ...rootDirectUsers],
+        children: [...rootDirectUsers, ...buildOrgChildren(root.id)],
       }))
     }
 
@@ -2037,7 +2030,28 @@ onBeforeUnmount(() => {
   height: 40px;
   border-radius: 6px;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  padding: 2px 4px;
+  /* ⭐ 上下不留 padding：列间虚线才能一行接一行连成整条竖线 */
+  padding: 0 4px;
+}
+
+/* ⭐ 展开箭头固定宽度：
+   el-tree 默认箭头 24px、叶子节点变透明但占位，
+   这里统一成 22px 并居中 —— 保证「有子节点」和「叶子」两种行的
+   内容起点完全一致，不会出现同级行差几个像素。 */
+.org-tree :deep(.el-tree-node__expand-icon) {
+  width: 22px;
+  padding: 0;
+  font-size: 11px;
+  color: #94A3B8;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.org-tree :deep(.el-tree-node__expand-icon.is-leaf) {
+  color: transparent;
+  cursor: default;
 }
 
 .org-tree :deep(.el-tree-node__content:hover) {
@@ -2048,12 +2062,63 @@ onBeforeUnmount(() => {
   background: #FEE2E2;
 }
 
+/* ⭐ 统一 5 列栅格：图标 | 名称（内含账号/角色/项数）| 车辆 | 司机 | 状态
+   所有类型的节点行都用同一套列 —— 车辆、司机、状态永远落在同一条竖线上，
+   不会出现「机构行第 3 列是个数、用户行第 3 列是账号」这种错位。
+   gap: 0 + 列内自带 padding，这样列间的虚线才能一格接一格连成竖线。 */
 .tree-node {
+  display: grid;
+  /* 第 1 列要容下「最多 4 层 × 16px 缩进 + 24px 图标」 */
+  grid-template-columns: 72px minmax(0, 300px) 96px 96px 68px;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.tree-node > * { min-width: 0; }
+
+/* 图标列：缩进 + 图标方块 */
+.node-ic {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* 名称列内部横排：名称 + 账号 + 角色 */
+.node-main {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1;
-  font-size: 13px;
+  min-width: 0;
+  padding: 0 10px;
+}
+
+/* ⭐ 列间虚线对齐条：用 background 画（border 的 dashed 节距太碎，看不见），
+   位置贴在列左边缘，同一层级的所有行连起来就是一条贯穿的对齐线。 */
+.tree-node > .node-main,
+.tree-node > .node-col {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 10px;
+  padding-right: 8px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    #C6D3E2 0 5px,
+    transparent 5px 10px
+  );
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 1px 100%;
+}
+
+/* 图标列与名称列之间留白，不画线（名称是一个视觉块的起点） */
+.tree-node > .node-main {
+  padding-left: 10px;
+  background-image: none;
 }
 
 .node-icon {
@@ -2101,8 +2166,12 @@ onBeforeUnmount(() => {
 }
 
 .node-label {
+  flex: 0 1 auto;
   font-weight: 600;
   color: #0F172A;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tree-node.type-root .node-label {
@@ -2122,15 +2191,16 @@ onBeforeUnmount(() => {
 }
 
 .node-count {
+  flex: 0 0 auto;
   font-size: 11.5px;
   color: #94A3B8;
   padding: 1px 8px;
   border-radius: 8px;
   background: #F1F5F9;
-  margin-left: 4px;
 }
 
 .node-account {
+  flex: 0 0 auto;
   font-size: 12px;
   color: #94A3B8;
   font-family: 'Courier New', monospace;
@@ -2140,6 +2210,7 @@ onBeforeUnmount(() => {
 }
 
 .node-role {
+  flex: 0 0 auto;
   font-size: 11.5px;
   color: #5B21B6;
   padding: 1px 8px;
@@ -2154,13 +2225,13 @@ onBeforeUnmount(() => {
 }
 
 .node-owner {
+  flex: 0 0 auto;
   font-size: 11.5px;
   color: #D97706;
   padding: 1px 8px;
   border-radius: 8px;
   background: #FEF3C7;
   font-weight: 600;
-  margin-left: auto;
 }
 
 .node-vehicles {

@@ -2,18 +2,18 @@
   <div class="ele-fence-page">
     <!-- 搜索卡片 -->
     <div class="search-card fade-up">
-      <div class="search-row">
-        <el-select v-model="searchForm.org" placeholder="请选择所属车队" size="default" class="search-select" clearable>
-          <el-option label="西马物流新能源车队" value="西马物流新能源车队" />
-          <el-option label="其他机构" value="其他机构" />
-        </el-select>
-        <el-select v-model="searchForm.shape" placeholder="请选择围栏形状" size="default" class="search-select" clearable>
-          <el-option label="圆形" value="circle" />
-          <el-option label="多边形" value="polygon" />
-          <el-option label="线形" value="polyline" />
-          <el-option label="行政区划" value="district" />
-        </el-select>
-        <el-input v-model="searchForm.name" placeholder="请输入围栏名称" size="default" class="search-input" clearable />
+      <!-- ⭐ 第一行：围栏类型 Tab（带数量）+ 操作按钮 -->
+      <div class="search-row type-row">
+        <div class="type-tabs">
+          <!-- 滑动指示器：位置由 JS 实测，切换时平滑过渡 -->
+          <span class="tab-indicator" :style="indicatorStyle"></span>
+          <div v-for="(t, i) in typeTabs" :key="t.key" :ref="el => setTabRef(el, i)" class="type-tab"
+            :class="[t.key, { on: searchForm.type === t.key }]" @click="handleTypeTab(t.key)">
+            <span class="t-sq"></span>
+            <span class="t-label">{{ t.label }}</span>
+            <span class="t-count">{{ typeCounts[t.key] || 0 }}</span>
+          </div>
+        </div>
 
         <div class="search-btns">
           <el-button type="primary" size="default" class="btn-primary" @click="handleSearch">
@@ -38,6 +38,27 @@
           </el-button>
         </div>
       </div>
+
+      <!-- 第二行：其他筛选条件 -->
+      <div class="search-row sub-row">
+        <el-select v-model="searchForm.org" placeholder="请选择所属机构" size="default" class="search-select"
+          clearable filterable>
+          <el-option v-for="o in orgOptions" :key="o" :label="o" :value="o" />
+          <template #empty>
+            <div style="padding: 14px; text-align: center; color: #94A3B8; font-size: 12.5px;">
+              暂无机构
+            </div>
+          </template>
+        </el-select>
+        <el-select v-model="searchForm.shape" placeholder="请选择围栏形状" size="default" class="search-select" clearable>
+          <el-option label="圆形" value="circle" />
+          <el-option label="多边形" value="polygon" />
+          <el-option label="线形" value="polyline" />
+          <el-option label="行政区划" value="district" />
+        </el-select>
+        <el-input v-model="searchForm.name" placeholder="请输入围栏名称" size="default" class="search-input" clearable
+          @keyup.enter="handleSearch" />
+      </div>
     </div>
 
     <!-- 表格卡片 -->
@@ -46,11 +67,16 @@
         <el-table :data="tableData" border stripe style="width: 100%;" size="default" v-loading="loading"
           class="custom-table" height="100%"
           :header-cell-style="{ background: '#F1F5F9', color: '#0F172A', fontWeight: '700', fontSize: '13px' }">
-          <el-table-column prop="name" label="围栏名称" min-width="160" align="center" show-overflow-tooltip>
+          <el-table-column prop="name" label="围栏名称" min-width="200" align="left" show-overflow-tooltip>
             <template #default="{ row }">
-              <div class="name-wrap">
-                <span class="name-bar"></span>
-                <span class="name-text">{{ row.name }}</span>
+              <div class="name-cell">
+                <div class="name-wrap" :class="'t-' + (row.fence_type || 'alert')">
+                  <span class="name-bar"></span>
+                  <span class="type-tag" :class="row.fence_type || 'alert'">{{
+                    typeShortText(row.fence_type)
+                  }}</span>
+                  <span class="name-text">{{ row.name }}</span>
+                </div>
               </div>
             </template>
           </el-table-column>
@@ -136,7 +162,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, nextTick, watch, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Download, Plus, MapLocation } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
@@ -189,6 +215,44 @@ const loadMyOrgInfo = async () => {
   } catch (e) { }
 }
 
+/* ============================================================
+   ⭐ 所属机构下拉：读真实机构，不再用硬编码的假选项
+   选项 = organizations 表里的机构 ∪ 围栏数据里实际出现过的 org
+   （合并是为了防止某些围栏的 org 在机构表里已被删/改名，导致筛不到）
+   ============================================================ */
+const orgNamesFromDb = ref([])
+
+const loadOrgOptions = async () => {
+  try {
+    let q = supabase
+      .from('organizations')
+      .select('id, name, level')
+      .order('level', { ascending: true })
+      .order('id', { ascending: true })
+    if (isCustomer) q = q.eq('owner_account', myAccount)
+    // 二级机构子账号：只有本机构可选
+    if (needOrgFilter.value && myOrgName.value) q = q.eq('name', myOrgName.value)
+
+    const { data, error } = await q
+    if (error) throw error
+    orgNamesFromDb.value = (data || [])
+      .map(o => String(o.name || '').trim())
+      .filter(Boolean)
+  } catch (e) {
+    console.warn('[围栏设置] 加载机构列表失败：', e)
+    orgNamesFromDb.value = []
+  }
+}
+
+const orgOptions = computed(() => {
+  const set = new Set(orgNamesFromDb.value)
+  fullList.value.forEach(r => {
+    const v = String(r.org || '').trim()
+    if (v) set.add(v)
+  })
+  return [...set]
+})
+
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '--'
   return dayjs(dateStr).format('YYYY-MM-DD HH:mm:ss')
@@ -197,6 +261,23 @@ const formatDateTime = (dateStr) => {
 const shapeText = (shape) => {
   const map = { circle: '圆形', polygon: '多边形', polyline: '线形', district: '行政区划' }
   return map[shape] || shape
+}
+
+/* ============================================================
+   ⭐ 围栏类型（pickup 装货 / delivery 卸货 / alert 提醒）
+   值存英文 key，中文只用于展示；
+   历史数据没有类型时统一按 alert（提醒围栏）兜底。
+   ============================================================ */
+const FENCE_TYPES = [
+  { key: 'pickup', label: '装货围栏', short: '装货', color: '#2563EB' },
+  { key: 'delivery', label: '卸货围栏', short: '卸货', color: '#0E9F6E' },
+  { key: 'alert', label: '提醒围栏', short: '提醒', color: '#D97706' },
+]
+const typeTabs = [{ key: 'all', label: '全部' }, ...FENCE_TYPES]
+
+const typeShortText = (type) => {
+  const hit = FENCE_TYPES.find(t => t.key === (type || 'alert'))
+  return hit ? hit.short : '提醒'
 }
 
 const countPoints = (points) => {
@@ -214,7 +295,7 @@ const currentPage = ref(1)
 
 const fullList = ref([])
 
-const searchForm = reactive({ org: '', shape: '', name: '' })
+const searchForm = reactive({ type: 'all', org: '', shape: '', name: '' })
 
 const deleting = ref(false)
 const deletingName = ref('')
@@ -275,6 +356,8 @@ const fetchData = async () => {
       name: row.name,
       desc: row.desc,
       shape: row.shape,
+      // ⭐ 列不存在（迁移未执行）时按提醒围栏兜底，不让整页崩
+      fence_type: row.fence_type || 'alert',
       org: row.org,
       attr: row.attr || row.desc || '',
       radius: row.radius,
@@ -297,20 +380,76 @@ const fetchData = async () => {
   }
 }
 
-// 本地搜索 + 分页
-const applyLocalFilter = () => {
-  let filtered = fullList.value
-  if (searchForm.org) filtered = filtered.filter(r => r.org === searchForm.org)
-  if (searchForm.shape) filtered = filtered.filter(r => r.shape === searchForm.shape)
+/* 除「类型」以外的筛选条件（Tab 计数要基于这个集合，否则选中装货后其他 Tab 就变 0 了） */
+const baseFiltered = () => {
+  let list = fullList.value
+  if (searchForm.org) list = list.filter(r => r.org === searchForm.org)
+  if (searchForm.shape) list = list.filter(r => r.shape === searchForm.shape)
   if (searchForm.name) {
     const kw = searchForm.name.toLowerCase()
-    filtered = filtered.filter(r => (r.name || '').toLowerCase().includes(kw))
+    list = list.filter(r => (r.name || '').toLowerCase().includes(kw))
+  }
+  return list
+}
+
+/* Tab 上的数量：跟着其他筛选条件联动，选中项不参与自身过滤 */
+const typeCounts = computed(() => {
+  const base = baseFiltered()
+  const counts = { all: base.length, pickup: 0, delivery: 0, alert: 0 }
+  base.forEach(r => {
+    const k = r.fence_type || 'alert'
+    if (counts[k] !== undefined) counts[k]++
+  })
+  return counts
+})
+
+// 本地搜索 + 分页
+const applyLocalFilter = () => {
+  let filtered = baseFiltered()
+  if (searchForm.type && searchForm.type !== 'all') {
+    filtered = filtered.filter(r => (r.fence_type || 'alert') === searchForm.type)
   }
   total.value = filtered.length
   const from = (currentPage.value - 1) * pageSize.value
   const to = from + pageSize.value
   tableData.value = filtered.slice(from, to)
 }
+
+const handleTypeTab = (key) => {
+  searchForm.type = key
+  currentPage.value = 1
+  applyLocalFilter()
+}
+
+/* ============================================================
+   Tab 滑动指示器：位置按实际元素测量（各 Tab 文案宽度不同，不能用百分比）
+   ============================================================ */
+const tabEls = []
+const setTabRef = (el, i) => { if (el) tabEls[i] = el }
+
+const indicator = reactive({ left: 0, top: 0, width: 0, height: 0 })
+
+const indicatorStyle = computed(() => ({
+  left: indicator.left + 'px',
+  top: indicator.top + 'px',
+  width: indicator.width + 'px',
+  height: indicator.height + 'px',
+  opacity: indicator.width ? 1 : 0,
+}))
+
+const updateIndicator = () => {
+  const i = typeTabs.findIndex(t => t.key === searchForm.type)
+  const el = tabEls[i]
+  if (!el) return
+  indicator.left = el.offsetLeft
+  indicator.top = el.offsetTop
+  indicator.width = el.offsetWidth
+  indicator.height = el.offsetHeight
+}
+
+// 切换 / 数量变化（宽度会变）都要重测
+watch(() => searchForm.type, () => nextTick(updateIndicator))
+watch(typeCounts, () => nextTick(updateIndicator))
 
 const handleSearch = async () => {
   currentPage.value = 1
@@ -319,6 +458,7 @@ const handleSearch = async () => {
 }
 
 const handleReset = () => {
+  searchForm.type = 'all'
   searchForm.org = ''
   searchForm.shape = ''
   searchForm.name = ''
@@ -416,7 +556,14 @@ const handleCurrentChange = (val) => {
 
 onMounted(async () => {
   if (isCustomer && isSubAccount) await loadMyOrgInfo()
+  loadOrgOptions()
   fetchData()
+  nextTick(updateIndicator)
+  window.addEventListener('resize', updateIndicator)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateIndicator)
 })
 </script>
 
@@ -475,6 +622,142 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+}
+
+.sub-row {
+  margin-top: 12px;
+}
+
+/* ============================================================
+   ⭐ 围栏类型 Tab（带数量）+ 滑动指示器
+   ============================================================ */
+.type-tabs {
+  position: relative;
+  display: inline-flex;
+  gap: 4px;
+  background: #F1F5F9;
+  padding: 3px;
+  border-radius: 9px;
+}
+
+/* 白色滑块：位置/宽度由 JS 实测，切换时平滑滑动 */
+.tab-indicator {
+  position: absolute;
+  border-radius: 7px;
+  background: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  pointer-events: none;
+  z-index: 0;
+  transition:
+    left 0.3s cubic-bezier(0.34, 1.2, 0.64, 1),
+    width 0.3s cubic-bezier(0.34, 1.2, 0.64, 1),
+    top 0.2s ease,
+    height 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.type-tab {
+  position: relative;
+  z-index: 1;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #64748B;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: color 0.22s ease;
+  user-select: none;
+}
+
+.type-tab:hover {
+  color: #0F172A;
+}
+
+.type-tab:active {
+  transform: scale(0.97);
+}
+
+.type-tab .t-sq {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: #94A3B8;
+  flex: 0 0 auto;
+  transition: transform 0.22s ease;
+}
+
+.type-tab.on .t-sq {
+  transform: scale(1.15);
+}
+
+.type-tab .t-count {
+  font-family: var(--num-font, -apple-system, sans-serif);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 800;
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 20px;
+  text-align: center;
+  background: #E2E8F0;
+  color: #64748B;
+  transition: background 0.22s ease, color 0.22s ease;
+}
+
+.type-tab.on {
+  color: #0F172A;
+}
+
+.type-tab.on .t-count {
+  background: #0F172A;
+  color: #fff;
+}
+
+/* 各类颜色（未选中时只给色块上色，选中时文字+计数一起变色） */
+.type-tab.all .t-sq {
+  background: #0F172A;
+}
+
+.type-tab.pickup .t-sq {
+  background: #2563EB;
+}
+
+.type-tab.delivery .t-sq {
+  background: #0E9F6E;
+}
+
+.type-tab.alert .t-sq {
+  background: #D97706;
+}
+
+.type-tab.pickup.on {
+  color: #2563EB;
+}
+
+.type-tab.pickup.on .t-count {
+  background: #2563EB;
+}
+
+.type-tab.delivery.on {
+  color: #0E9F6E;
+}
+
+.type-tab.delivery.on .t-count {
+  background: #0E9F6E;
+}
+
+.type-tab.alert.on {
+  color: #D97706;
+}
+
+.type-tab.alert.on .t-count {
+  background: #D97706;
 }
 
 .search-select {
@@ -573,6 +856,15 @@ onMounted(async () => {
   background: #FAFBFC;
 }
 
+/* ⭐ 名称列左对齐，且与表格左边框留出间隔 */
+.name-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 8px;
+  min-width: 0;
+}
+
 .name-wrap {
   display: inline-flex;
   align-items: center;
@@ -596,10 +888,70 @@ onMounted(async () => {
   display: inline-block;
   width: 3px;
   height: 16px;
-  background: linear-gradient(180deg, #EF4444, #B91C1C);
+  background: linear-gradient(180deg, #FBBF24, #D97706);
   border-radius: 2px;
-  box-shadow: 0 0 4px rgba(211, 47, 47, 0.4);
+  box-shadow: 0 0 4px rgba(217, 119, 6, 0.4);
   flex-shrink: 0;
+}
+
+/* ⭐ 色条按围栏类型染色（装货蓝 / 卸货绿 / 提醒琥珀，都避开品牌红） */
+.name-wrap.t-pickup .name-bar {
+  background: linear-gradient(180deg, #60A5FA, #2563EB);
+  box-shadow: 0 0 4px rgba(37, 99, 235, 0.4);
+}
+
+.name-wrap.t-delivery .name-bar {
+  background: linear-gradient(180deg, #34D399, #0E9F6E);
+  box-shadow: 0 0 4px rgba(14, 159, 110, 0.4);
+}
+
+.name-wrap.t-alert .name-bar {
+  background: linear-gradient(180deg, #FBBF24, #D97706);
+  box-shadow: 0 0 4px rgba(217, 119, 6, 0.4);
+}
+
+.name-wrap.t-pickup:hover {
+  border-color: #BFD4FE;
+}
+
+.name-wrap.t-delivery:hover {
+  border-color: #A7E8CE;
+}
+
+.name-wrap.t-alert:hover {
+  border-color: #FBD5A5;
+}
+
+/* 名称前的类型文字标签 */
+.type-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.type-tag.pickup {
+  background: #EFF4FF;
+  color: #2563EB;
+  border: 1px solid #BFD4FE;
+}
+
+.type-tag.delivery {
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7E8CE;
+}
+
+.type-tag.alert {
+  background: #FFF7ED;
+  color: #B45309;
+  border: 1px solid #FBD5A5;
 }
 
 .name-text {

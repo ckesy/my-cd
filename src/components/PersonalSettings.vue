@@ -32,6 +32,7 @@ watch(visible, (val) => {
   if (val) {
     refreshUser()
     resetForms()
+    resolveCompanyName()
   }
 })
 
@@ -62,10 +63,114 @@ async function pickTheme(key) {
 }
 
 // ---------- 基本信息 ----------
+/* ⭐ 2026-10-22：主账号可以自定义「昵称」；管理员/财务的名字只能在主账号的「用户管理」里改。
+   公司名称来自组织管理，任何角色都只读。 */
 const profileForm = reactive({
   name: '',
+  nickname: '',
   phone: '',
 })
+
+const isMaster = computed(() => {
+  const u = currentUser.value
+  if (!u) return false
+  return u.role !== 'admin' && !u.isSubAccount
+})
+
+/* 公司名称：优先取登录时带过来的 orgName（子账号/新登录的主账号都有），
+   老会话里没有就按 owner_account 去 organizations 查根机构，
+   最后兜底用 users.name（主账号的 name 存的就是公司全称）。 */
+const companyName = ref('')
+
+const resolveCompanyName = async () => {
+  const u = currentUser.value || {}
+  const direct = String(u.orgName || u.org || '').trim()
+  if (direct) { companyName.value = direct; return }
+
+  const key = tenantKey.value
+  if (key) {
+    try {
+      const { data } = await supabase
+        .from('organizations')
+        .select('name, level')
+        .eq('owner_account', key)
+        .order('level', { ascending: true })
+        .limit(1)
+      if (data && data[0] && data[0].name) {
+        companyName.value = String(data[0].name).trim()
+        return
+      }
+    } catch (e) { /* 查不到继续往下兜 */ }
+  }
+
+  if (u.orgId) {
+    try {
+      const { data } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', u.orgId)
+        .maybeSingle()
+      if (data && data.name) { companyName.value = String(data.name).trim(); return }
+    } catch (e) { }
+  }
+
+  companyName.value = String(u.name || '').trim()
+}
+
+/* 查重键：主账号用 account（owner_account 为空），员工用 owner_account */
+const tenantKey = computed(() => {
+  const u = currentUser.value || {}
+  return String(u.ownerAccount || u.masterAccount || u.account || '').trim()
+})
+
+const nicknameState = reactive({ checking: false, ok: false, msg: '' })
+let nickTimer = null
+
+const checkNickname = () => {
+  const v = String(profileForm.nickname || '').trim()
+  nicknameState.ok = false
+  nicknameState.msg = ''
+  if (!isMaster.value) return
+  if (!v) return
+  if (v.length < 2) {
+    nicknameState.msg = '昵称至少 2 个字'
+    return
+  }
+  if (nickTimer) clearTimeout(nickTimer)
+  nickTimer = setTimeout(async () => {
+    nicknameState.checking = true
+    try {
+      const key = tenantKey.value
+      // ⭐ 排除自己：users.id 是整数，老会话的 currentUser.id 可能是 uuid，
+      //    直接用会把查重接口打挂（报 invalid input syntax for type integer）
+      const uid = await resolveUserId()
+      let q = supabase
+        .from('users')
+        .select('id, account, name, nickname')
+        .or(`owner_account.eq.${key},account.eq.${key}`)
+      if (uid) q = q.neq('id', uid)
+      const { data } = await q
+      const low = v.toLowerCase()
+      const hit = (data || []).find(
+        (x) =>
+          String(x.name || '').trim().toLowerCase() === low ||
+          String(x.nickname || '').trim().toLowerCase() === low
+      )
+      if (hit) {
+        nicknameState.msg = `该昵称已被本公司的「${hit.nickname || hit.name} / ${hit.account}」使用，请换一个`
+      } else {
+        nicknameState.ok = true
+        nicknameState.msg = '可用'
+      }
+    } catch (e) {
+      /* 查不到就放行，别把保存卡死 */
+      nicknameState.ok = true
+      nicknameState.msg = ''
+    } finally {
+      nicknameState.checking = false
+    }
+  }, 300)
+}
 
 // ---------- 密码 ----------
 const passwordForm = reactive({
@@ -100,7 +205,10 @@ const resetForms = () => {
   const u = currentUser.value
   if (u) {
     profileForm.name = u.name || ''
+    profileForm.nickname = u.nickname || ''
     profileForm.phone = u.phone || ''
+    nicknameState.ok = false
+    nicknameState.msg = ''
   }
   passwordForm.oldPassword = ''
   passwordForm.newPassword = ''
@@ -113,12 +221,48 @@ const resetForms = () => {
 const savingProfile = ref(false)
 const savingPassword = ref(false)
 
+/* ============================================================
+   ⭐ 定位 users 行（2026-10-22 修「保存失败：invalid input syntax for type integer」）
+   根因：users.id 是整数（如 9），但老会话的 localStorage 里 currentUser.id
+   存的是 customers 表的 uuid（678b9759-...），拿它去 eq('id', ...) 会被 PG 拒。
+   做法：是纯数字就直接用，否则按 account（登录也是用 account 查的）回查真实 id。
+   ============================================================ */
+const resolveUserId = async () => {
+  const u = currentUser.value || {}
+  const raw = u.id
+  if (raw !== null && raw !== undefined && /^\d+$/.test(String(raw))) return Number(raw)
+
+  const acc = String(u.account || u.phone || '').trim()
+  if (!acc) return null
+  try {
+    const { data } = await supabase
+      .from('users')
+      .select('id')
+      .eq('account', acc)
+      .maybeSingle()
+    return data?.id ?? null
+  } catch (e) {
+    console.warn('[个人设置] 回查 users.id 失败：', e)
+    return null
+  }
+}
+
 // ---------- 保存基本信息 ----------
 // ⭐ 所有角色（管理员/主账号/子账号）都改 users 表
 //    理由：登录读 users.name、校验 users.password，一切以 users 为准
 const saveProfile = async () => {
-  if (!profileForm.name.trim()) {
+  if (!isMaster.value) return
+  const nick = String(profileForm.nickname || '').trim()
+  if (!nick) {
     ElMessage.warning('请输入昵称')
+    return
+  }
+  if (nick.length < 2 || nick.length > 12) {
+    ElMessage.warning('昵称 2~12 个字')
+    return
+  }
+  if (nicknameState.msg && !nicknameState.ok && !nicknameState.checking) {
+    ElMessage.error(nicknameState.msg)
     return
   }
   if (!currentUser.value?.id) {
@@ -128,17 +272,21 @@ const saveProfile = async () => {
 
   savingProfile.value = true
   try {
+    const uid = await resolveUserId()
+    if (!uid) throw new Error('登录信息异常，请重新登录')
+
     const { error } = await supabase
       .from('users')
       .update({
-        name: profileForm.name.trim(),
+        nickname: nick,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', currentUser.value.id)
+      .eq('id', uid)
 
     if (error) throw error
 
-    const updated = { ...currentUser.value, name: profileForm.name.trim() }
+    // ⭐ 顺手把脏 id 修正成 users 的真实整数 id，避免下次再犯
+    const updated = { ...currentUser.value, id: uid, nickname: nick, displayName: nick }
     localStorage.setItem('currentUser', JSON.stringify(updated))
     currentUser.value = updated
 
@@ -167,10 +315,13 @@ const savePassword = async () => {
 
   savingPassword.value = true
   try {
+    const uid = await resolveUserId()
+    if (!uid) throw new Error('登录信息异常，请重新登录')
+
     const { data: userData, error: queryError } = await supabase
       .from('users')
       .select('password')
-      .eq('id', currentUser.value.id)
+      .eq('id', uid)
       .maybeSingle()
 
     if (queryError) throw queryError
@@ -187,7 +338,7 @@ const savePassword = async () => {
         password: passwordForm.newPassword,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', currentUser.value.id)
+      .eq('id', uid)
 
     if (updateError) throw updateError
 
@@ -253,14 +404,36 @@ const savePassword = async () => {
 
     <!-- ==================== 基本信息 ==================== -->
     <div v-show="activeTab === 'profile'" class="tab-body">
+      <!-- 公司名称：来自组织管理，任何角色都只读 -->
       <div class="field">
+        <label class="field-label">公司名称</label>
+        <el-input :model-value="companyName || '—'" disabled />
+        <div class="field-hint">由管理端创建，不可修改</div>
+      </div>
+
+      <!-- 主账号：可自定义昵称（派单/审批/代操作都显示它） -->
+      <div class="field" v-if="isMaster">
         <label class="field-label">昵称</label>
         <el-input
-          v-model="profileForm.name"
-          placeholder="请输入昵称"
-          maxlength="20"
+          v-model="profileForm.nickname"
+          placeholder="设定一个称呼，如 王老板"
+          maxlength="12"
           show-word-limit
+          @input="checkNickname"
         />
+        <div
+          class="field-hint"
+          :class="{ ok: nicknameState.ok, err: !nicknameState.ok && !!nicknameState.msg }"
+        >
+          {{ nicknameState.msg || '派单、审批、代操作里的处理人都显示这个名字' }}
+        </div>
+      </div>
+
+      <!-- 其他角色：姓名只读，由主账号维护 -->
+      <div class="field" v-else>
+        <label class="field-label">姓名</label>
+        <el-input :model-value="profileForm.name || '—'" disabled />
+        <div class="field-hint warn">姓名由主账号在「用户管理」里维护，这里不能改</div>
       </div>
 
       <div class="field">
@@ -270,8 +443,13 @@ const savePassword = async () => {
       </div>
 
       <div class="field-actions">
-        <button class="action-btn ghost" @click="visible = false">取消</button>
-        <button class="action-btn primary" @click="saveProfile" :disabled="savingProfile">
+        <button class="action-btn ghost" @click="visible = false">{{ isMaster ? '取消' : '关闭' }}</button>
+        <button
+          v-if="isMaster"
+          class="action-btn primary"
+          @click="saveProfile"
+          :disabled="savingProfile || nicknameState.checking"
+        >
           {{ savingProfile ? '保存中...' : '保存' }}
         </button>
       </div>
@@ -553,6 +731,9 @@ const savePassword = async () => {
   margin-bottom: 8px;
 }
 
+.field-hint.ok { color: #67C23A; }
+.field-hint.err { color: #F56C6C; }
+.field-hint.warn { color: #B45309; }
 .field-hint {
   font-size: 12px;
   color: #94A3B8;
@@ -668,5 +849,17 @@ const savePassword = async () => {
 .personal-settings-dialog .light-form .el-input__inner.is-disabled {
   color: #94A3B8 !important;
   -webkit-text-fill-color: #94A3B8 !important;
+}
+
+/* ⭐ 只读字段（公司名称 / 手机号 / 姓名）文字别太淡，要能一眼读清 */
+.personal-settings-dialog .field .el-input.is-disabled .el-input__inner {
+  color: #334155 !important;
+  -webkit-text-fill-color: #334155 !important;
+  font-weight: 600;
+}
+
+.personal-settings-dialog .field .el-input.is-disabled .el-input__wrapper {
+  background: #F1F5F9 !important;
+  box-shadow: 0 0 0 1px #E2E8F0 inset !important;
 }
 </style>

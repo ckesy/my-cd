@@ -183,7 +183,10 @@
                           @click.stop
                           @change="() => toggleFence('speeding', f.id)"
                         />
-                        <span class="picker-item-name">{{ f.name }}</span>
+                        <span class="picker-item-name">
+                          <span class="ftype-tag alert">提醒</span>
+                          <span class="ftype-name">{{ f.name }}</span>
+                        </span>
                         <span v-if="speedingTempSelected.includes(f.id)" class="picker-item-check">
                           <el-icon><Select /></el-icon>
                         </span>
@@ -191,7 +194,7 @@
                     </transition-group>
                     <div v-if="filteredFences('speeding').length === 0" class="picker-empty">
                       <el-icon><Search /></el-icon>
-                      <span>{{ fenceList.length === 0 ? '暂无围栏，请先去创建' : '没有匹配的围栏' }}</span>
+                      <span>{{ fenceList.length === 0 ? '暂无提醒围栏，请先去创建' : '没有匹配的围栏' }}</span>
                     </div>
                   </div>
 
@@ -218,7 +221,7 @@
               </transition-group>
 
               <div v-if="fenceList.length === 0" class="empty-hint">
-                没有围栏？
+                没有提醒围栏？
                 <a class="link-btn" @click.stop="goToFenceSetting">去创建 →</a>
               </div>
               <div v-else-if="speeding.fence_ids.length === 0" class="global-hint speeding-global-hint">
@@ -400,7 +403,10 @@
                           @click.stop
                           @change="() => toggleFence('staying', f.id)"
                         />
-                        <span class="picker-item-name">{{ f.name }}</span>
+                        <span class="picker-item-name">
+                          <span class="ftype-tag alert">提醒</span>
+                          <span class="ftype-name">{{ f.name }}</span>
+                        </span>
                         <span v-if="stayingTempSelected.includes(f.id)" class="picker-item-check">
                           <el-icon><Select /></el-icon>
                         </span>
@@ -408,7 +414,7 @@
                     </transition-group>
                     <div v-if="filteredFences('staying').length === 0" class="picker-empty">
                       <el-icon><Search /></el-icon>
-                      <span>{{ fenceList.length === 0 ? '暂无围栏，请先去创建' : '没有匹配的围栏' }}</span>
+                      <span>{{ fenceList.length === 0 ? '暂无提醒围栏，请先去创建' : '没有匹配的围栏' }}</span>
                     </div>
                   </div>
 
@@ -786,7 +792,7 @@ const loadFenceList = async () => {
   try {
     let q = supabase
       .from('ele_fences')
-      .select('id, name, gfid, org')
+      .select('id, name, gfid, org, fence_type')
       .order('updated_at', { ascending: false })
 
     if (isCustomer) {
@@ -800,8 +806,10 @@ const loadFenceList = async () => {
 
     const { data, error } = await q
     if (error) throw error
-    fenceList.value = data || []
-    console.log('[AlertSetting] 加载围栏:', fenceList.value.length, '条')
+    // ⭐ 提醒设置只能选「提醒围栏」；列缺失或空值按提醒兜底（与列表页口径一致）
+    const all = data || []
+    fenceList.value = all.filter(f => (f.fence_type || 'alert') === 'alert')
+    console.log('[AlertSetting] 加载围栏:', all.length, '条 → 提醒围栏', fenceList.value.length, '条')
   } catch (e) {
     console.error('加载围栏列表失败：', e)
   }
@@ -2082,12 +2090,39 @@ onMounted(async () => {
 
 .picker-item-name {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 13px;
   font-weight: 600;
   color: #1E293B;
+}
+
+.ftype-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ⭐ 围栏类型标签：与「围栏设置」列表里的样式保持一致 */
+.ftype-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.ftype-tag.alert {
+  background: #FFF7ED;
+  color: #B45309;
+  border: 1px solid #FBD5A5;
 }
 
 .picker-item-check {
