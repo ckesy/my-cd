@@ -1509,7 +1509,7 @@ const submitForm = (isContinue) => {
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 12px;
-  color: #D32F2F;
+  color: var(--brand-primary);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -1550,7 +1550,7 @@ const submitForm = (isContinue) => {
 }
 
 .locate-btn:hover {
-  color: #D32F2F;
+  color: var(--brand-primary);
   box-shadow: 0 4px 14px rgba(211, 47, 47, 0.25);
   transform: translateY(-2px) scale(1.08);
 }
@@ -1668,11 +1668,11 @@ const submitForm = (isContinue) => {
 }
 
 :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px #D32F2F inset;
+  box-shadow: 0 0 0 1px var(--brand-primary) inset;
 }
 
 :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.15), 0 0 0 1px #D32F2F inset !important;
+  box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.15), 0 0 0 1px var(--brand-primary) inset !important;
 }
 
 .search-icon {
@@ -1682,7 +1682,7 @@ const submitForm = (isContinue) => {
 }
 
 .search-icon:hover {
-  color: #D32F2F;
+  color: var(--brand-primary);
   transform: scale(1.15) rotate(10deg);
 }
 
@@ -1720,7 +1720,7 @@ const submitForm = (isContinue) => {
 }
 
 .radius-slider :deep(.el-slider__runway) {
-  background: linear-gradient(90deg, #FEE2E2 0%, #FECACA 100%);
+  background: linear-gradient(90deg, var(--brand-primary-light) 0%, var(--brand-primary-light) 100%);
   height: 6px;
   border-radius: 3px;
 }
@@ -1734,7 +1734,7 @@ const submitForm = (isContinue) => {
 .radius-slider :deep(.el-slider__button) {
   width: 18px;
   height: 18px;
-  border: 3px solid #D32F2F;
+  border: 3px solid var(--brand-primary);
   background: #FFFFFF;
   box-shadow: 0 2px 8px rgba(211, 47, 47, 0.35);
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1839,15 +1839,15 @@ const submitForm = (isContinue) => {
 }
 
 .btn-cancel:hover {
-  border-color: #D32F2F;
-  color: #D32F2F;
-  background: #FEF2F2;
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  background: var(--brand-primary-light);
 }
 
 .btn-continue {
-  background-color: #FEF2F2;
+  background-color: var(--brand-primary-light);
   border-color: #FECACA;
-  color: #D32F2F;
+  color: var(--brand-primary);
 }
 
 .btn-continue:hover {
@@ -1857,8 +1857,8 @@ const submitForm = (isContinue) => {
 }
 
 .btn-submit {
-  background-color: #D32F2F;
-  border-color: #D32F2F;
+  background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
   color: #FFF;
   position: relative;
   overflow: hidden;
@@ -1949,7 +1949,7 @@ const submitForm = (isContinue) => {
 
 .ring-progress {
   fill: none;
-  stroke: #D32F2F;
+  stroke: var(--brand-primary);
   stroke-width: 6;
   stroke-linecap: round;
   stroke-dasharray: 263.89;
@@ -1964,7 +1964,7 @@ const submitForm = (isContinue) => {
   transform: translate(-50%, -50%);
   font-size: 26px;
   font-weight: 700;
-  color: #D32F2F;
+  color: var(--brand-primary);
   letter-spacing: 1px;
   text-shadow: 0 2px 8px rgba(211, 47, 47, 0.2);
 }
@@ -2035,7 +2035,7 @@ const submitForm = (isContinue) => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #D32F2F;
+  background: var(--brand-primary);
   animation: dotBounce 1.4s ease-in-out infinite;
 }
 

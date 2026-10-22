@@ -1108,9 +1108,15 @@ const rhythmPayload = computed(() => {
 
   const avg = counts.map((row, w) => row.map((c) => (dateCount[w] ? c / dateCount[w] : 0)))
   const max = Math.max(1, ...avg.flat())
+  /* ⭐ 色阶跟着皮肤走
+     ⚠️ 这里**不能**用 getComputedStyle 读色值再拼 rgb()：
+        这个值在 computed 里算，而 computed 不监听 CSS 变量 —— 换肤后不会重算，
+        会一直停在第一次算出来的颜色（所以之前怎么看都是旧色）。
+        直接把 rgba + var(--brand-rgb) 拼成字符串交给内联样式，
+        浏览器自己会展开变量，换肤立刻生效。 */
   const color = (v) => {
     const t = Math.pow(Math.min(1, v / max), 0.78)
-    return `rgb(${Math.round(255 - 55 * t)},${Math.round(245 - 229 * t)},${Math.round(245 - 199 * t)})`
+    return `rgba(var(--brand-rgb), ${(0.06 + t * 0.9).toFixed(2)})`
   }
   return {
     rhythm: WD.map((label, w) => ({
@@ -1198,11 +1204,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   transition: all 0.2s;
 }
 
-.modes button:hover { color: #c8102e; }
+.modes button:hover { color: var(--brand-primary); }
 
 .modes button.active {
   background: #fff;
-  color: #c8102e;
+  color: var(--brand-primary);
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1);
 }
 
@@ -1233,9 +1239,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 
 .progress {
   font-size: 11.5px;
-  color: #c8102e;
+  color: var(--brand-primary);
   font-weight: 700;
-  background: #fef2f2;
+  background: var(--brand-primary-light);
   border: 1px solid #fecaca;
   border-radius: 10px;
   padding: 2px 9px;
@@ -1247,13 +1253,13 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   background: #fff;
 }
 :deep(.btn-outline:hover) {
-  border-color: #c8102e;
-  color: #c8102e;
-  background: #fef2f2;
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  background: var(--brand-primary-light);
 }
 :deep(.btn-primary) {
-  background: #c8102e;
-  border-color: #c8102e;
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
 }
 :deep(.btn-primary:hover) {
   background: #a00d24;
@@ -1302,8 +1308,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 .tile.dragging { opacity: 0.45; }
 
 .tile.over {
-  border-color: #c8102e !important;
-  box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.15);
+  border-color: var(--brand-primary) !important;
+  box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.15);
 }
 
 .tile-head {
@@ -1343,11 +1349,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   white-space: nowrap;
 }
 
-.scope:hover { color: #c8102e; border-color: #fecaca; }
+.scope:hover { color: var(--brand-primary); border-color: #fecaca; }
 
 .scope.custom {
-  color: #c8102e;
-  background: #fef2f2;
+  color: var(--brand-primary);
+  background: var(--brand-primary-light);
   border-color: #fecaca;
 }
 
@@ -1363,7 +1369,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 .expand {
   border: 0;
   background: transparent;
-  color: #c8102e;
+  color: var(--brand-primary);
   font-family: inherit;
   font-size: 10.5px;
   font-weight: 700;
@@ -1373,7 +1379,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   white-space: nowrap;
 }
 
-.expand:hover { background: #fef2f2; }
+.expand:hover { background: var(--brand-primary-light); }
 
 .tile-tip {
   flex-shrink: 0;
@@ -1455,7 +1461,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   cursor: pointer;
 }
 
-.back:hover { border-color: #c8102e; color: #c8102e; background: #fef2f2; }
+.back:hover { border-color: var(--brand-primary); color: var(--brand-primary); background: var(--brand-primary-light); }
 
 .exp-title {
   font-size: 16px;
@@ -1484,7 +1490,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   border-radius: 6px;
 }
 
-.close-x:hover { background: #f1f5f9; color: #c8102e; }
+.close-x:hover { background: #f1f5f9; color: var(--brand-primary); }
 
 .month-nav {
   display: inline-flex;
@@ -1505,7 +1511,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   font-size: 15px;
 }
 
-.month-nav button:hover { background: #fef2f2; color: #c8102e; }
+.month-nav button:hover { background: var(--brand-primary-light); color: var(--brand-primary); }
 
 .month-nav span {
   font-size: 13.5px;
@@ -1537,7 +1543,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 
 .chips button.active {
   background: #fff;
-  color: #c8102e;
+  color: var(--brand-primary);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
 }
 

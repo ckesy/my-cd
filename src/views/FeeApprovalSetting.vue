@@ -765,7 +765,7 @@ onMounted(async () => {
   width: 180px;
   height: 180px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(200, 16, 46, .06), transparent 68%);
+  background: radial-gradient(circle, rgba(var(--brand-rgb), .06), transparent 68%);
   pointer-events: none;
 }
 
@@ -958,9 +958,9 @@ onMounted(async () => {
 }
 
 .fc-mode.on {
-  border-color: #c8102e;
+  border-color: var(--brand-primary);
   background: #FFF9FA;
-  box-shadow: 0 0 0 3px rgba(200, 16, 46, .05);
+  box-shadow: 0 0 0 3px rgba(var(--brand-rgb), .05);
 }
 
 .fc-radio {
@@ -974,8 +974,8 @@ onMounted(async () => {
 }
 
 .fc-mode.on .fc-radio {
-  border-color: #c8102e;
-  background: #c8102e;
+  border-color: var(--brand-primary);
+  background: var(--brand-primary);
   box-shadow: inset 0 0 0 2.5px #fff;
 }
 
@@ -1037,7 +1037,7 @@ onMounted(async () => {
 .fc-money > span {
   font-size: 13px;
   font-weight: 600;
-  color: #c8102e;
+  color: var(--brand-primary);
 }
 
 .fc-quick {
@@ -1059,13 +1059,13 @@ onMounted(async () => {
 
 .fc-chip:hover {
   border-color: #F3C6CF;
-  color: #c8102e;
+  color: var(--brand-primary);
 }
 
 .fc-chip.on {
-  background: #FEF2F2;
+  background: var(--brand-primary-light);
   border-color: #FBD5DB;
-  color: #c8102e;
+  color: var(--brand-primary);
   font-weight: 600;
 }
 
@@ -1105,7 +1105,7 @@ onMounted(async () => {
   margin-top: 1px;
 }
 
-.fc-no.one { background: #FEF2F2; color: #c8102e; }
+.fc-no.one { background: var(--brand-primary-light); color: var(--brand-primary); }
 .fc-no.two { background: #EFF6FF; color: #1D4ED8; }
 .fc-no.three { background: #F5F3FF; color: #6D28D9; }
 
@@ -1207,7 +1207,7 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
-.fc-node.one { border-color: #FBD5DB; background: #FEF2F2; color: #c8102e; font-weight: 600; }
+.fc-node.one { border-color: #FBD5DB; background: var(--brand-primary-light); color: var(--brand-primary); font-weight: 600; }
 .fc-node.two { border-color: #DBEAFE; background: #EFF6FF; color: #1D4ED8; font-weight: 600; }
 .fc-node.three { border-color: #E9D5FF; background: #F5F3FF; color: #6D28D9; font-weight: 600; }
 .fc-node.skip { color: var(--text-placeholder); text-decoration: line-through; }

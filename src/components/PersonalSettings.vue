@@ -2,6 +2,10 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { supabase } from '@/utils/supabase'
+import {
+  THEMES, DEFAULT_THEME, applyTheme,
+  readLocalTheme, writeLocalTheme, saveRemoteTheme,
+} from '@/utils/theme'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -33,6 +37,29 @@ watch(visible, (val) => {
 
 // ---------- Tab ----------
 const activeTab = ref('profile')
+
+// ---------- 外观 / 换肤 ----------
+const themeKey = ref(readLocalTheme() || DEFAULT_THEME)
+
+const themeGroups = computed(() => {
+  const order = ['沉稳', '明快']
+  const hints = { 沉稳: '低饱和 · 长时间看不累', 明快: '有色彩 · 活泼但不荧光' }
+  return order.map((name) => ({
+    name,
+    hint: hints[name] || '',
+    list: THEMES.filter((t) => t.group === name),
+  })).filter((g) => g.list.length)
+})
+
+/** 点一下立即生效（不用等保存），同时写账号 */
+async function pickTheme(key) {
+  themeKey.value = key
+  applyTheme(key)
+  writeLocalTheme(key)
+  const ok = await saveRemoteTheme(supabase, currentUser.value, key)
+  if (ok) ElMessage.success('已保存到账号')
+  else ElMessage.warning('已应用到当前设备（未能同步到账号）')
+}
 
 // ---------- 基本信息 ----------
 const profileForm = reactive({
@@ -215,6 +242,13 @@ const savePassword = async () => {
       >
         修改密码
       </button>
+      <button
+        class="tab"
+        :class="{ active: activeTab === 'appearance' }"
+        @click="activeTab = 'appearance'"
+      >
+        外观
+      </button>
     </div>
 
     <!-- ==================== 基本信息 ==================== -->
@@ -285,17 +319,125 @@ const savePassword = async () => {
         </button>
       </div>
     </div>
+
+    <!-- ==================== 外观 / 换肤 ==================== -->
+    <div v-show="activeTab === 'appearance'" class="tab-body">
+      <p class="theme-hint">
+        选一套配色，会保存到你的账号 —— 换电脑、换浏览器打开都是这套。
+      </p>
+
+      <div v-for="grp in themeGroups" :key="grp.name" class="theme-group">
+        <div class="theme-group-t">{{ grp.name }}<span>{{ grp.hint }}</span></div>
+        <div class="theme-grid">
+          <button
+            v-for="t in grp.list" :key="t.key"
+            class="theme-card" :class="{ on: themeKey === t.key }"
+            @click="pickTheme(t.key)"
+          >
+            <div class="tc-preview" :style="{ background: `linear-gradient(135deg, ${t.hover}, ${t.dark})` }">
+              <span class="tc-name">{{ t.name }}</span>
+              <span v-if="themeKey === t.key" class="tc-check">✓</span>
+            </div>
+            <div class="tc-ramp">
+              <i :style="{ background: t.light }"></i>
+              <i :style="{ background: t.main }"></i>
+              <i :style="{ background: t.hover }"></i>
+              <i :style="{ background: t.dark }"></i>
+            </div>
+            <div class="tc-desc">{{ t.desc }}</div>
+          </button>
+        </div>
+      </div>
+    </div>
   </el-dialog>
 </template>
 
 <style scoped>
+/* ============ 外观 / 换肤 ============ */
+.theme-hint {
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  color: #64748B;
+  line-height: 1.75;
+}
+.theme-group { margin-bottom: 20px; }
+.theme-group:last-child { margin-bottom: 0; }
+.theme-group-t {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #0F172A;
+}
+.theme-group-t span {
+  font-size: 11px;
+  font-weight: 400;
+  color: #94A3B8;
+}
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.theme-card {
+  padding: 0;
+  border: 1.5px solid #E6ECF3;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .18s, box-shadow .18s, transform .18s;
+}
+.theme-card:hover {
+  border-color: #CBD5E1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -4px rgba(15, 23, 42, .16);
+}
+.theme-card.on {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px var(--brand-primary-light);
+}
+.tc-preview {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+}
+.tc-name {
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+}
+.tc-check {
+  margin-left: auto;
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .95);
+  color: #0F172A;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.tc-ramp { display: flex; gap: 3px; padding: 7px 8px 4px; }
+.tc-ramp i { flex: 1; height: 13px; border-radius: 3px; display: block; }
+.tc-desc {
+  padding: 0 9px 8px;
+  font-size: 9.5px;
+  color: #94A3B8;
+  line-height: 1.5;
+}
+
 /* ============ 顶部用户条 ============ */
 .user-header {
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 18px 20px;
-  background: linear-gradient(120deg, #FEF2F2 0%, #FFFFFF 100%);
+  background: linear-gradient(120deg, var(--brand-primary-light) 0%, #FFFFFF 100%);
   border-radius: 12px;
   border: 1px solid #E2E8F0;
   margin-bottom: 18px;
@@ -308,8 +450,8 @@ const savePassword = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
-  box-shadow: 0 6px 18px rgba(200, 16, 46, 0.3);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
+  box-shadow: 0 6px 18px rgba(var(--brand-rgb), 0.3);
   flex-shrink: 0;
 }
 
@@ -369,7 +511,7 @@ const savePassword = async () => {
   color: #475569;
 }
 .tab.active {
-  color: #c8102e;
+  color: var(--brand-primary);
 }
 .tab.active::after {
   content: '';
@@ -379,9 +521,9 @@ const savePassword = async () => {
   transform: translateX(-50%);
   width: 28px;
   height: 3px;
-  background: linear-gradient(90deg, #c8102e, #a00d24);
+  background: linear-gradient(90deg, var(--brand-primary), var(--brand-primary-dark));
   border-radius: 3px 3px 0 0;
-  box-shadow: 0 0 10px rgba(200, 16, 46, 0.5);
+  box-shadow: 0 0 10px rgba(var(--brand-rgb), 0.5);
   animation: tabSlide 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 @keyframes tabSlide {
@@ -445,23 +587,23 @@ const savePassword = async () => {
   font-family: inherit;
 }
 .action-btn:hover:not(:disabled) {
-  color: #c8102e;
-  border-color: rgba(200, 16, 46, 0.5);
-  background: #FEF2F2;
+  color: var(--brand-primary);
+  border-color: rgba(var(--brand-rgb), 0.5);
+  background: var(--brand-primary-light);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.12);
+  box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.12);
 }
 .action-btn.primary {
   color: #FFFFFF;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   border-color: transparent;
-  box-shadow: 0 3px 10px rgba(200, 16, 46, 0.28);
+  box-shadow: 0 3px 10px rgba(var(--brand-rgb), 0.28);
 }
 .action-btn.primary:hover:not(:disabled) {
   color: #FFFFFF;
-  background: linear-gradient(135deg, #d41432, #b01029);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   border-color: transparent;
-  box-shadow: 0 6px 18px rgba(200, 16, 46, 0.45);
+  box-shadow: 0 6px 18px rgba(var(--brand-rgb), 0.45);
 }
 .action-btn.ghost {
   background: transparent;
@@ -512,12 +654,12 @@ const savePassword = async () => {
   transition: all 0.25s;
 }
 .personal-settings-dialog .light-form .el-input__wrapper:hover {
-  box-shadow: 0 0 0 1px rgba(200, 16, 46, 0.4) inset !important;
+  box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.4) inset !important;
   background: #FFFFFF !important;
 }
 .personal-settings-dialog .light-form .el-input__wrapper.is-focus {
   background: #FFFFFF !important;
-  box-shadow: 0 0 0 1px #c8102e inset, 0 0 0 3px rgba(200, 16, 46, 0.1) !important;
+  box-shadow: 0 0 0 1px var(--brand-primary) inset, 0 0 0 3px rgba(var(--brand-rgb), 0.1) !important;
 }
 .personal-settings-dialog .light-form .el-input__wrapper.is-disabled {
   background: #F1F5F9 !important;

@@ -499,7 +499,7 @@ onMounted(fetchList)
   width: 4px;
   height: 16px;
   border-radius: 2px;
-  background: linear-gradient(180deg, #e0243f, #c8102e);
+  background: linear-gradient(180deg, var(--brand-primary), var(--brand-primary));
   flex: 0 0 auto;
 }
 
@@ -609,8 +609,8 @@ onMounted(fetchList)
   height: 32px;
   border-radius: 8px;
   padding: 0 14px;
-  background: #c8102e;
-  border-color: #c8102e;
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
   font-weight: 600;
 }
 
@@ -631,8 +631,8 @@ onMounted(fetchList)
 
 .btn-outline:hover {
   border-color: #F3B4BE;
-  color: #c8102e;
-  background: #FEF2F2;
+  color: var(--brand-primary);
+  background: var(--brand-primary-light);
 }
 
 .btn-outline.is-disabled,
@@ -828,7 +828,7 @@ onMounted(fetchList)
 }
 
 :deep(.custom-pagination .el-pager li.is-active) {
-  background: #c8102e !important;
+  background: var(--brand-primary) !important;
   color: #fff;
 }
 
@@ -887,7 +887,7 @@ onMounted(fetchList)
   transition: all .16s;
 }
 
-.regen-btn:hover { color: #c8102e; background: #FEF2F2; }
+.regen-btn:hover { color: var(--brand-primary); background: var(--brand-primary-light); }
 
 .form-tip {
   display: flex;
@@ -910,8 +910,8 @@ onMounted(fetchList)
 
 .btn-submit {
   min-width: 96px;
-  background: #c8102e;
-  border-color: #c8102e;
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
   font-weight: 600;
 }
 

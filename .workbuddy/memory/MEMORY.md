@@ -106,6 +106,15 @@
 
 ## 其它
 
+- ⭐ **`reports.images` 存的是 COS 对象 `{ key, name, size }`，不是能直接显示的地址**。
+  要展示必须先 `signGet([key])`（`@/utils/cos`）换临时链接，
+  直接塞 `<el-image :src>` 会 100% 走 error 插槽（现象：全部显示"无图/加载失败"）。
+  签名 1 小时过期，缓存加 TTL（50 分钟）否则页面挂久了变 403。
+  参考实现：`FeeList.vue` 的 `normImgs` / `loadImgUrls` / `curCards`，
+  以及 `PaymentVouchers.vue`、`waybill-detail.vue` 的 `imageUrls`。
+  ⚠️ 且**不要跨费用项汇总图片**：一张图属于哪笔费用必须就地展示，
+  否则用户分不清对应关系（费用明细抽屉已改为「一笔费用一张卡 + 卡内凭证」）。
+
 - ⭐ el-table 动态列两个坑：
   1. `el-table-column` 外层包 `<template v-for>` 会被拆成 Fragment，列注册不上
      （表头空、行渲染成空 tr）→ 直接对 `el-table-column` 用 `v-for`；

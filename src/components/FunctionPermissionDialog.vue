@@ -343,10 +343,10 @@ const handleConfirm = () => {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #c8102e, #a00d24);
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
     color: #fff;
     font-size: 20px;
-    box-shadow: 0 6px 16px rgba(200, 16, 46, 0.35);
+    box-shadow: 0 6px 16px rgba(var(--brand-rgb), 0.35);
 }
 
 .pd-title {
@@ -377,7 +377,7 @@ const handleConfirm = () => {
 }
 
 .pd-counter b {
-    color: #c8102e;
+    color: var(--brand-primary);
     font-size: 16px;
     font-family: 'Courier New', monospace;
     font-weight: 900;
@@ -398,17 +398,17 @@ const handleConfirm = () => {
 }
 
 .pd-toggle-all:hover {
-    border-color: #c8102e;
-    color: #c8102e;
-    background: #FEF2F2;
+    border-color: var(--brand-primary);
+    color: var(--brand-primary);
+    background: var(--brand-primary-light);
     transform: translateY(-1px);
 }
 
 .pd-toggle-all.on {
-    background: linear-gradient(135deg, #c8102e, #a00d24);
-    border-color: #c8102e;
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
+    border-color: var(--brand-primary);
     color: #fff;
-    box-shadow: 0 4px 12px rgba(200, 16, 46, 0.35);
+    box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.35);
 }
 
 /* ============================================================
@@ -477,15 +477,15 @@ const handleConfirm = () => {
 }
 
 .pd-mod-item:hover:not(.disabled) {
-    background: #FEF2F2;
-    color: #c8102e;
+    background: var(--brand-primary-light);
+    color: var(--brand-primary);
     transform: translateX(2px);
 }
 
 .pd-mod-item.active {
-    background: linear-gradient(135deg, #c8102e, #a00d24);
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
     color: #fff;
-    box-shadow: 0 6px 16px rgba(200, 16, 46, 0.28);
+    box-shadow: 0 6px 16px rgba(var(--brand-rgb), 0.28);
 }
 
 .pd-mod-item.active::before {
@@ -496,9 +496,9 @@ const handleConfirm = () => {
     transform: translateY(-50%);
     width: 4px;
     height: 20px;
-    background: linear-gradient(180deg, #c8102e, #a00d24);
+    background: linear-gradient(180deg, var(--brand-primary), var(--brand-primary-dark));
     border-radius: 2px;
-    box-shadow: 0 0 8px rgba(200, 16, 46, 0.5);
+    box-shadow: 0 0 8px rgba(var(--brand-rgb), 0.5);
 }
 
 /* ⭐ 禁用态 */
@@ -560,8 +560,8 @@ const handleConfirm = () => {
     font-size: 11px;
     font-weight: 800;
     font-family: 'Courier New', monospace;
-    color: #c8102e;
-    background: #FEF2F2;
+    color: var(--brand-primary);
+    background: var(--brand-primary-light);
     padding: 1px 7px;
     border-radius: 8px;
     flex-shrink: 0;
@@ -617,7 +617,7 @@ const handleConfirm = () => {
 
 .pd-mod-item.active .pd-mod-done {
     background: #fff;
-    color: #c8102e;
+    color: var(--brand-primary);
 }
 
 @keyframes doneIn {
@@ -704,10 +704,10 @@ const handleConfirm = () => {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #c8102e, #a00d24);
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
     color: #fff;
     font-size: 14px;
-    box-shadow: 0 3px 8px rgba(200, 16, 46, 0.3);
+    box-shadow: 0 3px 8px rgba(var(--brand-rgb), 0.3);
 }
 
 .pd-panel-icon.disabled {
@@ -748,8 +748,8 @@ const handleConfirm = () => {
     padding: 5px 12px;
     border-radius: 16px;
     border: 1.5px solid #FCA5A5;
-    background: #FEF2F2;
-    color: #c8102e;
+    background: var(--brand-primary-light);
+    color: var(--brand-primary);
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
@@ -758,11 +758,11 @@ const handleConfirm = () => {
 }
 
 .pd-panel-all:hover {
-    background: linear-gradient(135deg, #c8102e, #a00d24);
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
     color: #fff;
-    border-color: #c8102e;
+    border-color: var(--brand-primary);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(200, 16, 46, 0.35);
+    box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.35);
 }
 
 /* 功能列表 */
@@ -809,7 +809,7 @@ const handleConfirm = () => {
     top: 0;
     bottom: 0;
     width: 3px;
-    background: linear-gradient(180deg, #c8102e, #a00d24);
+    background: linear-gradient(180deg, var(--brand-primary), var(--brand-primary-dark));
     opacity: 0;
     transition: opacity 0.3s;
 }
@@ -817,7 +817,7 @@ const handleConfirm = () => {
 .pd-func-item:hover:not(.disabled) {
     border-color: #FCA5A5;
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(200, 16, 46, 0.08);
+    box-shadow: 0 6px 18px rgba(var(--brand-rgb), 0.08);
 }
 
 .pd-func-item:hover:not(.disabled)::before {
@@ -825,9 +825,9 @@ const handleConfirm = () => {
 }
 
 .pd-func-item.on {
-    border-color: #c8102e;
-    background: linear-gradient(135deg, #FEF2F2, #FFFFFF);
-    box-shadow: 0 6px 18px rgba(200, 16, 46, 0.12);
+    border-color: var(--brand-primary);
+    background: linear-gradient(135deg, var(--brand-primary-light), #FFFFFF);
+    box-shadow: 0 6px 18px rgba(var(--brand-rgb), 0.12);
 }
 
 .pd-func-item.on::before {
@@ -867,10 +867,10 @@ const handleConfirm = () => {
 }
 
 .pd-func-item.on .pd-func-check {
-    border-color: #c8102e;
-    background: linear-gradient(135deg, #c8102e, #a00d24);
-    box-shadow: 0 0 0 4px rgba(200, 16, 46, 0.15),
-        0 4px 12px rgba(200, 16, 46, 0.35);
+    border-color: var(--brand-primary);
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
+    box-shadow: 0 0 0 4px rgba(var(--brand-rgb), 0.15),
+        0 4px 12px rgba(var(--brand-rgb), 0.35);
 }
 
 .pd-func-item.disabled .pd-func-check {
@@ -916,8 +916,8 @@ const handleConfirm = () => {
 }
 
 .pd-func-item.on .pd-func-key {
-    background: #FEF2F2;
-    color: #c8102e;
+    background: var(--brand-primary-light);
+    color: var(--brand-primary);
     border-color: #FCA5A5;
 }
 
@@ -936,7 +936,7 @@ const handleConfirm = () => {
     left: -100%;
     width: 60%;
     height: 100%;
-    background: linear-gradient(100deg, transparent, rgba(200, 16, 46, 0.12), transparent);
+    background: linear-gradient(100deg, transparent, rgba(var(--brand-rgb), 0.12), transparent);
     transition: left 0.6s ease;
     pointer-events: none;
 }
@@ -974,7 +974,7 @@ const handleConfirm = () => {
 }
 
 .pd-footer-tip .el-icon {
-    color: #c8102e;
+    color: var(--brand-primary);
     font-size: 13px;
 }
 
@@ -990,16 +990,16 @@ const handleConfirm = () => {
 }
 
 .pd-footer-btns .btn-primary {
-    background: linear-gradient(135deg, #c8102e, #a00d24);
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
     border: none;
     color: #fff;
-    box-shadow: 0 6px 16px rgba(200, 16, 46, 0.3);
+    box-shadow: 0 6px 16px rgba(var(--brand-rgb), 0.3);
     transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .pd-footer-btns .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(200, 16, 46, 0.45);
+    box-shadow: 0 10px 24px rgba(var(--brand-rgb), 0.45);
 }
 </style>
 

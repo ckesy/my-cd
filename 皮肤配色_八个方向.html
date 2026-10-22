@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>皮肤配色 · 八个方向</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#F1F4F8;color:#0F172A;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1180px;margin:0 auto;padding:30px 24px 70px}
+  h1{margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-.4px}
+  .sub{font-size:12.5px;color:#64748B;line-height:1.85}
+  .sub b{color:#0F172A}
+
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:22px}
+  .card{background:#fff;border:1px solid #E6ECF3;border-radius:14px;overflow:hidden}
+  .c-top{height:64px;position:relative}
+  .c-no{
+    position:absolute;left:14px;top:14px;width:22px;height:22px;border-radius:6px;
+    background:rgba(255,255,255,.9);color:#0F172A;
+    font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  }
+  .c-tag{
+    position:absolute;right:14px;top:14px;font-size:9.5px;font-weight:700;
+    padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.22);color:#fff;
+  }
+  .c-body{padding:14px 16px 16px}
+  .c-name{font-size:14.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .c-hex{font-size:10.5px;font-weight:600;color:#94A3B8;font-family:ui-monospace,Menlo,monospace}
+  .c-desc{font-size:11.5px;color:#64748B;line-height:1.7;margin-top:6px}
+
+  .mini{display:flex;gap:5px;margin-top:11px}
+  .mini i{flex:1;height:20px;border-radius:4px;display:block}
+
+  .demo{
+    display:flex;align-items:center;gap:7px;margin-top:12px;
+    padding:9px 11px;border-radius:8px;border:1px solid #EDF1F6;
+  }
+  .d-btn{padding:4px 11px;border-radius:6px;font-size:10.5px;font-weight:700;color:#fff}
+  .d-chip{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px}
+  .d-txt{font-size:10.5px;color:#64748B}
+
+  .note{margin-top:24px;padding:18px 20px;background:#fff;border:1px solid #E6ECF3;border-radius:14px;
+    font-size:12.5px;color:#475569;line-height:1.95}
+  .note h2{margin:0 0 10px;font-size:15px;font-weight:800;color:#0F172A}
+  .note b{color:#0F172A}
+  .note p{margin:8px 0 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>皮肤配色 · 八个方向</h1>
+  <p class="sub">
+    先不看状态色，纯挑气质。每种给主色 + 悬浮 + 浅底 + 深色四档，下方是按钮和标签的实际效果。<br>
+    共同点：<b>都偏低饱和、偏深</b>。这是缓解视觉疲劳的关键 —— 不是换个颜色就行，是<b>降低刺激强度</b>。
+  </p>
+
+  <div class="grid">
+
+    <!-- 1 -->
+    <div class="card">
+      <div class="c-top" style="background:linear-gradient(135deg,#374151,#1F2937)">
+        <span class="c-no">1</span><span class="c-tag">最耐看</span>
+      </div>
+      <div class="c-body">
+        <div class="c-name">石墨 <span class="c-hex">#1F2937</span></div>
+        <p class="c-desc">近黑深灰，几乎无色相。看一天不累，数据类后台的标准选择。缺点是偏冷、偏"素"。</p>
+        <div class="mini">
+          <i style="background:#1F2937"></i><i style="background:#374151"></i>
+          <i style="background:#F1F5F9"></i><i style="background:#0F172A"></i>
+        </div>
+        <div class="demo">
+          <span class="d-btn" style="background:#1F2937">刷新</span>
+          <span class="d-chip" style="background:#F1F5F9;color:#334155">待审核</span>
+          <span class="d-txt">¥746,681</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 -->
+    <div class="card">
+      <div class="c-top" style="background:linear-gradient(135deg,#2B4BA8,#152C6B)">
+        <span class="c-no">2</span><span class="c-tag">最稳</span>
+      </div>
+      <div class="c-body">
+        <div class="c-name">藏青 <span class="c-hex">#1E3A8A</span></div>
+        <p class="c-desc">深蓝偏灰，有色彩但不刺眼。最"正统"的商务感，对外演示不出错。</p>
+        <div class="mini">
+          <i style="background:#1E3A8A"></i><i style="background:#2B4BA8"></i>
+          <i style="background:#EFF6FF"></i><i style="background:#152C6B"></i>
+        </div>
+        <div class="demo">
+          <span class="d-btn" style="background:#1E3A8A">刷新</span>
+          <span class="d-chip" style="background:#EFF6FF;color:#1E3A8A">待审核</span>
+          <span class="d-txt">¥746,681</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 -->
+    <div class="card">
+      <div class="c-top" style="background:linear-gradient(135deg,#1B6B3A,#0B3A1E)">
+        <span class="c-no">3</span><span class="c-tag">行业感</span>
+      </div>
+      <div class="c-body">
+        <div class="c-name">墨绿 <span class="c-hex">#14532D</span></div>
+        <p class="c-desc">很深的绿，物流运输行业常见。沉稳、有生命力，比蓝色更有辨识度。</p>
+        <div class="mini">
+          <i style="background:#14532D"></i><i style="background:#1B6B3A"></i>
+          <i style="background:#F0FDF4"></i><i style="background:#0B3A1E"></i>
+        </div>
+        <div class="demo">
+          <span class="d-btn" style="background:#14532D">刷新</span>
+          <span class="d-chip" style="background:#F0FDF4;color:#14532D">待审核</span>
+          <span class="d-txt">¥746,681</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 -->
+    <div class="card">
+      <div class="c-top" style="background:linear-gradient(135deg,#5449D8,#332BA0)">
+        <span class="c-no">4</span><span class="c-tag">现代</span>
+      </div>
+      <div class="c-body">
+        <div class="c-name">靛紫 <span class="c-hex">#4338CA</span></div>
+        <p class="c-desc">偏蓝的紫，科技感强。比蓝有个性，但长时间盯会略微有点闷。</p>
+        <div class="mini">
+          <i style="background:#4338CA"></i><i style="background:#5449D8"></i>
+          <i style="background:#EEF2FF"></i><i style="background:#332BA0"></i>
+        </div>
+        <div class="demo">
+          <span class="d-btn" style="background:#4338CA">刷新</span>
+          <span class="d-chip" style="background:#EEF2FF;color:#4338CA">待审核</span>
+          <span class="d-txt">¥746,681</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5 -->
+    <div class="card">
+      <div class="c-top" style="background:linear-gradient(135deg,#0F766E,#134E4A)">
+        <span class="c-no">5</span><span class="c-tag">清爽</span>
+      </div>
+      <div class="c-body">
+        <div class="c-name">深青 <span class="c-hex">#0F766E</span></div>
+        <p class="c-desc">Teal，蓝绿之间。清爽但不轻浮，医疗、物流、SaaS 都常用。红色之后最"解腻"的选择。</p>
+        <div class="mini">
+          <i style="background:#0F766E"></i><i style="background:#0D9488"></i>
+          <i style="background:#F0FDFA"></i><i style="background:#134E4A"></i>
+        </div>
+        <div class="demo">
+          <span class="d-btn" style="background:#0F766E">刷新</span>
+          <span class="d-chip" style="background:#F0FDFA;color:#0F766E">待审核</span>
+          <span class="d-txt">¥746,681</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 -->
+    <div class="card">
+      <div class="c-top" style="background:linear-gradient(135deg,#92400E,#5C2A08)">
+        <span class="c-no">6</span><span class="c-tag">温暖</span>
+      </div>
+      <div class="c-body">
+        <div class="c-name">焦糖棕 <span class="c-hex">#92400E</span></div>
+        <p class="c-desc">暖棕色，比红柔和但保留了暖调。适合想保留"稳重、传统"感觉的场景。</p>
+        <div class="mini">
+          <i style="background:#92400E"></i><i style="background:#B45309"></i>
+          <i style="background:#FFFBEB"></i><i style="background:#5C2A08"></i>
+        </div>
+        <div class="demo">
+          <span class="d-btn" style="background:#92400E">刷新</span>
+          <span class="d-chip" style="background:#FFFBEB;color:#92400E">待审核</span>
+          <span class="d-txt">¥746,681</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7 -->
+    <div class="card">
+      <div class="c-top" style="background:linear-gradient(135deg,#292524,#1C1917)">
+        <span class="c-no">7</span><span class="c-tag">高端</span>
+      </div>
+      <div class="c-body">
+        <div class="c-name">炭黑 <span class="c-hex">#1C1917</span></div>
+        <p class="c-desc">带一点暖调的近黑。比冷灰有质感，配金色/琥珀色点缀会很高级。</p>
+        <div class="mini">
+          <i style="background:#1C1917"></i><i style="background:#292524"></i>
+          <i style="background:#F5F5F4"></i><i style="background:#0C0A09"></i>
+        </div>
+        <div class="demo">
+          <span class="d-btn" style="background:#1C1917">刷新</span>
+          <span class="d-chip" style="background:#F5F5F4;color:#44403C">待审核</span>
+          <span class="d-txt">¥746,681</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8 -->
+    <div class="card">
+      <div class="c-top" style="background:linear-gradient(135deg,#475569,#334155)">
+        <span class="c-no">8</span><span class="c-tag">中性</span>
+      </div>
+      <div class="c-body">
+        <div class="c-name">雾蓝灰 <span class="c-hex">#475569</span></div>
+        <p class="c-desc">偏蓝的中灰，比石墨有色彩、比藏青克制。介于"有颜色"和"无颜色"之间，最不容易出错。</p>
+        <div class="mini">
+          <i style="background:#475569"></i><i style="background:#64748B"></i>
+          <i style="background:#F1F5F9"></i><i style="background:#334155"></i>
+        </div>
+        <div class="demo">
+          <span class="d-btn" style="background:#475569">刷新</span>
+          <span class="d-chip" style="background:#F1F5F9;color:#475569">待审核</span>
+          <span class="d-txt">¥746,681</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note">
+    <h2>怎么挑</h2>
+    <p>
+      <b>想彻底不累</b> → 1 石墨 或 8 雾蓝灰。两个都是低饱和，红色那种"一直刺激眼睛"的感觉会消失。
+    </p>
+    <p>
+      <b>想保留商务感</b> → 2 藏青。最不会出错，客户演示也稳。
+    </p>
+    <p>
+      <b>想要点辨识度</b> → 3 墨绿 或 5 深青。运输物流行业用绿/青的不少，比一片蓝有记忆点。
+    </p>
+    <p>
+      <b>想要高级感</b> → 7 炭黑。偏暖的近黑，配琥珀色点缀很有质感。
+    </p>
+    <p style="margin-top:14px;padding-top:12px;border-top:1px solid #F1F5F9">
+      <b>我个人推荐：5 深青 或 3 墨绿。</b>
+      理由：你现在的红色「有情绪」，看久了累。石墨虽然最舒服，但整个界面会变成黑白灰，数据看板容易显得"冷、没重点"。
+      深青保留了色彩感，饱和度又低，既有辨识度又不刺激 —— 是"换个不累的红色"最接近的答案。
+    </p>
+    <p>
+      如果拿不准，<b>先把 5 深青和 1 石墨各做一版</b>，你自己在两个页面之间来回切着看，一天下来哪个舒服就用哪个。配色这东西看截图不准，得实际用。
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

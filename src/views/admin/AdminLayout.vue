@@ -138,11 +138,11 @@ const goLogout = () => {
   left: 0; right: 0; bottom: -1px;
   height: 2px;
   background: linear-gradient(90deg,
-    rgba(200, 16, 46, 0) 0%,
-    rgba(200, 16, 46, 0.85) 50%,
-    rgba(200, 16, 46, 0) 100%
+    rgba(var(--brand-rgb), 0) 0%,
+    rgba(var(--brand-rgb), 0.85) 50%,
+    rgba(var(--brand-rgb), 0) 100%
   );
-  box-shadow: 0 2px 8px rgba(200, 16, 46, 0.15);
+  box-shadow: 0 2px 8px rgba(var(--brand-rgb), 0.15);
   animation: headerLine 3s ease-in-out infinite;
 }
 @keyframes headerLine {
@@ -165,9 +165,9 @@ const goLogout = () => {
   transition: all 0.28s;
 }
 .icon-btn:hover {
-  color: #c8102e;
-  border-color: rgba(200, 16, 46, 0.5);
-  background: #FEF2F2;
+  color: var(--brand-primary);
+  border-color: rgba(var(--brand-rgb), 0.5);
+  background: var(--brand-primary-light);
   transform: scale(1.05);
 }
 
@@ -191,7 +191,7 @@ const goLogout = () => {
   display: block;
   width: 42px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(200, 16, 46, 0.5), transparent);
+  background: linear-gradient(90deg, transparent, rgba(var(--brand-rgb), 0.5), transparent);
 }
 
 .header-btn {
@@ -210,20 +210,20 @@ const goLogout = () => {
   font-family: inherit;
 }
 .header-btn:hover {
-  color: #c8102e;
-  border-color: rgba(200, 16, 46, 0.5);
-  background: #FEF2F2;
+  color: var(--brand-primary);
+  border-color: rgba(var(--brand-rgb), 0.5);
+  background: var(--brand-primary-light);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.12);
+  box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.12);
 }
 .header-btn.danger {
   color: #FFFFFF;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   border-color: transparent;
-  box-shadow: 0 3px 10px rgba(200, 16, 46, 0.28);
+  box-shadow: 0 3px 10px rgba(var(--brand-rgb), 0.28);
 }
 .header-btn.danger:hover {
-  box-shadow: 0 6px 18px rgba(200, 16, 46, 0.45);
+  box-shadow: 0 6px 18px rgba(var(--brand-rgb), 0.45);
   transform: translateY(-2px);
 }
 
@@ -260,13 +260,13 @@ const goLogout = () => {
   overflow: hidden;
 }
 .menu-item:hover {
-  color: #c8102e;
-  background: #FEF2F2;
+  color: var(--brand-primary);
+  background: var(--brand-primary-light);
   transform: translateX(3px);
 }
 .menu-item.active {
-  color: #c8102e;
-  background: linear-gradient(90deg, #FEF2F2, rgba(254, 242, 242, 0.4));
+  color: var(--brand-primary);
+  background: linear-gradient(90deg, var(--brand-primary-light), rgba(254, 242, 242, 0.4));
   font-weight: 700;
 }
 .menu-item.active::before {
@@ -274,9 +274,9 @@ const goLogout = () => {
   position: absolute;
   left: 0; top: 20%; bottom: 20%;
   width: 3px;
-  background: linear-gradient(180deg, #c8102e, #a00d24);
+  background: linear-gradient(180deg, var(--brand-primary), var(--brand-primary-dark));
   border-radius: 0 3px 3px 0;
-  box-shadow: 0 0 10px rgba(200, 16, 46, 0.6);
+  box-shadow: 0 0 10px rgba(var(--brand-rgb), 0.6);
 }
 .menu-icon {
   font-size: 18px;
@@ -408,30 +408,30 @@ const goLogout = () => {
   font-family: inherit;
 }
 .action-btn:hover:not(:disabled) {
-  color: #c8102e;
-  border-color: rgba(200, 16, 46, 0.5);
-  background: #FEF2F2;
+  color: var(--brand-primary);
+  border-color: rgba(var(--brand-rgb), 0.5);
+  background: var(--brand-primary-light);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(200, 16, 46, 0.15);
+  box-shadow: 0 6px 16px rgba(var(--brand-rgb), 0.15);
 }
 .action-btn.primary {
   color: #FFFFFF;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   border-color: transparent;
-  box-shadow: 0 3px 10px rgba(200, 16, 46, 0.28);
+  box-shadow: 0 3px 10px rgba(var(--brand-rgb), 0.28);
 }
 .action-btn.primary:hover:not(:disabled) {
-  box-shadow: 0 8px 22px rgba(200, 16, 46, 0.45);
+  box-shadow: 0 8px 22px rgba(var(--brand-rgb), 0.45);
   transform: translateY(-2px);
 }
 .action-btn.danger {
-  color: #c8102e;
-  border-color: rgba(200, 16, 46, 0.4);
+  color: var(--brand-primary);
+  border-color: rgba(var(--brand-rgb), 0.4);
   background: #FFFFFF;
 }
 .action-btn.danger:hover:not(:disabled) {
   color: #FFFFFF;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   border-color: transparent;
 }
 .action-btn.ghost { background: transparent; color: #94A3B8; border-color: #E2E8F0; }
@@ -454,8 +454,8 @@ const goLogout = () => {
 .panel-title .dot {
   width: 8px; height: 8px;
   border-radius: 50%;
-  background: #c8102e;
-  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.15);
+  background: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.15);
 }
 .panel-title .count {
   font-size: 12px;
@@ -473,13 +473,13 @@ const goLogout = () => {
 }
 .filter-grid .el-input__wrapper:hover,
 .filter-grid .el-select__wrapper:hover {
-  box-shadow: 0 0 0 1px rgba(200, 16, 46, 0.4) inset !important;
+  box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.4) inset !important;
   background: #FFFFFF !important;
 }
 .filter-grid .el-input__wrapper.is-focus,
 .filter-grid .el-select__wrapper.is-focused {
   background: #FFFFFF !important;
-  box-shadow: 0 0 0 1px #c8102e inset, 0 0 0 3px rgba(200, 16, 46, 0.1) !important;
+  box-shadow: 0 0 0 1px var(--brand-primary) inset, 0 0 0 3px rgba(var(--brand-rgb), 0.1) !important;
 }
 
 .light-select-popper {
@@ -490,11 +490,11 @@ const goLogout = () => {
 .light-select-popper .el-select-dropdown__item { font-size: 13px; color: #334155; }
 .light-select-popper .el-select-dropdown__item.is-hovering,
 .light-select-popper .el-select-dropdown__item:hover {
-  background: #FEF2F2 !important;
-  color: #c8102e !important;
+  background: var(--brand-primary-light) !important;
+  color: var(--brand-primary) !important;
 }
 .light-select-popper .el-select-dropdown__item.is-selected {
-  color: #c8102e !important;
+  color: var(--brand-primary) !important;
   font-weight: 700;
 }
 
@@ -505,7 +505,7 @@ const goLogout = () => {
   --el-table-border-color: #E2E8F0;
   --el-table-text-color: #334155;
   --el-table-header-text-color: #475569;
-  --el-table-row-hover-bg-color: #FEF2F2;
+  --el-table-row-hover-bg-color: var(--brand-primary-light);
   background: #FFFFFF !important;
   border-radius: 8px;
   overflow: hidden;
@@ -513,10 +513,10 @@ const goLogout = () => {
 .light-table .el-table__inner-wrapper::before { display: none; }
 .light-table .el-table__header th { font-weight: 700; letter-spacing: 0.4px; }
 .light-table .el-checkbox__input.is-checked .el-checkbox__inner {
-  background: #c8102e;
-  border-color: #c8102e;
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
 }
-.light-table .el-checkbox__inner:hover { border-color: #c8102e; }
+.light-table .el-checkbox__inner:hover { border-color: var(--brand-primary); }
 
 .row-btn {
   display: inline-flex;
@@ -535,23 +535,23 @@ const goLogout = () => {
   font-family: inherit;
 }
 .row-btn:hover:not(:disabled) {
-  color: #c8102e;
-  border-color: rgba(200, 16, 46, 0.5);
-  background: #FEF2F2;
+  color: var(--brand-primary);
+  border-color: rgba(var(--brand-rgb), 0.5);
+  background: var(--brand-primary-light);
 }
-.row-btn.danger { color: #c8102e; }
+.row-btn.danger { color: var(--brand-primary); }
 .row-btn.danger:hover:not(:disabled) {
   color: #FFFFFF;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   border-color: transparent;
 }
 .row-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .pagination-wrap { display: flex; justify-content: flex-end; margin-top: 16px; }
 .pagination-wrap .el-pagination.is-background .el-pager li.is-active {
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   border-color: transparent;
-  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.3);
+  box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.3);
 }
 
 .light-dialog.el-dialog {
@@ -572,12 +572,12 @@ const goLogout = () => {
 }
 .light-form .el-input__wrapper:hover,
 .light-form .el-textarea__inner:hover {
-  box-shadow: 0 0 0 1px rgba(200, 16, 46, 0.4) inset !important;
+  box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.4) inset !important;
   background: #FFFFFF !important;
 }
 .light-form .el-input__wrapper.is-focus,
 .light-form .el-textarea__inner:focus {
   background: #FFFFFF !important;
-  box-shadow: 0 0 0 1px #c8102e inset, 0 0 0 3px rgba(200, 16, 46, 0.1) !important;
+  box-shadow: 0 0 0 1px var(--brand-primary) inset, 0 0 0 3px rgba(var(--brand-rgb), 0.1) !important;
 }
 </style>

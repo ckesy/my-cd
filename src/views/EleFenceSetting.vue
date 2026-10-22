@@ -467,7 +467,7 @@ onMounted(async () => {
 
 .search-card:hover,
 .table-card:hover {
-  box-shadow: 0 6px 24px rgba(200, 16, 46, 0.06);
+  box-shadow: 0 6px 24px rgba(var(--brand-rgb), 0.06);
 }
 
 .search-row {
@@ -499,12 +499,12 @@ onMounted(async () => {
 
 :deep(.el-button:hover) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.15);
+  box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.15);
 }
 
 :deep(.btn-primary) {
-  background-color: #c8102e;
-  border-color: #c8102e;
+  background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
   color: #fff;
 }
 
@@ -519,24 +519,24 @@ onMounted(async () => {
 }
 
 :deep(.btn-outline:hover) {
-  border-color: #c8102e;
-  color: #c8102e;
-  background-color: #FEF2F2;
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  background-color: var(--brand-primary-light);
 }
 
 :deep(.btn-danger-outline) {
-  border-color: #c8102e;
-  color: #c8102e;
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 :deep(.btn-danger-outline:hover) {
-  background-color: #c8102e;
+  background-color: var(--brand-primary);
   color: #fff;
 }
 
 :deep(.el-input__wrapper.is-focus),
 :deep(.el-select__wrapper.is-focused) {
-  box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.15), 0 0 0 1px #c8102e inset !important;
+  box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.15), 0 0 0 1px var(--brand-primary) inset !important;
 }
 
 /* ========== 表格 ========== */
@@ -564,9 +564,9 @@ onMounted(async () => {
 }
 
 :deep(.el-table__row:hover) {
-  background-color: #FEF2F2 !important;
+  background-color: var(--brand-primary-light) !important;
   transform: scale(1.002);
-  box-shadow: 0 2px 8px rgba(200, 16, 46, 0.08);
+  box-shadow: 0 2px 8px rgba(var(--brand-rgb), 0.08);
 }
 
 :deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
@@ -588,7 +588,7 @@ onMounted(async () => {
 
 .name-wrap:hover {
   border-color: #FCA5A5;
-  box-shadow: 0 3px 10px rgba(200, 16, 46, 0.12);
+  box-shadow: 0 3px 10px rgba(var(--brand-rgb), 0.12);
   transform: translateY(-1px);
 }
 
@@ -666,7 +666,7 @@ onMounted(async () => {
 }
 
 .action-btn.edit {
-  color: #c8102e;
+  color: var(--brand-primary);
 }
 
 .action-btn.edit:hover {
@@ -679,7 +679,7 @@ onMounted(async () => {
 }
 
 .action-btn.delete:hover {
-  color: #c8102e;
+  color: var(--brand-primary);
   text-decoration: underline;
 }
 
@@ -744,18 +744,18 @@ onMounted(async () => {
 }
 
 :deep(.custom-pagination .el-pager li:hover) {
-  color: #c8102e;
+  color: var(--brand-primary);
   transform: scale(1.1);
 }
 
 :deep(.custom-pagination .el-pager li.is-active) {
-  background-color: #c8102e !important;
+  background-color: var(--brand-primary) !important;
   color: #fff !important;
-  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.35);
+  box-shadow: 0 2px 6px rgba(var(--brand-rgb), 0.35);
 }
 
 :deep(.custom-pagination button:hover) {
-  color: #c8102e;
+  color: var(--brand-primary);
 }
 
 .delete-loading-overlay {
@@ -812,7 +812,7 @@ onMounted(async () => {
 
 .del-ring-progress {
   fill: none;
-  stroke: #D32F2F;
+  stroke: var(--brand-primary);
   stroke-width: 6;
   stroke-linecap: round;
   stroke-dasharray: 263.89;
@@ -851,7 +851,7 @@ onMounted(async () => {
 }
 
 .delete-name {
-  color: #D32F2F;
+  color: var(--brand-primary);
   font-weight: 800;
 }
 
@@ -937,8 +937,8 @@ onMounted(async () => {
 
 <style>
 .btn-danger-confirm {
-  background-color: #D32F2F !important;
-  border-color: #D32F2F !important;
+  background-color: var(--brand-primary) !important;
+  border-color: var(--brand-primary) !important;
   color: #ffffff !important;
   font-weight: 700 !important;
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);

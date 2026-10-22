@@ -2,11 +2,21 @@
    全局 CSS 变量（与车队管理平台主题对齐）
    ========================================== */
 :root {
-  /* 品牌色 */
+  /* 品牌色（换肤时由 utils/theme.js 动态覆盖） */
   --brand-primary: #c8102e;
+  --brand-primary-hover: #A00D24;
   --brand-primary-dark: #a00d24;
   --brand-primary-deep: #7F1D1D;
   --brand-primary-light: #FEF2F2;
+
+  /* 状态色：语义固定（橙=待审 蓝=待付 青=已通过 绿=完成 红=驳回），
+     色相不变，只让它们微微带一点品牌色，换肤后才像一个体系 */
+  --state-wait: #B45309;    --state-wait-bg: #FFFBEB;
+  --state-pay: #1D4ED8;     --state-pay-bg: #EFF6FF;
+  --state-pass: #0E7490;    --state-pass-bg: #ECFEFF;
+  --state-done: #15803D;    --state-done-bg: #F0FDF4;
+  --state-reject: #A00D24;  --state-reject-bg: #FEF2F4;
+  --state-cancel: #64748B;  --state-cancel-bg: #F1F5F9;
 
   /* 文字颜色（提升对比度） */
   --text-primary: #0F172A;
@@ -314,4 +324,17 @@ code, pre {
 }
 .compact-date-picker .el-time-spinner__wrapper {
   max-height: 132px;
+}
+/* ==========================================
+   状态色自适应：支持 color-mix 的浏览器里，
+   状态色会掺 12% 品牌色 —— 换肤后自动协调
+   ========================================== */
+@supports (color: color-mix(in srgb, red, blue)) {
+  :root {
+    --state-wait: color-mix(in srgb, #B45309 88%, var(--brand-primary) 12%);
+    --state-pay: color-mix(in srgb, #1D4ED8 88%, var(--brand-primary) 12%);
+    --state-pass: color-mix(in srgb, #0E7490 88%, var(--brand-primary) 12%);
+    --state-done: color-mix(in srgb, #15803D 88%, var(--brand-primary) 12%);
+    --state-reject: color-mix(in srgb, #A00D24 88%, var(--brand-primary) 12%);
+  }
 }

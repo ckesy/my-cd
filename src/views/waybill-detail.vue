@@ -835,7 +835,7 @@
           v-for="r in filteredReports"
           :key="r.id"
           class="fee-report"
-          :class="{ open: expandedFee === r.id }"
+          :class="{ open: isFeeOpen(r) }"
         >
           <div class="fr-head" @click="toggleFee(r)">
             <span class="fr-type" :class="'t-' + (r.type || 'expense')">{{ typeShort(r.type) }}</span>
@@ -854,10 +854,10 @@
               </div>
             </div>
             <el-tag size="small" effect="light" :type="statusTagType(r.status)">{{ r.status }}</el-tag>
-            <el-icon class="fr-arrow" :class="{ up: expandedFee === r.id }"><ArrowDown /></el-icon>
+            <el-icon class="fr-arrow" :class="{ up: isFeeOpen(r) }"><ArrowDown /></el-icon>
           </div>
 
-          <div v-show="expandedFee === r.id" class="fr-body">
+          <div v-show="isFeeOpen(r)" class="fr-body">
             <div class="fr-cols">
               <div class="fr-col">
                 <div class="fr-col-title">明细</div>
@@ -2143,7 +2143,15 @@ const feeLoading = ref(false)
 const feeFilter = ref('all')
 const feeError = ref('')
 const feeApprovalEnabled = ref(true)
-const expandedFee = ref(null)
+/* ⭐ 默认全部展开：只记「被手动收起」的那几条，新数据进来即恢复全展开 */
+const collapsedFee = ref([])
+const isFeeOpen = (r) => !collapsedFee.value.includes(String(r.id))
+const toggleFee = (r) => {
+  const k = String(r.id)
+  const i = collapsedFee.value.indexOf(k)
+  if (i >= 0) collapsedFee.value.splice(i, 1)
+  else collapsedFee.value.push(k)
+}
 const actingId = ref(null)
 
 const rejectVisible = ref(false)
@@ -2283,10 +2291,6 @@ const filteredReports = computed(() => {
   return list.filter((r) => r.status === feeFilter.value)
 })
 
-const toggleFee = (r) => {
-  expandedFee.value = expandedFee.value === r.id ? null : r.id
-}
-
 const openReject = (r) => {
   rejectTarget.value = r
   rejectReason.value = '缺凭证照片'
@@ -2307,7 +2311,7 @@ async function loadFeeReports() {
     if (error) throw error
     feeReports.value = Array.isArray(data) ? data : []
     if (mainRecord.value && mainRecord.value.fee_approval === 'off') feeApprovalEnabled.value = false
-    if (!feeReports.value.length && expandedFee.value) expandedFee.value = null
+    collapsedFee.value = []
     loadImageUrls(feeReports.value)
   } catch (e) {
     console.warn('[费用情况] 读取上报失败', e)
@@ -2827,9 +2831,9 @@ onMounted(async () => {
   content: '';
   width: 4px;
   height: 18px;
-  background: linear-gradient(180deg, #c8102e, #a00d24);
+  background: linear-gradient(180deg, var(--brand-primary), var(--brand-primary-dark));
   border-radius: 2px;
-  box-shadow: 0 0 8px rgba(200, 16, 46, 0.35);
+  box-shadow: 0 0 8px rgba(var(--brand-rgb), 0.35);
 }
 
 /* ===== ⭐ 拒单信息提示块 ===== */
@@ -2899,12 +2903,12 @@ onMounted(async () => {
   color: #0F172A;
   margin: 16px 0 12px 0;
   padding: 10px 14px;
-  background: linear-gradient(90deg, #FEF2F2 0%, #ffffff 100%);
+  background: linear-gradient(90deg, var(--brand-primary-light) 0%, #ffffff 100%);
   border-radius: 8px;
-  border-left: 4px solid #c8102e;
+  border-left: 4px solid var(--brand-primary);
   line-height: 1.2;
   text-align: left;
-  box-shadow: 0 2px 8px rgba(200, 16, 46, 0.05);
+  box-shadow: 0 2px 8px rgba(var(--brand-rgb), 0.05);
   letter-spacing: 0.3px;
 }
 
@@ -2970,8 +2974,8 @@ onMounted(async () => {
   font-size: 12.5px;
   line-height: 1.7;
   color: #A32D2D;
-  background: #FEF2F2;
-  border-left: 3px solid #c8102e;
+  background: var(--brand-primary-light);
+  border-left: 3px solid var(--brand-primary);
   border-radius: 6px;
 }
 
@@ -2993,12 +2997,12 @@ onMounted(async () => {
   top: 0;
   bottom: 0;
   width: 3px;
-  background: linear-gradient(180deg, #c8102e, #a00d24);
+  background: linear-gradient(180deg, var(--brand-primary), var(--brand-primary-dark));
   opacity: 0;
   transition: opacity 0.3s;
 }
 .task-card:hover {
-  box-shadow: 0 8px 24px rgba(200, 16, 46, 0.1);
+  box-shadow: 0 8px 24px rgba(var(--brand-rgb), 0.1);
   transform: translateY(-2px);
   border-color: #FCA5A5;
 }
@@ -3022,10 +3026,10 @@ onMounted(async () => {
   font-size: 14px;
   white-space: nowrap;
   padding: 4px 12px;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   color: #fff;
   border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.25);
+  box-shadow: 0 2px 6px rgba(var(--brand-rgb), 0.25);
   letter-spacing: 0.3px;
 }
 .task-name-display {
@@ -3050,14 +3054,14 @@ onMounted(async () => {
   height: 26px;
   line-height: 26px;
   border-radius: 50%;
-  background-color: #c8102e;
+  background-color: var(--brand-primary);
   color: #fff;
   font-weight: 800;
   font-size: 13px;
   text-align: center;
   flex-shrink: 0;
   margin-top: 2px;
-  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.35);
+  box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.35);
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .badge-circle:hover {
@@ -3083,7 +3087,7 @@ onMounted(async () => {
   font-weight: 600;
 }
 .required-star {
-  color: #c8102e;
+  color: var(--brand-primary);
   font-weight: 700;
   margin-right: 2px;
 }
@@ -3119,7 +3123,7 @@ onMounted(async () => {
 }
 .info-value {
   font-weight: 800;
-  color: #c8102e;
+  color: var(--brand-primary);
   font-size: 16px;
   font-family: 'Courier New', monospace;
 }
@@ -3133,7 +3137,7 @@ onMounted(async () => {
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .cargo-row:hover {
-  box-shadow: 0 6px 20px rgba(200, 16, 46, 0.08);
+  box-shadow: 0 6px 20px rgba(var(--brand-rgb), 0.08);
   border-color: #FCA5A5;
 }
 .cargo-row .el-row {
@@ -3158,7 +3162,7 @@ onMounted(async () => {
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .assign-card:hover {
-  box-shadow: 0 6px 20px rgba(200, 16, 46, 0.08);
+  box-shadow: 0 6px 20px rgba(var(--brand-rgb), 0.08);
   border-color: #FCA5A5;
 }
 .assign-card .el-row {
@@ -3276,7 +3280,7 @@ onMounted(async () => {
   bottom: 6px;
   height: 2px;
   border-radius: 1px;
-  background: #c8102e;
+  background: var(--brand-primary);
 }
 .detail-tab-dot {
   display: inline-block;
@@ -3284,7 +3288,7 @@ onMounted(async () => {
   height: 5px;
   margin-left: 5px;
   border-radius: 50%;
-  background: #c8102e;
+  background: var(--brand-primary);
   vertical-align: middle;
 }
 .detail-tabs-hint {
@@ -3368,7 +3372,7 @@ onMounted(async () => {
   margin-bottom: 10px;
   background: #ffffff;
   border-radius: 12px;
-  border-left: 3px solid #c8102e;
+  border-left: 3px solid var(--brand-primary);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 .lg-sub-branch { font-size: 12px; font-weight: 700; color: #A32D2D; }
@@ -3415,11 +3419,11 @@ onMounted(async () => {
 }
 .lg-record:hover {
   border-color: #FCA5A5;
-  box-shadow: 0 6px 18px rgba(200, 16, 46, 0.08);
+  box-shadow: 0 6px 18px rgba(var(--brand-rgb), 0.08);
 }
 .lg-record.active {
-  border-color: #c8102e;
-  box-shadow: 0 6px 18px rgba(200, 16, 46, 0.14);
+  border-color: var(--brand-primary);
+  box-shadow: 0 6px 18px rgba(var(--brand-rgb), 0.14);
 }
 .lg-record-head {
   display: flex;
@@ -3449,7 +3453,7 @@ onMounted(async () => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.lg-record-route i { font-style: normal; color: #c8102e; margin: 0 2px; }
+.lg-record-route i { font-style: normal; color: var(--brand-primary); margin: 0 2px; }
 .lg-record-meta { margin-top: 4px; font-size: 11.5px; color: #94A3B8; }
 .lg-record-flag {
   position: absolute;
@@ -3557,13 +3561,13 @@ onMounted(async () => {
 .lg-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .lg-lg-dot { width: 8px; height: 8px; border-radius: 50%; }
 .lg-lg-dot.start { background: #0F6E56; }
-.lg-lg-dot.end { background: #c8102e; }
-.lg-lg-dot.car { background: #C8102E; box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.18); }
+.lg-lg-dot.end { background: var(--brand-primary); }
+.lg-lg-dot.car { background: var(--brand-primary); box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.18); }
 .lg-lg-line {
   width: 12px;
   height: 3px;
   border-radius: 2px;
-  background: #c8102e;
+  background: var(--brand-primary);
 }
 
 /* ---- 行驶轨迹信息条 ---- */
@@ -3636,7 +3640,7 @@ onMounted(async () => {
   background: #F8FAFC;
   border-left: 3px solid #CBD5E1;
 }
-.lg-group.is-active { background: #FCEBEB; border-left-color: #c8102e; }
+.lg-group.is-active { background: #FCEBEB; border-left-color: var(--brand-primary); }
 .lg-group.is-done { background: #F1F5F9; border-left-color: #0F6E56; }
 .lg-group-label { font-size: 12.5px; font-weight: 700; color: #0F172A; }
 .lg-group-time { font-size: 11.5px; color: #64748B; }
@@ -3665,9 +3669,9 @@ onMounted(async () => {
 }
 .lg-node.is-done .lg-node-dot { background: #0F6E56; border-color: #0F6E56; }
 .lg-node.is-active .lg-node-dot {
-  background: #c8102e;
-  border-color: #c8102e;
-  box-shadow: 0 0 0 4px rgba(200, 16, 46, 0.14);
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 4px rgba(var(--brand-rgb), 0.14);
 }
 .lg-node.is-cancelled .lg-node-dot { background: #94A3B8; border-color: #94A3B8; }
 .lg-node-body { flex: 1; min-width: 0; }
@@ -3695,7 +3699,7 @@ onMounted(async () => {
   color: #475569;
 }
 .lg-node-sep { margin: 0 5px; }
-.lg-running { color: #c8102e !important; }
+.lg-running { color: var(--brand-primary) !important; }
 .lg-pending { color: #CBD5E1 !important; }
 .lg-node-remark { margin-top: 2px; font-size: 11px; color: #B4B2A9; }
 
@@ -3746,9 +3750,9 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 @keyframes wbPulse {
-  0% { box-shadow: 0 0 0 0 rgba(200, 16, 46, 0.35); }
-  70% { box-shadow: 0 0 0 12px rgba(200, 16, 46, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(200, 16, 46, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(var(--brand-rgb), 0.35); }
+  70% { box-shadow: 0 0 0 12px rgba(var(--brand-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--brand-rgb), 0); }
 }
 
 /* 窄屏：地图与时间轴由左右并排改为上下堆叠 */
@@ -3785,7 +3789,7 @@ onMounted(async () => {
   margin-bottom: 12px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-left: 3px solid #c8102e;
+  border-left: 3px solid var(--brand-primary);
   border-radius: 12px;
 }
 .rec-task-left {
@@ -4019,13 +4023,13 @@ onMounted(async () => {
   background: #fff;
   border: 1px solid #E9EEF5;
   border-radius: 9px;
-  padding: 9px 12px;
-  margin-bottom: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
 }
 
 .fee-stat {
-  min-width: 108px;
-  padding-right: 12px;
+  min-width: 118px;
+  padding-right: 14px;
   border-right: 1px solid #F1F5F9;
 }
 
@@ -4035,13 +4039,13 @@ onMounted(async () => {
 
 .fee-stat span {
   display: block;
-  font-size: 10.5px;
+  font-size: 12px;
   color: #94A3B8;
-  margin-bottom: 1px;
+  margin-bottom: 3px;
 }
 
 .fee-stat b {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: #0F172A;
   letter-spacing: -.3px;
@@ -4077,8 +4081,8 @@ onMounted(async () => {
   width: 46px;
   height: 46px;
   border-radius: 50%;
-  background: #FEF2F2;
-  color: #c8102e;
+  background: var(--brand-primary-light);
+  color: var(--brand-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4087,14 +4091,14 @@ onMounted(async () => {
 }
 
 .fee-empty p {
-  margin: 0 0 4px;
-  font-size: 13px;
+  margin: 0 0 5px;
+  font-size: 14.5px;
   font-weight: 600;
   color: #334155;
 }
 
 .fee-empty span {
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: #94A3B8;
 }
 
@@ -4102,35 +4106,35 @@ onMounted(async () => {
   background: #fff;
   border: 1px solid #E9EEF5;
   border-radius: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   overflow: hidden;
   transition: border-color .18s, box-shadow .18s;
 }
 
 .fee-report.open {
   border-color: #F6DDE2;
-  box-shadow: 0 0 0 3px rgba(200, 16, 46, .04);
+  box-shadow: 0 0 0 3px rgba(var(--brand-rgb), .04);
 }
 
 .fr-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 11px;
+  padding: 12px 14px;
   cursor: pointer;
 }
 
 .fr-type {
   flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 8px;
-  background: #FEF2F2;
-  color: #c8102e;
+  background: var(--brand-primary-light);
+  color: var(--brand-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 11.5px;
   font-weight: 700;
 }
 
@@ -4153,27 +4157,27 @@ onMounted(async () => {
 }
 
 .fr-title b {
-  font-size: 12.5px;
+  font-size: 14.5px;
   font-weight: 600;
   color: #0F172A;
 }
 
 .fr-amount {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
-  color: #c8102e;
+  color: var(--brand-primary);
   letter-spacing: -.2px;
 }
 
 .fr-meta {
-  font-size: 10.5px;
+  font-size: 12.5px;
   color: #94A3B8;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .fr-arrow {
   color: #CBD5E1;
-  font-size: 13px;
+  font-size: 14px;
   transition: transform .2s;
 }
 
@@ -4184,33 +4188,35 @@ onMounted(async () => {
 .fr-body {
   border-top: 1px solid #F1F5F9;
   background: #FCFDFF;
-  padding: 11px 12px;
+  padding: 13px 14px;
 }
 
 .fr-cols {
   display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 16px;
+  grid-template-columns: 1fr 310px;
+  gap: 18px;
 }
 
 .fr-col-title {
-  font-size: 10px;
+  font-size: 12px;
   color: #94A3B8;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .fr-items {
   border: 1px solid #EDF1F7;
   border-radius: 7px;
   overflow: hidden;
+  /* 宽屏下别把「名称 … 金额」拉成一条长线，留出可读宽度即可 */
+  max-width: 460px;
 }
 
 .fr-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 9px;
-  font-size: 11.5px;
+  padding: 8px 10px;
+  font-size: 13px;
   color: #475569;
   border-bottom: 1px solid #F4F7FA;
 }
@@ -4219,41 +4225,42 @@ onMounted(async () => {
 .fr-item b { color: #0F172A; }
 
 .fr-none {
-  font-size: 11.5px;
+  font-size: 13px;
   color: #94A3B8;
 }
 
 .fr-imgs {
   display: flex;
-  gap: 6px;
-  margin-top: 7px;
+  gap: 8px;
+  margin-top: 9px;
+  flex-wrap: wrap;
 }
 
 .fr-img {
-  font-size: 10px;
+  font-size: 11.5px;
   color: #475569;
   background: #EEF2F7;
   border-radius: 5px;
-  padding: 3px 8px;
+  padding: 4px 9px;
 }
 
 .fr-note {
-  margin-top: 7px;
-  font-size: 11px;
+  margin-top: 9px;
+  font-size: 12.5px;
   color: #94A3B8;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 /* 审批链 */
 .fr-chain {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 9px;
 }
 
 .fr-step {
   display: flex;
-  gap: 7px;
+  gap: 8px;
   position: relative;
 }
 
@@ -4264,48 +4271,48 @@ onMounted(async () => {
   border-radius: 50%;
   border: 2px solid #CBD5E1;
   background: #fff;
-  margin-top: 3px;
+  margin-top: 5px;
 }
 
 .fr-step.done .fr-dot { border-color: #22C55E; background: #22C55E; }
-.fr-step.cur .fr-dot { border-color: #c8102e; background: #c8102e; box-shadow: 0 0 0 3px rgba(200, 16, 46, .12); }
+.fr-step.cur .fr-dot { border-color: var(--brand-primary); background: var(--brand-primary); box-shadow: 0 0 0 3px rgba(var(--brand-rgb), .12); }
 .fr-step.skip .fr-dot { border-color: #CBD5E1; }
 
 .fr-step b {
   display: block;
-  font-size: 11.5px;
+  font-size: 13.5px;
   font-weight: 600;
   color: #334155;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .fr-step em {
   display: block;
   font-style: normal;
-  font-size: 10px;
+  font-size: 12px;
   color: #94A3B8;
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
-.fr-step.cur b { color: #c8102e; }
+.fr-step.cur b { color: var(--brand-primary); }
 
 .fr-actions {
   display: flex;
   align-items: center;
-  gap: 7px;
-  margin-top: 10px;
-  padding-top: 9px;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 11px;
   border-top: 1px solid #F1F5F9;
 }
 
 .fr-hint {
   margin-right: auto;
-  font-size: 10.5px;
+  font-size: 12px;
   color: #94A3B8;
 }
 
 .fr-reject {
-  font-size: 11px;
+  font-size: 12px;
   color: #B91C1C;
 }
 
@@ -4317,30 +4324,30 @@ onMounted(async () => {
   margin: 10px 0 2px;
   padding: 8px 10px;
   border-radius: 8px;
-  background: #FEF2F2;
+  background: var(--brand-primary-light);
   border: 1px solid #FBD5DB;
 }
 .fr-reject-k {
   flex: 0 0 auto;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: #B91C1C;
   background: #FEE2E2;
   border-radius: 4px;
-  padding: 1px 6px;
+  padding: 2px 7px;
   line-height: 1.7;
 }
 .fr-reject-t {
   flex: 1;
   min-width: 0;
-  font-size: 11.5px;
+  font-size: 13px;
   color: #9F1239;
   line-height: 1.7;
   word-break: break-all;
 }
 .fr-reject-n {
   flex: 0 0 auto;
-  font-size: 10.5px;
+  font-size: 12px;
   color: #B45309;
 }
 
@@ -4348,23 +4355,24 @@ onMounted(async () => {
 .fr-paid {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 10px 0 2px;
-  padding: 8px 10px;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 11px 0 2px;
+  padding: 9px 11px;
   border-radius: 8px;
   background: #F0FDF4;
   border: 1px solid #BBF7D0;
-  font-size: 11.5px;
+  font-size: 13px;
   color: #15803D;
 }
 .fr-paid-k {
   flex: 0 0 auto;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: #15803D;
   background: #DCFCE7;
   border-radius: 4px;
-  padding: 1px 6px;
+  padding: 2px 7px;
   line-height: 1.7;
 }
 .fr-paid-by {
@@ -4374,22 +4382,22 @@ onMounted(async () => {
 /* 已付款信息条里的补充字段 */
 .fr-paid-method {
   flex: 0 0 auto;
-  font-size: 10.5px;
+  font-size: 12px;
   color: #15803D;
   background: #DCFCE7;
   border-radius: 4px;
-  padding: 1px 6px;
+  padding: 2px 7px;
   line-height: 1.7;
 }
 .fr-paid-serial {
-  font-size: 10.5px;
+  font-size: 12px;
   color: #166534;
   font-family: var(--num-font, monospace);
 }
 .fr-paid-voucher {
   margin-left: auto;
-  font-size: 11.5px;
-  color: #c8102e;
+  font-size: 13px;
+  color: var(--brand-primary);
   font-weight: 600;
   cursor: pointer;
 }
@@ -4424,8 +4432,8 @@ onMounted(async () => {
   transition: all .16s;
 }
 
-.rj-chip:hover { border-color: #F3C6CF; color: #c8102e; }
-.rj-chip.on { background: #FEF2F2; border-color: #FBD5DB; color: #c8102e; font-weight: 600; }
+.rj-chip:hover { border-color: #F3C6CF; color: var(--brand-primary); }
+.rj-chip.on { background: var(--brand-primary-light); border-color: #FBD5DB; color: var(--brand-primary); font-weight: 600; }
 
 @media (max-width: 1100px) {
   .fr-cols { grid-template-columns: 1fr; gap: 12px; }
@@ -4433,11 +4441,11 @@ onMounted(async () => {
 
 
 .fr-extra {
-  font-size: 11.5px;
+  font-size: 13px;
   color: #475569;
   line-height: 1.8;
 }
-.fr-net { color: #c8102e; font-weight: 700; }
+.fr-net { color: var(--brand-primary); font-weight: 700; }
 
 
 /* ============================================================
@@ -4507,7 +4515,7 @@ onMounted(async () => {
 
 .as-route i {
   font-style: normal;
-  color: #c8102e;
+  color: var(--brand-primary);
   font-size: 14px;
 }
 
@@ -4553,7 +4561,7 @@ onMounted(async () => {
 
 .as-fee:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(200, 16, 46, 0.08);
+  box-shadow: 0 6px 16px rgba(var(--brand-rgb), 0.08);
 }
 
 .as-fee-top {
@@ -4567,7 +4575,7 @@ onMounted(async () => {
 .as-fee-v {
   font-size: 24px;
   font-weight: 700;
-  color: #c8102e;
+  color: var(--brand-primary);
   letter-spacing: -0.6px;
   margin: 2px 0 4px;
   font-family: var(--font-num);
@@ -4613,8 +4621,8 @@ onMounted(async () => {
 
 
 .fr-thumb {
-  width: 72px;
-  height: 54px;
+  width: 88px;
+  height: 66px;
   border-radius: 6px;
   overflow: hidden;
   background: #eef2f7;

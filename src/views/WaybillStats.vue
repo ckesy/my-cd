@@ -436,7 +436,7 @@ onMounted(load)
 
 .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 13px; }
 .kpi { border: 1px solid #EDF1F6; border-radius: 11px; padding: 14px 16px; background: #fff; }
-.kpi.hero { background: linear-gradient(135deg, #1E3A8A, #152C6B); border-color: transparent; }
+.kpi.hero { background: linear-gradient(135deg, var(--brand-primary-hover), var(--brand-primary-dark)); border-color: transparent; }
 .kpi-k { font-size: 11px; color: #94A3B8; }
 .kpi.hero .kpi-k { color: rgba(255, 255, 255, .72); }
 .kpi-v { font-size: 22px; font-weight: 800; letter-spacing: -.6px; margin-top: 6px; color: #0F172A; }

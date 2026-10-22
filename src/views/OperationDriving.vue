@@ -49,8 +49,8 @@ import { Guide } from '@element-plus/icons-vue'
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #FEF2F2;
-  color: #c8102e;
+  background: var(--brand-primary-light);
+  color: var(--brand-primary);
   font-size: 30px;
   margin-bottom: 4px;
 }

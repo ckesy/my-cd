@@ -333,8 +333,8 @@ const rhythm = computed(() => props.payload.rhythm || [])
 }
 .cell.empty { background: transparent; }
 .cell.future { background: #fbfcfe; border: 1px dashed #eef2f7; }
-.cell.today { box-shadow: inset 0 0 0 1.2px #c8102e; }
-.cell.picked { border-color: #c8102e; box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.14); }
+.cell.today { box-shadow: inset 0 0 0 1.2px var(--brand-primary); }
+.cell.picked { border-color: var(--brand-primary); box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.14); }
 .dnum { font-size: 9.5px; color: #9aa7b8; font-weight: 700; }
 .km {
   font-size: 15px;
@@ -395,11 +395,11 @@ const rhythm = computed(() => props.payload.rhythm || [])
 .cell.has { transition: transform 0.15s, box-shadow 0.15s; }
 .cell.has:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(200, 16, 46, 0.16);
+  box-shadow: 0 6px 14px rgba(var(--brand-rgb), 0.16);
   z-index: 2;
 }
 .mx-cell { transition: box-shadow 0.15s; }
-.mx-cell:not(.blank):hover { box-shadow: inset 0 0 0 2px #c8102e; }
+.mx-cell:not(.blank):hover { box-shadow: inset 0 0 0 2px var(--brand-primary); }
 .rk { transition: background 0.15s; border-radius: 6px; }
 .rk:hover { background: #fdf6f6; }
 .is-row { transition: background 0.15s; }
@@ -408,14 +408,23 @@ const rhythm = computed(() => props.payload.rhythm || [])
 .tl-row:hover { background: #fdf6f6; }
 .tl-row:hover .tl-track { box-shadow: inset 0 0 0 1px #fca5a5; }
 .rh-c { transition: outline-color 0.15s; }
-.rh-c:hover { outline: 1.5px solid #c8102e; outline-offset: -1px; }
+.rh-c:hover { outline: 1.5px solid var(--brand-primary); outline-offset: -1px; }
 
 /* 热力：5 档（用「元素+lv」提高权重，避免被后面的 .cell/.mx-cell 默认底色覆盖） */
-.cell.lv1, .mx-cell.lv1 { background: #fff1f1; }
-.cell.lv2, .mx-cell.lv2 { background: #ffd6d6; }
-.cell.lv3, .mx-cell.lv3 { background: #fbb0b0; }
-.cell.lv4, .mx-cell.lv4 { background: #f28181; }
-.cell.lv5, .mx-cell.lv5 { background: #e04a5f; color: #fff; }
+/* 热力色阶跟着品牌色走：透明度递进，换肤后自动协调 */
+/* ⚠️ 不用 color-mix —— 旧版 Chromium（部分国产浏览器内核）不支持，
+   @supports 整块被跳过，色阶会退回写死的红。rgba 兼容性好得多。 */
+.cell.lv1, .mx-cell.lv1 { background: rgba(var(--brand-rgb), 0.08); }
+.cell.lv2, .mx-cell.lv2 { background: rgba(var(--brand-rgb), 0.18); }
+.cell.lv3, .mx-cell.lv3 { background: rgba(var(--brand-rgb), 0.32); }
+
+/* 深色档位（0.52 以上）黑字看不清 —— 文字改成白色，子元素一起继承 */
+.cell.lv4, .mx-cell.lv4 { background: rgba(var(--brand-rgb), 0.52); color: #fff; }
+.cell.lv4 > *, .mx-cell.lv4 > * { color: inherit; }
+
+/* 第 5 档 = 最高，用品牌深色，白字保证可读 */
+.cell.lv5, .mx-cell.lv5 { background: var(--brand-primary-dark); color: #fff; }
+.cell.lv5 > *, .mx-cell.lv5 > * { color: inherit; }
 
 /* ================= 矩阵 ================= */
 .mx {
@@ -524,7 +533,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
   align-items: center;
   justify-content: center;
 }
-.rk-idx.top { background: #c8102e; color: #fff; }
+.rk-idx.top { background: var(--brand-primary); color: #fff; }
 .rk-name {
   font-size: 10px;
   font-weight: 700;
@@ -542,7 +551,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
 .rk-bar {
   height: 8px;
   border-radius: 4px;
-  background: linear-gradient(90deg, #e8566b, #c8102e);
+  background: linear-gradient(90deg, var(--brand-primary-hover), var(--brand-primary));
 }
 .rk-avg {
   position: absolute;
@@ -561,7 +570,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
 .rk-val i { font-size: 8px; font-style: normal; color: #94a3b8; margin-left: 1px; }
 .rk-delta { font-size: 8.5px; font-weight: 800; text-align: right; }
 .rk-delta.good { color: #0f9d58; }
-.rk-delta.bad { color: #c8102e; }
+.rk-delta.bad { color: var(--brand-primary); }
 
 /* ================= 剖面 ================= */
 .tl { height: 100%; overflow: auto; }
@@ -613,7 +622,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
   position: absolute;
   top: 2px;
   bottom: 2px;
-  background: linear-gradient(90deg, #e8566b, #c8102e);
+  background: linear-gradient(90deg, var(--brand-primary-hover), var(--brand-primary));
   border-radius: 3px;
 }
 .tl-none {
@@ -647,7 +656,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
   font-size: 9.5px;
 }
 .is-lv { width: 3px; height: 14px; border-radius: 2px; }
-.is-lv.h { background: #c8102e; }
+.is-lv.h { background: var(--brand-primary); }
 .is-lv.m { background: #f0a04b; }
 .is-name {
   font-weight: 800;
@@ -670,7 +679,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
   padding: 1px 5px;
   border-radius: 4px;
   text-align: center;
-  background: #fef2f2;
+  background: var(--brand-primary-light);
   color: #9f1239;
   white-space: nowrap;
 }

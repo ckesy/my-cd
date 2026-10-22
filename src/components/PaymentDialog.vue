@@ -420,7 +420,7 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
   justify-content: space-between;
   padding: 12px 14px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #fef2f2, #fff7f8);
+  background: linear-gradient(135deg, var(--brand-primary-light), var(--brand-primary-light));
   border: 1px solid #fbd5db;
   margin-bottom: 12px;
 }
@@ -440,7 +440,7 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
 .pd-amt {
   font-family: var(--num-font, monospace);
   font-size: 20px;
-  color: #c8102e;
+  color: var(--brand-primary);
 }
 
 .pd-rows {
@@ -476,7 +476,7 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
 
 .pd-row b {
   font-family: var(--num-font, monospace);
-  color: #c8102e;
+  color: var(--brand-primary);
 }
 
 .pd-field { margin-bottom: 12px; }
@@ -514,10 +514,10 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
   transition: all 0.2s;
 }
 
-.pd-chip:hover { border-color: #c8102e; color: #c8102e; }
+.pd-chip:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
 
 .pd-chip.on {
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   border-color: transparent;
   color: #fff;
   font-weight: 600;
@@ -543,13 +543,13 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
 }
 
 .pd-up-box:hover {
-  border-color: #c8102e;
+  border-color: var(--brand-primary);
   background: #fffafa;
 }
 
 .pd-up-ic {
   font-size: 20px;
-  color: #c8102e;
+  color: var(--brand-primary);
   line-height: 1;
 }
 

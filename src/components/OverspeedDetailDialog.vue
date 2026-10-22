@@ -443,10 +443,10 @@ watch(() => props.modelValue, async (val) => {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 4px 14px 4px 10px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   color: #fff; font-size: 13px; font-weight: 800;
   letter-spacing: 0.8px;
-  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.35);
+  box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.35);
   font-family: 'Courier New', monospace;
 }
 .osd-plate-bar {
@@ -467,7 +467,7 @@ watch(() => props.modelValue, async (val) => {
 .osd-stat {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px;
-  background: linear-gradient(135deg, #fff 0%, #FEF2F2 100%);
+  background: linear-gradient(135deg, #fff 0%, var(--brand-primary-light) 100%);
   border: 1px solid #FEE2E2;
   border-radius: 10px;
   opacity: 0;
@@ -476,7 +476,7 @@ watch(() => props.modelValue, async (val) => {
 }
 .osd-stat:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(200, 16, 46, 0.12);
+  box-shadow: 0 10px 24px rgba(var(--brand-rgb), 0.12);
   border-color: #FCA5A5;
 }
 @keyframes osdStatIn {
@@ -491,7 +491,7 @@ watch(() => props.modelValue, async (val) => {
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .osd-stat:hover .osd-stat-icon { transform: scale(1.1) rotate(-6deg); }
-.osd-stat-icon.max { background: linear-gradient(135deg, #EF4444, #991B1B); box-shadow: 0 5px 14px rgba(239, 68, 68, 0.35); }
+.osd-stat-icon.max { background: linear-gradient(135deg, #EF4444, var(--brand-primary-deep)); box-shadow: 0 5px 14px rgba(239, 68, 68, 0.35); }
 .osd-stat-icon.avg { background: linear-gradient(135deg, #F59E0B, #D97706); box-shadow: 0 5px 14px rgba(245, 158, 11, 0.35); }
 .osd-stat-icon.dur { background: linear-gradient(135deg, #3B82F6, #1D4ED8); box-shadow: 0 5px 14px rgba(59, 130, 246, 0.35); }
 .osd-stat-icon.cnt { background: linear-gradient(135deg, #8B5CF6, #6D28D9); box-shadow: 0 5px 14px rgba(139, 92, 246, 0.35); }
@@ -510,7 +510,7 @@ watch(() => props.modelValue, async (val) => {
 .osd-address-bar {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 14px;
-  background: linear-gradient(135deg, #FEF2F2, #FEE2E2);
+  background: linear-gradient(135deg, var(--brand-primary-light), var(--brand-primary-light));
   border: 1px solid #FECACA;
   border-radius: 10px;
   font-size: 13px;
@@ -524,7 +524,7 @@ watch(() => props.modelValue, async (val) => {
   to { opacity: 1; transform: translateY(0); }
 }
 .osd-address-bar .el-icon {
-  color: #c8102e;
+  color: var(--brand-primary);
   font-size: 16px;
   flex-shrink: 0;
 }
@@ -546,8 +546,8 @@ watch(() => props.modelValue, async (val) => {
 .osd-bar {
   width: 3px; height: 12px;
   border-radius: 2px;
-  background: linear-gradient(180deg, #c8102e, #7F1D1D);
-  box-shadow: 0 0 6px rgba(200, 16, 46, 0.5);
+  background: linear-gradient(180deg, var(--brand-primary), var(--brand-primary-deep));
+  box-shadow: 0 0 6px rgba(var(--brand-rgb), 0.5);
 }
 .osd-count { margin-left: auto; font-size: 11.5px; color: #94A3B8; font-weight: 500; }
 
@@ -558,20 +558,20 @@ watch(() => props.modelValue, async (val) => {
 .osd-axis-y text { font-size: 10px; fill: #94A3B8; font-family: 'Courier New', monospace; font-weight: 600; }
 .osd-axis-x { font-size: 11px; fill: #64748B; font-family: 'Courier New', monospace; font-weight: 600; }
 .osd-threshold-line {
-  stroke: #c8102e;
+  stroke: var(--brand-primary);
   stroke-width: 1.5;
   stroke-dasharray: 6 4;
   opacity: 0.7;
   animation: thresholdPulse 2s ease-in-out infinite;
 }
 @keyframes thresholdPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.95; } }
-.osd-threshold-label { font-size: 10.5px; fill: #c8102e; font-weight: 700; }
+.osd-threshold-label { font-size: 10.5px; fill: var(--brand-primary); font-weight: 700; }
 .osd-area { opacity: 0; animation: areaFadeIn 1s ease-out 0.6s forwards; }
 @keyframes areaFadeIn { to { opacity: 1; } }
 
 .osd-point {
   fill: #fff;
-  stroke: #c8102e;
+  stroke: var(--brand-primary);
   stroke-width: 1.8;
   opacity: 0;
   animation: pointPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -580,10 +580,10 @@ watch(() => props.modelValue, async (val) => {
 }
 .osd-point:hover {
   r: 5;
-  fill: #c8102e;
+  fill: var(--brand-primary);
   stroke: #fff;
   stroke-width: 2.5;
-  filter: drop-shadow(0 0 6px rgba(200, 16, 46, 0.7));
+  filter: drop-shadow(0 0 6px rgba(var(--brand-rgb), 0.7));
 }
 @keyframes pointPop { from { opacity: 0; r: 0; } to { opacity: 1; r: 3; } }
 
@@ -610,7 +610,7 @@ watch(() => props.modelValue, async (val) => {
   animation: rowIn 0.35s ease forwards;
   transition: background 0.2s;
 }
-.osd-point-row:hover { background: #FEF2F2; }
+.osd-point-row:hover { background: var(--brand-primary-light); }
 .osd-point-row:last-child { border-bottom: none; }
 @keyframes rowIn {
   from { opacity: 0; transform: translateX(-6px); }
@@ -667,7 +667,7 @@ watch(() => props.modelValue, async (val) => {
   min-width: 0;
 }
 .osd-point-loc .loc-icon {
-  color: #c8102e;
+  color: var(--brand-primary);
   font-size: 12px;
   flex-shrink: 0;
 }
@@ -675,7 +675,7 @@ watch(() => props.modelValue, async (val) => {
   display: inline-block;
   width: 10px; height: 10px;
   border: 1.5px solid #FCA5A5;
-  border-top-color: #c8102e;
+  border-top-color: var(--brand-primary);
   border-radius: 50%;
   animation: locSpin 0.8s linear infinite;
   flex-shrink: 0;
@@ -710,10 +710,10 @@ watch(() => props.modelValue, async (val) => {
 /* 曲线 hover tooltip */
 .osd-point.is-hovered {
   r: 6;
-  fill: #c8102e;
+  fill: var(--brand-primary);
   stroke: #fff;
   stroke-width: 2.5;
-  filter: drop-shadow(0 0 8px rgba(200, 16, 46, 0.7));
+  filter: drop-shadow(0 0 8px rgba(var(--brand-rgb), 0.7));
 }
 .osd-tooltip {
   position: absolute;
@@ -753,7 +753,7 @@ watch(() => props.modelValue, async (val) => {
   font-family: 'Courier New', monospace;
   letter-spacing: -0.5px;
   line-height: 1.1;
-  background: linear-gradient(120deg, #ffffff 0%, #FCA5A5 50%, #ffffff 100%);
+  background: linear-gradient(120deg, #ffffff 0%, var(--brand-primary-light) 50%, #ffffff 100%);
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;

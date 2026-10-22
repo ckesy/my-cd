@@ -807,7 +807,7 @@ defineExpose({ fetchCargos })
   width: 4px;
   height: 14px;
   border-radius: 2px;
-  background: linear-gradient(180deg, #c8102e, #a00d24);
+  background: linear-gradient(180deg, var(--brand-primary), var(--brand-primary-dark));
   flex: 0 0 auto;
 }
 
@@ -848,29 +848,29 @@ defineExpose({ fetchCargos })
 
 .panel-search :deep(.el-input__wrapper:hover),
 .panel-search :deep(.el-select__wrapper:hover) {
-  background: #FEF2F2 !important;
+  background: var(--brand-primary-light) !important;
   box-shadow: 0 0 0 1px #FCA5A5 inset !important;
 }
 
 .panel-search :deep(.el-input__wrapper.is-focus),
 .panel-search :deep(.el-select__wrapper.is-focused) {
   background: #fff !important;
-  box-shadow: 0 0 0 2px rgba(200, 16, 46, 0.15), 0 0 0 1px #c8102e inset !important;
+  box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.15), 0 0 0 1px var(--brand-primary) inset !important;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #c8102e, #a00d24) !important;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark)) !important;
   border: none !important;
   color: #fff !important;
   font-weight: 600;
   border-radius: 6px !important;
-  box-shadow: 0 3px 10px rgba(200, 16, 46, 0.22);
+  box-shadow: 0 3px 10px rgba(var(--brand-rgb), 0.22);
   transition: all .25s;
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 5px 14px rgba(200, 16, 46, 0.35);
+  box-shadow: 0 5px 14px rgba(var(--brand-rgb), 0.35);
 }
 
 .btn-primary.is-disabled {
@@ -893,9 +893,9 @@ defineExpose({ fetchCargos })
 }
 
 .btn-outline:hover {
-  border-color: #c8102e !important;
-  color: #c8102e !important;
-  background: #FEF2F2 !important;
+  border-color: var(--brand-primary) !important;
+  color: var(--brand-primary) !important;
+  background: var(--brand-primary-light) !important;
 }
 
 .status-tabs {
@@ -918,13 +918,13 @@ defineExpose({ fetchCargos })
 }
 
 .status-tab:hover {
-  color: #c8102e;
-  background: #FEF2F2;
+  color: var(--brand-primary);
+  background: var(--brand-primary-light);
 }
 
 .status-tab.active {
-  background: #FEF2F2;
-  color: #c8102e;
+  background: var(--brand-primary-light);
+  color: var(--brand-primary);
   border-color: #FECACA;
   font-weight: 700;
 }
@@ -944,7 +944,7 @@ defineExpose({ fetchCargos })
   z-index: 9999;
   padding: 18px 20px;
   background: #fff;
-  box-shadow: 0 20px 60px rgba(200, 16, 46, 0.12);
+  box-shadow: 0 20px 60px rgba(var(--brand-rgb), 0.12);
   animation: fs-fade-in .25s ease;
 }
 
@@ -1003,15 +1003,15 @@ defineExpose({ fetchCargos })
 }
 
 :deep(.custom-table .el-table__row:hover td) {
-  background: #FEF2F2 !important;
+  background: var(--brand-primary-light) !important;
 }
 
 :deep(.custom-table .is-selected-row td) {
-  background: #FEF2F2 !important;
+  background: var(--brand-primary-light) !important;
 }
 
 :deep(.custom-table .is-selected-row td:first-child) {
-  box-shadow: inset 3px 0 0 #c8102e;
+  box-shadow: inset 3px 0 0 var(--brand-primary);
 }
 
 .cargo-name,
@@ -1106,12 +1106,12 @@ defineExpose({ fetchCargos })
 }
 
 .action-edit {
-  color: #c8102e;
+  color: var(--brand-primary);
 }
 
 .action-edit:hover {
   color: #7F1D1D;
-  background: #FEF2F2;
+  background: var(--brand-primary-light);
 }
 
 .action-warn {
@@ -1138,7 +1138,7 @@ defineExpose({ fetchCargos })
 
 .action-danger:hover {
   color: #B91C1C;
-  background: #FEF2F2;
+  background: var(--brand-primary-light);
 }
 
 .empty-state {
@@ -1205,19 +1205,19 @@ defineExpose({ fetchCargos })
   padding: 0 16px;
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   color: #fff;
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 8px 22px rgba(200, 16, 46, .35);
+  box-shadow: 0 8px 22px rgba(var(--brand-rgb), .35);
   transition: all .25s;
   font-family: inherit;
 }
 
 .fs-exit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(200, 16, 46, .45);
+  box-shadow: 0 12px 28px rgba(var(--brand-rgb), .45);
 }
 
 .fs-fade-enter-active,
@@ -1308,20 +1308,20 @@ defineExpose({ fetchCargos })
 }
 
 .btn-ghost:hover {
-  border-color: #c8102e;
-  color: #c8102e;
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 .btn-solid {
   border: none;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   color: #fff;
-  box-shadow: 0 4px 12px rgba(200, 16, 46, .28);
+  box-shadow: 0 4px 12px rgba(var(--brand-rgb), .28);
 }
 
 .btn-solid:hover {
   transform: translateY(-1px);
-  box-shadow: 0 7px 18px rgba(200, 16, 46, .38);
+  box-shadow: 0 7px 18px rgba(var(--brand-rgb), .38);
 }
 
 .btn-solid:disabled {

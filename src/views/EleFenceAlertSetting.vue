@@ -1130,11 +1130,11 @@ onMounted(async () => {
 }
 :deep(.el-button:hover) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.15);
+  box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.15);
 }
 :deep(.btn-primary) {
-  background-color: #c8102e;
-  border-color: #c8102e;
+  background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
   color: #fff;
 }
 :deep(.btn-primary:hover) {
@@ -1146,9 +1146,9 @@ onMounted(async () => {
   color: #334155;
 }
 :deep(.btn-outline:hover) {
-  border-color: #c8102e;
-  color: #c8102e;
-  background-color: #FEF2F2;
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  background-color: var(--brand-primary-light);
 }
 
 /* ========== 开关卡片区 ========== */
@@ -1249,7 +1249,7 @@ onMounted(async () => {
 }
 
 .speeding-icon {
-  background: linear-gradient(135deg, #FEE2E2, #FCA5A5);
+  background: linear-gradient(135deg, var(--brand-primary-light), var(--brand-primary-light));
   color: #991B1B;
 }
 .staying-icon {
@@ -1366,7 +1366,7 @@ onMounted(async () => {
 }
 
 .speeding-section {
-  background: linear-gradient(135deg, #FFF9F9 0%, #FEF2F2 100%);
+  background: linear-gradient(135deg, var(--brand-primary-light) 0%, var(--brand-primary-light) 100%);
   border: 1px solid #FECACA;
   box-shadow: 0 4px 20px rgba(211, 47, 47, 0.06);
 }
@@ -1434,7 +1434,7 @@ onMounted(async () => {
   font-size: 18px;
 }
 .speeding-banner-icon {
-  background: linear-gradient(135deg, #FEE2E2, #FCA5A5);
+  background: linear-gradient(135deg, var(--brand-primary-light), var(--brand-primary-light));
   color: #991B1B;
   animation: bannerIconPulse 2s ease-in-out infinite;
 }
@@ -1654,8 +1654,8 @@ onMounted(async () => {
 
 .fence-select-trigger:hover {
   background: #ffffff;
-  border-color: #c8102e;
-  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.08);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.08);
   transform: translateY(-1px);
 }
 
@@ -1665,7 +1665,7 @@ onMounted(async () => {
 }
 
 .fence-select-trigger.active {
-  background: #FEF2F2;
+  background: var(--brand-primary-light);
   border-color: #FCA5A5;
 }
 .fence-select-trigger.active.staying-trigger {
@@ -1690,7 +1690,7 @@ onMounted(async () => {
   color: #64748B;
 }
 .fence-select-trigger.active .trigger-icon {
-  color: #c8102e;
+  color: var(--brand-primary);
 }
 .fence-select-trigger.active.staying-trigger .trigger-icon {
   color: #2563EB;
@@ -1719,7 +1719,7 @@ onMounted(async () => {
 }
 .trigger-arrow.rotate {
   transform: rotate(180deg);
-  color: #c8102e;
+  color: var(--brand-primary);
 }
 .staying-trigger .trigger-arrow.rotate {
   color: #2563EB;
@@ -1845,7 +1845,7 @@ onMounted(async () => {
 
 .block-slider { margin: 0; }
 :deep(.block-slider .el-slider__runway) {
-  background: linear-gradient(90deg, #FEE2E2 0%, #FCA5A5 100%);
+  background: linear-gradient(90deg, var(--brand-primary-light) 0%, var(--brand-primary-light) 100%);
   height: 5px;
   border-radius: 3px;
 }
@@ -1862,7 +1862,7 @@ onMounted(async () => {
 :deep(.block-slider .el-slider__button) {
   width: 14px;
   height: 14px;
-  border: 3px solid #D32F2F;
+  border: 3px solid var(--brand-primary);
   background: #FFFFFF;
   box-shadow: 0 2px 8px rgba(211, 47, 47, 0.35);
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1891,7 +1891,7 @@ onMounted(async () => {
   font-weight: 500;
 }
 .link-btn {
-  color: #c8102e;
+  color: var(--brand-primary);
   cursor: pointer;
   font-weight: 700;
   transition: all 0.2s;
@@ -1914,7 +1914,7 @@ onMounted(async () => {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #FEE2E2, #FCA5A5);
+  background: linear-gradient(135deg, var(--brand-primary-light), var(--brand-primary-light));
   align-items: center;
   justify-content: center;
   margin-bottom: 16px;
@@ -2016,8 +2016,8 @@ onMounted(async () => {
 }
 .speeding-picker-popper .picker-toolbar .el-checkbox__input.is-checked .el-checkbox__inner,
 .speeding-picker-popper .picker-toolbar .el-checkbox__input.is-indeterminate .el-checkbox__inner {
-  background-color: #c8102e !important;
-  border-color: #c8102e !important;
+  background-color: var(--brand-primary) !important;
+  border-color: var(--brand-primary) !important;
 }
 .staying-picker-popper .picker-toolbar .el-checkbox__input.is-checked .el-checkbox__inner,
 .staying-picker-popper .picker-toolbar .el-checkbox__input.is-indeterminate .el-checkbox__inner {
@@ -2031,7 +2031,7 @@ onMounted(async () => {
   font-weight: 600;
 }
 .picker-count b {
-  color: #c8102e;
+  color: var(--brand-primary);
   font-weight: 800;
   margin: 0 2px;
 }
@@ -2060,21 +2060,21 @@ onMounted(async () => {
   transform: translateX(2px);
 }
 .picker-item.selected {
-  background: #FEF2F2;
+  background: var(--brand-primary-light);
 }
 .staying-picker-popper .picker-item.selected {
   background: #EFF6FF;
 }
 .picker-item.selected .el-checkbox__input.is-checked .el-checkbox__inner {
-  background-color: #c8102e !important;
-  border-color: #c8102e !important;
+  background-color: var(--brand-primary) !important;
+  border-color: var(--brand-primary) !important;
 }
 .staying-picker-popper .picker-item.selected .el-checkbox__input.is-checked .el-checkbox__inner {
   background-color: #2563EB !important;
   border-color: #2563EB !important;
 }
 .picker-item.selected .el-checkbox__input.is-checked + .el-checkbox__label {
-  color: #c8102e !important;
+  color: var(--brand-primary) !important;
 }
 .staying-picker-popper .picker-item.selected .el-checkbox__input.is-checked + .el-checkbox__label {
   color: #2563EB !important;
@@ -2091,7 +2091,7 @@ onMounted(async () => {
 }
 
 .picker-item-check {
-  color: #c8102e;
+  color: var(--brand-primary);
   font-size: 14px;
   animation: checkPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -2142,8 +2142,8 @@ onMounted(async () => {
   background: #F8FAFC;
 }
 .speeding-confirm-btn {
-  background-color: #c8102e !important;
-  border-color: #c8102e !important;
+  background-color: var(--brand-primary) !important;
+  border-color: var(--brand-primary) !important;
 }
 .speeding-confirm-btn:hover {
   background-color: #a00d24 !important;

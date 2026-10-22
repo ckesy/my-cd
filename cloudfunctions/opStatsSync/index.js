@@ -42,9 +42,12 @@ function getDb() {
   }
   // ⚠️ 不能用 tcb.SYMBOL_DEFAULT_ENV（Symbol），配了 accessKey 时 SDK 会拼 URL 失败：
   //    TypeError: Cannot convert a Symbol value to a string
+  /* ⭐ accessKey 只在确实配了环境变量时才传。
+     传 undefined 有的 SDK 版本会当成空串发出去 → 网关回 "Access token is invalid"。
+     不传的话用云函数自带的内置权限，反而更稳。 */
   const app = tcb.init({
     env: process.env.TCB_ENV || 'wuxian-token-d0guymjkpadcd1f22',
-    accessKey: process.env.CLOUDBASE_APIKEY,
+    ...(process.env.CLOUDBASE_APIKEY ? { accessKey: process.env.CLOUDBASE_APIKEY } : {}),
   })
   // ⚠️ node-sdk 的 rdb() 默认把 env 当 schema 发（Accept-Profile），网关会回
   //    "Invalid schema: <envId>"；这里必须显式指定 schema（默认 public）。
@@ -191,9 +194,14 @@ exports.main = async (event = {}, context = {}) => {
     const vres = await rdb.from('vehicles').select('plate,vin,org,customer_id')
     if (vres.error) {
       const msg = vres.error.message || JSON.stringify(vres.error)
-      const hint = /Invalid schema/i.test(msg)
-        ? '（schema 不对：把函数环境变量 RDB_SCHEMA 设成你的 schema，云开发 PostgreSQL 通常是 public）'
-        : ''
+      let hint = ''
+      if (/Invalid schema/i.test(msg)) {
+        hint = '（schema 不对：把函数环境变量 RDB_SCHEMA 设成你的 schema，云开发 PostgreSQL 通常是 public）'
+      } else if (/Access token|ACCESS_TOKEN/i.test(msg)) {
+        hint = process.env.CLOUDBASE_APIKEY
+          ? '（云函数环境变量 CLOUDBASE_APIKEY 失效了：删掉这个变量改用内置权限，或换一个新的 API Key）'
+          : '（云函数拿不到数据库权限：检查是否部署在同环境，或改用 CLOUDBASE_APIKEY 环境变量）'
+      }
       return { ok: false, error: `读 vehicles 失败：${msg}${hint}`, schema: process.env.RDB_SCHEMA || 'public' }
     }
     let vehicles = (vres.data || []).filter((v) => v.vin && v.plate)

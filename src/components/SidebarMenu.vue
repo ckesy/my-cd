@@ -239,8 +239,8 @@ const reportOn = computed(() => moduleFlags.report === true)
 }
 
 .nav-pin.on {
-  color: #D32F2F;
-  background: #FEF2F2;
+  color: var(--brand-primary);
+  background: var(--brand-primary-light);
 }
 
 .nav-pin .pin-ic {
@@ -319,14 +319,14 @@ const reportOn = computed(() => moduleFlags.report === true)
   height: 16px;
   padding: 0 5px;
   border-radius: 8px;
-  background: #c8102e;
+  background: var(--brand-primary);
   color: #fff;
   font-size: 10.5px;
   font-weight: 700;
   line-height: 16px;
   text-align: center;
   flex: 0 0 auto;
-  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.28);
+  box-shadow: 0 2px 6px rgba(var(--brand-rgb), 0.28);
 }
 
 .menu-badge.sm {
@@ -404,14 +404,14 @@ const reportOn = computed(() => moduleFlags.report === true)
 .sidebar-menu :deep(.el-menu-item:hover),
 .sidebar-menu :deep(.el-sub-menu__title:hover) {
   background-color: transparent !important;
-  color: #D32F2F !important;
+  color: var(--brand-primary) !important;
   transform: translateX(4px);
 }
 
 .sidebar-menu :deep(.el-menu-item.is-active),
 .sidebar-menu :deep(.el-sub-menu .el-menu-item.is-active) {
-  background-color: #FEF2F2 !important;
-  color: #D32F2F !important;
+  background-color: var(--brand-primary-light) !important;
+  color: var(--brand-primary) !important;
   font-weight: 600;
 }
 
@@ -423,7 +423,7 @@ const reportOn = computed(() => moduleFlags.report === true)
   top: 50%;
   height: 20px;
   width: 3px;
-  background: #D32F2F;
+  background: var(--brand-primary);
   border-radius: 0 4px 4px 0;
   box-shadow: 0 0 8px rgba(211, 47, 47, 0.6);
   transform: translateY(-50%) scaleY(0);
@@ -437,14 +437,14 @@ const reportOn = computed(() => moduleFlags.report === true)
 }
 
 .sidebar-menu :deep(.el-sub-menu:has(.el-menu-item.is-active) .el-sub-menu__title) {
-  color: #D32F2F !important;
-  background-color: #FEF2F2 !important;
+  color: var(--brand-primary) !important;
+  background-color: var(--brand-primary-light) !important;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(211, 47, 47, 0.05);
 }
 
 .sidebar-menu :deep(.el-sub-menu:has(.el-menu-item.is-active) .el-sub-menu__icon-arrow) {
-  color: #D32F2F;
+  color: var(--brand-primary);
 }
 
 .sidebar-menu :deep(.el-menu--inline) {

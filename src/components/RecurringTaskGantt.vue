@@ -467,7 +467,7 @@ const drillTo = (trip) => {
   transition: background 0.2s, transform 0.2s;
 }
 .rtg-trip:hover {
-  background: #fef2f2;
+  background: var(--brand-primary-light);
   transform: translateX(2px);
 }
 .rtg-trip-seq {
@@ -485,12 +485,12 @@ const drillTo = (trip) => {
   margin-top: 4px;
   padding: 5px 10px;
   font-size: 11.5px;
-  color: #c8102e;
+  color: var(--brand-primary);
   cursor: pointer;
   border-radius: 6px;
   transition: background 0.2s;
 }
-.rtg-more:hover { background: #fef2f2; }
+.rtg-more:hover { background: var(--brand-primary-light); }
 
 /* ============================================================
    周期视图
@@ -521,7 +521,7 @@ const drillTo = (trip) => {
   margin-left: auto;
   padding: 3px 10px;
   font-size: 11.5px;
-  color: #c8102e;
+  color: var(--brand-primary);
   background: #fff;
   border: 1px solid #f7c1c1;
   border-radius: 6px;
@@ -529,7 +529,7 @@ const drillTo = (trip) => {
   font-family: inherit;
   transition: background 0.2s;
 }
-.rtg-back:hover { background: #fef2f2; }
+.rtg-back:hover { background: var(--brand-primary-light); }
 
 .rtg-axis {
   position: relative;
@@ -604,7 +604,7 @@ const drillTo = (trip) => {
 }
 .rtg-cell.is-done { background: #639922; }
 .rtg-cell.is-transit { background: #ef9f27; }
-.rtg-cell.is-loading { background: #c8102e; }
+.rtg-cell.is-loading { background: var(--brand-primary); }
 .rtg-cell.is-ready { background: #fde7c4; }
 .rtg-cell.is-pending { background: #dbeafe; }
 .rtg-cell.is-cancelled { background: #e2e8f0; }
@@ -618,7 +618,7 @@ const drillTo = (trip) => {
   );
 }
 .rtg-cell.is-today {
-  box-shadow: 0 0 0 2px #fef2f2, 0 0 0 3px #c8102e;
+  box-shadow: 0 0 0 2px var(--brand-primary-light), 0 0 0 3px var(--brand-primary);
 }
 
 .rtg-legend {
@@ -645,7 +645,7 @@ const drillTo = (trip) => {
 }
 .rtg-legend .c-done { background: #639922; }
 .rtg-legend .c-transit { background: #ef9f27; }
-.rtg-legend .c-loading { background: #c8102e; }
+.rtg-legend .c-loading { background: var(--brand-primary); }
 .rtg-legend .c-ready { background: #fde7c4; }
 .rtg-legend .c-planned { background: #f1f5f9; }
 .rtg-legend .c-missed {
@@ -666,7 +666,7 @@ const drillTo = (trip) => {
   background: #f8fafc;
   transition: background 0.2s;
 }
-.rtg-day :deep(.wpb:hover) { background: #fef2f2; }
+.rtg-day :deep(.wpb:hover) { background: var(--brand-primary-light); }
 
 .rtg-none {
   padding: 26px 0;

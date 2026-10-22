@@ -366,7 +366,7 @@ const goLogout = () => {
 }
 .orb-green  { width: 720px; height: 720px; top: -220px; left: -180px; background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, transparent 70%); }
 .orb-purple { width: 760px; height: 760px; bottom: -260px; right: -200px; background: radial-gradient(circle, rgba(139, 92, 246, 0.22) 0%, transparent 70%); animation-delay: -8s; }
-.orb-red    { width: 480px; height: 480px; top: 45%; left: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle, rgba(200, 16, 46, 0.08) 0%, transparent 70%); animation-delay: -4s; animation-name: orbFloatCenter; }
+.orb-red    { width: 480px; height: 480px; top: 45%; left: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle, rgba(var(--brand-rgb), 0.08) 0%, transparent 70%); animation-delay: -4s; animation-name: orbFloatCenter; }
 @keyframes orbFloat {
   0%, 100% { transform: translate(0, 0) scale(1); }
   50%      { transform: translate(40px, -30px) scale(1.1); }
@@ -437,7 +437,7 @@ const goLogout = () => {
   transform: translateX(-50%);
   width: 100%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #c8102e, #c8102e, #c8102e, transparent);
+  background: linear-gradient(90deg, transparent, var(--brand-primary), var(--brand-primary), var(--brand-primary), transparent);
   border-radius: 2px;
   animation: titleBarPulse 2.6s ease-in-out infinite;
 }
@@ -449,7 +449,7 @@ const goLogout = () => {
   display: block;
   width: 60px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(200, 16, 46, 0.5), transparent);
+  background: linear-gradient(90deg, transparent, rgba(var(--brand-rgb), 0.5), transparent);
 }
 
 .logout-btn {
@@ -459,22 +459,22 @@ const goLogout = () => {
   padding: 8px 18px;
   font-size: 13px;
   font-weight: 600;
-  color: #c8102e;
+  color: var(--brand-primary);
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(200, 16, 46, 0.35);
+  border: 1px solid rgba(var(--brand-rgb), 0.35);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-family: inherit;
-  box-shadow: 0 2px 10px rgba(200, 16, 46, 0.06);
+  box-shadow: 0 2px 10px rgba(var(--brand-rgb), 0.06);
 }
 .logout-btn:hover {
   color: #FFFFFF;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   border-color: transparent;
-  box-shadow: 0 8px 22px rgba(200, 16, 46, 0.35);
+  box-shadow: 0 8px 22px rgba(var(--brand-rgb), 0.35);
   transform: translateY(-2px);
 }
 

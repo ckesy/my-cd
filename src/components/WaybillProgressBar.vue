@@ -289,7 +289,7 @@ const metricClass = computed(() => {
   text-overflow: ellipsis;
 }
 .wpb-metrics.is-live {
-  color: #c8102e;
+  color: var(--brand-primary);
   font-weight: 600;
 }
 .wpb-metrics.is-ok {
@@ -375,7 +375,7 @@ const metricClass = computed(() => {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: #c8102e;
+  background: var(--brand-primary);
   transition: left 0.8s linear;
 }
 .wpb-now-label {
@@ -383,7 +383,7 @@ const metricClass = computed(() => {
   top: -1px;
   left: 3px;
   font-size: 10px;
-  color: #c8102e;
+  color: var(--brand-primary);
   white-space: nowrap;
 }
 
@@ -426,7 +426,7 @@ const metricClass = computed(() => {
 .lg-now {
   width: 1px;
   height: 12px;
-  background: #c8102e;
+  background: var(--brand-primary);
 }
 
 .wpb-none {

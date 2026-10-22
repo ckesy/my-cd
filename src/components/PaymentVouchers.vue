@@ -166,7 +166,7 @@ watch(
 
 .pv-file-a {
   font-size: 12px;
-  color: #c8102e;
+  color: var(--brand-primary);
   font-weight: 600;
   text-decoration: none;
   flex: 0 0 auto;

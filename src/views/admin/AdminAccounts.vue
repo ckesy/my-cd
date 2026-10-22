@@ -586,8 +586,8 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  background: #FEF2F2;
-  border: 1px solid rgba(200, 16, 46, 0.18);
+  background: var(--brand-primary-light);
+  border: 1px solid rgba(var(--brand-rgb), 0.18);
   border-radius: 8px;
   font-size: 13px;
   color: #475569;
@@ -595,7 +595,7 @@ onMounted(async () => {
 }
 
 .reset-tip b {
-  color: #c8102e;
+  color: var(--brand-primary);
 }
 
 .tip-icon-red {
@@ -605,7 +605,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #c8102e;
+  background: var(--brand-primary);
   color: #fff;
   font-weight: 700;
   font-size: 12px;

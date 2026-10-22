@@ -937,7 +937,7 @@ onMounted(async () => {
 
 .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 11px; }
 .kpi { border: 1px solid #EDF1F6; border-radius: 10px; padding: 12px 14px; background: #fff; }
-.kpi.hero { background: linear-gradient(135deg, #1E3A8A, #152C6B); border-color: transparent; }
+.kpi.hero { background: linear-gradient(135deg, var(--brand-primary-hover), var(--brand-primary-dark)); border-color: transparent; }
 .kpi.good { background: #F0FDF4; border-color: #BBF7D0; }
 .kpi.warn { background: #FEF2F4; border-color: #FECDD3; }
 .kpi-k { font-size: 12px; color: #64748B; }
@@ -949,7 +949,7 @@ onMounted(async () => {
 .kpi.hero .kpi-v { color: #fff; }
 .kpi-d { font-size: 11.5px; margin-top: 5px; color: #64748B; }
 .kpi.hero .kpi-d { color: rgba(255, 255, 255, .6); }
-.kpi-d.up { color: #C8102E; }
+.kpi-d.up { color: var(--brand-primary); }
 .kpi-d.down { color: #15803D; }
 
 .panel { border: 1px solid #EDF1F6; border-radius: 10px; background: #fff; padding: 13px 15px; }

@@ -114,7 +114,7 @@ const onChange = (val) => {
 }
 
 .unit-select-popper .el-select-dropdown__item.is-selected .unit-opt {
-  color: #c8102e;
+  color: var(--brand-primary);
   font-weight: 600;
 }
 

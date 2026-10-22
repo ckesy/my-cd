@@ -124,32 +124,57 @@
         </div>
 
         <div class="dt-body">
-          <div class="dt-label">费用 · {{ cur.items.length }} 笔</div>
-          <div class="dt-items">
-            <div v-for="it in cur.items" :key="it.id" class="dt-item">
-              <span class="dt-ico">{{ (TYPE_LABEL[it.type] || '费').slice(0, 1) }}</span>
-              <span class="dt-name">
-                <b>{{ TYPE_LABEL[it.type] || it.type }}</b>
-                <span>{{ itemDesc(it) }}</span>
-              </span>
-              <span class="dt-amt num">¥{{ fmtMoney(it.amount) }}</span>
-            </div>
-            <div class="dt-sum">
-              合计 <b class="num">¥{{ fmtMoney(cur.total) }}</b>
+          <div class="dt-label">费用明细 · {{ cur.items.length }} 笔</div>
+
+          <!-- ⭐ 每笔费用一张卡：上半是这笔的信息，下半只放这笔自己的凭证，
+               这样图片和费用天然对应，不用靠顺序去猜 -->
+          <div class="dt-cards">
+            <div v-for="c in curCards" :key="c.id" class="fc">
+              <div class="fc-hd">
+                <span class="fc-ico">{{ (TYPE_LABEL[c.type] || '费').slice(0, 1) }}</span>
+                <div class="fc-tt">
+                  <div class="fc-t">
+                    <b>{{ TYPE_LABEL[c.type] || c.type }}</b>
+                    <span class="st fc-st" :class="statusCls(normalizeStatus(c.status))">
+                      <i></i>{{ normalizeStatus(c.status) }}
+                    </span>
+                  </div>
+                  <div class="fc-d num">{{ itemDesc(c) }}</div>
+                </div>
+                <span class="fc-amt num">¥{{ fmtMoney(c.amount) }}</span>
+              </div>
+
+              <div class="fc-vch">
+                <template v-if="c.imgs.length">
+                  <div class="fc-vch-hd">凭证 · {{ c.imgs.length }} 张</div>
+                  <div class="dt-imgs">
+                    <template v-for="im in c.imgs" :key="im.key">
+                      <!-- 图片：预览列表只含本笔的图，左右切换不会串到别的费用 -->
+                      <el-image v-if="im.isImage && im.url" :src="im.url" fit="cover"
+                        class="dt-img" :preview-src-list="c.previewUrls"
+                        :initial-index="im.idx" preview-teleported>
+                        <template #error><div class="dt-img-err">加载失败</div></template>
+                      </el-image>
+                      <!-- 非图片（pdf / 表格等）：给个可点的文件块 -->
+                      <a v-else-if="im.url" :href="im.url" target="_blank" rel="noopener"
+                        class="dt-file" :title="im.name">
+                        <span class="dt-file-ic">件</span>
+                        <span class="dt-file-n">{{ im.name }}</span>
+                      </a>
+                      <!-- 链接还没签下来 / 签名失败：保留占位，别让凭证凭空消失 -->
+                      <div v-else class="dt-img dt-img-ph">
+                        {{ imgLoading ? '加载中' : '未取到' }}
+                      </div>
+                    </template>
+                  </div>
+                </template>
+                <div v-else class="fc-novch"><i></i>这笔费用没有上传凭证</div>
+              </div>
             </div>
           </div>
 
-          <div class="dt-label" style="margin-top:13px">
-            凭证{{ cur.images.length ? ` · ${cur.images.length} 张` : '' }}
-          </div>
-          <div class="dt-imgs" v-if="cur.images.length">
-            <el-image v-for="(im, i) in cur.images" :key="i" :src="im" fit="cover"
-              class="dt-img" :preview-src-list="cur.images" :initial-index="i" preview-teleported>
-              <template #error><div class="dt-img-err">无图</div></template>
-            </el-image>
-          </div>
-          <div v-else class="dt-noimg">
-            <span class="dt-noimg-dot"></span>没有上传凭证
+          <div class="dt-sum">
+            合计 <b class="num">¥{{ fmtMoney(cur.total) }}</b>
           </div>
         </div>
 
@@ -174,6 +199,7 @@ import dayjs from 'dayjs'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/utils/supabase'
 import { moduleFlags, approvalOn } from '@/utils/modules'
+import { signGet } from '@/utils/cos'
 import TableTools from '@/components/TableTools.vue'
 
 /* ================= 用户与范围 ================= */
@@ -309,7 +335,6 @@ const groups = computed(() => {
         status: '',
         last_time: '',
         flow: [],
-        images: [],
         payMethod: '',
         paid_at: '',
         pendingCount: 0,
@@ -324,8 +349,6 @@ const groups = computed(() => {
     if (r.payment && r.payment.method) g.payMethod = r.payment.method
     if (r.paid_at) g.paid_at = r.paid_at
     if (r.flow && r.flow.length && !g.flow.length) g.flow = r.flow
-    const imgs = (r.images || []).map((x) => x.fileID || x.url || x).filter(Boolean)
-    if (imgs.length) g.images.push(...imgs)
   })
 
   return [...map.values()].map((g) => {
@@ -410,6 +433,75 @@ function itemDesc(it) {
   return parts.length ? parts.join(' · ') + ' · ' + fmtDate(it.create_time) : fmtDate(it.create_time)
 }
 
+/* ================= 凭证：key → 临时链接 =================
+   ⚠️ reports.images 里存的是 COS 的 `{ key, name, size }`，**不是**能直接塞 <img> 的地址；
+      老数据里也可能只剩一串 fileID 或裸字符串，这里统一归一化后再签链接。
+      （不签直接用 → 每张都会走 error 插槽，也就是之前"全部显示无图"的原因） */
+const imgUrls = ref({})
+const imgAt = ref({})               // key → 拿到链接的时间，用于 TTL
+const IMG_TTL = 50 * 60 * 1000      // COS 签名 1 小时有效，缓存留 10 分钟余量
+const imgLoading = ref(false)
+
+/** 明确是附件（不当图片渲染）的扩展名；判断不出来的一律按图片试 */
+const FILE_EXT = /\.(pdf|docx?|xlsx?|csv|zip|rar|7z|txt|ppt|pptx)$/i
+
+function normImgs(raw) {
+  const list = Array.isArray(raw) ? raw : []
+  return list
+    .map((x) => {
+      const isStr = typeof x === 'string'
+      const direct = isStr ? (/^https?:/i.test(x) ? x : '') : (/^https?:/i.test(x?.url || '') ? x.url : '')
+      const key = isStr ? (direct ? '' : x) : (x?.key || x?.fileID || '')
+      const id = key || direct
+      const name = (!isStr && x?.name) || key || direct || '凭证'
+      return { key: id, name, isImage: !FILE_EXT.test(name) }
+    })
+    .filter((x) => !!x.key)
+}
+
+const imgsOf = (it) => normImgs(it && it.images)
+
+/** 抽屉里的费用卡：把每笔费用的凭证就地展开成 { url, isImage, idx }
+ *  —— 图片永远跟着它所属的那笔费用，不汇总、不混排。
+ *  依赖 imgUrls，所以签名链接一回来会自动重渲染。 */
+const curCards = computed(() => {
+  const items = (cur.value && cur.value.items) || []
+  return items.map((it) => {
+    const imgs = imgsOf(it).map((im) => ({
+      ...im,
+      url: imgUrls.value[im.key] || (/^https?:/i.test(im.key) ? im.key : ''),
+    }))
+    const previewUrls = imgs.filter((x) => x.isImage && x.url).map((x) => x.url)
+    imgs.forEach((x) => { x.idx = Math.max(0, previewUrls.indexOf(x.url)) })
+    return { ...it, imgs, previewUrls }
+  })
+})
+
+async function loadImgUrls(items) {
+  const keys = []
+  const now = Date.now()
+  ;(items || []).forEach((it) => {
+    imgsOf(it).forEach((im) => {
+      if (!im.key || /^https?:/i.test(im.key)) return
+      /* 没签过，或者缓存已经接近签名有效期 → 重新签 */
+      if (!imgUrls.value[im.key] || now - (imgAt.value[im.key] || 0) > IMG_TTL) keys.push(im.key)
+    })
+  })
+  if (!keys.length) return
+  imgLoading.value = true
+  try {
+    const map = await signGet([...new Set(keys)])
+    const stamp = {}
+    Object.keys(map).forEach((k) => { stamp[k] = Date.now() })
+    imgUrls.value = { ...imgUrls.value, ...map }
+    imgAt.value = { ...imgAt.value, ...stamp }
+  } catch (e) {
+    console.warn('[费用明细] 凭证临时链接获取失败', e)
+  } finally {
+    imgLoading.value = false
+  }
+}
+
 /**
  * 抽屉底部按钮 —— 由「当前状态 × 两个开关」决定：
  *   待审核（审批开）→ 驳回 / 通过（付款也开时多一个「通过并付款」一步到位）
@@ -464,6 +556,7 @@ async function refreshAndKeep() {
     const fresh = groups.value.find((g) => g.key === key)
     cur.value = fresh || null
     if (!fresh) drawer.value = false
+    else loadImgUrls(fresh.items)
   }
 }
 
@@ -537,6 +630,7 @@ async function doAction(action) {
 function openDetail(row) {
   cur.value = row
   drawer.value = true
+  loadImgUrls(row.items)
 }
 
 /* ================= 交互 ================= */
@@ -574,7 +668,7 @@ onMounted(load)
   display: inline-flex; align-items: center; gap: 6px; transition: .15s;
 }
 .fl-tab:hover { border-color: #CBD5E1; color: #0F172A; }
-.fl-tab.on { background: #C8102E; border-color: #C8102E; color: #fff; font-weight: 700; }
+.fl-tab.on { background: var(--brand-primary); border-color: var(--brand-primary); color: #fff; font-weight: 700; }
 .fl-tab-n {
   font-size: 10.5px; font-weight: 700; padding: 0 5px; border-radius: 4px;
   background: rgba(15,23,42,.06); color: inherit;
@@ -589,7 +683,7 @@ onMounted(load)
 
 /* 工具行 */
 .fl-toolbar { display: flex; align-items: center; gap: 10px; padding: 0 2px; }
-.tl-bar { width: 3px; height: 15px; border-radius: 2px; background: #C8102E; }
+.tl-bar { width: 3px; height: 15px; border-radius: 2px; background: var(--brand-primary); }
 .fl-toolbar h2 { margin: 0; font-size: 14px; font-weight: 800; color: #0F172A; }
 .tl-hint { font-size: 11px; color: #B4BECB; }
 .fl-toolbar :deep(.table-tools) { margin-left: auto; }
@@ -651,7 +745,7 @@ onMounted(load)
 }
 .dt-t { font-size: 17.5px; font-weight: 800; color: #0F172A; letter-spacing: -.2px; }
 .dt-s { font-size: 13.5px; color: #64748B; margin-top: 6px; }
-.dt-amt-inline { font-size: 15px; font-weight: 800; color: #C8102E; margin-left: 5px; }
+.dt-amt-inline { font-size: 15px; font-weight: 800; color: var(--brand-primary); margin-left: 5px; }
 .dt-x { margin-left: auto; color: #C4CDD9; font-size: 21px; cursor: pointer; line-height: 1; }
 
 .dt-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 16px; }
@@ -660,24 +754,37 @@ onMounted(load)
   letter-spacing: .4px; margin-bottom: 9px;
 }
 
-.dt-items { border: 1px solid #EDF1F6; border-radius: 9px; overflow: hidden; }
-.dt-item { display: flex; align-items: center; gap: 12px; padding: 15px 14px; border-bottom: 1px solid #F7F9FC; }
-.dt-item:last-of-type { border-bottom: none; }
-.dt-ico {
-  width: 32px; height: 32px; border-radius: 8px; flex: 0 0 auto;
-  background: #EEF2F7; color: #475569; font-size: 13px; font-weight: 800;
+/* ===== 每笔费用一张卡（信息 + 自己的凭证，绑在一起） ===== */
+.dt-cards { display: flex; flex-direction: column; gap: 10px; }
+.fc {
+  border: 1px solid #E9EEF5; border-radius: 11px;
+  background: #fff; overflow: hidden;
+}
+.fc-hd { display: flex; align-items: flex-start; gap: 11px; padding: 13px 13px 12px; }
+.fc-ico {
+  width: 30px; height: 30px; border-radius: 8px; flex: 0 0 auto;
+  background: #EEF2F7; color: #475569; font-size: 12.5px; font-weight: 800;
   display: flex; align-items: center; justify-content: center;
 }
-.dt-name { flex: 1; min-width: 0; }
-.dt-name b { display: block; font-size: 15.5px; color: #0F172A; font-weight: 700; }
-.dt-name span { display: block; font-size: 13px; color: #94A3B8; margin-top: 4px; }
-.dt-amt { font-size: 18px; font-weight: 800; color: #0F172A; letter-spacing: -.3px; }
+.fc-tt { flex: 1; min-width: 0; }
+.fc-t { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fc-t b { font-size: 14.5px; color: #0F172A; font-weight: 700; }
+.fc-st { font-size: 11.5px; }
+.fc-d { font-size: 12px; color: #94A3B8; margin-top: 4px; line-height: 1.5; }
+.fc-amt { font-size: 16.5px; font-weight: 800; color: #0F172A; letter-spacing: -.3px; white-space: nowrap; }
+
+.fc-vch { border-top: 1px dashed #E9EEF5; background: #FAFBFD; padding: 11px 13px 13px; }
+.fc-vch-hd { font-size: 11.5px; font-weight: 700; color: #64748B; letter-spacing: .2px; margin-bottom: 9px; }
+.fc-novch { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94A3B8; }
+.fc-novch i { width: 5px; height: 5px; border-radius: 50%; background: #CBD5E1; }
+
 .dt-sum {
-  display: flex; justify-content: flex-end; align-items: baseline; gap: 9px;
-  padding: 14px; background: #FAFBFD; border-top: 1px solid #EDF1F6;
-  font-size: 13.5px; color: #64748B;
+  display: flex; justify-content: flex-end; align-items: baseline; gap: 8px;
+  margin-top: 12px; padding: 12px 14px; border-radius: 11px;
+  background: #F7F9FC; border: 1px solid #EDF1F6;
+  font-size: 12.5px; color: #64748B;
 }
-.dt-sum b { font-size: 23px; color: #C8102E; letter-spacing: -.4px; }
+.dt-sum b { font-size: 20px; color: var(--brand-primary); letter-spacing: -.4px; }
 
 .dt-flow { padding-left: 2px; }
 .dt-step { display: flex; gap: 8px; padding: 5px 0; }
@@ -695,12 +802,6 @@ onMounted(load)
 
 .dt-kv { display: flex; justify-content: space-between; padding: 5px 0; font-size: 11.5px; color: #64748B; }
 .dt-kv b { color: #0F172A; font-weight: 700; }
-
-.dt-noimg {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 13.5px; color: #94A3B8; padding: 4px 0;
-}
-.dt-noimg-dot { width: 5px; height: 5px; border-radius: 50%; background: #CBD5E1; }
 
 /* 底部操作栏 */
 .dt-foot {
@@ -720,12 +821,32 @@ onMounted(load)
 .dt-warn:hover { background: #B45309; border-color: #B45309; }
 .dt-main { background: #0F172A; border-color: #0F172A; color: #fff; font-weight: 700; }
 
-.dt-imgs { display: flex; gap: 10px; flex-wrap: wrap; }
+.dt-imgs { display: flex; gap: 9px; flex-wrap: wrap; }
 .dt-img-err {
   width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
   font-size: 11px; color: #B4BECB; background: #F7F9FC;
 }
-.dt-img { width: 76px; height: 76px; border-radius: 9px; border: 1px solid #E9EEF5; }
+.dt-img { width: 76px; height: 76px; border-radius: 9px; border: 1px solid #E9EEF5; background: #fff; cursor: zoom-in; }
+/* 链接没签下来 / 签名失败的占位：灰块 + 文字，别留空白 */
+.dt-img-ph {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: #B4BECB; background: #F7F9FC; cursor: default;
+}
+/* 非图片凭证（pdf / 表格等）：可点的文件块 */
+.dt-file {
+  display: inline-flex; align-items: center; gap: 7px; height: 76px;
+  max-width: 100%; padding: 0 12px; border-radius: 9px;
+  border: 1px solid #E9EEF5; background: #fff; text-decoration: none;
+}
+.dt-file-ic {
+  width: 24px; height: 24px; border-radius: 6px; flex: 0 0 auto;
+  background: #E2E8F0; color: #475569; font-size: 10.5px;
+  display: flex; align-items: center; justify-content: center;
+}
+.dt-file-n {
+  font-size: 12px; color: #334155; max-width: 190px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 </style>
 
 <style>

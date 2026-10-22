@@ -662,15 +662,15 @@ const goLogin = () => {
 }
 
 .todo-bell:hover {
-  border-color: #c8102e;
-  color: #c8102e;
-  background: #FEF2F2;
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  background: var(--brand-primary-light);
 }
 
 .todo-bell.on {
-  color: #c8102e;
+  color: var(--brand-primary);
   border-color: #FBD5DB;
-  background: #FEF2F2;
+  background: var(--brand-primary-light);
 }
 
 .todo-dot {
@@ -681,13 +681,13 @@ const goLogin = () => {
   height: 16px;
   padding: 0 4px;
   border-radius: 8px;
-  background: #c8102e;
+  background: var(--brand-primary);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
   line-height: 16px;
   text-align: center;
-  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.35);
+  box-shadow: 0 2px 6px rgba(var(--brand-rgb), 0.35);
 }
 
 .todo-mask {
@@ -728,7 +728,7 @@ const goLogin = () => {
   cursor: pointer;
 }
 
-.tp-refresh:hover { color: #c8102e; }
+.tp-refresh:hover { color: var(--brand-primary); }
 
 .tp-row {
   display: flex;
@@ -754,7 +754,7 @@ const goLogin = () => {
   flex: 0 0 auto;
 }
 
-.tp-ic.wait { background: #FEF2F2; color: #c8102e; }
+.tp-ic.wait { background: var(--brand-primary-light); color: var(--brand-primary); }
 .tp-ic.pay { background: #FFFBEB; color: #B45309; }
 
 .tp-m {
@@ -779,7 +779,7 @@ const goLogin = () => {
 .tp-n {
   font-size: 14px;
   font-weight: 700;
-  color: #c8102e;
+  color: var(--brand-primary);
   font-family: var(--num-font, monospace);
 }
 
@@ -812,9 +812,9 @@ const goLogin = () => {
 }
 
 .settings-btn:hover {
-  border-color: #D32F2F;
-  color: #D32F2F;
-  background: #FEF2F2;
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  background: var(--brand-primary-light);
 }
 
 .back-btn {
@@ -824,9 +824,9 @@ const goLogin = () => {
 }
 
 .back-btn:hover {
-  border-color: #D32F2F !important;
-  color: #D32F2F !important;
-  background: #FEF2F2 !important;
+  border-color: var(--brand-primary) !important;
+  color: var(--brand-primary) !important;
+  background: var(--brand-primary-light) !important;
   transform: translateY(-1px) !important;
   box-shadow: 0 4px 12px rgba(211, 47, 47, 0.12) !important;
 }
@@ -836,9 +836,9 @@ const goLogin = () => {
 }
 
 .logout-btn {
-  background-color: #D32F2F;
+  background-color: var(--brand-primary);
   color: #FFFFFF;
-  border-color: #D32F2F;
+  border-color: var(--brand-primary);
 }
 
 .logout-btn:hover {
@@ -899,8 +899,8 @@ const goLogin = () => {
 }
 
 .tab-item.el-tag--danger {
-  background: #FEF2F2;
-  color: #D32F2F;
+  background: var(--brand-primary-light);
+  color: var(--brand-primary);
   border: 1px solid #FECACA;
   font-weight: 600;
 }
@@ -927,7 +927,7 @@ const goLogin = () => {
 }
 
 .tab-item.el-tag--danger .el-tag__close {
-  color: #D32F2F;
+  color: var(--brand-primary);
 }
 
 .tab-item .el-tag__close:hover {
@@ -1075,7 +1075,7 @@ h2 {
 .no-permission-icon {
   font-size: 64px;
   line-height: 1;
-  filter: drop-shadow(0 6px 16px rgba(200, 16, 46, 0.25));
+  filter: drop-shadow(0 6px 16px rgba(var(--brand-rgb), 0.25));
   animation: noPermFloat 3s ease-in-out infinite;
 }
 
@@ -1110,18 +1110,18 @@ h2 {
   font-weight: 700;
   letter-spacing: 1px;
   color: #FFFFFF;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  box-shadow: 0 6px 20px rgba(200, 16, 46, 0.3);
+  box-shadow: 0 6px 20px rgba(var(--brand-rgb), 0.3);
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-family: inherit;
 }
 
 .back-btn-home:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(200, 16, 46, 0.45);
+  box-shadow: 0 12px 28px rgba(var(--brand-rgb), 0.45);
 }
 
 /* 退出登录动画 */
@@ -1264,7 +1264,7 @@ h2 {
 }
 
 .settings-option {
-  color: #D32F2F !important;
+  color: var(--brand-primary) !important;
   font-weight: 500;
   padding: 4px 0;
 }
@@ -1311,8 +1311,8 @@ h2 {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #c8102e;
-  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.15);
+  background: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.15);
 }
 
 .panel-title .count {

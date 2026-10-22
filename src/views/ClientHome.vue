@@ -277,7 +277,7 @@ onMounted(loadData)
   align-items: center;
   gap: 18px;
   padding: 22px 26px;
-  background: linear-gradient(120deg, #FFFFFF 0%, #FEF2F2 60%, #FFFFFF 100%);
+  background: linear-gradient(120deg, #FFFFFF 0%, var(--brand-primary-light) 60%, #FFFFFF 100%);
   border: 1px solid #E2E8F0;
   border-radius: 12px;
   overflow: hidden;
@@ -292,7 +292,7 @@ onMounted(loadData)
   position: absolute;
   top: 0; left: -60%;
   width: 50%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(200, 16, 46, 0.06), transparent);
+  background: linear-gradient(90deg, transparent, rgba(var(--brand-rgb), 0.06), transparent);
   animation: shine 5s ease-in-out infinite;
 }
 @keyframes shine {
@@ -303,11 +303,11 @@ onMounted(loadData)
 .welcome-avatar {
   width: 52px; height: 52px;
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   color: #FFFFFF;
   border-radius: 12px;
   font-size: 26px;
-  box-shadow: 0 8px 20px rgba(200, 16, 46, 0.25);
+  box-shadow: 0 8px 20px rgba(var(--brand-rgb), 0.25);
   flex-shrink: 0;
 }
 .welcome-text { flex: 1; min-width: 0; }
@@ -333,11 +333,11 @@ onMounted(loadData)
   font-weight: 700;
   letter-spacing: 1px;
   color: #FFFFFF;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  box-shadow: 0 6px 20px rgba(200, 16, 46, 0.3);
+  box-shadow: 0 6px 20px rgba(var(--brand-rgb), 0.3);
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-family: inherit;
   position: relative;
@@ -353,7 +353,7 @@ onMounted(loadData)
 }
 .enter-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(200, 16, 46, 0.45);
+  box-shadow: 0 12px 28px rgba(var(--brand-rgb), 0.45);
 }
 .enter-btn:hover::before { left: 130%; }
 .enter-btn :deep(.el-icon) { transition: transform 0.3s; }
@@ -398,7 +398,7 @@ onMounted(loadData)
   background: currentColor;
   border-radius: 12px 0 0 12px;
 }
-.stat-card.tone-red    { color: #c8102e; }
+.stat-card.tone-red    { color: var(--brand-primary); }
 .stat-card.tone-green  { color: #059669; }
 .stat-card.tone-slate  { color: #475569; }
 .stat-card.tone-orange { color: #EA580C; }
@@ -427,7 +427,7 @@ onMounted(loadData)
   flex-shrink: 0;
   transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.stat-card.tone-red    .stat-icon { background: linear-gradient(135deg, #c8102e, #a00d24); box-shadow: 0 8px 20px rgba(200, 16, 46, 0.22); }
+.stat-card.tone-red    .stat-icon { background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark)); box-shadow: 0 8px 20px rgba(var(--brand-rgb), 0.22); }
 .stat-card.tone-green  .stat-icon { background: linear-gradient(135deg, #10B981, #059669); box-shadow: 0 8px 20px rgba(16, 185, 129, 0.22); }
 .stat-card.tone-slate  .stat-icon { background: linear-gradient(135deg, #64748B, #334155); box-shadow: 0 8px 20px rgba(71, 85, 105, 0.22); }
 .stat-card.tone-orange .stat-icon { background: linear-gradient(135deg, #F97316, #EA580C); box-shadow: 0 8px 20px rgba(249, 115, 22, 0.22); }
@@ -517,12 +517,12 @@ onMounted(loadData)
   align-items: center;
   justify-content: flex-end;
   padding-right: 12px;
-  background: linear-gradient(90deg, #FCA5A5, #c8102e);
+  background: linear-gradient(90deg, var(--brand-primary-light), var(--brand-primary));
   border-radius: 8px;
   min-width: 42px;
   animation: barGrow 1s cubic-bezier(0.4, 0, 0.2, 1) both;
   animation-delay: calc(var(--i) * 0.08s + 0.3s);
-  box-shadow: 0 2px 8px rgba(200, 16, 46, 0.25);
+  box-shadow: 0 2px 8px rgba(var(--brand-rgb), 0.25);
 }
 .bar-fill::after {
   content: '';
@@ -575,9 +575,9 @@ onMounted(loadData)
 }
 .recent-item:hover {
   background: #FFFFFF;
-  border-color: rgba(200, 16, 46, 0.35);
+  border-color: rgba(var(--brand-rgb), 0.35);
   transform: translateX(4px);
-  box-shadow: 0 4px 16px rgba(200, 16, 46, 0.1);
+  box-shadow: 0 4px 16px rgba(var(--brand-rgb), 0.1);
 }
 .recent-head {
   display: flex;

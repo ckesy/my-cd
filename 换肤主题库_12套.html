@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>换肤主题库 · 12 套</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#F1F4F8;color:#0F172A;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1200px;margin:0 auto;padding:30px 24px 70px}
+  h1{margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-.4px}
+  .sub{font-size:12.5px;color:#64748B;line-height:1.85}
+  .sub b{color:#0F172A}
+
+  .grp{margin-top:26px}
+  .g-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:13px}
+  .g-t{font-size:15px;font-weight:800}
+  .g-s{font-size:11.5px;color:#94A3B8}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .card{background:#fff;border:1px solid #E6ECF3;border-radius:13px;overflow:hidden}
+  .head{height:52px;position:relative;display:flex;align-items:flex-end;padding:0 14px 9px}
+  .hname{font-size:13px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.15)}
+  .hname.dark{color:#0F172A;text-shadow:none}
+  .hhex{margin-left:auto;font-size:10px;font-weight:600;color:rgba(255,255,255,.8);
+    font-family:ui-monospace,Menlo,monospace}
+  .hhex.dark{color:#64748B}
+
+  .body{padding:11px 14px 13px}
+  .ramp{display:flex;gap:4px;margin-bottom:10px}
+  .ramp i{flex:1;height:16px;border-radius:3px;display:block}
+  .codes{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;margin-bottom:10px}
+  .cd{font-size:9px;color:#94A3B8;font-family:ui-monospace,Menlo,monospace;display:flex;justify-content:space-between}
+  .cd b{color:#475569;font-weight:600}
+
+  .demo{display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:7px;background:#FAFBFD}
+  .d-btn{padding:3px 9px;border-radius:5px;font-size:10px;font-weight:700;color:#fff}
+  .d-btn.dark{color:#0F172A}
+  .d-chip{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:4px}
+  .d-num{font-size:10.5px;font-weight:800;margin-left:auto}
+  .dsc{font-size:10.5px;color:#64748B;line-height:1.6;margin-top:9px}
+
+  .note{margin-top:24px;padding:18px 20px;background:#fff;border:1px solid #E6ECF3;border-radius:14px;
+    font-size:12.5px;color:#475569;line-height:1.95}
+  .note h2{margin:0 0 10px;font-size:15px;font-weight:800;color:#0F172A}
+  .note b{color:#0F172A}
+  .note p{margin:7px 0 0}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>换肤主题库 · 12 套</h1>
+  <p class="sub">
+    每套给四档色值：<b>主色 / 悬浮 / 浅底 / 深色（用于文字和渐变终点）</b>。
+    对着填 CSS 变量就能用，不用再算。<br>
+    分两组：<b>沉稳组</b>（视觉重量低，长时间看）和<b>明快组</b>（饱和度中等，有活力）。
+  </p>
+
+  <!-- ============ 沉稳组 ============ -->
+  <div class="grp">
+    <div class="g-hd">
+      <span class="g-t">沉稳组</span>
+      <span class="g-s">低饱和 · 大面积铺开不刺眼 · 适合日常长时间使用</span>
+    </div>
+
+    <div class="grid">
+
+      <div class="card">
+        <div class="head" style="background:linear-gradient(135deg,#374151,#1F2937)">
+          <span class="hname">石墨</span><span class="hhex">#1F2937</span>
+        </div>
+        <div class="body">
+          <div class="ramp">
+            <i style="background:#F1F5F9"></i><i style="background:#CBD5E1"></i>
+            <i style="background:#374151"></i><i style="background:#0F172A"></i>
+          </div>
+          <div class="codes">
+            <span class="cd"><span>main</span><b>#1F2937</b></span>
+            <span class="cd"><span>hover</span><b>#374151</b></span>
+            <span class="cd"><span>light</span><b>#F1F5F9</b></span>
+            <span class="cd"><span>dark</span><b>#0F172A</b></span>
+          </div>
+          <div class="demo">
+            <span class="d-btn" style="background:#1F2937">按钮</span>
+            <span class="d-chip" style="background:#F1F5F9;color:#334155">标签</span>
+            <span class="d-num" style="color:#1F2937">¥74.7万</span>
+          </div>
+          <p class="dsc">零色彩倾向，最耐看。界面会变成黑白灰，靠状态色提亮。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head" style="background:linear-gradient(135deg,#2B4BA8,#152C6B)">
+          <span class="hname">藏青</span><span class="hhex">#1E3A8A</span>
+        </div>
+        <div class="body">
+          <div class="ramp">
+            <i style="background:#EFF6FF"></i><i style="background:#BFDBFE"></i>
+            <i style="background:#2B4BA8"></i><i style="background:#152C6B"></i>
+          </div>
+          <div class="codes">
+            <span class="cd"><span>main</span><b>#1E3A8A</b></span>
+            <span class="cd"><span>hover</span><b>#2B4BA8</b></span>
+            <span class="cd"><span>light</span><b>#EFF6FF</b></span>
+            <span class="cd"><span>dark</span><b>#152C6B</b></span>
+          </div>
+          <div class="demo">
+            <span class="d-btn" style="background:#1E3A8A">按钮</span>
+            <span class="d-chip" style="background:#EFF6FF;color:#1E3A8A">标签</span>
+            <span class="d-num" style="color:#1E3A8A">¥74.7万</span>
+          </div>
+          <p class="dsc">最正统的商务蓝。对外演示、给客户看都不出错。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head" style="background:linear-gradient(135deg,#1B6B3A,#0B3A1E)">
+          <span class="hname">墨绿</span><span class="hhex">#14532D</span>
+        </div>
+        <div class="body">
+          <div class="ramp">
+            <i style="background:#F0FDF4"></i><i style="background:#86EFAC"></i>
+            <i style="background:#1B6B3A"></i><i style="background:#0B3A1E"></i>
+          </div>
+          <div class="codes">
+            <span class="cd"><span>main</span><b>#14532D</b></span>
+            <span class="cd"><span>hover</span><b>#1B6B3A</b></span>
+            <span class="cd"><span>light</span><b>#F0FDF4</b></span>
+            <span class="cd"><span>dark</span><b>#0B3A1E</b></span>
+          </div>
+          <div class="demo">
+            <span class="d-btn" style="background:#14532D">按钮</span>
+            <span class="d-chip" style="background:#F0FDF4;color:#14532D">标签</span>
+            <span class="d-num" style="color:#14532D">¥74.7万</span>
+          </div>
+          <p class="dsc">物流运输业常见。沉稳、有生命力，比蓝色有记忆点。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head" style="background:linear-gradient(135deg,#5449D8,#332BA0)">
+          <span class="hname">靛紫</span><span class="hhex">#4338CA</span>
+        </div>
+        <div class="body">
+          <div class="ramp">
+            <i style="background:#EEF2FF"></i><i style="background:#C7D2FE"></i>
+            <i style="background:#5449D8"></i><i style="background:#332BA0"></i>
+          </div>
+          <div class="codes">
+            <span class="cd"><span>main</span><b>#4338CA</b></span>
+            <span class="cd"><span>hover</span><b>#5449D8</b></span>
+            <span class="cd"><span>light</span><b>#EEF2FF</b></span>
+            <span class="cd"><span>dark</span><b>#332BA0</b></span>
+          </div>
+          <div class="demo">
+            <span class="d-btn" style="background:#4338CA">按钮</span>
+            <span class="d-chip" style="background:#EEF2FF;color:#4338CA">标签</span>
+            <span class="d-num" style="color:#4338CA">¥74.7万</span>
+          </div>
+          <p class="dsc">偏蓝的紫，科技感强。比蓝有个性，长时间盯略闷。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head" style="background:linear-gradient(135deg,#0F766E,#134E4A)">
+          <span class="hname">深青</span><span class="hhex">#0F766E</span>
+        </div>
+        <div class="body">
+          <div class="ramp">
+            <i style="background:#F0FDFA"></i><i style="background:#99F6E4"></i>
+            <i style="background:#0F766E"></i><i style="background:#134E4A"></i>
+          </div>
+          <div class="codes">
+            <span class="cd"><span>main</span><b>#0F766E</b></span>
+            <span class="cd"><span>hover</span><b>#0D9488</b></span>
+            <span class="cd"><span>light</span><b>#F0FDFA</b></span>
+            <span class="cd"><span>dark</span><b>#134E4A</b></span>
+          </div>
+          <div class="demo">
+            <span class="d-btn" style="background:#0F766E">按钮</span>
+            <span class="d-chip" style="background:#F0FDFA;color:#0F766E">标签</span>
+            <span class="d-num" style="color:#0F766E">¥74.7万</span>
+          </div>
+          <p class="dsc">蓝绿之间，清爽不轻浮。从红色换过来最"解腻"。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head" style="background:linear-gradient(135deg,#292524,#1C1917)">
+          <span class="hname">炭黑</span><span class="hhex">#1C1917</span>
+        </div>
+        <div class="body">
+          <div class="ramp">
+            <i style="background:#F5F5F4"></i><i style="background:#D6D3D1"></i>
+            <i style="background:#292524"></i><i style="background:#0C0A09"></i>
+          </div>
+          <div class="codes">
+            <span class="cd"><span>main</span><b>#1C1917</b></span>
+            <span class="cd"><span>hover</span><b>#292524</b></span>
+            <span class="cd"><span>light</span><b>#F5F5F4</b></span>
+            <span class="cd"><span>dark</span><b>#0C0A09</b></span>
+          </div>
+          <div class="demo">
+            <span class="d-btn" style="background:#1C1917">按钮</span>
+            <span class="d-chip" style="background:#F5F5F4;color:#44403C">标签</span>
+            <span class="d-num" style="color:#1C1917">¥74.7万</span>
+          </div>
+          <p class="dsc">带暖调的近黑，配琥珀色点缀有高级感。</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ 明快组 ============ -->
+  <div class="grp">
+    <div class="g-hd">
+      <span class="g-t">明快组</span>
+      <span class="g-s">中饱和 · 有色彩但不荧光 · 白字仍然清楚</span>
+    </div>
+
+    <div class="grid">
+
+      <div class="card">
+        <div class="head" style="background:linear-gradient(135deg,#38BDF8,#0284C7)">
+          <span class="hname">天蓝</span><span class="hhex">#0284C7</span>
+        </div>
+        <div class="body">
+          <div class="ramp">
+            <i style="background:#F0F9FF"></i><i style="background:#BAE6FD"></i>
+            <i style="background:#38BDF8"></i><i style="background:#075985"></i>
+          </div>
+          <div class="codes">
+            <span class="cd"><span>main</span><b>#0284C7</b></span>
+            <span class="cd"><span>hover</span><b>#0EA5E9</b></span>
+            <span class="cd"><span>light</span><b>#F0F9FF</b></span>
+            <span class="cd"><span>dark</span><b>#075985</b></span>
+          </div>
+          <div class="demo">
+            <span class="d-btn" style="background:#0284C7">按钮</span>
+            <span class="d-chip" style="background:#F0F9FF;color:#0284C7">标签</span>
+            <span class="d-num" style="color:#0284C7">¥74.7万</span>
+          </div>
+          <p class="dsc">明亮的天空蓝。清新、不压抑，比藏青轻松。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head" style="background:linear-gradient(135deg,#22D3EE,#0E7490)">
+          <span class="hname">湖蓝</span><span class="hhex">#0891B2</span>
+        </div>
+        <div class="body">
+          <div class="ramp">
+            <i style="background:#ECFEFF"></i><i style="background:#A5F3FC"></i>
+            <i style="background:#22D3EE"></i><i style="background:#155E75"></i>
+          </div>
+          <div class="codes">
+            <span class="cd"><span>main</span><b>#0891B2</b></span>
+            <span class="cd"><span>hover</span><b>#06B6D4</b></span>
+            <span class="cd"><span>light</span><b>#ECFEFF</b></span>
+            <span class="cd"><span>dark</span><b>#155E75</b></span>
+          </div>
+          <div class="demo">
+            <span class="d-btn" style="background:#0891B2">按钮</span>
+            <span class="d-chip" style="background:#ECFEFF;color:#0891B2">标签</span>
+            <span class="d-num" style="color:#0891B2">¥74.7万</span>
+          </div>
+          <p class="dsc">青蓝调，干净通透。适合数据看板，图表配色也好搭。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head" style="background:linear-gradient(135deg,#2DD4BF,#0D9488)">
+          <span class="hname">青绿</span><span class="hhex">#0D9488</span>
+        </div>
+        <div class="body">
+          <div class="ramp">
+            <i style="background:#F0FDFA"></i><i style="background:#99F6E4"></i>
+            <i style="background:#2DD4BF"></i><i style="background:#115E59"></i>
+          </div>
+          <div class="codes">
+            <span class="cd"><span>main</span><b>#0D9488</b></span>
+            <span class="cd"><span>hover</span><b>#14B8A6</b></span>
+            <span class="cd"><span>light</span><b>#F0FDFA</b></span>
+            <span class="cd"><span>dark</span><b>#115E59</b></span>
+          </div>
+          <div class="demo">
+            <span class="d-btn" style="background:#0D9488">按钮</span>
+            <span class="d-chip" style="background:#F0FDFA;color:#0D9488">标签</span>
+            <span class="d-num" style="color:#0D9488">¥74.7万</span>
+          </div>
+          <p class="dsc">薄荷青，清爽有活力。年轻人接受度高。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head" style="background:linear-gradient(135deg,#34D399,#059669)">
+          <span class="hname">薄荷绿</span><span class="hhex">#059669</span>
+        </div>
+        <div class="body">
+          <div class="ramp">
+            <i style="background:#ECFDF5"></i><i style="background:#A7F3D0"></i>
+            <i style="background:#34D399"></i><i style="background:#065F46"></i>
+          </div>
+          <div class="codes">
+            <span class="cd"><span>main</span><b>#059669</b></span>
+            <span class="cd"><span>hover</span><b>#10B981</b></span>
+            <span class="cd"><span>light</span><b>#ECFDF5</b></span>
+            <span class="cd"><span>dark</span><b>#065F46</b></span>
+          </div>
+          <div class="demo">
+            <span class="d-btn" style="background:#059669">按钮</span>
+            <span class="d-chip" style="background:#ECFDF5;color:#059669">标签</span>
+            <span class="d-num" style="color:#059669">¥74.7万</span>
+          </div>
+          <p class="dsc">比墨绿明亮一档。积极、健康，适合"效率"类产品。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head" style="background:linear-gradient(135deg,#FB7185,#BE123C)">
+          <span class="hname">珊瑚红</span><span class="hhex">#E11D48</span>
+        </div>
+        <div class="body">
+          <div class="ramp">
+            <i style="background:#FFF1F2"></i><i style="background:#FECDD3"></i>
+            <i style="background:#FB7185"></i><i style="background:#9F1239"></i>
+          </div>
+          <div class="codes">
+            <span class="cd"><span>main</span><b>#E11D48</b></span>
+            <span class="cd"><span>hover</span><b>#F43F5E</b></span>
+            <span class="cd"><span>light</span><b>#FFF1F2</b></span>
+            <span class="cd"><span>dark</span><b>#9F1239</b></span>
+          </div>
+          <div class="demo">
+            <span class="d-btn" style="background:#E11D48">按钮</span>
+            <span class="d-chip" style="background:#FFF1F2;color:#E11D48">标签</span>
+            <span class="d-num" style="color:#E11D48">¥74.7万</span>
+          </div>
+          <p class="dsc">玫瑰红，比现在的主色柔和。想保留红色气质的话选这个。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head" style="background:linear-gradient(135deg,#C4B5FD,#6D28D9)">
+          <span class="hname">紫罗兰</span><span class="hhex">#7C3AED</span>
+        </div>
+        <div class="body">
+          <div class="ramp">
+            <i style="background:#F5F3FF"></i><i style="background:#DDD6FE"></i>
+            <i style="background:#C4B5FD"></i><i style="background:#5B21B6"></i>
+          </div>
+          <div class="codes">
+            <span class="cd"><span>main</span><b>#7C3AED</b></span>
+            <span class="cd"><span>hover</span><b>#8B5CF6</b></span>
+            <span class="cd"><span>light</span><b>#F5F3FF</b></span>
+            <span class="cd"><span>dark</span><b>#5B21B6</b></span>
+          </div>
+          <div class="demo">
+            <span class="d-btn" style="background:#7C3AED">按钮</span>
+            <span class="d-chip" style="background:#F5F3FF;color:#7C3AED">标签</span>
+            <span class="d-num" style="color:#7C3AED">¥74.7万</span>
+          </div>
+          <p class="dsc">明亮紫，年轻活泼。配浅灰底很好看。</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="note">
+    <h2>用的时候注意两点</h2>
+    <p>
+      <b>① 浅色系（明快组）的白字要有底线。</b>
+      主色亮度太高时白字会看不清 —— 上表的主色我都压在 500~600 级（比如天蓝用 <code>#0284C7</code> 而不是 <code>#38BDF8</code>），
+      浅的那档只在渐变的起点用。如果你自己调色调得更浅，按钮文字记得换成深色。
+    </p>
+    <p>
+      <b>② 别选超过 4 套。</b>
+      主题一多，每加一个新组件就要在 12 套下面都确认一遍，维护成本翻倍。
+      建议：<b>默认 1 套 + 用户可选 3 套</b>，其他先不做。
+    </p>
+    <p style="margin-top:14px;padding-top:12px;border-top:1px solid #F1F5F9">
+      <b>如果让我挑 4 套做成可选：</b><br>
+      默认 <b>深青</b>（清爽、从红换过来最舒服）·
+      可选 <b>藏青</b>（商务稳）·
+      可选 <b>石墨</b>（极简不累）·
+      可选 <b>天蓝</b>（明快组代表）
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

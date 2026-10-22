@@ -3,6 +3,11 @@ import { ref, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { supabase, ensureAnonymousLogin } from '@/utils/supabase'
+import {
+  ensureModuleFlags,
+  ensureApprovalMode,
+  resetApprovalMode,
+} from '@/utils/modules'
 
 const router = useRouter()
 
@@ -157,7 +162,7 @@ const handleLogin = async () => {
         try {
           const { data } = await supabase
             .from('roles')
-            .select('code, name, permissions, status')
+            .select('code, name, role_type, permissions, status')
             .eq('id', roleId)
             .maybeSingle()
           roleData = data || null
@@ -187,7 +192,7 @@ const handleLogin = async () => {
         try {
           const { data } = await supabase
             .from('roles')
-            .select('code, name, permissions, status')
+            .select('code, name, role_type, permissions, status')
             .eq('id', roleId)
             .maybeSingle()
           roleData = data || null
@@ -237,7 +242,6 @@ const handleLogin = async () => {
         const ownerAcc = String(userData.owner_account || '').trim()
         if (!hasRole && ownerAcc) {
           ElMessage.error('司机账号请使用小程序端登录')
-          loading.value = false
           return
         }
         try {
@@ -367,6 +371,38 @@ const handleLogin = async () => {
         }
       } catch (e) {
         console.warn('[登录] 查询主账号 customers 失败:', e)
+      }
+    }
+
+    // ============================================================
+    // ⭐ 财务账号闸门（2026-10-22）
+    //    财务角色（子账号 / 员工，不含管理员和客户主账号）：
+    //    「费用审批」和「付款记录」都没开通时，Web 端他也没有任何能用的功能，
+    //    直接不给登录，提示权限未开通。
+    //    ⚠️ 与小程序 login-by-account 同口径：那边是云函数直接拒绝登录。
+    // ============================================================
+    const isFinanceRole =
+      !isAdmin &&
+      (roleData?.role_type === 'finance' || String(roleData?.name || '').includes('财务'))
+    /* 客户主账号自带财务角色时不拦：他还要进来把开关打开 */
+    const isTenantOwner = !isAdmin && !isSubAccount
+
+    if (isFinanceRole && !isTenantOwner) {
+      try {
+        /* force：同一浏览器里换账号登录时，别用上一个人的模块缓存 */
+        const mods = await ensureModuleFlags(account, { force: true })
+        resetApprovalMode()
+        const appr = await ensureApprovalMode(account)
+        const auditOn = appr.mode !== 'off'
+        const payoutOn = mods.payout === true
+        console.log('[登录] 财务账号校验 → 费用审批:', auditOn, '| 付款记录:', payoutOn)
+        if (!auditOn && !payoutOn) {
+          ElMessage.error('该账号未开通费用审批与付款记录权限，请联系管理员')
+          return
+        }
+      } catch (err) {
+        /* 读不到开关时放行，别把「网络抖一下」当成没权限 */
+        console.warn('[登录] 财务权限校验失败（放行）:', err)
       }
     }
 
@@ -1073,7 +1109,7 @@ const playWelcome = (target = '/dashboard') => {
   position: absolute;
   border-radius: 50%;
   background: rgba(255, 214, 221, 0.95);
-  box-shadow: 0 0 10px rgba(200, 16, 46, 0.9), 0 0 22px rgba(200, 16, 46, 0.45);
+  box-shadow: 0 0 10px rgba(var(--brand-rgb), 0.9), 0 0 22px rgba(var(--brand-rgb), 0.45);
   opacity: 0;
   animation-name: particleRise;
   animation-timing-function: linear;
@@ -1114,8 +1150,8 @@ const playWelcome = (target = '/dashboard') => {
   height: 200px;
   margin: -100px 0 0 -100px;
   border-radius: 50%;
-  border: 2px solid rgba(200, 16, 46, 0.55);
-  box-shadow: 0 0 30px rgba(200, 16, 46, 0.35), inset 0 0 30px rgba(200, 16, 46, 0.2);
+  border: 2px solid rgba(var(--brand-rgb), 0.55);
+  box-shadow: 0 0 30px rgba(var(--brand-rgb), 0.35), inset 0 0 30px rgba(var(--brand-rgb), 0.2);
   animation: ringExpand 2.8s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
 }
 
@@ -1157,7 +1193,7 @@ const playWelcome = (target = '/dashboard') => {
   border-radius: 50%;
   background: conic-gradient(from 0deg,
       transparent 0deg,
-      rgba(200, 16, 46, 0.35) 55deg,
+      rgba(var(--brand-rgb), 0.35) 55deg,
       transparent 130deg,
       transparent 360deg);
   filter: blur(38px);
@@ -1206,7 +1242,7 @@ const playWelcome = (target = '/dashboard') => {
   height: 250px;
   width: auto;
   display: block;
-  filter: drop-shadow(0 10px 32px rgba(200, 16, 46, 0.6)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 10px 32px rgba(var(--brand-rgb), 0.6)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
   animation: logoFloat 3s ease-in-out infinite;
 }
 
@@ -1230,10 +1266,10 @@ const playWelcome = (target = '/dashboard') => {
   line-height: 1.3;
   background: linear-gradient(100deg,
       #ffffff 0%,
-      #ffd6dd 22%,
-      #c8102e 46%,
+      var(--brand-primary-light) 22%,
+      var(--brand-primary) 46%,
       #ff8fa3 58%,
-      #ffd6dd 74%,
+      var(--brand-primary-light) 74%,
       #ffffff 100%);
   background-size: 220% 100%;
   -webkit-background-clip: text;
@@ -1241,7 +1277,7 @@ const playWelcome = (target = '/dashboard') => {
   color: transparent;
   -webkit-text-fill-color: transparent;
   animation: titleShine 2.2s linear infinite;
-  filter: drop-shadow(0 4px 18px rgba(200, 16, 46, 0.45));
+  filter: drop-shadow(0 4px 18px rgba(var(--brand-rgb), 0.45));
 }
 
 @keyframes titleShine {
@@ -1294,13 +1330,13 @@ const playWelcome = (target = '/dashboard') => {
   border-radius: 3px;
   background: linear-gradient(90deg,
       transparent 0%,
-      #c8102e 30%,
+      var(--brand-primary) 30%,
       #ff8fa3 50%,
-      #c8102e 70%,
+      var(--brand-primary) 70%,
       transparent 100%);
   background-size: 200% 100%;
   animation: loaderRun 0.9s linear infinite;
-  box-shadow: 0 0 12px rgba(200, 16, 46, 0.9);
+  box-shadow: 0 0 12px rgba(var(--brand-rgb), 0.9);
 }
 
 @keyframes loaderRun {

@@ -500,6 +500,12 @@ const offModules = computed(() => {
   const seen = new Set()
   const out = []
   allNodes.value.forEach((n) => {
+    /* ⭐ 费用审批是特例：没有 module，开关走 fee_approval_configs.mode。
+       之前这里只认 n.module，导致「审批关闭」时它既不画在图上、也不进未开通池 —— 直接消失。 */
+    if (n.special === 'audit') {
+      if (!n.enabled) out.push({ key: 'audit', name: n.name, configured: true })
+      return
+    }
     if (!n.module || n.enabled || seen.has(n.module)) return
     seen.add(n.module)
     out.push({ key: n.module, name: n.name, configured: isConfigured(n.module) })
@@ -846,7 +852,7 @@ onMounted(async () => {
   font-size: 11.5px; font-family: var(--num, monospace);
   font-variant-numeric: tabular-nums; color: #475569;
 }
-.z-val:hover { color: #C8102E; }
+.z-val:hover { color: var(--brand-primary); }
 .z-fit {
   border: none; border-left: 1px solid #EEF1F6; background: transparent;
   cursor: pointer; height: 26px; padding: 0 10px;
@@ -1010,7 +1016,7 @@ onMounted(async () => {
   height: 14px;
   margin-right: 5px;
   border-radius: 50%;
-  background: #C8102E;
+  background: var(--brand-primary);
   color: #fff;
   font-size: 10px;
   font-weight: 800;
@@ -1020,8 +1026,8 @@ onMounted(async () => {
   animation: warnPulse 2.4s ease-in-out infinite;
 }
 @keyframes warnPulse {
-  0%, 100% { box-shadow: 0 0 0 2.5px rgba(200, 16, 46, .16); }
-  50% { box-shadow: 0 0 0 5px rgba(200, 16, 46, .05); }
+  0%, 100% { box-shadow: 0 0 0 2.5px rgba(var(--brand-rgb), .16); }
+  50% { box-shadow: 0 0 0 5px rgba(var(--brand-rgb), .05); }
 }
 
 .fnode .fn-menu {
@@ -1120,7 +1126,7 @@ onMounted(async () => {
 .np-nav:hover { background: #F1F5F9; }
 .np-nav.on {
   background: #fff; color: #0F172A; font-weight: 700;
-  box-shadow: inset 2px 0 0 var(--pop-c, #C8102E);
+  box-shadow: inset 2px 0 0 var(--pop-c, var(--brand-primary));
 }
 .np-nav i {
   width: 4px; height: 4px; border-radius: 50%;
@@ -1182,9 +1188,9 @@ onMounted(async () => {
 /* 泳道色小圆点：代替浮层原来的左侧色条，更轻 */
 .np-dot {
   width: 8px; height: 8px; border-radius: 50%;
-  background: var(--pop-c, #C8102E);
+  background: var(--pop-c, var(--brand-primary));
   flex: 0 0 auto;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pop-c, #C8102E) 14%, #fff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pop-c, var(--brand-primary)) 14%, #fff);
 }
 .np-name { font-size: 15px; font-weight: 800; color: #0F172A; }
 .np-st { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 5px; }
@@ -1215,7 +1221,7 @@ onMounted(async () => {
   border-bottom: 1px solid #F6F8FB;
 }
 .np-item:last-child { border-bottom: none; }
-.np-item:hover .np-fname { color: #C8102E; }
+.np-item:hover .np-fname { color: var(--brand-primary); }
 .np-check {
   width: 15px; height: 15px; border-radius: 5px;
   border: 1.5px solid #D5DDE7; background: #fff;
@@ -1244,7 +1250,7 @@ onMounted(async () => {
 }
 .np-btn.danger { color: #fff; background: #0F172A; border: none; }
 .np-btn.danger:hover { background: #1E293B; }
-.np-btn.primary { color: #fff; background: #C8102E; border: none; }
+.np-btn.primary { color: #fff; background: var(--brand-primary); border: none; }
 .np-btn.primary:hover { background: #A00D24; }
 .np-btn.line { color: #64748B; background: #fff; border: 1px solid #E2E8F0; }
 .np-btn.line:hover { border-color: #CBD5E1; color: #0F172A; }
@@ -1277,7 +1283,7 @@ onMounted(async () => {
 }
 .db-label::before {
   content: ''; position: absolute; left: 0; top: 2px;
-  width: 3px; height: 10px; border-radius: 2px; background: #C8102E;
+  width: 3px; height: 10px; border-radius: 2px; background: var(--brand-primary);
 }
 .db-state {
   background: #F8FAFC; border: 1px solid #EDF1F6;

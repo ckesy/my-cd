@@ -5,6 +5,7 @@ import './style.css'                    // ← 保留你的全局样式
 import App from './App.vue'
 import router from './router'
 import { supabase, ensureAnonymousLogin } from './utils/supabase'
+import { applyTheme, readLocalTheme, DEFAULT_THEME, loadRemoteTheme } from './utils/theme'
 
 // 1. 导入中文语言包和 dayjs
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
@@ -16,6 +17,9 @@ dayjs.locale('zh-cn')
 
 // 3. 导入并注册所有图标
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+
+/* ⭐ 先套主题再挂载：读 localStorage 的缓存，避免刷新时闪一下默认色 */
+applyTheme(readLocalTheme() || DEFAULT_THEME)
 
 const app = createApp(App)
 
@@ -31,6 +35,18 @@ app.use(ElementPlus, {
 
 app.use(router)
 app.mount('#app')
+
+/* 登录态存在时，从账号同步主题（换设备打开也是同一套皮肤） */
+;(async () => {
+  try {
+    const u = JSON.parse(localStorage.getItem('currentUser') || 'null')
+    if (!u) return
+    const remote = await loadRemoteTheme(supabase, u)
+    if (remote) applyTheme(remote)
+  } catch (e) {
+    /* 拿不到就用本地缓存 */
+  }
+})()
 /* ============================================================
    ⭐ 启动即确保 CloudBase 匿名登录态
    ------------------------------------------------------------

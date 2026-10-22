@@ -212,7 +212,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 }
 
 .tt-total b {
-  color: #c8102e;
+  color: var(--brand-primary);
   font-size: 13.5px;
   font-weight: 700;
   margin: 0 1px;
@@ -243,18 +243,18 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 }
 
 .tt-icon-btn:hover {
-  border-color: #c8102e;
-  color: #c8102e;
-  background: #FEF2F2;
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  background: var(--brand-primary-light);
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(200, 16, 46, .15);
+  box-shadow: 0 3px 8px rgba(var(--brand-rgb), .15);
 }
 
 .tt-icon-btn.active {
-  border-color: #c8102e;
+  border-color: var(--brand-primary);
   color: #fff;
-  background: linear-gradient(135deg, #c8102e, #a00d24);
-  box-shadow: 0 3px 10px rgba(200, 16, 46, .35);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
+  box-shadow: 0 3px 10px rgba(var(--brand-rgb), .35);
 }
 
 .tt-icon-btn.spinning :deep(.el-icon) {
@@ -272,7 +272,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 <style>
 .tt-density-dropdown.el-dropdown__popper.el-popper {
   border: 2px solid #FFFFFF !important;
-  box-shadow: 0 10px 32px rgba(200, 16, 46, 0.18), 0 0 0 1px rgba(200, 16, 46, 0.15) !important;
+  box-shadow: 0 10px 32px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.15) !important;
   border-radius: 10px !important;
   overflow: hidden;
   background: #FFFFFF !important;
@@ -285,7 +285,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 
 .tt-density-dropdown .el-dropdown-menu__item {
   font-size: 13px !important;
-  color: #c8102e !important;
+  color: var(--brand-primary) !important;
   font-weight: 600 !important;
   border-radius: 6px !important;
   padding: 6px 16px !important;
@@ -294,7 +294,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 
 .tt-density-dropdown .el-dropdown-menu__item:hover {
   color: #ffffff !important;
-  background: linear-gradient(135deg, #c8102e, #a00d24) !important;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark)) !important;
   transform: translateX(2px);
 }
 
@@ -305,7 +305,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 }
 
 .tt-density-dropdown .tt-density-item.active {
-  color: #c8102e;
+  color: var(--brand-primary);
   font-weight: 700;
 }
 
@@ -316,7 +316,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 .tt-column-popper.el-popover.el-popper {
   padding: 0 !important;
   border-radius: 12px !important;
-  box-shadow: 0 12px 36px rgba(200, 16, 46, 0.18), 0 0 0 1px rgba(200, 16, 46, 0.12) !important;
+  box-shadow: 0 12px 36px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.12) !important;
   border: 2px solid #FFFFFF !important;
   overflow: hidden;
   background: #FFFFFF !important;
@@ -344,7 +344,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   gap: 5px;
   font-size: 13px;
   font-weight: 700;
-  color: #c8102e;
+  color: var(--brand-primary);
 }
 
 .tt-column-title .el-icon {
@@ -353,7 +353,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 
 .tt-column-reset {
   font-size: 12.5px;
-  color: #c8102e;
+  color: var(--brand-primary);
   cursor: pointer;
   font-weight: 700;
   padding: 2px 6px;
@@ -394,7 +394,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 }
 
 .tt-column-item:hover {
-  background: #FEF2F2;
+  background: var(--brand-primary-light);
 }
 
 .tt-column-item.dragging {
@@ -402,7 +402,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 }
 
 .tt-column-item.dragOver {
-  box-shadow: inset 0 2px 0 #c8102e;
+  box-shadow: inset 0 2px 0 var(--brand-primary);
 }
 
 .tt-drag-handle {
@@ -444,12 +444,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 }
 
 .tt-fix-btn:hover {
-  color: #c8102e;
+  color: var(--brand-primary);
   background: #FEE2E2;
 }
 
 .tt-fix-btn.active {
-  color: #c8102e;
+  color: var(--brand-primary);
   background: #FEE2E2;
 }
 </style>

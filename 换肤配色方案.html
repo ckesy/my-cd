@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>换肤配色方案</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#F1F4F8;color:#0F172A;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1180px;margin:0 auto;padding:30px 24px 70px}
+  h1{margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-.4px}
+  .sub{font-size:12.5px;color:#64748B;line-height:1.85}
+  .sub b{color:#0F172A}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}
+  .card{background:#fff;border:1px solid #E6ECF3;border-radius:15px;overflow:hidden}
+  .c-hd{padding:15px 18px 13px;border-bottom:1px solid #F1F5F9;display:flex;align-items:center;gap:10px}
+  .c-no{width:24px;height:24px;border-radius:7px;background:#0F172A;color:#fff;
+    font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .c-name{font-size:14px;font-weight:800}
+  .c-tag{margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;background:#F1F5F9;color:#64748B}
+  .c-tag.rec{background:#0F172A;color:#fff}
+  .c-desc{padding:11px 18px 0;font-size:11.5px;color:#64748B;line-height:1.75}
+  .c-body{padding:14px 18px 18px}
+
+  /* 配色条 */
+  .swatches{display:flex;gap:6px;margin-bottom:30px}
+  .sw{flex:1;height:34px;border-radius:7px;position:relative}
+  .sw span{position:absolute;left:0;right:0;bottom:-16px;text-align:center;font-size:9px;color:#94A3B8;
+    font-family:-apple-system,Arial,sans-serif}
+
+  /* 模拟组件 */
+  .mock{border:1px solid #EDF1F6;border-radius:10px;padding:12px;margin-top:0}
+  .m-kpi{border-radius:9px;padding:10px 12px;color:#fff;margin-bottom:10px}
+  .m-kpi .k{font-size:10px;opacity:.75}
+  .m-kpi .v{font-size:19px;font-weight:800;margin-top:3px;letter-spacing:-.5px}
+  .m-btn{display:inline-block;padding:6px 14px;border-radius:7px;font-size:11.5px;font-weight:700;color:#fff;margin-right:6px}
+  .m-btn.ghost{background:#fff;border:1px solid #E2E8F0;color:#64748B}
+  .m-row{display:flex;align-items:center;gap:8px;font-size:11px;margin-top:9px;color:#475569}
+  .m-dot{width:6px;height:6px;border-radius:50%}
+  .m-bar{flex:1;height:8px;border-radius:4px;background:#F1F5F9;overflow:hidden}
+  .m-bar i{display:block;height:100%;border-radius:4px}
+  .m-active{background:#EEF2F7;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:700;margin-top:9px}
+
+  .note{margin-top:22px;padding:16px 20px;background:#fff;border:1px solid #E6ECF3;border-radius:14px;
+    font-size:12.5px;color:#475569;line-height:1.95}
+  .note h2{margin:0 0 10px;font-size:15px;font-weight:800;color:#0F172A}
+  .note b{color:#0F172A}
+  .note table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11.5px}
+  .note th{background:#FAFBFD;color:#475569;font-weight:700;padding:7px 9px;text-align:left;font-size:10.5px}
+  .note td{padding:7px 9px;border-bottom:1px solid #F1F5F9}
+  .note td:first-child{font-weight:700}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#F1F5F9;padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>换肤配色 · 四个方案</h1>
+  <p class="sub">
+    只换主色系，布局和字号不动。<br>
+    选色的前提是<b>避开已有状态色</b>：橙=待审核、蓝=待打款/在途、青=已通过、绿=已完成、红=异常/驳回。<br>
+    所以主色只能落在<b>中性色、深色、紫</b>这几类上，否则会和状态语义打架。
+  </p>
+
+  <div class="grid">
+
+    <!-- A 石墨 -->
+    <div class="card">
+      <div class="c-hd">
+        <span class="c-no">A</span>
+        <span class="c-name">石墨</span>
+        <span class="c-tag rec">推荐</span>
+      </div>
+      <p class="c-desc">近黑的深灰，几乎没有色彩倾向。最不疲劳，也最不会和数据色冲突。</p>
+      <div class="c-body">
+        <div class="swatches">
+          <div class="sw" style="background:#1F2937"><span>#1F2937</span></div>
+          <div class="sw" style="background:#374151"><span>hover</span></div>
+          <div class="sw" style="background:#F1F5F9"><span>浅底</span></div>
+          <div class="sw" style="background:#0F172A"><span>深</span></div>
+        </div>
+        <div class="mock">
+          <div class="m-kpi" style="background:linear-gradient(135deg,#374151,#1F2937)">
+            <div class="k">本月费用合计</div><div class="v">¥746,681</div>
+          </div>
+          <span class="m-btn" style="background:#1F2937">刷新</span>
+          <span class="m-btn ghost">导出</span>
+          <div class="m-row"><span class="m-dot" style="background:#B45309"></span>待审核
+            <span class="m-bar"><i style="width:65%;background:#1F2937"></i></span>¥64.7万</div>
+          <div class="m-active" style="background:#F1F5F9">当前选中：全部</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B 藏青 -->
+    <div class="card">
+      <div class="c-hd">
+        <span class="c-no">B</span>
+        <span class="c-name">藏青</span>
+        <span class="c-tag">最稳</span>
+      </div>
+      <p class="c-desc">深蓝偏灰，有色彩但不刺眼。和「待打款」的亮蓝区分度够，不会混。</p>
+      <div class="c-body">
+        <div class="swatches">
+          <div class="sw" style="background:#1E3A8A"><span>#1E3A8A</span></div>
+          <div class="sw" style="background:#2B4BA8"><span>hover</span></div>
+          <div class="sw" style="background:#EFF6FF"><span>浅底</span></div>
+          <div class="sw" style="background:#152C6B"><span>深</span></div>
+        </div>
+        <div class="mock">
+          <div class="m-kpi" style="background:linear-gradient(135deg,#2B4BA8,#152C6B)">
+            <div class="k">本月费用合计</div><div class="v">¥746,681</div>
+          </div>
+          <span class="m-btn" style="background:#1E3A8A">刷新</span>
+          <span class="m-btn ghost">导出</span>
+          <div class="m-row"><span class="m-dot" style="background:#B45309"></span>待审核
+            <span class="m-bar"><i style="width:65%;background:#1E3A8A"></i></span>¥64.7万</div>
+          <div class="m-active" style="background:#EFF6FF;color:#1E3A8A">当前选中：全部</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C 墨绿 -->
+    <div class="card">
+      <div class="c-hd">
+        <span class="c-no">C</span>
+        <span class="c-name">墨绿</span>
+        <span class="c-tag">行业感</span>
+      </div>
+      <p class="c-desc">很深的绿，运输物流行业常见。和「已完成」的亮绿差得开，不会让人误判状态。</p>
+      <div class="c-body">
+        <div class="swatches">
+          <div class="sw" style="background:#14532D"><span>#14532D</span></div>
+          <div class="sw" style="background:#1B6B3A"><span>hover</span></div>
+          <div class="sw" style="background:#F0FDF4"><span>浅底</span></div>
+          <div class="sw" style="background:#0B3A1E"><span>深</span></div>
+        </div>
+        <div class="mock">
+          <div class="m-kpi" style="background:linear-gradient(135deg,#1B6B3A,#0B3A1E)">
+            <div class="k">本月费用合计</div><div class="v">¥746,681</div>
+          </div>
+          <span class="m-btn" style="background:#14532D">刷新</span>
+          <span class="m-btn ghost">导出</span>
+          <div class="m-row"><span class="m-dot" style="background:#B45309"></span>待审核
+            <span class="m-bar"><i style="width:65%;background:#14532D"></i></span>¥64.7万</div>
+          <div class="m-active" style="background:#F0FDF4;color:#14532D">当前选中：全部</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D 靛紫 -->
+    <div class="card">
+      <div class="c-hd">
+        <span class="c-no">D</span>
+        <span class="c-name">靛紫</span>
+        <span class="c-tag">现代</span>
+      </div>
+      <p class="c-desc">偏蓝的紫，科技感强。图表里的「过磅」用了亮紫，两者深浅差明显，不会混。</p>
+      <div class="c-body">
+        <div class="swatches">
+          <div class="sw" style="background:#4338CA"><span>#4338CA</span></div>
+          <div class="sw" style="background:#5449D8"><span>hover</span></div>
+          <div class="sw" style="background:#EEF2FF"><span>浅底</span></div>
+          <div class="sw" style="background:#332BA0"><span>深</span></div>
+        </div>
+        <div class="mock">
+          <div class="m-kpi" style="background:linear-gradient(135deg,#5449D8,#332BA0)">
+            <div class="k">本月费用合计</div><div class="v">¥746,681</div>
+          </div>
+          <span class="m-btn" style="background:#4338CA">刷新</span>
+          <span class="m-btn ghost">导出</span>
+          <div class="m-row"><span class="m-dot" style="background:#B45309"></span>待审核
+            <span class="m-bar"><i style="width:65%;background:#4338CA"></i></span>¥64.7万</div>
+          <div class="m-active" style="background:#EEF2FF;color:#4338CA">当前选中：全部</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note">
+    <h2>对比与建议</h2>
+    <table>
+      <tr><th></th><th>A 石墨</th><th>B 藏青</th><th>C 墨绿</th><th>D 靛紫</th></tr>
+      <tr><td>视觉疲劳</td><td><b>最低</b></td><td>低</td><td>低</td><td>中</td></tr>
+      <tr><td>专业感</td><td>中上</td><td><b>高</b></td><td>中</td><td>中</td></tr>
+      <tr><td>和状态色冲突</td><td><b>无</b></td><td>轻微（蓝）</td><td>轻微（绿）</td><td>轻微（紫）</td></tr>
+      <tr><td>长时间看表</td><td><b>最舒服</b></td><td>舒服</td><td>舒服</td><td>稍闷</td></tr>
+      <tr><td>适合场景</td><td>数据密集型后台</td><td>对外演示</td><td>物流运输</td><td>偏互联网风格</td></tr>
+    </table>
+
+    <p style="margin:14px 0 0">
+      <b>我的建议：A 石墨做默认，B 藏青做备选。</b>
+    </p>
+    <p style="margin:8px 0 0">
+      你现在的痛点是「红色看久了累」。红色的刺激来自**高饱和 + 大量面积**（KPI 主卡、按钮、选中态全是红）。
+      换成石墨后，界面几乎只有黑白灰 + 状态色，<b>状态色反而更跳</b> —— 待审核的橙、已完成的绿会因为背景变素而更容易被注意到，这其实是加分。
+    </p>
+    <p style="margin:8px 0 0">
+      如果觉得纯灰太素，选 B 藏青：有颜色但饱和度低，深蓝在屏幕上比红色柔和得多。
+    </p>
+
+    <p style="margin:16px 0 0"><b>实现方式（只改配色，不动布局）</b></p>
+    <p style="margin:6px 0 0">
+      第一步把散落的 86 处硬编码收成变量：<code>#C8102E</code> 36 处、<code>#D32F2F</code> 49 处、<code>#8E0A20</code> 1 处，分布在 7 个文件。
+    </p>
+    <p style="margin:6px 0 0">
+      第二步在根节点挂 <code>data-theme</code>，用 CSS 变量切换：
+    </p>
+    <pre style="margin:8px 0 0;background:#0F172A;color:#E2E8F0;padding:12px 14px;border-radius:9px;font-size:11px;line-height:1.7;overflow-x:auto">:root[data-theme="graphite"] {
+  --brand:       #1F2937;   /* 主色：按钮、选中态、强调数字 */
+  --brand-hover: #374151;
+  --brand-light: #F1F5F9;   /* 浅底：选中行、标签背景 */
+  --brand-dark:  #0F172A;   /* 深色：主卡渐变终点 */
+}</pre>
+    <p style="margin:10px 0 0">
+      主题存 <code>localStorage.theme</code>，刷新不丢。想更省事也可以只做<b>石墨一个主题</b> + 一个「恢复默认红」的开关，不搞多套。
+    </p>
+  </div>
+
+</div>
+</body>
+</html>
