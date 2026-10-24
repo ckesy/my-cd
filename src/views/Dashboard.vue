@@ -14,31 +14,8 @@
       <el-header class="dashboard-header">
         <div class="dashboard-title">车队管理平台</div>
         <div class="dashboard-actions">
-          <!-- ⭐ 费用待办：待我审批 + 待打款 合成一个红点 -->
-          <div class="todo-wrap">
-            <button class="todo-bell" :class="{ on: todoTotal > 0 }" title="费用待办" @click="todoOpen = !todoOpen">
-              <el-icon><Bell /></el-icon>
-              <span v-if="todoTotal" class="todo-dot">{{ todoTotal > 99 ? '99+' : todoTotal }}</span>
-            </button>
-            <div v-if="todoOpen" class="todo-mask" @click="todoOpen = false"></div>
-            <div v-if="todoOpen" class="todo-panel">
-              <div class="tp-head">
-                <span>费用待办</span>
-                <span class="tp-refresh" @click="loadTodo">刷新</span>
-              </div>
-              <div v-if="auditOn" class="tp-row" @click="goTodo('approve')">
-                <span class="tp-ic wait">审</span>
-                <div class="tp-m"><b>待我审批</b><em>当前审批节点是我</em></div>
-                <span class="tp-n">{{ todo.approve }}</span>
-              </div>
-              <div v-if="canPayFee" class="tp-row" @click="goTodo('pay')">
-                <span class="tp-ic pay">付</span>
-                <div class="tp-m"><b>待付款</b><em>已通过、还没登记付款</em></div>
-                <span class="tp-n">{{ todo.pay }}</span>
-              </div>
-              <div v-if="!todoTotal" class="tp-empty">暂无待办</div>
-            </div>
-          </div>
+          <!-- ⭐ 消息中心：到期提醒 + 费用待办 统一收口（点铃铛出抽屉，底部进独立页） -->
+          <MessageCenter />
 
           <el-button size="small" plain class="action-btn settings-btn" @click="handleSettings">
             <el-icon>
@@ -119,16 +96,13 @@
           <template v-else-if="route.path === '/report'">
             <Report />
           </template>
-          <!-- 车辆档案 -->
-          <template v-else-if="route.path === '/vehicle-archive'">
+          <!-- ⭐ 档案管理：车辆 / 司机 / 客户 / 货物 -->
+          <template v-else-if="route.path === '/archive/vehicle'">
             <VehicleArchive />
           </template>
-          <!-- 司机档案 -->
-          <template v-else-if="route.path === '/driver-archive'">
+          <template v-else-if="route.path === '/archive/driver'">
             <DriverArchive />
           </template>
-
-          <!-- ⭐ 档案管理 -->
           <template v-else-if="route.path === '/archive/customer'">
             <CustomerArchive />
           </template>
@@ -171,6 +145,36 @@
             <OrgManage />
           </template>
 
+          <!-- ⭐ 车务管理 -->
+          <template v-else-if="route.path === '/affair/home'">
+            <AffairHome />
+          </template>
+          <template v-else-if="route.path === '/affair/ledger'">
+            <AffairLedger />
+          </template>
+          <template v-else-if="route.path === '/affair/reminders'">
+            <AffairReminders />
+          </template>
+          <template v-else-if="route.path === '/affair/settings'">
+            <AffairSettings />
+          </template>
+          <!-- ⭐ 维保台账 -->
+          <template v-else-if="route.path === '/maintenance'">
+            <MaintenanceLedger />
+          </template>
+          <template v-else-if="route.path === '/maintenance/vehicle'">
+            <MaintenanceVehicle />
+          </template>
+          <!-- ⭐ 消息中心（独立页） -->
+          <template v-else-if="route.path === '/message'">
+            <MessageCenterPage />
+          </template>
+
+          <!-- 行车管理 -->
+          <template v-else-if="isAppearancePage">
+            <AppearanceInspection />
+          </template>
+
           <!-- 其他页面（占位） -->
           <template v-else>
             <h2>{{ currentPage || '欢迎' }}</h2>
@@ -195,6 +199,7 @@ import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { Setting, Bell } from '@element-plus/icons-vue'
+import { permHit } from '@/config/permissions'
 import SidebarMenu from '../components/SidebarMenu.vue'
 import PersonalSettings from '../components/PersonalSettings.vue'
 import ClientHome from '../views/ClientHome.vue'
@@ -206,6 +211,17 @@ import VehicleArchive from '../views/VehicleArchive.vue'
 import DriverArchive from '../views/DriverArchive.vue'
 import CustomerArchive from '../views/CustomerArchive.vue'
 import CargoArchive from '../views/CargoArchive.vue'
+// ⭐ 行车管理 · 外观巡检（记录来自小程序 inspection 云函数）
+import AppearanceInspection from '../views/AppearanceInspection.vue'
+// ⭐ 车务管理（证件到期 + 提醒事项）+ 消息中心
+import AffairHome from '../views/affair/AffairHome.vue'
+import AffairLedger from '../views/affair/AffairLedger.vue'
+import AffairReminders from '../views/affair/AffairReminders.vue'
+import AffairSettings from '../views/affair/AffairSettings.vue'
+import MaintenanceLedger from '../views/MaintenanceLedger.vue'
+import MaintenanceVehicle from '../views/MaintenanceVehicle.vue'
+import MessageCenterPage from '../views/MessageCenterPage.vue'
+import MessageCenter from '../components/MessageCenter.vue'
 
 import EleFenceSetting from '../views/EleFenceSetting.vue'
 import EleFenceAlertSetting from '../views/EleFenceAlertSetting.vue'
@@ -272,31 +288,53 @@ const clientPerms = computed(() => {
   return currentUser?.permissions?.client || []
 })
 
+/* ⭐ 中文路径的坑：从侧边栏点进来时 route.path 是**解码后**的中文，
+   但刷新页面 / 从收藏夹进来时 location.pathname 是 %E5%A4%96…，
+   直接比字符串会掉回占位页 —— 两种写法都认。 */
+const isAppearancePage = computed(() => {
+  const want = '/dashboard/外观巡检管理'
+  const p = route.path || ''
+  if (p === want) return true
+  try {
+    return decodeURIComponent(p) === want
+  } catch (e) {
+    return false
+  }
+})
+
 // 路由 → 权限 key
-const routePermissionMap = {
-  '/dashboard': 'home',
+const routePermissionMap = {  '/dashboard': 'home',
   '/fullmap': 'driving_fullmap',
   '/dashboard/车辆故障管理': 'vehicle_fault',
   '/dashboard/外观巡检管理': 'appearance_inspect',
   '/ele-fence/setting': 'ele_fence',
   '/ele-fence/alert-setting': 'ele_fence',
   '/ele-fence/alert-query': 'ele_fence',
-  '/dashboard/运营管理': 'operation',
-  '/operation/summary': 'operation',
-  '/operation/energy': 'operation',
-  '/operation/energy/report': 'operation',
-  '/operation/driving': 'operation',
+  '/dashboard/运营管理': 'operation_summary',
+  /* ⭐ 2026-10-24：三个报表拆成独立权限；老角色里那条 operation 由下面的别名兜底 */
+  '/operation/summary': 'operation_summary',
+  '/operation/energy': 'operation_energy',
+  '/operation/energy/report': 'operation_energy',
+  '/operation/driving': 'operation_driving',
   '/waybill': 'waybill',
   '/waybill/create': 'waybill',
   '/waybill/detail': 'waybill',
   '/waybill/stats': 'waybill',
-  '/fee/list': 'fee_stats',
+  '/fee/list': 'fee_list',
   '/fee/stats': 'fee_stats',
   // ⭐ 路线管理暂时不做权限限制（新功能，等业务明确后再加 'route'）
   // '/route/manage': 'route',
   '/report': 'report',
-  '/vehicle-archive': 'vehicle_archive',
-  '/driver-archive': 'driver_archive',
+  '/archive/vehicle': 'vehicle_archive',
+  /* ⭐ 车务管理：主账号必有；子账号要在功能配置里勾 vehicle_affair */
+  '/affair/home': 'vehicle_affair',
+  '/affair/ledger': 'vehicle_affair',
+  '/affair/reminders': 'vehicle_affair',
+  '/affair/settings': 'vehicle_affair',
+  /* 维保台账与车务同一把钥匙（保养要回写车务，本来就是一件事） */
+  '/maintenance': 'vehicle_affair',
+  '/maintenance/vehicle': 'vehicle_affair',
+  '/archive/driver': 'driver_archive',
   // ⭐ 档案管理暂时不做权限限制（新功能，等权限数据补齐后再放开这两行）
   // '/archive/customer': 'customer_archive',
   // '/archive/cargo': 'cargo_archive',
@@ -333,27 +371,40 @@ const isPermitted = computed(() => {
   const gate = MODULE_GATE[route.path]
   if (gate && moduleFlags[gate] !== true && moduleFlags.waybill !== undefined) return false
   if (route.path === '/dashboard' && !route.params.page) return true
-  // 业务流程画布：主账号可进（管理员可编辑，客户只读调参）
-  if (route.path === '/flow/canvas') return isMaster.value
+  // 业务流程画布：主账号必有；角色被勾了 flow 也能进（非主账号只读调参）
+  if (route.path === '/flow/canvas') {
+    return isMaster.value || permHit(clientPerms.value, 'flow')
+  }
   // 费用审批设置只给主账号：不看权限 key，避免被误配给其他角色
   if (route.path === '/fee/config') return isMaster.value
-  // 付款登记：主账号 + 财务 + 模块已开通（其余人看不到入口，也别让他们直接敲地址）
-  if (route.path === '/fee/payout') return (isMaster.value || isFinance.value) && moduleFlags.payout
+  // 付款登记：主账号 / 财务，或在功能配置里勾了 fee_payout；模块开关仍是硬前提
+  if (route.path === '/fee/payout') {
+    return (isMaster.value || isFinance.value || permHit(clientPerms.value, 'fee_payout'))
+      && moduleFlags.payout
+  }
   // 车队运营报告：主账号始终可见（模块开关由 MODULE_GATE 拦）
   if (route.path === '/report') {
     return isMaster.value || clientPerms.value.includes('report')
   }
-  // 运单统计：跟着运单模块走，主账号始终可见
-  if (route.path === '/waybill/stats') {
-    return isMaster.value || clientPerms.value.includes('waybill')
+  // 车务管理：主账号始终可见；子账号必须被勾了 vehicle_affair
+  if (route.path.startsWith('/affair')) {
+    return isMaster.value || permHit(clientPerms.value, 'vehicle_affair')
   }
-  // 费用统计 / 费用明细：主账号始终可见；其他人看功能配置
+  // 维保台账：与车务同一把钥匙
+  if (route.path.startsWith('/maintenance')) {
+    return isMaster.value || permHit(clientPerms.value, 'vehicle_affair')
+  }
+  // 运单统计：独立权限（老配置里跟 waybill 共用，permHit 走别名兼容）
+  if (route.path === '/waybill/stats') {
+    return isMaster.value || permHit(clientPerms.value, 'waybill_stats')
+  }
+  // 费用统计 / 费用明细：主账号始终可见；其他人按各自的功能权限
   if (route.path === '/fee/stats' || route.path === '/fee/list') {
-    return isMaster.value || clientPerms.value.includes('fee_stats')
+    return isMaster.value || permHit(clientPerms.value, route.path === '/fee/list' ? 'fee_list' : 'fee_stats')
   }
   const permKey = routePermissionMap[route.path]
   if (!permKey) return true
-  return clientPerms.value.includes(permKey)
+  return permHit(clientPerms.value, permKey)
 })
 
 watch(isPermitted, (val) => {
@@ -464,8 +515,8 @@ const pathLabels = {
   '/fee/stats': '费用统计',
   '/fee/payout': '付款登记',
   '/fee/config': '费用审批设置',
-  '/vehicle-archive': '车辆档案',
-  '/driver-archive': '司机档案',
+  '/archive/vehicle': '车辆档案',
+  '/archive/driver': '司机档案',
   '/archive/customer': '客户档案',
   '/archive/cargo': '货物档案',
   '/dashboard/档案管理': '档案管理',

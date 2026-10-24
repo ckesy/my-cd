@@ -341,7 +341,10 @@ const handleLogin = async () => {
     // ============================================================
     // 7️⃣ 主账号：从 customers 表读权限
     // ============================================================
-    if (!isAdmin && !isSubAccount && userData.phone) {
+    /* ⭐ 2026-10-24：**管理员也要查** customers —— 客户自己的主账号在 admins 里也是 role=admin，
+       之前只对非 admin 查，导致客户主账号被当成"平台服务商"（业务流程画布里能开没授权的模块）。
+       命中 customers 就标 isTenantOwner，modules.isFlowAdmin 据此排除他。 */
+    if (!isSubAccount && userData.phone) {
       try {
         const { data: cList, error: cErr } = await supabase
           .from('customers')
@@ -355,6 +358,7 @@ const handleLogin = async () => {
           const c = cList[0]
 
           account.customerId = c.id
+          account.isTenantOwner = true
 
           let cp = []
           if (Array.isArray(c.permissions)) {
@@ -373,7 +377,7 @@ const handleLogin = async () => {
           if (Array.isArray(c.platforms)) {
             account.platforms = c.platforms
           }
-        } else {
+        } else if (!isAdmin) {
           console.warn('[登录] customers 表里找不到 phone =', userData.phone)
         }
       } catch (e) {
@@ -438,6 +442,17 @@ const handleLogin = async () => {
 
     localStorage.setItem('currentUser', JSON.stringify(account))
     localStorage.setItem('originalUser', JSON.stringify(account))
+
+    /* ⭐ 换账号 → 立刻切到该账号自己的皮肤（同设备多账号互不影响） */
+    try {
+      const { applyTheme, readLocalTheme, DEFAULT_THEME, loadRemoteTheme } = await import('@/utils/theme')
+      const { supabase } = await import('@/utils/supabase')
+      applyTheme(readLocalTheme(account.account) || DEFAULT_THEME)
+      const remote = await loadRemoteTheme(supabase, account)
+      if (remote) applyTheme(remote)
+    } catch (e) {
+      console.warn('[登录] 主题切换失败（忽略）', e && (e.message || e))
+    }
 
     if (isAdmin) {
       playWelcome('/portal')

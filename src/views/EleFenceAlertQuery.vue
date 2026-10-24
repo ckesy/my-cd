@@ -565,6 +565,42 @@ const failProgress = () => {
 }
 
 // ============================================================
+// ⭐ 2026-10-24：车多时单次请求太慢 —— 前端按批切分、并行调用云函数
+//   云函数那边是「逐车拉东风轨迹」，一台一台串行；后端并发不可控，
+//   但可以多开几个请求同时算：每批 20 辆、最多 5 批并行，总耗时约降到 1/5。
+//   （不改云函数入参协议：还是 vehicles 数组，只是分几次传。）
+// ============================================================
+const CHECK_CHUNK = 20
+const CHECK_CONCURRENCY = 5
+
+const checkInBatches = async (endpoint, base, vehicles, listKey) => {
+  const chunks = []
+  for (let i = 0; i < vehicles.length; i += CHECK_CHUNK) {
+    chunks.push(vehicles.slice(i, i + CHECK_CHUNK))
+  }
+  if (!chunks.length) return []
+  const out = []
+  let cursor = 0
+  const worker = async () => {
+    while (cursor < chunks.length) {
+      const i = cursor++
+      const res = await fetch(`${API_BASE}/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...base, vehicles: chunks[i] }),
+      })
+      const json = await res.json()
+      if (json.code !== 1) throw new Error(json.msg || '云函数调用失败')
+      out.push(...(json[listKey] || []))
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(CHECK_CONCURRENCY, chunks.length) }, () => worker())
+  )
+  return out
+}
+
+// ============================================================
 // 读配置
 // ============================================================
 const loadAlertConfig = async (type) => {
@@ -711,20 +747,16 @@ const fetchOverspeedAlerts = async (forceRefresh = false) => {
 
   setStage(2, `正在查询 ${vehicles.length} 辆车的轨迹数据...`)
 
-  const res = await fetch(`${API_BASE}/dongfeng-overspeed-check`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      vehicles, fences,
-      threshold: threshold.value,
-      startTime, endTime,
-    }),
-  })
-  const json = await res.json()
-  if (json.code !== 1) throw new Error(json.msg || '云函数调用失败')
+  /* 分批复用：每批 20 辆，最多 5 批并行 */
+  const segments = await checkInBatches(
+    'dongfeng-overspeed-check',
+    { fences, threshold: threshold.value, startTime, endTime },
+    vehicles,
+    'segments'
+  )
 
   setStage(3, '解析超速数据...')
-  allSegments.value = json.segments || []
+  allSegments.value = segments
   writeCache(allSegments.value)
   console.log(`[overspeed] 拉取 ${allSegments.value.length} 段`)
 }
@@ -759,21 +791,16 @@ const fetchStayAlerts = async (forceRefresh = false) => {
 
   setStage(2, `正在查询 ${vehicles.length} 辆车的停留事件...`)
 
-  const res = await fetch(`${API_BASE}/dongfeng-stay-check`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      vehicles, fences,
-      stayDuration,
-      stayRadius,
-      startTime, endTime,
-    }),
-  })
-  const json = await res.json()
-  if (json.code !== 1) throw new Error(json.msg || '云函数调用失败')
+  /* 分批复用：每批 20 辆，最多 5 批并行 */
+  const events = await checkInBatches(
+    'dongfeng-stay-check',
+    { fences, stayDuration, stayRadius, startTime, endTime },
+    vehicles,
+    'events'
+  )
 
   setStage(3, '解析停留数据...')
-  allSegments.value = json.events || []
+  allSegments.value = events
   writeCache(allSegments.value)
   console.log(`[stay] 拉取 ${allSegments.value.length} 条`)
 }

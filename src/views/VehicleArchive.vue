@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount, onActivated, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import {
   Upload, Search, Refresh, Delete, Download,
@@ -7,9 +8,13 @@ import {
   Grid, Rank, DArrowLeft, DArrowRight,
 } from '@element-plus/icons-vue'
 import { supabase } from '@/utils/supabase'
-import * as XLSX from 'xlsx'
-import ExcelJS from 'exceljs'
 import dayjs from 'dayjs'
+// ⭐ 车务管理：证件与保险 + 宽表导入导出（一张表 40 列）
+import { exportWide, viewRowToLabels } from '@/utils/vehicleExcel'
+import VehicleImportDialog from '@/components/affair/VehicleImportDialog.vue'
+import { loadCertMap, upsertCert, parseDays, loadSettings } from '@/utils/vehicleAffair'
+import { CERT_TYPES, REMIND_DAYS_OPTIONS, VEHICLE_COLUMNS } from '@/config/vehicleColumns'
+import { MAINTAIN_KM_OPTIONS } from '@/utils/vehicleAffair'
 
 const formatDateTime = (d) => d ? dayjs(d).format('YYYY-MM-DD HH:mm:ss') : '--'
 
@@ -139,23 +144,35 @@ const handleDensityChange = (cmd) => {
 }
 
 const columnPopoverVisible = ref(false)
+/* ⭐ 2026-10-24：列表显示**全部 40 列**（车辆本体 + 证件 + 提醒），
+   数据源是宽表视图 v_vehicle_export，所以一行就能取到所有字段。
+   列定义与导出/导入共用 vehicleColumns.js，加字段不用改这里 */
 const DEFAULT_COLUMNS = [
-  { prop: 'plate', label: '车牌号', visible: true, fixed: 'left', minWidth: 130, align: 'left' },
-  { prop: 'vin', label: 'VIN码', visible: true, fixed: false, minWidth: 180, align: 'left' },
-  { prop: 'nickname', label: '车辆昵称', visible: true, fixed: false, minWidth: 100, align: 'center' },
-  { prop: 'org', label: '所属机构组织', visible: true, fixed: false, minWidth: 140, align: 'center' },
-  { prop: 'driver', label: '绑定司机', visible: true, fixed: false, minWidth: 120, align: 'center' },
-  { prop: 'fuel_type', label: '燃料类型', visible: true, fixed: false, minWidth: 90, align: 'center' },
-  { prop: 'vehicle_type', label: '车辆类型', visible: true, fixed: false, minWidth: 90, align: 'center' },
-  { prop: 'usage', label: '车辆用途', visible: true, fixed: false, minWidth: 90, align: 'center' },
-  { prop: 'sub_vehicle', label: '子母车', visible: true, fixed: false, minWidth: 80, align: 'center' },
-  { prop: 'trailer', label: '关联挂车', visible: true, fixed: false, minWidth: 90, align: 'center' },
-  { prop: 'purchase_date', label: '车辆购买日', visible: true, fixed: false, minWidth: 110, align: 'center' },
-  { prop: 'insurance_date', label: '保险购买日', visible: true, fixed: false, minWidth: 110, align: 'center' },
-  { prop: 'created_at', label: '创建时间', visible: true, fixed: false, minWidth: 150, align: 'center' },
-  { prop: 'updated_at', label: '修改时间', visible: true, fixed: false, minWidth: 150, align: 'center' },
-  { prop: 'action', label: '操作', visible: true, fixed: 'right', width: 120, align: 'center' },
+  ...VEHICLE_COLUMNS.map((c, i) => ({
+    prop: c.key,
+    label: c.label,
+    visible: true,
+    fixed: i === 0 ? 'left' : false,
+    width: c.width || 110,
+    align: i === 0 ? 'left' : 'center',
+    field: c,
+    isNew: !!c.isNew,
+  })),
+  { prop: 'action', label: '操作', visible: true, fixed: 'right', width: 148, align: 'center' },
 ]
+
+/* 单元格文本：宽表里 int[] 可能回数组、也可能回 "{30,7}" 字符串 */
+const cellText = (row, col) => {
+  if (col.prop === 'action') return ''
+  let v = row[col.prop]
+  if (v === null || v === undefined || v === '') return '--'
+  if (Array.isArray(v)) return v.length ? v.join(' / ') : '--'
+  if (typeof v === 'string' && v.startsWith('{')) {
+    const t = v.replace(/[{}]/g, '').trim()
+    return t ? t.split(',').join(' / ') : '--'
+  }
+  return String(v)
+}
 const columnConfig = ref(JSON.parse(JSON.stringify(DEFAULT_COLUMNS)))
 const visibleColumns = computed(() => columnConfig.value.filter(c => c.visible))
 const resetColumns = () => {
@@ -227,6 +244,14 @@ const confirmDelete = async () => {
 // ============================================================
 const detailDialogVisible = ref(false)
 const currentDetailRow = ref(null)
+const router = useRouter()
+/* 车辆档案 → 维保记录（单车维保页） */
+const goMaintenance = () => {
+  const row = currentDetailRow.value
+  if (!row || !row.plate) return
+  detailDialogVisible.value = false
+  router.push({ path: '/maintenance/vehicle', query: { plate: row.plate } })
+}
 const handleView = (row) => { currentDetailRow.value = row; detailDialogVisible.value = true }
 
 const editDialogVisible = ref(false)
@@ -240,10 +265,89 @@ const handleEdit = (row) => {
   data.driverDisplay = !names.length ? '' : names.length <= 2 ? names.join('；') : `已选 ${names.length} 名司机`
   originalOrgWhenEdit.value = String(row.org || '').trim() || null   // ⭐ 记录
   editFormData.value = data
+  editTab.value = 'base'
   editDialogVisible.value = true
+  loadCertsForEdit(row.plate)
 }
 const openEditFromView = () => {
   if (currentDetailRow.value) { handleEdit(currentDetailRow.value); detailDialogVisible.value = false }
+}
+
+// ============================================================
+// 证件与保险（⭐ 存 vehicle_certs，一台车多条）
+// ============================================================
+const editTab = ref('base')
+/* ⭐ 租户在「提醒设置」里配的各类证件默认提醒节点，新建证件时套用 */
+const affairDefaults = ref(null)
+loadSettings().then((st) => { affairDefaults.value = st.default_days || null }).catch(() => {})
+const certsLoading = ref(false)
+const certForm = ref({})
+const certDueCount = ref(0)
+
+const remindPool = (k) => (k === 'maintain' ? MAINTAIN_KM_OPTIONS : REMIND_DAYS_OPTIONS)
+const blankCert = (k) => ({
+  cert_no: '', start_date: '', expire_date: '',
+  last_maintain_km: null, maintain_interval_km: 10000,
+  remind_days: (affairDefaults.value?.[k]?.length
+    ? [...affairDefaults.value[k]]
+    : (k === 'maintain' ? [1000] : [30])),
+  remind_enabled: true, remark: '', _id: null,
+})
+const initCertForm = () => {
+  const o = {}
+  CERT_TYPES.forEach(t => { o[t.key] = blankCert(t.key) })
+  return o
+}
+const loadCertsForEdit = async (plate) => {
+  certsLoading.value = true
+  certForm.value = initCertForm()
+  certDueCount.value = 0
+  try {
+    if (!plate) return
+    const map = await loadCertMap(plate)
+    Object.keys(map).forEach(k => {
+      if (!certForm.value[k]) return
+      const c = map[k]
+      const days = parseDays(c.remind_days)
+      certForm.value[k] = {
+        cert_no: c.cert_no || '',
+        start_date: c.start_date || '',
+        expire_date: c.expire_date || '',
+        last_maintain_km: c.last_maintain_km ?? null,
+        maintain_interval_km: c.maintain_interval_km ?? 10000,
+        remind_days: days.length ? days : blankCert(k).remind_days,
+        remind_enabled: c.remind_enabled !== false,
+        remark: c.remark || '',
+        _id: c.id,
+      }
+      // 快到期/逾期 的项在 Tab 上挂个数字
+      if (c.expire_date) {
+        const left = dayjs(c.expire_date).startOf('day').diff(dayjs().startOf('day'), 'day')
+        if (left <= 30) certDueCount.value++
+      }
+    })
+  } catch (e) {
+    console.warn('[车辆档案] 读证件失败', e)
+  } finally { certsLoading.value = false }
+}
+const toggleCertDay = (k, d) => {
+  const a = certForm.value[k].remind_days
+  const i = a.indexOf(d)
+  i >= 0 ? a.splice(i, 1) : a.push(d)
+  a.sort((x, y) => y - x)
+}
+const certState = (k) => {
+  const f = certForm.value[k]
+  if (!f) return { text: '', color: '#94A3B8' }
+  if (k === 'maintain') {
+    if (!f.last_maintain_km) return { text: '未录入', color: '#94A3B8' }
+    return { text: `上次 ${Number(f.last_maintain_km).toLocaleString('zh-CN')} km`, color: '#64748B' }
+  }
+  if (!f.expire_date) return { text: '未录入', color: '#94A3B8' }
+  const left = dayjs(f.expire_date).startOf('day').diff(dayjs().startOf('day'), 'day')
+  if (left < 0) return { text: `已逾期 ${Math.abs(left)} 天`, color: '#C8102E' }
+  if (left <= 3) return { text: `${left} 天后到期`, color: '#EA580C' }
+  return { text: `剩 ${left} 天`, color: '#047857' }
 }
 
 // ============================================================
@@ -349,6 +453,34 @@ const saveEdit = async () => {
     const { id, created_at, updated_at, driverDisplay, ...fields } = editFormData.value
     const { error } = await supabase.from('vehicles').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', id)
     if (error) throw error
+
+    /* ⭐ 证件：逐项 upsert；整组空且从未存过 → 不建记录 */
+    const plate = fields.plate || editFormData.value.plate
+    for (const t of CERT_TYPES) {
+      const f = certForm.value[t.key]
+      if (!f) continue
+      const hasData = t.key === 'maintain'
+        ? (f.last_maintain_km || f.start_date)
+        : (f.cert_no || f.expire_date)
+      if (!hasData && !f._id) continue
+      await upsertCert({
+        plate,
+        org: fields.org || null,
+        cert_type: t.key,
+        cert_no: f.cert_no || null,
+        start_date: f.start_date || null,
+        expire_date: t.key === 'maintain' ? null : (f.expire_date || null),
+        last_maintain_km: t.key === 'maintain' ? (f.last_maintain_km || null) : null,
+        maintain_interval_km: t.key === 'maintain' ? (f.maintain_interval_km || 10000) : null,
+        remind_days: f.remind_days,
+        remind_enabled: f.remind_enabled !== false,
+        remark: f.remark || null,
+        vehicle_id: String(id),
+        customer_id: myCustomerId.value ? String(myCustomerId.value) : null,
+        owner_account: myAccount || null,
+      })
+    }
+
     ElMessage.success('更新成功')
     editDialogVisible.value = false
     await syncFromVehiclesToDrivers()
@@ -364,12 +496,13 @@ const saveEdit = async () => {
 const exportData = async () => {
   const li = ElLoading.service({ fullscreen: true, text: '正在导出...', background: 'rgba(0,0,0,0.6)' })
   try {
-    let q = supabase.from('vehicles').select('*').order('updated_at', { ascending: false })
+    /* ⭐ 导出走宽表视图 v_vehicle_export：一行一车 40 列，
+       车辆本体 + 6 类证件一次取全，前端只做字段映射 */
+    let q = supabase.from('v_vehicle_export').select('*').order('updated_at', { ascending: false })
 
     if (isCustomer) {
       if (!myCustomerId.value) { ElMessage.warning('未关联客户，无法导出'); return }
       q = q.eq('customer_id', myCustomerId.value)
-      // ⭐ 只有二级机构才按 org 过滤
       if (needOrgFilter.value) {
         if (!myOrgName.value) { ElMessage.warning('未关联组织，无法导出'); return }
         q = q.eq('org', myOrgName.value)
@@ -384,28 +517,7 @@ const exportData = async () => {
     if (error) throw error
     if (!data?.length) { ElMessage.warning('没有数据可导出'); return }
 
-    const wb = new ExcelJS.Workbook()
-    const ws = wb.addWorksheet('车辆档案')
-    const headers = ['车牌号', 'VIN码', '车辆昵称', '所属机构组织', '绑定司机', '燃料类型', '车辆类型', '车辆用途', '子母车', '关联挂车', '车辆购买日', '保险购买日', '创建时间', '修改时间']
-    const hr = ws.addRow(headers)
-    hr.eachCell(c => {
-      c.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 }
-      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC8102E' } }
-      c.alignment = { horizontal: 'center', vertical: 'middle' }
-      c.border = { top: { style: 'thin', color: { argb: 'FFCCCCCC' } }, left: { style: 'thin', color: { argb: 'FFCCCCCC' } }, bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } }, right: { style: 'thin', color: { argb: 'FFCCCCCC' } } }
-    })
-    data.forEach(r => {
-      const dr = ws.addRow([r.plate || '', r.vin || '', r.nickname || '', r.org || '', r.driver || '', r.fuel_type || '', r.vehicle_type || '', r.usage || '', r.sub_vehicle || '', r.trailer || '', r.purchase_date || '', r.insurance_date || '', formatDateTime(r.created_at), formatDateTime(r.updated_at)])
-      dr.eachCell(c => { c.border = { top: { style: 'thin', color: { argb: 'FFCCCCCC' } }, left: { style: 'thin', color: { argb: 'FFCCCCCC' } }, bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } }, right: { style: 'thin', color: { argb: 'FFCCCCCC' } } } })
-    })
-    ws.columns = headers.map(() => ({ width: 18 }))
-    const buf = await wb.xlsx.writeBuffer()
-    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `车辆档案_${dayjs().format('YYYYMMDD_HHmmss')}.xlsx`
-    document.body.appendChild(link); link.click(); document.body.removeChild(link)
-    URL.revokeObjectURL(link.href)
+    await exportWide(data.map(viewRowToLabels), `车辆档案_${dayjs().format('YYYYMMDD_HHmmss')}.xlsx`)
     ElMessage.success(`成功导出 ${data.length} 条数据`)
   } catch (err) { ElMessage.error('导出失败：' + err.message) }
   finally { li.close() }
@@ -428,7 +540,8 @@ const fetchVehicles = async () => {
 
   loading.value = true
   try {
-    let q = supabase.from('vehicles').select('*', { count: 'exact' }).order('updated_at', { ascending: false })
+    /* ⭐ 列表走宽表视图：一行一车 40 列，证件字段直接可读 */
+    let q = supabase.from('v_vehicle_export').select('*', { count: 'exact' }).order('updated_at', { ascending: false })
 
     if (isCustomer) {
       q = q.eq('customer_id', myCustomerId.value)
@@ -464,133 +577,9 @@ const handleSizeChange = (v) => { pageSize.value = v; currentPage.value = 1; fet
 const handleCurrentChange = (v) => { currentPage.value = v; fetchVehicles() }
 
 // ============================================================
-// 导入
+// 导入（⭐ 一张宽表，40 列，按表头名解析）
 // ============================================================
 const showImportDialog = ref(false)
-const uploadRef = ref(null)
-const uploadFile = ref(null)
-const uploadFileName = ref('')
-const importErrors = ref([])
-const importing = ref(false)
-
-const templateHeaders = ['车牌号', 'VIN码', '车辆昵称', '燃料类型', '车辆类型', '车辆用途', '子母车', '关联挂车', '车辆购买日', '保险购买日']
-
-const downloadTemplate = async () => {
-  const wb = new ExcelJS.Workbook()
-  const ws = wb.addWorksheet('车辆档案导入模板')
-  const hr = ws.addRow(templateHeaders)
-  hr.eachCell(c => {
-    c.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 }
-    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC8102E' } }
-    c.alignment = { horizontal: 'center', vertical: 'middle' }
-  })
-  ws.addRow(['粤A12345', 'LGAX3AG59N9009177', '我的车', '纯电动', '', '快递快运', '否', '无', '2026-01-01', '2026-01-01'])
-  ws.columns = templateHeaders.map(() => ({ width: 18 }))
-  const buf = await wb.xlsx.writeBuffer()
-  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = '车辆档案导入模板.xlsx'
-  document.body.appendChild(link); link.click(); document.body.removeChild(link)
-  URL.revokeObjectURL(link.href)
-}
-
-const handleFileChange = (f) => { uploadFile.value = f.raw; uploadFileName.value = f.name; importErrors.value = [] }
-const handleFileRemove = () => { uploadFile.value = null; uploadFileName.value = ''; importErrors.value = [] }
-
-const confirmImport = async () => {
-  if (!uploadFile.value) { ElMessage.warning('请先选择文件'); return }
-
-  if (isCustomer && !myCustomerId.value) {
-    ElMessage.error('未关联客户，无法导入')
-    return
-  }
-  if (needOrgFilter.value && !myOrgName.value) {
-    ElMessage.error('未关联组织，无法导入')
-    return
-  }
-
-  importing.value = true; importErrors.value = []
-  try {
-    const file = uploadFile.value
-    const ext = file.name.split('.').pop().toLowerCase()
-    let rows = []
-    if (ext === 'csv') {
-      const txt = await file.text()
-      rows = txt.split('\n').filter(l => l.trim()).slice(1).map(l => l.split(',').map(c => c.trim()))
-    } else if (['xlsx', 'xls'].includes(ext)) {
-      const data = await file.arrayBuffer()
-      const wb = XLSX.read(data, { type: 'array' })
-      const sheet = wb.Sheets[wb.SheetNames[0]]
-      rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }).slice(1)
-    } else { ElMessage.error('不支持的文件格式'); return }
-
-    const validData = [], errors = []
-    rows.forEach((row, i) => {
-      const n = i + 2
-      const [plate, vin, nickname, fuelType, vehicleType, usage, subVehicle, trailer, purchaseDate, insuranceDate] = row.map(c => (c || '').toString().trim())
-      if (!plate || !vin) { errors.push(`第 ${n} 行：缺少必填字段`); return }
-      const dr = /^\d{4}-\d{2}-\d{2}$/
-      if (purchaseDate && !dr.test(purchaseDate)) { errors.push(`第 ${n} 行：车辆购买日格式错误`); return }
-      if (insuranceDate && !dr.test(insuranceDate)) { errors.push(`第 ${n} 行：保险购买日格式错误`); return }
-      const obj = {
-        plate, vin,
-        nickname: nickname || null,
-        org: null,
-        driver: '',
-        fuel_type: fuelType || null, vehicle_type: vehicleType || null, usage: usage || null,
-        sub_vehicle: subVehicle || null, trailer: trailer || null,
-        purchase_date: purchaseDate || null, insurance_date: insuranceDate || null,
-        created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-      }
-      if (isCustomer) {
-        obj.customer_id = myCustomerId.value
-        // ⭐ 只有二级机构导入时才写 org
-        if (needOrgFilter.value && myOrgName.value) {
-          obj.org = myOrgName.value
-        }
-      }
-      validData.push(obj)
-    })
-
-    if (errors.length) { importErrors.value = errors.slice(0, 20); ElMessage.error(`存在 ${errors.length} 条错误`); return }
-    if (!validData.length) { ElMessage.warning('没有有效数据'); return }
-
-    const existing = new Set()
-    let eq = supabase.from('vehicles').select('plate').in('plate', validData.map(v => v.plate))
-    if (isCustomer) {
-      eq = eq.eq('customer_id', myCustomerId.value)
-      if (needOrgFilter.value && myOrgName.value) {
-        eq = eq.eq('org', myOrgName.value)
-      }
-    }
-    const { data: ex } = await eq
-      ; (ex || []).forEach(i => existing.add(i.plate))
-
-    const upd = [], ins = []
-    validData.forEach(item => existing.has(item.plate) ? upd.push(item) : ins.push(item))
-
-    for (const item of upd) {
-      let uq = supabase.from('vehicles').update(item).eq('plate', item.plate)
-      if (isCustomer) {
-        uq = uq.eq('customer_id', myCustomerId.value)
-        if (needOrgFilter.value && myOrgName.value) uq = uq.eq('org', myOrgName.value)
-      }
-      const { error } = await uq
-      if (error) throw error
-    }
-    if (ins.length) {
-      const { error } = await supabase.from('vehicles').insert(ins)
-      if (error) throw error
-    }
-
-    ElMessage.success(`导入完成：更新 ${upd.length} 条，新增 ${ins.length} 条`)
-    showImportDialog.value = false
-    uploadFile.value = null; uploadFileName.value = ''; importErrors.value = []
-    handleSearch()
-  } catch (err) { ElMessage.error('导入失败：' + err.message) }
-  finally { importing.value = false }
-}
 
 // ============================================================
 // 生命周期
@@ -755,8 +744,9 @@ onBeforeUnmount(() => {
               <el-table-column v-if="batchDeleteMode" type="selection" width="46" align="center" />
 
               <template v-for="col in visibleColumns" :key="col.prop">
+                <!-- 操作列 -->
                 <el-table-column v-if="col.prop === 'action'" :label="col.label"
-                  :width="col.width ? Math.round(col.width * densityMultiplier) : 120" :align="col.align"
+                  :width="Math.round((col.width || 118) * densityMultiplier)" :align="col.align"
                   :fixed="col.fixed || false">
                   <template #default="{ row }">
                     <div class="action-cell">
@@ -774,25 +764,18 @@ onBeforeUnmount(() => {
                   </template>
                 </el-table-column>
 
-                <el-table-column v-else-if="col.prop === 'created_at' || col.prop === 'updated_at'" :label="col.label"
-                  :min-width="Math.round(col.minWidth * densityMultiplier)" :align="col.align"
-                  :fixed="col.fixed || false" show-overflow-tooltip>
-                  <template #default="{ row }"><span class="time-text">{{ formatDateTime(row[col.prop])
-                  }}</span></template>
-                </el-table-column>
-
+                <!-- 车架号：等宽字 -->
                 <el-table-column v-else-if="col.prop === 'vin'" :label="col.label"
-                  :min-width="Math.round(col.minWidth * densityMultiplier)" :align="col.align"
+                  :width="Math.round((col.width || 168) * densityMultiplier)" :align="col.align"
                   :fixed="col.fixed || false" show-overflow-tooltip>
                   <template #default="{ row }"><span class="mono-text">{{ row.vin || '--' }}</span></template>
                 </el-table-column>
 
-                <el-table-column v-else :prop="col.prop" :label="col.label"
-                  :min-width="Math.round(col.minWidth * densityMultiplier)" :align="col.align"
-                  :fixed="col.fixed || false" show-overflow-tooltip>
+                <!-- 其余 38 列：统一文本；到期日/提醒由 cellText 处理数组 -->
+                <el-table-column v-else :label="col.label" :width="Math.round((col.width || 110) * densityMultiplier)"
+                  :align="col.align" :fixed="col.fixed || false" show-overflow-tooltip>
                   <template #default="{ row }">
-                    <span :class="col.prop === 'plate' ? 'plate-text' : 'text-content'">{{ row[col.prop] || '--'
-                    }}</span>
+                    <span :class="col.prop === 'plate' ? 'plate-text' : 'text-content'">{{ cellText(row, col) }}</span>
                   </template>
                 </el-table-column>
               </template>
@@ -827,51 +810,8 @@ onBeforeUnmount(() => {
       </div>
     </Teleport>
 
-    <!-- 导入 -->
-    <el-dialog v-model="showImportDialog" title="导入车辆档案" width="560px" destroy-on-close :close-on-click-modal="false"
-      class="va-dialog">
-      <div class="import-step">
-        <div class="step-header"><span class="step-num">1</span><span class="step-title">下载模板</span></div>
-        <div class="step-body">
-          <el-button type="primary" class="btn-primary" size="small" @click="downloadTemplate">
-            <el-icon>
-              <Download />
-            </el-icon> 下载模板
-          </el-button>
-          <span class="step-tip">支持 .csv / .xlsx</span>
-        </div>
-      </div>
-
-      <div class="import-step">
-        <div class="step-header"><span class="step-num">2</span><span class="step-title">上传文件</span></div>
-        <div class="step-body step-col">
-          <el-upload ref="uploadRef" action="#" :auto-upload="false" :on-change="handleFileChange"
-            :on-remove="handleFileRemove" :limit="1" accept=".csv,.xlsx,.xls" drag class="import-upload">
-            <div class="upload-inner">
-              <el-icon class="upload-icon">
-                <Upload />
-              </el-icon>
-              <div class="upload-text">点击或拖拽上传</div>
-            </div>
-          </el-upload>
-          <div v-if="uploadFileName" class="upload-filename">已选：{{ uploadFileName }}</div>
-        </div>
-      </div>
-
-      <div v-if="importErrors.length" class="import-errors">
-        <div class="error-title">错误：</div>
-        <div class="error-list">
-          <div v-for="(e, i) in importErrors" :key="i">{{ e }}</div>
-        </div>
-      </div>
-
-      <template #footer>
-        <button class="action-btn-footer ghost" @click="showImportDialog = false">取消</button>
-        <button class="action-btn-footer primary" :disabled="importing" @click="confirmImport">
-          {{ importing ? '导入中...' : '确认导入' }}
-        </button>
-      </template>
-    </el-dialog>
+    <!-- 导入（⭐ 一张宽表 40 列，按表头名解析，老 10 列模板也能导） -->
+    <VehicleImportDialog v-model="showImportDialog" @done="fetchVehicles" />
 
     <!-- 详情 -->
     <el-dialog v-model="detailDialogVisible" width="720px" top="8vh" destroy-on-close :close-on-click-modal="false"
@@ -917,6 +857,7 @@ onBeforeUnmount(() => {
           formatDateTime(currentDetailRow.updated_at) }}</span></div>
       </div>
       <template #footer>
+        <button class="action-btn-footer ghost" @click="goMaintenance">维保记录</button>
         <button class="action-btn-footer ghost" @click="detailDialogVisible = false">关闭</button>
         <button class="action-btn-footer primary" @click="openEditFromView">编辑</button>
       </template>
@@ -933,6 +874,14 @@ onBeforeUnmount(() => {
       </template>
       <div v-if="editFormData" class="edit-content">
         <el-form :model="editFormData" label-width="100px" class="edit-form">
+          <div class="edit-tabs">
+            <span :class="{ on: editTab === 'base' }" @click="editTab = 'base'">基本信息</span>
+            <span :class="{ on: editTab === 'cert' }" @click="editTab = 'cert'">
+              证件与保险<span class="dot" v-if="certDueCount">{{ certDueCount }}</span>
+            </span>
+          </div>
+
+          <div v-show="editTab === 'base'">
           <div class="form-section">
             <div class="section-title">基本信息</div>
             <el-row :gutter="16">
@@ -1023,6 +972,68 @@ onBeforeUnmount(() => {
                 }}</span></el-form-item>
               </el-col>
             </el-row>
+          </div>
+          </div><!-- /base -->
+
+          <!-- ⭐ 证件与保险：一行一个证件，存 vehicle_certs（不占 vehicles 列） -->
+          <div v-show="editTab === 'cert'" class="cert-pane">
+            <div v-if="certsLoading" class="cert-loading">正在读取证件…</div>
+            <div v-for="t in CERT_TYPES" :key="t.key" class="cert-block">
+              <div class="cert-head">
+                <span class="cert-tag" :style="{ background: t.bg, color: t.color }">{{ t.name }}</span>
+                <span class="cert-state" :style="{ color: certState(t.key).color }">{{ certState(t.key).text }}</span>
+                <span class="cert-switch">
+                  <el-switch v-model="certForm[t.key].remind_enabled" size="small" />
+                  <em>提醒</em>
+                </span>
+              </div>
+
+              <el-row :gutter="12">
+                <el-col :span="12">
+                  <el-form-item :label="t.key === 'maintain' ? '最近保养日期' : '证号 / 保单号'">
+                    <el-date-picker v-if="t.key === 'maintain'" v-model="certForm[t.key].start_date"
+                      type="date" value-format="YYYY-MM-DD" style="width:100%" />
+                    <el-input v-else v-model="certForm[t.key].cert_no" placeholder="可不填" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item :label="t.key === 'maintain' ? '上次保养里程' : (t.key === 'driving' ? '有效期至' : '到期日')">
+                    <el-input v-if="t.key === 'maintain'" v-model.number="certForm[t.key].last_maintain_km"
+                      placeholder="km"><template #append>km</template></el-input>
+                    <el-date-picker v-else v-model="certForm[t.key].expire_date" type="date"
+                      value-format="YYYY-MM-DD" style="width:100%" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-row :gutter="12" v-if="t.key === 'maintain'">
+                <el-col :span="12">
+                  <el-form-item label="间隔里程">
+                    <el-input v-model.number="certForm[t.key].maintain_interval_km" placeholder="10000">
+                      <template #append>km</template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="12" v-else-if="t.key !== 'driving'">
+                <el-col :span="12">
+                  <el-form-item label="起期">
+                    <el-date-picker v-model="certForm[t.key].start_date" type="date"
+                      value-format="YYYY-MM-DD" style="width:100%" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <div class="cert-days">
+                <span class="cert-days-lb">{{ t.key === 'maintain' ? '提前提醒(km)' : '提前提醒(天)' }}</span>
+                <span v-for="d in remindPool(t.key)" :key="d" class="cert-chip"
+                  :class="{ on: certForm[t.key].remind_days.includes(d) }"
+                  @click="toggleCertDay(t.key, d)">{{ d }}</span>
+              </div>
+            </div>
+            <div class="cert-tip">
+              证件单独存一张表（一台车多条），到期提醒按这里的日期走。留空 = 这车没有该项证件。
+            </div>
           </div>
         </el-form>
       </div>
@@ -2201,4 +2212,58 @@ body {
   background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark)) !important;
   border-color: var(--brand-primary) !important;
 }
+
+/* ============================================================
+   ⭐ 证件与保险 Tab
+   ============================================================ */
+.edit-tabs { display: flex; gap: 6px; margin: 0 0 14px; border-bottom: 1px solid #EEF2F7; padding-bottom: 10px; }
+.edit-tabs span {
+  position: relative; font-size: 13px; font-weight: 700; color: #64748B;
+  padding: 6px 13px; border-radius: 8px; cursor: pointer; user-select: none;
+}
+.edit-tabs span:hover { background: #F8FAFC; }
+.edit-tabs span.on { background: #FDF2F4; color: #C8102E; }
+.edit-tabs span .dot {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 16px; border-radius: 9px; background: #C8102E; color: #fff;
+  font-size: 10px; font-weight: 800; margin-left: 5px; padding: 0 4px; vertical-align: 1px;
+}
+.cert-pane { padding-bottom: 4px; }
+.cert-loading { font-size: 12px; color: #94A3B8; padding: 6px 0 12px; }
+.cert-block {
+  border: 1px solid #EEF2F7; border-radius: 10px;
+  padding: 11px 13px 4px; margin-bottom: 10px; background: #FCFDFE;
+}
+.cert-head { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+.cert-tag { font-size: 11.5px; font-weight: 800; padding: 2px 8px; border-radius: 5px; }
+.cert-state { font-size: 12px; font-weight: 700; }
+.cert-switch { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.cert-switch em { font-style: normal; font-size: 11.5px; color: #94A3B8; font-weight: 600; }
+.cert-days { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 2px 0 9px; }
+.cert-days-lb { font-size: 12px; color: #94A3B8; font-weight: 600; margin-right: 3px; }
+.cert-chip {
+  height: 24px; padding: 0 10px; border-radius: 12px; border: 1px solid #E2E8F0;
+  background: #fff; font-size: 11.5px; font-weight: 700; color: #64748B;
+  display: inline-flex; align-items: center; cursor: pointer;
+}
+.cert-chip.on { background: #C8102E; border-color: #C8102E; color: #fff; }
+.cert-tip { font-size: 11.5px; color: #94A3B8; line-height: 1.7; padding: 2px 0 6px; }
+.cert-pane :deep(.el-form-item) { margin-bottom: 12px; }
+.cert-pane :deep(.el-form-item__label) { font-size: 12.5px; color: #64748B; }
+
+/* ============================================================
+   ⭐ 编辑弹窗内容变多（基本信息 + 6 组证件）
+   锁高度、body 内滚、footer 常驻
+   ⚠️ va-dialog 这个 class 就落在 .el-dialog 自己身上（不是祖先），
+      所以只能写 .va-dialog.el-dialog；scoped 里的 :deep(.va-dialog .el-dialog) 永不命中。
+   ============================================================ */
+.va-dialog.el-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 6vh - 16px);
+  margin-bottom: 0;
+}
+.va-dialog .el-dialog__header { flex: 0 0 auto; }
+.va-dialog .el-dialog__footer { flex: 0 0 auto; }
+.va-dialog .el-dialog__body { flex: 1; min-height: 0; overflow: auto; }
 </style>

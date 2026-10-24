@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>车辆档案 · 一张表导入导出 · 模板预览</title>
+<style>
+* { box-sizing: border-box; }
+:root{
+  --brand:#c8102e; --brand-soft:#fdf2f4;
+  --ink:#0F172A; --ink2:#334155; --ink3:#64748B; --ink4:#94A3B8;
+  --line:#E2E8F0; --line2:#EEF2F7; --bg:#F5F7FA;
+  --red:#c8102e; --orange:#EA580C; --amber:#B45309; --green:#047857; --blue:#2563EB;
+}
+html,body{ margin:0; padding:0; }
+body{
+  background:#EEF1F5; font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+  color:var(--ink); padding:26px 20px 70px; -webkit-font-smoothing:antialiased;
+}
+.wrap{ max-width:1280px; margin:0 auto; }
+.head h1{ font-size:20px; margin:0 0 7px; letter-spacing:.2px; }
+.head p{ margin:0; font-size:13px; color:var(--ink3); line-height:1.75; }
+.head .tagline{ display:inline-flex; gap:7px; margin-top:10px; flex-wrap:wrap; }
+.tag{ font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:20px; background:#fff; border:1px solid var(--line); color:var(--ink2); }
+
+.switcher{ display:flex; gap:7px; margin:18px 0 16px; flex-wrap:wrap; position:sticky; top:0; z-index:50; background:#EEF1F5; padding:9px 0; }
+.switcher button{ font:inherit; font-size:12.5px; font-weight:700; cursor:pointer; padding:8px 15px; border-radius:9px; border:1px solid var(--line); background:#fff; color:var(--ink2); transition:all .16s; }
+.switcher button:hover{ border-color:#CBD5E1; color:var(--brand); }
+.switcher button.on{ background:var(--brand); border-color:var(--brand); color:#fff; box-shadow:0 6px 16px rgba(200,16,46,.24); }
+.panel{ display:none; } .panel.on{ display:block; }
+
+.card{ background:#fff; border-radius:12px; padding:16px; box-shadow:0 4px 16px rgba(0,0,0,.045); margin-bottom:14px; }
+.card-label{ font-size:11px; font-weight:800; color:var(--ink4); letter-spacing:1.3px; margin:0 0 12px; display:flex; align-items:center; gap:8px; }
+.card-label::after{ content:''; flex:1; height:1px; background:var(--line2); }
+.note{ display:flex; gap:10px; background:#fff; border:1px solid var(--line); border-left:3px solid var(--brand); border-radius:10px; padding:12px 15px; margin-bottom:13px; }
+.note .dot{ width:18px;height:18px;border-radius:50%;background:var(--brand-soft);color:var(--brand);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:1px; }
+.note b{ font-size:13px; }
+.note p{ margin:4px 0 0; font-size:12.5px; color:var(--ink3); line-height:1.7; }
+.note p strong{ color:var(--ink2); }
+h2.sec{ font-size:15px; margin:20px 0 11px; display:flex; align-items:center; gap:9px; }
+h2.sec::before{ content:''; width:3px; height:15px; background:var(--brand); border-radius:2px; }
+
+/* Excel */
+.xls-wrap{ background:#fff; border-radius:12px; box-shadow:0 4px 18px rgba(0,0,0,.06); overflow:hidden; }
+.xls-bar{ display:flex; align-items:center; gap:9px; padding:9px 14px; background:#F7F9FC; border-bottom:1px solid var(--line2); }
+.xls-bar .fn{ font-size:12.5px; font-weight:800; color:var(--ink2); display:flex; align-items:center; gap:6px; }
+.xls-bar .fn i{ width:14px;height:16px;background:#1D6F42;border-radius:2px;display:block; }
+.xls-bar .meta{ font-size:11.5px; color:var(--ink4); }
+.xls-bar .right{ margin-left:auto; display:flex; gap:6px; }
+.xls-hint{ font-size:11.5px; color:var(--ink4); padding:7px 14px; background:#FCFDFE; border-bottom:1px solid var(--line2); display:flex; gap:8px; align-items:center; }
+.xls-hint b{ color:var(--amber); }
+.xls-scroll{ overflow-x:auto; position:relative; }
+.xls-scroll::after{ content:""; position:sticky; right:0; }
+table.xls{ border-collapse:separate; border-spacing:0; font-size:12.5px; background:#fff; }
+table.xls th, table.xls td{ border-right:1px solid #D9D9D9; border-bottom:1px solid #D9D9D9; }
+table.xls td:first-child, table.xls th:nth-child(2){ border-left:1px solid #D9D9D9; }
+table.xls .cl{ background:#F5F5F5; color:#7A7A7A; font-size:10px; font-weight:600; text-align:center; height:20px; padding:0 3px; }
+table.xls .rn{ background:#F5F5F5; color:#7A7A7A; font-size:11px; font-weight:600; text-align:center; width:34px; min-width:34px; position:sticky; left:0; z-index:3; }
+.grp{ text-align:center; font-size:11px; font-weight:800; height:24px; padding:0 6px; letter-spacing:.3px; }
+.grp.g1{ background:#EEF2F7; color:#334155; }
+.grp.g2{ background:#EFF4FF; color:#1D4ED8; }
+.grp.g3{ background:#ECFDF5; color:#047857; }
+.grp.g4{ background:#FFF7ED; color:#B45309; }
+.grp.g5{ background:#FDF2F4; color:#9F1239; }
+.grp.g6{ background:#F5F3FF; color:#5B21B6; }
+.grp.g7{ background:#FEF9C3; color:#854D0E; }
+table.xls thead .fld{ background:#fff; color:#334155; font-size:11.5px; font-weight:700; padding:5px 8px; text-align:left; white-space:nowrap; height:30px; border-bottom:2px solid #C9D2DE; }
+table.xls thead .fld.req::after{ content:' *'; color:var(--brand); }
+table.xls thead .fld.new{ color:#1D4ED8; }
+table.xls tbody td{ padding:5px 8px; color:var(--ink); font-weight:600; white-space:nowrap; height:29px; }
+table.xls tbody tr:nth-child(even) td{ background:#FCFDFE; }
+table.xls tbody td.mut{ color:#C7D0DB; font-weight:400; }
+table.xls tbody td.dim{ color:var(--ink4); font-weight:400; }
+table.xls tbody td.lock{ position:sticky; background:inherit; z-index:2; box-shadow:1px 0 0 #D9D9D9; }
+table.xls tbody tr:nth-child(even) td.lock{ background:#FCFDFE; }
+table.xls tbody tr:nth-child(odd) td.lock{ background:#fff; }
+table.xls tbody td.l1{ left:34px; }
+table.xls tbody td.l2{ left:34px; }
+.sheet-tabs{ display:flex; gap:2px; padding:0 12px; background:#F7F9FC; border-top:1px solid var(--line2); }
+.sheet-tabs div{ font-size:12px; font-weight:700; color:var(--ink3); padding:7px 14px; border-bottom:2px solid transparent; }
+.sheet-tabs div.on{ color:var(--brand); border-bottom-color:var(--brand); background:#fff; }
+
+table.cmp{ width:100%; border-collapse:separate; border-spacing:0; background:#fff; border-radius:10px; overflow:hidden; font-size:12.5px; box-shadow:0 2px 10px rgba(0,0,0,.04); }
+table.cmp th{ background:#F7F9FC; color:#475569; font-size:11.5px; font-weight:700; text-align:left; padding:9px 11px; border-bottom:1px solid var(--line2); }
+table.cmp td{ padding:9px 11px; border-bottom:1px solid #F4F7FA; color:var(--ink2); line-height:1.65; vertical-align:top; }
+table.cmp td:first-child{ color:var(--ink); font-weight:700; }
+table.cmp tr:last-child td{ border-bottom:none; }
+.pill{ display:inline-flex; align-items:center; gap:5px; height:21px; padding:0 8px; border-radius:11px; font-size:11.5px; font-weight:700; }
+.pill .d{ width:5px;height:5px;border-radius:50%;background:currentColor; }
+.pill.red{ background:#FDF2F4; color:var(--red); }
+.pill.amber{ background:#FFF7ED; color:var(--amber); }
+.pill.green{ background:#ECFDF5; color:var(--green); }
+.pill.blue{ background:#EFF4FF; color:var(--blue); }
+.pill.gray{ background:#F1F5F9; color:var(--ink3); }
+code{ background:#F1F5F9; border-radius:4px; padding:1px 5px; font-size:11.5px; color:#334155; font-family:"SF Mono",Menlo,Consolas,monospace; }
+.grid2{ display:grid; grid-template-columns:1.3fr .7fr; gap:12px; align-items:start; }
+.muted{ color:var(--ink4); font-size:12px; line-height:1.7; }
+.btn{ display:inline-flex; align-items:center; gap:5px; height:27px; padding:0 10px; border-radius:7px; border:1px solid var(--line); background:#fff; color:var(--ink2); font-size:12px; font-weight:700; }
+.btn.primary{ background:var(--brand); border-color:var(--brand); color:#fff; }
+.err-row{ display:flex; gap:8px; padding:8px 11px; border-radius:8px; background:#FFFCFC; border:1px solid #F7C1C1; font-size:12px; color:#A32D2D; margin-bottom:6px; align-items:flex-start; }
+.err-row b{ flex:0 0 auto; }
+
+/* 拆表图 */
+.split{ display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap; }
+.sbox{ border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:#fff; font-size:12px; line-height:1.7; color:var(--ink2); }
+.sbox b{ display:block; font-size:12.5px; color:var(--ink); margin-bottom:2px; }
+.sbox.src{ border-left:3px solid var(--amber); background:#FFFDF7; }
+.sbox.src code{ display:block; margin-top:5px; white-space:normal; word-break:break-word; line-height:1.65; }
+.sbox.t1{ border-left:3px solid var(--blue); }
+.sbox.t2{ border-left:3px solid var(--green); }
+.sarw{ color:#CBD5E1; font-size:18px; font-weight:700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>车辆档案 · 一张表导入导出</h1>
+    <p>导入、导出都只用<b>一张宽表</b>（一行一车、40 列），数据库内部仍是两张表，但这件事客户和后续维护都看不到 ——
+       写库前拆一下、读库时拼一下，核心逻辑只有一份列定义。</p>
+    <div class="tagline">
+      <span class="tag">40 列 · 7 个分组</span>
+      <span class="tag">一行一车</span>
+      <span class="tag">按表头名解析，不认列位置</span>
+      <span class="tag">老 10 列 Excel 仍可导入</span>
+      <span class="tag">导出 → 改 → 导回 形成闭环</span>
+    </div>
+  </div>
+
+  <div class="switcher">
+    <button class="on" data-p="p1">宽表模板</button>
+    <button data-p="p2">为什么不用分两张表</button>
+    <button data-p="p3">一行怎么拆成 1+6 条</button>
+    <button data-p="p4">校验与报错</button>
+  </div>
+
+  <!-- ============ 1 宽表模板 ============ -->
+  <section class="panel on" id="p1">
+
+    <div class="note">
+      <div class="dot">!</div>
+      <div>
+        <b>两行表头：第 1 行是分组，第 2 行才是字段名</b>
+        <p>解析时<b>读第 2 行建「字段名 → 列号」映射</b>，不看列在 A 还是 AN。所以：列序随便调、删掉不要的列、
+           甚至只有老模板 10 列，都能导 —— 缺的列就当"这次不更新"。</p>
+      </div>
+    </div>
+
+    <div class="xls-wrap">
+      <div class="xls-bar">
+        <span class="fn"><i></i>车辆档案.xlsx</span>
+        <span class="meta">一张表 · 40 列 · 7 分组 · 示例 3 行可删</span>
+        <span class="right"><span class="btn">下载模板</span><span class="btn primary">上传导入</span></span>
+      </div>
+      <div class="xls-hint">
+        <b>← 横向滚动 →</b>
+        <span>第一列（车牌号）已冻结，滚到 AN 列也看得见是哪台车</span>
+        <span style="margin-left:auto">蓝色字段名 = 本次新增</span>
+      </div>
+      <div class="xls-scroll">
+        <table class="xls">
+          <thead>
+            <tr>
+              <th class="cl rn" style="height:20px"></th>
+              <th class="cl">A</th><th class="cl">B</th><th class="cl">C</th><th class="cl">D</th><th class="cl">E</th><th class="cl">F</th><th class="cl">G</th>
+              <th class="cl">H</th><th class="cl">I</th><th class="cl">J</th><th class="cl">K</th><th class="cl">L</th><th class="cl">M</th><th class="cl">N</th>
+              <th class="cl">O</th><th class="cl">P</th><th class="cl">Q</th>
+              <th class="cl">R</th><th class="cl">S</th>
+              <th class="cl">T</th><th class="cl">U</th><th class="cl">V</th>
+              <th class="cl">W</th><th class="cl">X</th><th class="cl">Y</th>
+              <th class="cl">Z</th><th class="cl">AA</th><th class="cl">AB</th>
+              <th class="cl">AC</th><th class="cl">AD</th><th class="cl">AE</th>
+              <th class="cl">AF</th><th class="cl">AG</th><th class="cl">AH</th>
+              <th class="cl">AI</th><th class="cl">AJ</th><th class="cl">AK</th><th class="cl">AL</th><th class="cl">AM</th><th class="cl">AN</th>
+            </tr>
+            <tr>
+              <th class="cl rn"></th>
+              <th class="grp g1" colspan="17">车辆信息</th>
+              <th class="grp g2" colspan="2">行驶证</th>
+              <th class="grp g3" colspan="3">营运证</th>
+              <th class="grp g4" colspan="3">交强险</th>
+              <th class="grp g5" colspan="3">商业险</th>
+              <th class="grp g6" colspan="3">超赔险</th>
+              <th class="grp g1" colspan="3">保养</th>
+              <th class="grp g7" colspan="6">提醒设置（留空 = 30 天）</th>
+            </tr>
+            <tr>
+              <th class="cl rn"></th>
+              <th class="fld req" style="min-width:104px">车牌号</th>
+              <th class="fld req" style="min-width:158px">车架号(VIN)</th>
+              <th class="fld" style="min-width:86px">车辆昵称</th>
+              <th class="fld" style="min-width:98px">所属机构组织</th>
+              <th class="fld" style="min-width:88px">绑定司机</th>
+              <th class="fld" style="min-width:76px">燃料类型</th>
+              <th class="fld" style="min-width:76px">车辆类型</th>
+              <th class="fld" style="min-width:76px">车辆用途</th>
+              <th class="fld" style="min-width:62px">子母车</th>
+              <th class="fld" style="min-width:80px">关联挂车</th>
+              <th class="fld new" style="min-width:92px">发动机号</th>
+              <th class="fld new" style="min-width:104px">初次登记日期</th>
+              <th class="fld new" style="min-width:84px">车主姓名</th>
+              <th class="fld new" style="min-width:80px">车辆状态</th>
+              <th class="fld" style="min-width:96px">车辆购买日</th>
+              <th class="fld" style="min-width:96px">保险购买日</th>
+              <th class="fld" style="min-width:88px">备注</th>
+
+              <th class="fld new" style="min-width:104px">行驶证号</th>
+              <th class="fld new" style="min-width:110px">行驶证有效期至</th>
+
+              <th class="fld new" style="min-width:110px">营运证号</th>
+              <th class="fld new" style="min-width:92px">营运证起期</th>
+              <th class="fld new" style="min-width:110px">营运证有效期至</th>
+
+              <th class="fld new" style="min-width:124px">交强险保单号</th>
+              <th class="fld new" style="min-width:92px">交强险起期</th>
+              <th class="fld new" style="min-width:92px">交强险止期</th>
+
+              <th class="fld new" style="min-width:124px">商业险保单号</th>
+              <th class="fld new" style="min-width:92px">商业险起期</th>
+              <th class="fld new" style="min-width:92px">商业险止期</th>
+
+              <th class="fld new" style="min-width:124px">超赔险保单号</th>
+              <th class="fld new" style="min-width:92px">超赔险起期</th>
+              <th class="fld new" style="min-width:92px">超赔险止期</th>
+
+              <th class="fld new" style="min-width:104px">最近保养日期</th>
+              <th class="fld new" style="min-width:96px">最近保养里程</th>
+              <th class="fld new" style="min-width:96px">保养间隔里程</th>
+
+              <th class="fld new" style="min-width:82px">行驶证提醒</th>
+              <th class="fld new" style="min-width:82px">营运证提醒</th>
+              <th class="fld new" style="min-width:82px">交强险提醒</th>
+              <th class="fld new" style="min-width:82px">商业险提醒</th>
+              <th class="fld new" style="min-width:82px">超赔险提醒</th>
+              <th class="fld new" style="min-width:82px">保养提醒</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="rn">4</td>
+              <td class="lock l1">沪A·D12345</td>
+              <td>LGAX3AG59N9009177</td>
+              <td class="dim">一号车</td>
+              <td class="dim">华东一队</td>
+              <td class="dim">张伟</td>
+              <td class="dim">纯电动</td>
+              <td class="dim">牵引车</td>
+              <td class="dim">干线运输</td>
+              <td class="dim">否</td>
+              <td class="dim">沪A·T9001</td>
+              <td class="dim">WP13E5001</td>
+              <td class="dim">2020-11-19</td>
+              <td class="dim">王建国</td>
+              <td class="dim">营运</td>
+              <td class="dim">2020-11-25</td>
+              <td class="dim">2025-10-21</td>
+              <td class="mut"></td>
+
+              <td class="dim">沪A12345678</td><td>2026-11-18</td>
+
+              <td class="dim">沪交运管字 3382</td><td class="dim">2022-10-19</td><td>2026-10-18</td>
+
+              <td class="dim">PDZA2025…1102</td><td class="dim">2025-10-27</td><td>2026-10-26</td>
+
+              <td class="dim">PDAA2025…8821</td><td class="dim">2025-10-21</td><td style="color:#c8102e;font-weight:800">2026-10-20</td>
+
+              <td class="dim">PDAE2025…4437</td><td class="dim">2025-11-23</td><td>2026-11-22</td>
+
+              <td class="dim">2026-08-12</td><td class="dim">48,200</td><td class="dim">10,000</td>
+
+              <td class="mut">30,7,3</td><td class="mut">90,30,7</td><td class="mut">30</td>
+              <td class="mut">90,30,7,3</td><td class="mut">30</td><td class="mut">30</td>
+            </tr>
+            <tr>
+              <td class="rn">5</td>
+              <td class="lock l1">沪B·E88888</td>
+              <td>LGAX3AG59N9009231</td>
+              <td class="dim">二号车</td>
+              <td class="dim">华东一队</td>
+              <td class="dim">李强</td>
+              <td class="dim">燃油车</td>
+              <td class="dim">厢式车</td>
+              <td class="dim">城配</td>
+              <td class="dim">否</td>
+              <td class="mut"></td>
+              <td class="dim">WP10H3201</td>
+              <td class="dim">2022-05-08</td>
+              <td class="dim">赵明</td>
+              <td class="dim">营运</td>
+              <td class="mut"></td><td class="mut"></td>
+              <td class="dim">只交了交强险</td>
+
+              <td class="dim">沪B98765432</td><td>2027-01-09</td>
+
+              <td class="dim">沪交运管字 4491</td><td class="mut"></td><td>2027-04-18</td>
+
+              <td class="dim">PDZA2026…0031</td><td class="dim">2026-11-30</td><td>2027-11-29</td>
+
+              <td class="mut"></td><td class="mut"></td><td class="mut"></td>
+
+              <td class="mut"></td><td class="mut"></td><td class="mut"></td>
+
+              <td class="mut"></td><td class="mut"></td><td class="mut"></td>
+
+              <td class="mut">30</td><td class="mut">30</td><td class="mut">30</td>
+              <td class="mut"></td><td class="mut"></td><td class="mut"></td>
+            </tr>
+            <tr>
+              <td class="rn">6</td>
+              <td class="lock l1">沪C·F66666</td>
+              <td>LGAX3AG59N9009555</td>
+              <td class="mut"></td>
+              <td class="mut"></td>
+              <td class="mut"></td>
+              <td class="mut"></td>
+              <td class="mut"></td>
+              <td class="mut"></td>
+              <td class="mut"></td>
+              <td class="mut"></td>
+              <td class="mut"></td>
+              <td class="mut"></td>
+              <td class="mut"></td>
+              <td class="mut"></td>
+              <td class="mut"></td>
+              <td class="mut"></td>
+              <td class="mut"></td>
+
+              <td class="dim">沪C11223344</td><td>2027-05-20</td>
+
+              <td class="mut"></td><td class="mut"></td><td class="mut"></td>
+              <td class="mut"></td><td class="mut"></td><td class="mut"></td>
+              <td class="mut"></td><td class="mut"></td><td class="mut"></td>
+              <td class="mut"></td><td class="mut"></td><td class="mut"></td>
+              <td class="mut"></td><td class="mut"></td><td class="mut"></td>
+              <td class="mut"></td><td class="mut"></td><td class="mut"></td>
+              <td class="mut"></td><td class="mut"></td><td class="mut"></td>
+            </tr>
+            <tr>
+              <td class="rn">7</td>
+              <td colspan="40" class="mut">↓ 继续添加（只有车牌号 + 车架号必填，其余都可以空着以后在页面里补）</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sheet-tabs">
+        <div class="on">车辆档案</div>
+        <div>填写说明</div>
+        <div>可选值对照</div>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:14px">
+      <div class="card" style="margin:0">
+        <div class="card-label">只有 2 个必填，其余全可空</div>
+        <table class="cmp">
+          <tr><th style="width:172px">字段</th><th style="width:80px">必填</th><th>说明</th></tr>
+          <tr><td>车牌号</td><td><span class="pill red"><i class="d"></i>是</span></td><td class="dim">唯一键，靠它判断是新建还是更新</td></tr>
+          <tr><td>车架号(VIN)</td><td><span class="pill red"><i class="d"></i>是</span></td><td class="dim">新建车必填；<b>已存在的车可空</b>（空 = 不动原值）</td></tr>
+          <tr><td>其余 18 个车辆字段</td><td><span class="pill gray"><i class="d"></i>否</span></td><td class="dim">空 = 跳过，不覆盖库里已有值</td></tr>
+          <tr><td>6 组证件的止期/有效期</td><td><span class="pill gray"><i class="d"></i>否</span></td><td class="dim">整组全空 = 这车没有该证件，不建记录</td></tr>
+          <tr><td>6 个提醒列</td><td><span class="pill gray"><i class="d"></i>否</span></td><td class="dim">空 = 默认 30；可写 <code>90,30,7,3</code></td></tr>
+        </table>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-label">分组配色就是给填表人看的</div>
+        <table class="cmp">
+          <tr><th style="width:110px">分组</th><th>列</th></tr>
+          <tr><td><span class="pill gray"><i class="d"></i>车辆信息</span></td><td class="dim">A–Q（17 列）</td></tr>
+          <tr><td><span class="pill blue"><i class="d"></i>行驶证</span></td><td class="dim">R–S（2 列）</td></tr>
+          <tr><td><span class="pill green"><i class="d"></i>营运证</span></td><td class="dim">T–V（3 列）</td></tr>
+          <tr><td><span class="pill amber"><i class="d"></i>交强险</span></td><td class="dim">W–Y（3 列）</td></tr>
+          <tr><td><span class="pill red"><i class="d"></i>商业险</span></td><td class="dim">Z–AB（3 列）</td></tr>
+          <tr><td><span class="pill" style="background:#F5F3FF;color:#5B21B6"><i class="d"></i>超赔险</span></td><td class="dim">AC–AE（3 列）</td></tr>
+          <tr><td><span class="pill gray"><i class="d"></i>保养</span></td><td class="dim">AF–AH（3 列）</td></tr>
+          <tr><td><span class="pill" style="background:#FEF9C3;color:#854D0E"><i class="d"></i>提醒设置</span></td><td class="dim">AI–AN（6 列）</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2 为什么不用两张表 ============ -->
+  <section class="panel" id="p2">
+    <div class="note">
+      <div class="dot">✓</div>
+      <div>
+        <b>你担心的"维护两套"确实是最大的成本，这一版把它彻底去掉了</b>
+        <p>办法不是"把列变少"，而是<strong>把列定义收成一份、解析按表头名</strong>。
+           一份列定义同时驱动：Excel 导出、导入解析、页面「列设置」、视图字段。以后加一个字段，改一处，四处同时生效。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">一份列定义，四处共用（这是"只用维护一张表"的真正含义）</div>
+      <div class="split">
+        <div class="sbox src" style="min-width:200px">
+          <b>src/config/vehicleColumns.js</b>
+          <code>{ key:'sy_end', label:'商业险止期', group:'商业险', type:'date' }</code>
+        </div>
+        <span class="sarw">→</span>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div class="sbox t1"><b>导出</b>按定义顺序写表头 + 取值</div>
+          <div class="sbox t1"><b>导入</b>按 label 反查列号，不认位置</div>
+          <div class="sbox t1"><b>列设置</b>弹窗自动出现该列，可隐藏/调序</div>
+          <div class="sbox t1"><b>视图</b>字段名跟 key 对齐</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="cmp" style="margin-top:14px">
+      <tr><th style="width:150px">担心的事</th><th>这一版怎么解决</th></tr>
+      <tr><td>导出和导入两套列</td><td class="dim"><b>同一份定义</b>。导出写的是它，导入读的也是它 —— 导出文件改完直接导回，天然闭环</td></tr>
+      <tr><td>老客户手上的老 Excel</td><td class="dim">按表头名解析 → 老 10 列文件<b>一张不改也能导</b>，缺的列当作"本次不更新"</td></tr>
+      <tr><td>客户删掉不要的列</td><td class="dim">同样没事。只要表头名还在，列序、删列都不影响</td></tr>
+      <tr><td>加新字段要改几处</td><td class="dim">改列定义 + 加数据库列 + 视图加一行，<b>前端导入导出零改动</b></td></tr>
+      <tr><td>两种格式的校验规则</td><td class="dim">只有一份校验（按 <code>type</code> 走 date/number/text），不会出现"导出能写、导入不认"</td></tr>
+    </table>
+
+    <div class="note" style="margin-top:14px;border-left-color:#D97706">
+      <div class="dot" style="background:#FFF7ED;color:#B45309">!</div>
+      <div>
+        <b>数据库仍然是两张表，但这件事只在"写库那一步"存在</b>
+        <p>代码里只有两个函数知道内情：<code>saveVehicleWithCerts(row)</code> 负责拆成 1 条 + N 条，
+           <code>toFlatRow(vehicle, certs)</code> 负责拼回一行。其余所有地方（页面、导出、导入、列表）看到的都是宽表。
+           想藏得再干净一点，也可以把拆/拼放进一个云函数 <code>vehicle-save</code>，前端完全不知道。</p>
+      </div>
+    </div>
+
+    <table class="cmp" style="margin-top:4px">
+      <tr><th style="width:150px">方案</th><th style="width:120px">列数</th><th>评价</th></tr>
+      <tr><td>拆两个模板（我上一版）</td><td>10 + 9</td><td class="dim">填起来更省事，但客户要维护两个文件、还要记顺序 → <b>你否掉是对的</b></td></tr>
+      <tr><td><b>一张宽表（本版）</b></td><td><b>40</b></td><td class="dim"><b>一个文件搞定，导出改完直接导回</b>。代价是列多，靠分组色 + 冻结 + 按名解析解决</td></tr>
+      <tr><td>纯宽表存数据库</td><td>约 54</td><td class="dim">不用拆，但提醒查询要写 6 个 OR、改期要拼列名 → 不值得</td></tr>
+    </table>
+  </section>
+
+  <!-- ============ 3 一行怎么拆 ============ -->
+  <section class="panel" id="p3">
+    <div class="note">
+      <div class="dot">i</div>
+      <div>
+        <b>客户眼里：1 行。数据库里：1 条 vehicle + 5 条 cert</b>
+        <p>下面用第 4 行（沪A·D12345）真实走一遍。哪一组填了值就建哪一条，<strong>整组全空的不建</strong> —— 否则每台车都会凭空多出 6 条空证件。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">拆分过程</div>
+      <div class="split">
+        <div class="sbox src" style="min-width:230px">
+          <b>Excel 第 4 行</b>
+          沪A·D12345 · 17 个车辆字段<br>
+          + 行驶证/营运证/交强/商业/超赔/保养 各有值<br>
+          <span style="color:var(--amber);font-weight:700">1 行 = 1 台车 + 6 项证件</span>
+        </div>
+        <span class="sarw">→</span>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="sbox t1"><b>vehicles × 1</b>plate=沪A·D12345（upsert，靠车牌去重）</div>
+          <div class="sbox t2"><b>vehicle_certs × 6</b>driving / transport / jq / sy / excess / maintain</div>
+        </div>
+      </div>
+      <div style="height:1px;background:var(--line2);margin:14px 0"></div>
+      <table class="cmp">
+        <tr><th style="width:156px">填了哪些列</th><th style="width:170px">写库动作</th><th>说明</th></tr>
+        <tr><td>车牌 + VIN</td><td>upsert <code>vehicles</code></td><td class="dim">车牌已存在 → 只更新非空字段；不存在 → 新建</td></tr>
+        <tr><td>行驶证号 + 有效期至</td><td>upsert <code>certs(driving)</code></td><td class="dim">证号可空，只要有有效期至就建</td></tr>
+        <tr><td>商业险三列全空</td><td><span class="pill gray"><i class="d"></i>不建记录</span></td><td class="dim">第 5 行（沪B）就是这样，只在页面里显示"未录入"</td></tr>
+        <tr><td>保养：只有里程没日期</td><td>建 <code>certs(maintain)</code></td><td class="dim">按里程提醒；日期留空</td></tr>
+        <tr><td>提醒列写了 <code>90,30,7,3</code></td><td>存 <code>remind_days = {90,30,7,3}</code></td><td class="dim">空则该证件用默认 <code>{30}</code></td></tr>
+      </table>
+    </div>
+
+    <h2 class="sec">幂等：同一份文件重复导入不会产生重复数据</h2>
+    <table class="cmp">
+      <tr><th style="width:190px">约束</th><th>作用</th></tr>
+      <tr><td><code>vehicles.plate</code></td><td class="dim">upsert 的冲突键，同一车牌永远只有一条</td></tr>
+      <tr><td><code>vehicle_certs (plate, cert_type)</code></td><td class="dim">唯一索引。同一车同一证件只有一条，重导 = 覆盖，不会变 12 条</td></tr>
+    </table>
+    <p class="muted" style="margin-top:9px">所以客户"上传错了 → 改完再传一遍"永远是安全的，这一点比什么都重要。</p>
+  </section>
+
+  <!-- ============ 4 校验 ============ -->
+  <section class="panel" id="p4">
+    <h2 class="sec">导入结果：红底只标出错的行，其余照常入库</h2>
+    <table class="cmp">
+      <tr><th style="width:60px">行</th><th style="width:118px">车牌号</th><th style="width:110px">商业险止期</th><th style="width:120px">商业险提醒</th><th>校验结果</th></tr>
+      <tr><td>4</td><td>沪A·D12345</td><td>2026-10-20</td><td>90,30,7,3</td><td><span class="pill green"><i class="d"></i>可导入</span></td></tr>
+      <tr style="background:#FFFCFC"><td>5</td><td>沪B·E88888</td><td><b style="color:#A32D2D">2026-13-01</b></td><td>30</td><td><span class="pill red"><i class="d"></i>日期不存在（13 月）</span></td></tr>
+      <tr style="background:#FFFCFC"><td>6</td><td>沪C·F66666</td><td class="mut">空</td><td><b style="color:#A32D2D">45</b></td><td><span class="pill red"><i class="d"></i>提醒只能填 90/30/15/7/3</span></td></tr>
+      <tr><td>7</td><td>沪D·G11111</td><td>2026-11-22</td><td class="mut">空</td><td><span class="pill amber"><i class="d"></i>按默认 30 天导入</span></td></tr>
+      <tr><td>8</td><td>沪E·H22222</td><td class="mut">全空</td><td class="mut">空</td><td><span class="pill gray"><i class="d"></i>跳过，不建商业险记录</span></td></tr>
+    </table>
+
+    <div class="grid2" style="margin-top:14px">
+      <div class="card" style="margin:0">
+        <div class="card-label">校验规则（一份，导入导出共用）</div>
+        <table class="cmp">
+          <tr><th style="width:110px">项</th><th>规则</th></tr>
+          <tr><td>表头</td><td class="dim">读第 2 行，<b>缺列不报错</b>（当本次不更新）；表头名不认识的列直接忽略</td></tr>
+          <tr><td>必填</td><td class="dim">车牌号；新建车时 VIN 必填</td></tr>
+          <tr><td>车牌</td><td class="dim">去空格、统一大小写；同一表内重复车牌 → 报错（避免自相覆盖）</td></tr>
+          <tr><td>日期</td><td class="dim">兼容 <code>2026-11-18</code> / <code>2026/11/18</code> / Excel 序列号；非法日期报错</td></tr>
+          <tr><td>提醒</td><td class="dim">只允许 90/30/15/7/3，逗号分隔；空 = 30</td></tr>
+          <tr><td>数字</td><td class="dim">保养里程允许 <code>48,200</code> 带千分位，解析前剥逗号</td></tr>
+          <tr><td>枚举</td><td class="dim">燃料类型/车辆状态给下拉；填了不认识的值 → 报错并提示可选值</td></tr>
+        </table>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-label">两个致命坑，已堵</div>
+        <div class="err-row"><b>空值覆盖</b><span>把空格子当"清空" → 客户重传一次模板就把到期日全抹掉，提醒全部消失。<b>规则：空 = 跳过</b></span></div>
+        <div class="err-row"><b>整组空也建行</b><span>不加判断就建 6 条 cert → 每台车凭空多 6 条空记录，台账一片"未录入"。<b>规则：整组全空不建</b></span></div>
+        <p class="muted" style="margin:10px 0 0">另外导出时带一个隐藏 Sheet「字段说明」，客户忘了哪列填什么不用回来问你。</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+function activate(id) {
+  document.querySelectorAll('.switcher button').forEach(function (x) { x.classList.toggle('on', x.dataset.p === id); });
+  document.querySelectorAll('.panel').forEach(function (x) { x.classList.toggle('on', x.id === id); });
+}
+document.querySelectorAll('.switcher button').forEach(function (b) {
+  b.addEventListener('click', function () { activate(b.dataset.p); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+});
+var m = /[?&]p=(p[0-9])/.exec(location.search || '');
+if (m && document.getElementById(m[1])) activate(m[1]);
+</script>
+</body>
+</html>

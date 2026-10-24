@@ -488,7 +488,7 @@
     </el-form>
 
     <!-- ===== 常驻任务弹窗 ===== -->
-    <el-dialog v-model="recurringDialogVisible" title="设置为常驻任务" width="520px" destroy-on-close :show-close="false">
+    <el-dialog v-model="recurringDialogVisible" title="设置为常驻任务" width="520px" destroy-on-close :show-close="false" append-to-body>
       <el-form label-width="140px" size="default">
         <el-form-item label="常驻任务开关">
           <el-switch v-model="recurringDraft.isRecurring" active-text="开" inactive-text="关" />
@@ -1997,14 +1997,16 @@ const applyCloneData = (cloneData) => {
       form.transportMode = cloneData.transportMode
     }
 
-    /* ⭐ 常驻任务设置一并还原，保证「创建相同运单」落在同一个常驻任务下 */
+    /* ⭐ 常驻设置一并还原（类型 / 有效期 / 次数上限），但**分组号不要沿用**：
+       每次发布都是一个独立的常驻运单（2026-10-24 19:56 用户定稿），
+       组号在发布时按新单号生成 `CZ + 单号后 12 位`。 */
     if (cloneData.recurring) {
       isRecurring.value = !!cloneData.recurring.isRecurring
       recurringType.value = cloneData.recurring.type || 'time'
       recurringStart.value = cloneData.recurring.start || ''
       recurringEnd.value = cloneData.recurring.end || ''
       recurringCount.value = cloneData.recurring.count || 1
-      recurringGroupNo.value = cloneData.recurring.groupNo || ''
+      recurringGroupNo.value = ''
     }
 
     markDirty()
@@ -2348,10 +2350,12 @@ const doPublish = async () => {
     const count = rawRecords.length
     const waybillNos = await generateWaybillNos(count)
 
-    /* ⭐ 常驻任务续建：沿用上一趟的分组号，并取下一个趟次序号
-       （多个任务一起发布时各自独立成组，不共用分组号） */
-    const reuseGroup = !!(recurringGroupNo.value && isRecurring.value && count === 1)
-    const baseTripSeq = reuseGroup ? await nextTripSeq(recurringGroupNo.value) : 1
+    /* ⭐⭐ 2026-10-24 19:56 用户定稿：**每次发布都是一个独立的常驻运单**（新编号）。
+       以前从「创建相同运单」进来会沿用旧的分组号、把自己变成"第 N 趟"，
+       用户的原话：「每个常驻运单不要成组，每一个都是对应的一条」。
+       同一个常驻运单下的多趟，只能由司机在小程序点「接一趟」产生（trip_seq 才会 +1）。 */
+    const reuseGroup = false
+    const baseTripSeq = 1
 
     /* ⭐ 规划里程与起终点坐标：发布时算一次，
        之后「物流状态」刷新只拉东风轨迹，不再调高德 */
@@ -2398,6 +2402,32 @@ const doPublish = async () => {
     if (error) throw error
 
     ElMessage.success(`运单发布成功！共生成 ${waybillList.length} 条运单`)
+
+    /* ⭐⭐ 续建到同一个组（reuseGroup）时，把**组级配置**刷新到最新，并把「已结束」刷回「生效中」：
+       · 组主那条的 recurring_status 常常已经因为「次数用满 / 过期」被收口成已结束，
+         续建的新趟次派出去后，司机端会把整组沉到「已结束」段、点接一趟还会 409；
+       · 有效期 / 次数上限也写在组主上，不刷新的话司机端显示的还是老期限。
+       （2026-10-24 用户报「web 发了常驻运单，三端都不显示」就是这条链路） */
+    if (reuseGroup && recurringGroupNo.value) {
+      try {
+        const patch = { recurring_status: '生效中' }
+        if (isRecurring.value) {
+          patch.recurring_type = recurringType.value
+          if (recurringType.value === 'time') {
+            patch.recurring_start_time = recurringStart.value || null
+            patch.recurring_end_time = recurringEnd.value || null
+          } else {
+            patch.recurring_max_count = Number(recurringCount.value) || null
+          }
+        }
+        await supabase
+          .from('waybills')
+          .update(patch)
+          .eq('recurring_group_no', recurringGroupNo.value)
+      } catch (e) {
+        console.warn('[常驻] 刷新任务级配置失败（不影响已发布的运单）', e)
+      }
+    }
 
     /* ⭐ 派单提醒：直接指派了司机的运单，调云函数发订阅消息（没配模板会自动跳过）。
        fire-and-forget，失败不影响发布结果。 */

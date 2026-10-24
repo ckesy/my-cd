@@ -19,11 +19,21 @@ export const isMasterUser = (u) => {
   return u.role === 'customer' && !u.isSubAccount
 }
 
-/** 能登记打款的人：主账号 / 财务角色 */
+/** 能登记打款的人：主账号 / 财务角色 / 被单独勾了「付款登记」权限的角色 */
 export const isPayer = (u) => {
   if (!u) return false
   if (isMasterUser(u)) return true
-  return String(u.roleName || '').includes('财务')
+  if (String(u.roleName || '').includes('财务')) return true
+  /* ⭐ 2026-10-24：付款登记不再只给主账号/财务 —— 功能配置里勾了 fee_payout 也能付 */
+  const perms = u.permissions && u.permissions.client
+  return Array.isArray(perms) && perms.includes('fee_payout')
+}
+
+/** 财务岗：角色名带「财务」，或主账号亲自兜底（小车队没有专职财务） */
+export const isFinanceUser = (u) => {
+  if (!u) return false
+  if (String(u.roleName || '').includes('财务')) return true
+  return isMasterUser(u)
 }
 
 /** 这一条上报的当前审批节点是不是我 */
@@ -33,7 +43,13 @@ export const canApproveReport = (r, u) => {
   const step = flow[(Number(r.current_level) || 0) - 1]
   if (!step) return false
   if (step.approver_id && u && Number(step.approver_id) === Number(u.id)) return true
-  return step.role === 'owner' && isMasterUser(u)
+  if (step.role === 'owner' && isMasterUser(u)) return true
+  /* ⭐ 2026-10-24：财务节点兜底。
+     审批链里的 finance 节点记的是「提交那一刻配置的财务账号 id」，
+     换人、换账号、或配置里没指定具体人时，老板/财务登录会完全看不到这笔待办
+     （用户反馈「管理端找不到待我审批」就是这个）。财务岗或主账号都可以处理。 */
+  if (step.role === 'finance' && isFinanceUser(u)) return true
+  return false
 }
 
 /** 当前登录人（localStorage 里那份，和页面里的口径一致） */

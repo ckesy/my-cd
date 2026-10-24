@@ -8,8 +8,8 @@
         <span class="menu-label">首页</span>
       </el-menu-item>
 
-      <!-- ⭐ 业务流程：主账号可见。管理员可启停+配参数，客户只能看已开通的并调参数 -->
-      <el-menu-item v-if="isMaster" index="/flow/canvas">
+      <!-- ⭐ 业务流程：主账号必有，也可在「功能配置」里勾给某个角色（非主账号只读调参） -->
+      <el-menu-item v-if="isMaster || hasPerm('flow')" index="/flow/canvas">
         <el-icon>
           <Share />
         </el-icon>
@@ -41,16 +41,20 @@
         <el-menu-item index="/ele-fence/alert-query">提醒事件查询</el-menu-item>
       </el-sub-menu>
 
-      <el-sub-menu v-if="hasPerm('operation')" index="operation-management">
+      <!-- ⭐ 三个报表各自独立授权（老配置里那条 operation 仍然三个都放行，见 hasPerm 别名） -->
+      <el-sub-menu
+        v-if="hasPerm('operation_summary') || hasPerm('operation_energy') || hasPerm('operation_driving')"
+        index="operation-management"
+      >
         <template #title>
           <el-icon>
             <DataLine />
           </el-icon>
           <span class="menu-label">运营管理</span>
         </template>
-        <el-menu-item index="/operation/summary">综合报表</el-menu-item>
-        <el-menu-item index="/operation/energy">能耗报告</el-menu-item>
-        <el-menu-item index="/operation/driving">驾驶行为报表</el-menu-item>
+        <el-menu-item v-if="hasPerm('operation_summary')" index="/operation/summary">综合报表</el-menu-item>
+        <el-menu-item v-if="hasPerm('operation_energy')" index="/operation/energy">能耗报告</el-menu-item>
+        <el-menu-item v-if="hasPerm('operation_driving')" index="/operation/driving">驾驶行为报表</el-menu-item>
       </el-sub-menu>
 
       <!-- ⭐ 运输管理：整组挂在运单模块下（运单关了，底下三项都没有意义） -->
@@ -63,7 +67,7 @@
           <span class="menu-label">运输管理</span>
         </template>
         <el-menu-item v-if="hasPerm('waybill')" index="/waybill">运单管理</el-menu-item>
-        <el-menu-item v-if="waybillOn" index="/waybill/stats">运单统计</el-menu-item>
+        <el-menu-item v-if="waybillOn && hasPerm('waybill_stats')" index="/waybill/stats">运单统计</el-menu-item>
         <el-menu-item v-if="routeOn" index="/route/manage">路线管理</el-menu-item>
       </el-sub-menu>
 
@@ -76,9 +80,9 @@
           <span class="menu-label">费用管理</span>
           <span v-if="todoApprove" class="menu-badge" :title="`待我审批 ${todoApprove} 笔`">{{ todoApprove }}</span>
         </template>
-        <el-menu-item v-if="isMaster || hasPerm('fee_stats')" index="/fee/list">费用明细</el-menu-item>
+        <el-menu-item v-if="isMaster || hasPerm('fee_list')" index="/fee/list">费用明细</el-menu-item>
         <el-menu-item v-if="isMaster || hasPerm('fee_stats')" index="/fee/stats">费用统计</el-menu-item>
-        <el-menu-item v-if="(isMaster || isFinance) && payoutOn" index="/fee/payout">
+        <el-menu-item v-if="(isMaster || isFinance || hasPerm('fee_payout')) && payoutOn" index="/fee/payout">
           <span class="mi-label">付款登记</span>
           <span v-if="todoPay" class="menu-badge sm" :title="`待付款 ${todoPay} 笔`">{{ todoPay }}</span>
         </el-menu-item>
@@ -86,27 +90,33 @@
         <el-menu-item v-if="isMaster && approvalOn" index="/fee/config">费用审批设置</el-menu-item>
       </el-sub-menu>
 
-      <!-- ⭐ 车队分析报告：一级菜单，夹在「费用管理」和「基础数据管理」之间 -->
+      <!-- ⭐ 车务管理：主账号必有；子账号要在功能配置里勾「车务管理」才有（勾了才会收到到期提醒） -->
+      <el-sub-menu v-if="isMaster || hasPerm('vehicle_affair')" index="affair-management">
+        <template #title>
+          <el-icon>
+            <Van />
+          </el-icon>
+          <span class="menu-label">车务管理</span>
+        </template>
+        <el-menu-item index="/affair/home">车务总览</el-menu-item>
+        <el-menu-item index="/maintenance">维保台账</el-menu-item>
+        <el-menu-item index="/affair/ledger">证件台账</el-menu-item>
+        <el-menu-item index="/affair/reminders">提醒事项</el-menu-item>
+        <el-menu-item index="/affair/settings">提醒设置</el-menu-item>
+      </el-sub-menu>
+
+      <!-- ⭐ 车队分析报告：一级菜单，夹在「费用管理」和「档案管理」之间 -->
       <el-menu-item v-if="reportOn && hasPerm('report')" index="/report" class="menu-lv1">
         <el-icon><DataAnalysis /></el-icon>
         <span class="menu-label">车队分析报告</span>
       </el-menu-item>
 
-      <el-sub-menu v-if="hasPerm('vehicle_archive') || hasPerm('driver_archive')" index="base-data-management">
-        <template #title>
-          <el-icon>
-            <User />
-          </el-icon>
-          <span class="menu-label">基础数据管理</span>
-        </template>
-        <el-menu-item v-if="hasPerm('vehicle_archive')" index="/vehicle-archive">车辆档案</el-menu-item>
-        <el-menu-item v-if="hasPerm('driver_archive')" index="/driver-archive">司机档案</el-menu-item>
-      </el-sub-menu>
-
       <!-- ⭐ 档案管理：和「系统管理」平级的一级菜单
-           ⚠️ 和「路线管理」一样，新功能暂时不挂权限（历史客户的权限数据里还没有
+           2026-10-25：车辆档案 / 司机档案 从原「基础数据管理」整组并入这里
+           （原分组只有这两项，并入后该分组已删除）。
+           ⚠️ 客户档案 / 货物档案暂时不挂权限（历史客户的权限数据里还没有
            customer_archive / cargo_archive，一挂就整组菜单都不显示）。
-           等权限数据补齐后再把 v-if="hasPerm('customer_archive')" 加回来。 -->
+           车辆 / 司机档案沿用老 key，子账号没勾就只看到客户/货物两项。 -->
       <el-sub-menu index="archive-management">
         <template #title>
           <el-icon>
@@ -114,6 +124,8 @@
           </el-icon>
           <span class="menu-label">档案管理</span>
         </template>
+        <el-menu-item v-if="hasPerm('vehicle_archive')" index="/archive/vehicle">车辆档案</el-menu-item>
+        <el-menu-item v-if="hasPerm('driver_archive')" index="/archive/driver">司机档案</el-menu-item>
         <el-menu-item index="/archive/customer">客户档案</el-menu-item>
         <el-menu-item index="/archive/cargo">货物档案</el-menu-item>
       </el-sub-menu>
@@ -147,8 +159,9 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import { HomeFilled, Van, Location, DataLine, Tickets, User, Setting, FolderOpened, Wallet, Share, DataAnalysis } from '@element-plus/icons-vue'
+import { HomeFilled, Van, Location, DataLine, Tickets, Setting, FolderOpened, Wallet, Share, DataAnalysis } from '@element-plus/icons-vue'
 import { moduleFlags, approvalOn, ensureApprovalMode, currentUserForModules } from '@/utils/modules'
+import { permHit } from '@/config/permissions'
 
 const props = defineProps({
   activePath: { type: String, required: true },
@@ -184,10 +197,10 @@ onMounted(() => {
   ensureApprovalMode(currentUserForModules())
 })
 
-const hasPerm = (key) => {
-  if (clientPerms.value === null) return true
-  return clientPerms.value.includes(key)
-}
+/* ⭐ 权限别名统一在 config/permissions.js 里维护（permHit）：老角色里
+   operation / fee_stats / waybill 这些"一个大 key 管多个菜单"的历史数据，
+   拆分后仍然放行对应的新菜单。 */
+const hasPerm = (key) => permHit(clientPerms.value, key)
 
 // ⭐ 主账号：客户身份且不是子账号（管理员模拟进入也视为可配）
 const isMaster = computed(() => {
@@ -198,7 +211,8 @@ const isMaster = computed(() => {
 
 // 费用管理整组：主账号看全部；财务可进付款登记；其他人只有拿到 fee_stats 才显示
 const isFinance = computed(() => String(currentUser?.roleName || '').includes('财务'))
-const showFeeMenu = computed(() => isMaster.value || isFinance.value || hasPerm('fee_stats'))
+const showFeeMenu = computed(() => isMaster.value || isFinance.value
+  || hasPerm('fee_stats') || hasPerm('fee_list') || hasPerm('fee_payout'))
 // 付款登记是可配置模块：没开通就完全不显示入口
 const payoutOn = computed(() => moduleFlags.payout === true)
 /* ⭐ 模块联动：运单是总闸，路线/报表挂在它下面

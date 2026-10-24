@@ -70,16 +70,24 @@
             </div>
           </div>
 
-          <!-- 客户视角：未开通清单 -->
+          <!-- 客户视角：未开通清单
+               ⭐ 2026-10-24：管理员**配过**的模块（configured），客户主账号可以自己再开回来；
+                  只有管理员没配过的才需要联系运营人员。 -->
           <template v-if="!isAdmin && offModules.length">
             <div class="bc-divider"></div>
             <div class="bc-pool-t">未开通 · {{ offModules.length }} 项</div>
-            <div v-for="m in offModules" :key="m.key" class="bc-pool-item">
+            <div
+              v-for="m in offModules"
+              :key="m.key"
+              class="bc-pool-item"
+              :class="{ can: m.configured }"
+            >
               {{ m.name }}
-              <em class="lock">需联系运营人员开启</em>
+              <em v-if="m.configured" class="unlock" @click="enableFromPool(m)">开启</em>
+              <em v-else class="lock">需联系运营人员开启</em>
             </div>
             <div class="bc-pool-hint">
-              以上功能暂未开通，<br>如需使用请联系运营人员
+              带「开启」的可以直接点开；<br>没有的需联系运营人员授权
             </div>
           </template>
 
@@ -242,7 +250,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Lock } from '@element-plus/icons-vue'
 import {
   moduleFlags, ensureModuleFlags, setModuleFlag, setModuleConfig,
-  isFlowAdmin, currentUserForModules, moduleOwner,
+  isFlowAdmin, currentUserForModules, moduleOwner, isModuleGranted,
 } from '@/utils/modules'
 import { supabase } from '@/utils/supabase'
 import { BASE_MODULES, MODULES as MODULES_FOR_FLAGS, foldDeps } from '@/config/modules'
@@ -476,9 +484,8 @@ const visibleNodes = computed(() => {
   return allNodes.value.filter((n) => n.enabled)
 })
 
-/** 这个模块管理员配置过没有（tenant_modules 里有记录 = 配过） */
-const isConfigured = (key) =>
-  !!key && Object.prototype.hasOwnProperty.call(moduleFlags.intent || {}, key)
+/** 这个模块运营人员授权过没有（tenant_modules.granted；老库降级为"有记录"） */
+const isConfigured = (key) => isModuleGranted(key)
 
 /**
  * 费用审批关闭时，只有「付款记录」跟着不可用
@@ -491,13 +498,14 @@ const approvalGated = (key) =>
 const canToggle = (n) => {
   if (!n || !n.module) return false
   if (approvalGated(n.module)) return false   // 被审批卡住，谁都开不了
-  if (isAdmin) return true                    // 服务商：随便改
-  return isConfigured(n.module)               // 客户：只能改配过的
+  if (isAdmin) return true                    // 平台视角（代管/模拟客户）：随便改
+  /* 客户：已经开着的可以关（撤销自己开的）；想打开的必须有运营授权 */
+  if (n.enabled) return true
+  return isConfigured(n.module)
 }
 
 /** 客户视角下未开通的模块（放左栏池子） */
-const offModules = computed(() => {
-  const seen = new Set()
+const offModules = computed(() => {  const seen = new Set()
   const out = []
   allNodes.value.forEach((n) => {
     /* ⭐ 费用审批是特例：没有 module，开关走 fee_approval_configs.mode。
@@ -694,6 +702,25 @@ function impactOf(key) {
 }
 
 /* ---- 模块启停 ---- */
+/* ⭐ 从「未开通」池子里直接开启（2026-10-24 用户要求）：
+   管理员给客户配过的模块，客户主账号可以自由开关 —— 关掉后不该只能联系运营。
+   这里复用节点开关的同一套写入（setModuleFlag），只是强制走"开启"分支。 */
+async function enableFromPool(m) {
+  if (!m || !m.configured) return
+  /* 二次校验：运营人员没授权（granted=false）就绝不放行，
+     即使前端状态判断出问题也不会误开 —— 与 setModuleFlag 的后端闸门同口径 */
+  if (!isModuleGranted(m.key)) {
+    ElMessage.warning('该功能尚未由运营人员开通，请联系服务顾问')
+    return
+  }
+  if (m.key === 'audit') {
+    await toggleAudit()
+    return
+  }
+  const node = allNodes.value.find((n) => n.module === m.key) || { module: m.key, name: m.name }
+  await toggleModule({ ...node, enabled: false })
+}
+
 async function toggleModule(node) {
   if (!node || !node.module) return
   const next = !node.enabled
@@ -1269,6 +1296,25 @@ onMounted(async () => {
   color: #94A3B8; background: #F1F5F9;
   border-radius: 4px; padding: 0 5px; margin-left: 6px;
 }
+/* 管理员配过的模块：客户可以自己点开（不再是死灰） */
+.bc-pool-item.can {
+  color: #475569;
+  background: #FFF;
+  border-style: solid;
+  border-color: #E9EEF5;
+}
+/* 管理员没配过：保持灰、不可点，视觉上明确是「锁住」 */
+.bc-pool-item:not(.can) {
+  opacity: .72;
+  cursor: not-allowed;
+}
+.bc-pool-item em.unlock {
+  font-style: normal; font-size: 8.5px; font-weight: 700;
+  color: #B45309; background: #FEF3C7;
+  border-radius: 4px; padding: 0 6px; margin-left: 6px;
+  cursor: pointer;
+}
+.bc-pool-item em.unlock:hover { background: #FDE68A; }
 
 /* 抽屉 */
 .drawer-body { padding: 4px 2px; }

@@ -31,6 +31,8 @@ const refreshUser = () => {
 watch(visible, (val) => {
   if (val) {
     refreshUser()
+    /* ⭐ 主题按账号取：同一台电脑换账号登录，各看各的皮肤 */
+    themeKey.value = readLocalTheme(currentUser.value?.account) || DEFAULT_THEME
     resetForms()
     resolveCompanyName()
   }
@@ -40,7 +42,7 @@ watch(visible, (val) => {
 const activeTab = ref('profile')
 
 // ---------- 外观 / 换肤 ----------
-const themeKey = ref(readLocalTheme() || DEFAULT_THEME)
+const themeKey = ref(DEFAULT_THEME)
 
 const themeGroups = computed(() => {
   const order = ['沉稳', '明快']
@@ -56,10 +58,10 @@ const themeGroups = computed(() => {
 async function pickTheme(key) {
   themeKey.value = key
   applyTheme(key)
-  writeLocalTheme(key)
+  writeLocalTheme(key, currentUser.value?.account)
   const ok = await saveRemoteTheme(supabase, currentUser.value, key)
-  if (ok) ElMessage.success('已保存到账号')
-  else ElMessage.warning('已应用到当前设备（未能同步到账号）')
+  if (ok) ElMessage.success('已保存到当前账号')
+  else ElMessage.warning('已应用到当前设备（账号同步未生效，需先执行 users.theme 迁移）')
 }
 
 // ---------- 基本信息 ----------

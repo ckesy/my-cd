@@ -142,8 +142,9 @@ const auditOn = computed(() => approvalOn.value)
 const TYPE_LABEL = {
   expense: '费用上报', subsidy: '补贴申请', loan: '借款申请', violation: '违章处理',
   weigh: '过磅单', receipt: '回单上报', overtime: '超时报备', cardfix: '补卡申请',
+  repair: '报修报销',
 }
-const ALL_TYPES = ['expense', 'subsidy', 'weigh', 'loan', 'violation', 'receipt', 'overtime', 'cardfix']
+const ALL_TYPES = ['expense', 'subsidy', 'weigh', 'loan', 'violation', 'receipt', 'overtime', 'cardfix', 'repair']
 const isMoneyType = (t) => (MONEY_TYPES || []).includes(t)
 
 const DATE_SHORTCUTS = [

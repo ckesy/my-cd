@@ -78,9 +78,43 @@ export const THEMES = [
 ]
 
 export const DEFAULT_THEME = 'teal'
-const STORAGE_KEY = 'app_theme'
+const STORAGE_KEY = 'app_theme' // 老版本：全局一份（只作迁移兜底）
 
 export const findTheme = (key) => THEMES.find((t) => t.key === key) || THEMES.find((t) => t.key === DEFAULT_THEME)
+
+/* ⭐ 2026-10-24：主题改成**跟账号走**。
+   以前存的是 app_theme 一个全局 key，同一个浏览器里换个账号登录还是上一个人的皮肤，
+   看起来像"改皮肤影响到了别人"。现在 key 带上账号：app_theme:15035660020 */
+const keyOf = (account) => {
+  const a = String(account || '').trim()
+  return a ? `${STORAGE_KEY}:${a}` : STORAGE_KEY
+}
+
+/** 本地缓存（按账号；没传账号时退回老 key，保证刷新不闪） */
+export function readLocalTheme(account) {
+  try {
+    const hit = localStorage.getItem(keyOf(account))
+    if (hit) return hit
+    /* 老数据迁移：只有全局 key 时先用一次，用户动一次皮肤就会写到自己的 key 下 */
+    return localStorage.getItem(STORAGE_KEY) || ''
+  } catch {
+    return ''
+  }
+}
+
+export function writeLocalTheme(key, account) {
+  try {
+    localStorage.setItem(keyOf(account), key)
+  } catch {
+    /* 隐私模式忽略 */
+  }
+}
+
+/** 当前账号标识：**不再取 masterAccount** —— 同租户的账号各存各的 */
+function accountOf(user) {
+  if (!user) return ''
+  return String(user.account || user.phone || '').trim()
+}
 
 /**
  * 把主题写到 <html data-theme>，并在根节点注入 CSS 变量。
@@ -105,31 +139,13 @@ export function applyTheme(key) {
 }
 
 /** 本地缓存（保证刷新不闪、也不用等接口） */
-export function readLocalTheme() {
-  try {
-    return localStorage.getItem(STORAGE_KEY) || ''
-  } catch {
-    return ''
-  }
-}
-
-export function writeLocalTheme(key) {
-  try {
-    localStorage.setItem(STORAGE_KEY, key)
-  } catch {
-    /* 隐私模式忽略 */
-  }
-}
-
-/** 当前用户能用来存主题的账号标识 */
-function accountOf(user) {
-  if (!user) return ''
-  return String(user.masterAccount || user.account || user.phone || '').trim()
-}
 
 /**
  * 从数据库读账号绑定的主题
- * 存在 customers.theme（主账号一行），子账号读同一个主账号的记录 —— 全家视觉统一
+ * ⭐ 2026-10-24：改成存 **users.theme（每个账号一行，各存各的）**。
+ *   以前存 customers.theme（一个租户一行）→ 同公司的账号共用一个皮肤，
+ *   换账号登录还是上一个人的色，用户要求「只跟账号相关」。
+ *   新列还没加（SQL 未执行）时静默降级为「只存本地」，不影响使用。
  */
 const NO_COL_KEY = 'theme_col_missing'
 
@@ -147,15 +163,14 @@ function hasNoColumn() {
 export async function loadRemoteTheme(supabase, user) {
   const acc = accountOf(user)
   if (!acc || !supabase) return ''
-  if (hasNoColumn()) return ''   // 之前已经确认过列不存在
+  if (hasNoColumn()) return ''
   try {
     const { data, error } = await supabase
-      .from('customers')
+      .from('users')
       .select('theme')
-      .eq('phone', acc)
+      .eq('account', acc)
       .maybeSingle()
     if (error) {
-      /* 42703 = column does not exist；这类错误重试也没用，直接记下来 */
       const msg = String((error && (error.message || error.details)) || '')
       if (/theme|42703|does not exist|column/i.test(msg)) markNoColumn()
       return ''
@@ -168,7 +183,7 @@ export async function loadRemoteTheme(supabase, user) {
 
 /** 保存到账号 */
 /**
- * 保存到账号
+ * 保存到账号（users.theme，按 account 精确定位到本人）
  * ⚠️ 这里**不检查** hasNoColumn() 标记 —— 用户主动点保存时值得重试一次，
  *    上一次失败可能是因为 SQL 还没跑，跑完就该能用了。
  */
@@ -177,9 +192,9 @@ export async function saveRemoteTheme(supabase, user, key) {
   if (!acc || !supabase) return false
   try {
     const { data, error } = await supabase
-      .from('customers')
+      .from('users')
       .update({ theme: key })
-      .eq('phone', acc)
+      .eq('account', acc)
       .select('id')
     if (error) {
       const msg = String((error && (error.message || error.details)) || '')
@@ -188,9 +203,8 @@ export async function saveRemoteTheme(supabase, user, key) {
       console.warn('[主题] 保存失败:', msg)
       return false
     }
-    /* update 影响 0 行 → customers 里没有这个手机号的记录 */
     if (!data || !data.length) {
-      console.warn('[主题] 没有匹配到账号记录，phone =', acc)
+      console.warn('[主题] 没有匹配到账号记录，account =', acc)
       return false
     }
     clearNoColumn()

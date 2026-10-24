@@ -11,8 +11,13 @@
       <aside class="detail-aside">
         <div class="as-card">
           <div class="as-top">
-            <span class="as-no">{{ waybillNo || '—' }}</span>
+            <!-- ⭐ 常驻任务的编号就是**组号**（CZ…），不是某一趟的运单号（2026-10-24） -->
+            <span class="as-no">{{ isRecurringWaybill ? recGroupNo : (waybillNo || '—') }}</span>
             <span class="as-status" :style="statusStyle(asideStatus)">{{ asideStatus }}</span>
+          </div>
+          <div v-if="isRecurringWaybill" class="as-trip">
+            常驻任务 · 共 {{ recTripRows.length }} 趟 · 最新第 {{ recLatestSeq }} 趟
+            <span class="as-trip-no">当前打开 {{ waybillNo }}</span>
           </div>
           <div class="as-route">
             <span>{{ (activeRecord && activeRecord.pickup) || '—' }}</span>
@@ -61,10 +66,83 @@
           <span class="detail-tabs-hint" v-if="waybillNo">运单号 {{ waybillNo }}</span>
         </div>
 
+      <!-- ===== 常驻任务：任务级操作条（暂停 / 恢复 / 结束） =====
+           ⭐ 用户 2026-10-17：常驻任务可以暂停、可以结束；
+              有趟次在进行中（待装车…已到达）时**不允许**，会提示「有任务在进行中」 -->
+      <div class="rec-task-bar" v-if="isRecurringWaybill">
+        <div class="rec-task-left">
+          <span class="rec-task-name">常驻任务 {{ recGroupNo }}</span>
+          <span class="rec-task-status" :style="recStatusStyle">{{ recTaskStatus }}</span>
+        </div>
+        <div class="rec-task-right">
+          <el-button
+            v-if="recTaskStatus === '生效中'"
+            size="small"
+            plain
+            :disabled="recHasRunning || settingRecStatus"
+            @click="setRecurringStatus('已暂停')"
+          >暂停</el-button>
+          <el-button
+            v-else-if="recTaskStatus === '已暂停'"
+            size="small"
+            type="primary"
+            plain
+            :disabled="settingRecStatus"
+            @click="setRecurringStatus('生效中')"
+          >恢复</el-button>
+          <el-button
+            v-if="recTaskStatus !== '已结束'"
+            size="small"
+            type="danger"
+            plain
+            :disabled="recHasRunning || settingRecStatus"
+            @click="setRecurringStatus('已结束')"
+          >结束</el-button>
+        </div>
+        <div class="rec-task-hint" v-if="recTaskHint">{{ recTaskHint }}</div>
+      </div>
+
+
     <!-- ============================================================
          标签页 1：运单信息
          ============================================================ -->
     <div v-show="activeTab === 'info'">
+
+    <!-- ⭐ 常驻任务：基本信息 + 趟次明细（2026-10-24 用户要求
+         "web 端的运单信息里加上常驻任务的信息"、"历史记录不能消失"） -->
+    <div class="rec-info-card" v-if="isRecurringWaybill">
+      <div class="ric-hd">
+        <span class="ric-bar"></span>
+        <span class="ric-title">常驻任务</span>
+        <span class="ric-status" :style="recStatusStyle">{{ recTaskStatus }}</span>
+        <span class="ric-no">{{ recGroupNo }}</span>
+      </div>
+      <div class="ric-grid">
+        <div class="ric-item">
+          <span class="ric-k">常驻方式</span>
+          <span class="ric-v">{{ recTypeText }}</span>
+        </div>
+        <!-- ⭐ 与小程序组卡统一：按次数看「已接 / 上限」，按时间看「完成 X/Y」 -->
+        <div class="ric-item">
+          <span class="ric-k">{{ mainRecord && mainRecord.recurring_type === 'count' ? '已接 / 上限' : '趟次' }}</span>
+          <span class="ric-v" v-if="mainRecord && mainRecord.recurring_type === 'count'">
+            {{ recurringAcceptedCount }} / {{ Number(mainRecord.recurring_max_count) || 0 }} 次
+          </span>
+          <span class="ric-v" v-else>完成 {{ recDoneCount }}/{{ recTripRows.length }}</span>
+        </div>
+        <div class="ric-item">
+          <span class="ric-k">当前趟次</span>
+          <span class="ric-v">第 {{ (mainRecord && mainRecord.trip_seq) || 1 }} 趟</span>
+        </div>
+        <div class="ric-item" v-if="mainRecord && mainRecord.recurring_type !== 'count'">
+          <span class="ric-k">有效期</span>
+          <span class="ric-v">{{ fmtTime(mainRecord.recurring_start_time) || '—' }} ~ {{ fmtTime(mainRecord.recurring_end_time) || '—' }}</span>
+        </div>
+      </div>
+      <div class="ric-sub" v-if="recTripRows.length > 1">
+        本任务下共 {{ recTripRows.length }} 趟，明细见「物流状态」的趟次进度
+      </div>
+    </div>
 
     <!-- ============================================================
          ⭐ 运输节点与打卡管控
@@ -378,42 +456,6 @@
           <el-icon v-if="!loadingLogistics" class="lg-refresh-icon"><Refresh /></el-icon>
           刷新
         </el-button>
-      </div>
-
-      <!-- ===== 常驻任务：任务级操作条（暂停 / 恢复 / 结束） =====
-           ⭐ 用户 2026-10-17：常驻任务可以暂停、可以结束；
-              有趟次在进行中（待装车…已到达）时**不允许**，会提示「有任务在进行中」 -->
-      <div class="rec-task-bar" v-if="isRecurringWaybill">
-        <div class="rec-task-left">
-          <span class="rec-task-name">常驻任务 {{ recGroupNo }}</span>
-          <span class="rec-task-status" :style="recStatusStyle">{{ recTaskStatus }}</span>
-        </div>
-        <div class="rec-task-right">
-          <el-button
-            v-if="recTaskStatus === '生效中'"
-            size="small"
-            plain
-            :disabled="recHasRunning || settingRecStatus"
-            @click="setRecurringStatus('已暂停')"
-          >暂停</el-button>
-          <el-button
-            v-else-if="recTaskStatus === '已暂停'"
-            size="small"
-            type="primary"
-            plain
-            :disabled="settingRecStatus"
-            @click="setRecurringStatus('生效中')"
-          >恢复</el-button>
-          <el-button
-            v-if="recTaskStatus !== '已结束'"
-            size="small"
-            type="danger"
-            plain
-            :disabled="recHasRunning || settingRecStatus"
-            @click="setRecurringStatus('已结束')"
-          >结束</el-button>
-        </div>
-        <div class="rec-task-hint" v-if="recTaskHint">{{ recTaskHint }}</div>
       </div>
 
       <!-- ===== 常驻任务：周期甘特 ===== -->
@@ -748,6 +790,22 @@
           <el-tag v-if="feeApprovalEnabled" size="small" type="success" effect="plain">费用审批已开启</el-tag>
           <el-tag v-else-if="feeApprovalOff" size="small" type="info" effect="plain">本单免审</el-tag>
           <el-tag v-else size="small" type="info" effect="plain">费用审批未开启</el-tag>
+          <!-- ⭐ 一单派多人（多司机 / 多车）时，先按上报人收窄再看钱 -->
+          <el-select
+            v-if="feeReporters.length > 1"
+            v-model="feeReporter"
+            size="small"
+            class="fee-who-select"
+            placeholder="全部上报人"
+          >
+            <el-option label="全部上报人" value="all" />
+            <el-option
+              v-for="p in feeReporters"
+              :key="p.key"
+              :value="p.key"
+              :label="p.label"
+            />
+          </el-select>
           <el-select v-model="feeFilter" size="small" style="width: 118px">
             <el-option label="全部" value="all" />
             <!-- 审批关着就不该有「待我审批 / 审核中」这两个筛选项 -->
@@ -772,12 +830,19 @@
         :description="feeError"
       />
 
+      <div v-if="feeReporter !== 'all'" class="fee-by-bar">
+        <span class="fbb-k">只看</span>
+        <span class="fbb-who">{{ feeReporterLabel }}</span>
+        <span class="fbb-n">{{ filteredReports.length }} 笔 · ¥{{ money(filteredReportsAmount) }}</span>
+        <button type="button" class="fbb-x" @click="feeReporter = 'all'">看全部上报人</button>
+      </div>
+
       <div v-loading="feeLoading" class="fee-list">
         <div v-if="!feeLoading && !filteredReports.length" class="fee-empty">
           <div class="fee-empty-ic">
             <el-icon><Tickets /></el-icon>
           </div>
-          <p>本单还没有上报记录</p>
+          <p>{{ isRecurringWaybill ? '这个常驻任务还没有上报记录' : '本单还没有上报记录' }}</p>
           <span>司机在小程序「上报」里提交费用后，会出现在这里</span>
         </div>
 
@@ -798,7 +863,16 @@
                 </el-tag>
               </div>
               <div class="fr-meta">
-                {{ r.driver_name || r.plate || '—' }} · {{ fmtTime(r.create_time) }} ·
+                <!-- ⭐ 谁上报的：头像字 + 姓名 + 车牌，一眼能分清（一单多人时尤其重要） -->
+                <span class="fr-who">
+                  <i class="fr-ava" :style="{ background: whoColor(r).bg, color: whoColor(r).fg }">{{ whoInitial(r) }}</i>
+                  <b>{{ r.driver_name || '未署名' }}</b>
+                  <em v-if="r.trip_seq" class="fr-plate">第{{ r.trip_seq }}趟</em>
+                  <em v-if="r.plate" class="fr-plate">{{ r.plate }}</em>
+                </span>
+                <span class="fr-sep">·</span>
+                <span>{{ fmtTime(r.create_time) }}</span>
+                <span class="fr-sep">·</span>
                 <template v-if="Number(r.current_level) > 0">第 {{ r.current_level }} 级审批中</template>
                 <template v-else>免审</template>
               </div>
@@ -834,17 +908,27 @@
                   <template v-else>—</template>
                 </div>
                 <div v-if="reportImages(r).length" class="fr-imgs">
-                  <template v-for="(img, i) in reportImages(r)" :key="i">
+                  <template
+                    v-for="(img, i) in reportImages(r)"
+                    :key="imgKeyOf(img) + ':' + (imgRetry[imgKeyOf(img)] || 0)"
+                  >
                     <el-image
-                      v-if="imageUrls[img.key || img.fileID]"
-                      :src="imageUrls[img.key || img.fileID]"
+                      v-if="imageUrls[imgKeyOf(img)]"
+                      :src="imageUrls[imgKeyOf(img)]"
                       :preview-src-list="reportImageUrls(r)"
-                      :initial-index="i"
+                      :initial-index="previewIndexOf(r, img)"
                       fit="cover"
                       class="fr-thumb"
                       preview-teleported
-                    />
-                    <span v-else class="fr-img">凭证 {{ i + 1 }}</span>
+                      @error="onReportImgError(r, img)"
+                    >
+                      <template #error>
+                        <div class="fr-img-err" @click.stop="retryReportImg(r, img)">
+                          加载失败<br /><em>点击重试</em>
+                        </div>
+                      </template>
+                    </el-image>
+                    <span v-else class="fr-img" @click.stop="retryReportImg(r, img)">凭证 {{ i + 1 }}</span>
                   </template>
                 </div>
                 <div v-if="r.payload && r.payload.note" class="fr-note">{{ r.payload.note }}</div>
@@ -888,7 +972,13 @@
             <div v-if="canApprove(r)" class="fr-actions">
               <span class="fr-hint">驳回必选理由，会原文回给司机</span>
               <el-button size="small" @click="openReject(r)">驳回</el-button>
-              <el-button size="small" :disabled="Number(r.current_level) < 2" @click="escalateReport(r)">
+              <!-- ⭐ 「送老板」只给财务 / 主账号（管理员）用（2026-10-24 用户要求） -->
+              <el-button
+                v-if="isMasterUser || isFinanceRole"
+                size="small"
+                :disabled="Number(r.current_level) < 2"
+                @click="escalateReport(r)"
+              >
                 送老板
               </el-button>
               <el-button size="small" type="primary" :loading="actingId === r.id" @click="approveReport(r)">
@@ -978,7 +1068,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { WarningFilled, Refresh, ArrowDown, Tickets } from '@element-plus/icons-vue'
 import app, { supabase } from '@/utils/supabase'
-import { signGet } from '@/utils/cos'
+import { signGetCached, forgetCosUrl } from '@/utils/cos'
 import { unitFull } from '@/utils/units'
 import { isPayer } from '@/utils/feeTodo'
 import { moduleFlags, ensureModuleFlags, approvalOn, ensureApprovalMode, currentUserForModules } from '@/utils/modules'
@@ -1447,6 +1537,43 @@ const recRunningTrips = computed(() =>
   (records.value || []).filter((r) => isRunningStatus(r))
 )
 const recHasRunning = computed(() => recRunningTrips.value.length > 0)
+
+/* ---------- 常驻任务：信息卡 + 趟次明细（2026-10-24） ---------- */
+const recTripRows = computed(() =>
+  (records.value || [])
+    .slice()
+    .sort((a, b) => (Number(a.trip_seq) || 0) - (Number(b.trip_seq) || 0))
+)
+/* 最新一趟的趟次号（常驻编号显示用） */
+const recLatestSeq = computed(() => {
+  const rows = recTripRows.value
+  return rows.length ? Number(rows[rows.length - 1].trip_seq) || 0 : 0
+})
+/* 已完成趟次（与小程序组卡「完成 X/Y」同口径） */
+const recDoneCount = computed(
+  () => recTripRows.value.filter((r) => String(r.status || '').trim() === '已完成').length
+)
+const recTypeText = computed(() => {
+  const r = mainRecord.value || {}
+  if (String(r.recurring_type || '').trim() === 'count') {
+    return `按次数（上限 ${Number(r.recurring_max_count) || 0} 次）`
+  }
+  return `按时间 ${fmtTime(r.recurring_start_time) || '—'} ~ ${fmtTime(r.recurring_end_time) || '—'}`
+})
+const tripCarrier = (row) => {
+  if (!row) return '—'
+  const d = String(row.driver || '').trim()
+  const v = String(row.vehicle || '').trim()
+  if (d && v) return `${d} · ${v}`
+  return d || v || '—'
+}
+const statusClsOf = (st) => {
+  const v = String(st || '').trim()
+  if (v === '待接单' || v === '待重新指派') return 'todo'
+  if (v === '已完成') return 'done'
+  if (v === '已取消' || v === '已结束' || v === '已暂停') return 'off'
+  return 'doing'
+}
 const recStatusStyle = computed(() => statusStyle(recTaskStatus.value))
 const recTaskHint = computed(() => {
   if (recHasRunning.value) {
@@ -1489,6 +1616,24 @@ const setRecurringStatus = async (next) => {
       .update({ recurring_status: next })
       .eq('recurring_group_no', groupNo)
     if (error) throw error
+
+    /* ⭐ 结束任务：组里还没人接的趟次一并作废。
+       否则会留一堆「待接单」但司机点就报「任务已结束」的死单，三端都看着像还能接。 */
+    if (next === '已结束') {
+      try {
+        await supabase
+          .from('waybills')
+          .update({
+            status: '已取消',
+            cancel_reason: '常驻任务已结束',
+            cancel_time: new Date().toISOString(),
+          })
+          .eq('recurring_group_no', groupNo)
+          .eq('status', '待接单')
+      } catch (e) {
+        console.warn('[常驻结束] 作废未接趟次失败（不阻断）', e && (e.message || e))
+      }
+    }
     /* 本地同步：主体 + 组内所有趟次（下次进页面会重新拉） */
     if (mainRecord.value) mainRecord.value.recurring_status = next
     records.value = records.value.map((r) => ({ ...r, recurring_status: next }))
@@ -2104,10 +2249,11 @@ const REJECT_REASONS = ['缺凭证照片', '金额与票据不符', '运单号�
 const TYPE_LABEL = {
   expense: '费用上报', weigh: '磅单上报', subsidy: '补贴申请', violation: '违章上报',
   overtime: '超时报备', receipt: '回单上报', loan: '借款申请', cardfix: '补卡申请',
+  repair: '报修报销',
 }
 const TYPE_SHORT = {
   expense: '费', weigh: '磅', subsidy: '补', violation: '违',
-  overtime: '超', receipt: '回', loan: '借', cardfix: '卡',
+  overtime: '超', receipt: '回', loan: '借', cardfix: '卡', repair: '修',
 }
 const MONEY_TYPES = ['expense', 'subsidy', 'loan', 'violation']
 
@@ -2128,11 +2274,16 @@ const reportImages = (r) => (Array.isArray(r?.images) ? r.images : [])
 
 /* ⭐ 凭证 key → 临时链接（失败就保留文字占位，不影响主流程）
    ⚠️ 2026-10-20：凭证已改为直传 COS，字段是 `key`；老数据是 `fileID`，两个都认
-   （历史里没有真·云存储 fileID，全部是空数组，所以把 fileID 当 key 签不会出事） */
+   （历史里没有真·云存储 fileID，全部是空数组，所以把 fileID 当 key 签不会出事）
+   ⚠️ 2026-10-24：链接 1 小时过期 → 统一走 signGetCached（50min TTL 自动重签），
+      并给图片加「加载失败 → 自动重签重试一次 → 仍失败可手动点重试」 */
 const imageUrls = ref({})
+const imgRetry = ref({}) // key → 已重试次数（同时当 el-image 的 key，强制重建组件重发请求）
 const imgKeyOf = (img) => (img && (img.key || img.fileID)) || ''
 const reportImageUrls = (r) =>
   reportImages(r).map((img) => imageUrls.value[imgKeyOf(img)]).filter(Boolean)
+/* 预览大图的起始索引：preview-src-list 只含「有链接」的那几张，不能直接用原下标 */
+const previewIndexOf = (r, img) => Math.max(0, reportImageUrls(r).indexOf(imageUrls.value[imgKeyOf(img)]))
 
 async function loadImageUrls(list) {
   const keys = []
@@ -2144,11 +2295,33 @@ async function loadImageUrls(list) {
   })
   if (!keys.length) return
   try {
-    const map = await signGet([...new Set(keys)])
+    /* 缓存优先：只补没签过 / 已过期的，页面停留再久也不会拿旧链接 */
+    const map = await signGetCached([...new Set(keys)])
     imageUrls.value = { ...imageUrls.value, ...map }
   } catch (e) {
     console.warn('[费用情况] 凭证临时链接获取失败（仍显示文字占位）', e)
   }
+}
+
+/* 图片 403/超时：大概率是链接过期或瞬时网络抖动 → 扔掉缓存重签一次 */
+async function retryReportImg(r, img) {
+  const k = imgKeyOf(img)
+  if (!k) return
+  forgetCosUrl(k)
+  imgRetry.value = { ...imgRetry.value, [k]: (imgRetry.value[k] || 0) + 1 }
+  try {
+    const map = await signGetCached([k], { force: true })
+    if (map[k]) imageUrls.value = { ...imageUrls.value, [k]: map[k] }
+  } catch (e) {
+    console.warn('[费用情况] 凭证重签失败', k, e)
+  }
+}
+/* 自动重试：同一个 key 最多自动来两次，再失败就交给用户点 */
+function onReportImgError(r, img) {
+  const k = imgKeyOf(img)
+  if (!k) return
+  if ((imgRetry.value[k] || 0) >= 2) return
+  retryReportImg(r, img)
 }
 
 const statusTagType = (st) => {
@@ -2171,8 +2344,16 @@ const canApprove = (r) => {
   if (!st) return false
   if (st.approver_id && Number(st.approver_id) === Number(currentUser.id)) return true
   // 主账号节点没指定具体人时，由主账号兜底
-  return st.role === 'owner' && isMasterUser
+  if (st.role === 'owner' && isMasterUser) return true
+  /* ⭐ 2026-10-24：财务节点兜底 —— 配置里指定的是「某个财务账号」，
+     实际换人/换账号登录时（或配置里没指定具体人）财务岗仍要能审、能送老板，
+     否则财务登录后这一单连按钮都不出。 */
+  if (st.role === 'finance' && isFinanceRole) return true
+  return false
 }
+/* 财务岗：角色名带「财务」，或主账号亲自兜底（小车队没有专职财务的情况） */
+const isFinanceRole = !isAdmin
+  && (String(currentUser.roleName || '').includes('财务') || (isMasterUser && !isSubAccount))
 
 const stepClass = (st) => {
   if (!st) return ''
@@ -2235,12 +2416,77 @@ const asideVehicle = computed(() => {
   return a.target || '—'
 })
 
+/* ============================================================
+   ⭐ 上报人维度：一单派给多个司机 / 多辆车时，先看「是谁报的」
+   ------------------------------------------------------------
+   用 driver_name + plate + driver_phone 组合认人（reports 表没有 driver_id），
+   同名同车但手机号不同的两条也不会被并成一个人。
+   ============================================================ */
+const whoKeyOf = (r) => {
+  const name = String(r?.driver_name || '').trim()
+  const plate = String(r?.plate || '').trim()
+  const phone = String(r?.driver_phone || '').trim()
+  if (!name && !plate && !phone) return 'unknown'
+  return [name, plate, phone].join('|')
+}
+const whoLabelOf = (r) => {
+  const name = String(r?.driver_name || '').trim()
+  const plate = String(r?.plate || '').trim()
+  if (name && plate) return `${name} · ${plate}`
+  return name || plate || '未署名'
+}
+const amtOf = (r) => (hasAmount(r.type) ? Number(r.amount) || 0 : 0)
+
+const feeReporters = computed(() => {
+  const map = new Map()
+  feeReports.value.forEach((r) => {
+    const k = whoKeyOf(r)
+    const hit = map.get(k)
+    if (hit) {
+      hit.count += 1
+      hit.amount += amtOf(r)
+    } else {
+      map.set(k, { key: k, label: whoLabelOf(r), count: 1, amount: amtOf(r) })
+    }
+  })
+  /* 报得多的排前面，管理员一眼看到主体 */
+  return [...map.values()].sort((a, b) => b.amount - a.amount || b.count - a.count)
+})
+const feeReporter = ref('all')
+const feeReporterLabel = computed(
+  () => feeReporters.value.find((p) => p.key === feeReporter.value)?.label || ''
+)
+/* 刷新后名单变了（换人/被删）→ 退回全部，别停在空列表 */
+watch(feeReports, (list) => {
+  if (feeReporter.value === 'all') return
+  if (!list.some((r) => whoKeyOf(r) === feeReporter.value)) feeReporter.value = 'all'
+})
+
 const filteredReports = computed(() => {
-  const list = feeReports.value
+  let list = feeReports.value
+  if (feeReporter.value !== 'all') list = list.filter((r) => whoKeyOf(r) === feeReporter.value)
   if (feeFilter.value === 'all') return list
   if (feeFilter.value === 'mine') return list.filter((r) => canApprove(r))
   return list.filter((r) => r.status === feeFilter.value)
 })
+const filteredReportsAmount = computed(() => filteredReports.value.reduce((s, r) => s + amtOf(r), 0))
+
+/* 头像色：同一个人在全页固定一个颜色，扫列表时靠色块就能分组 */
+const WHO_COLORS = [
+  { bg: '#FEF2F2', fg: '#B91C1C' },
+  { bg: '#EFF6FF', fg: '#1D4ED8' },
+  { bg: '#ECFDF5', fg: '#047857' },
+  { bg: '#FFFBEB', fg: '#B45309' },
+  { bg: '#F5F3FF', fg: '#6D28D9' },
+  { bg: '#F0F9FF', fg: '#0369A1' },
+]
+const whoColor = (r) => {
+  const k = whoKeyOf(r)
+  let h = 0
+  for (let i = 0; i < k.length; i += 1) h = (h * 31 + k.charCodeAt(i)) % 9973
+  return WHO_COLORS[h % WHO_COLORS.length]
+}
+const whoInitial = (r) => String(r?.driver_name || r?.plate || '?').trim().slice(0, 1) || '?'
 
 const openReject = (r) => {
   rejectTarget.value = r
@@ -2254,13 +2500,43 @@ async function loadFeeReports() {
   feeLoading.value = true
   feeError.value = ''
   try {
+    /* ⭐⭐ 常驻任务：司机把费用报在**某一趟**上，组主那一单可能一条都没有。
+       以前只按 waybillNo（组主）查 → 常驻任务永远显示「本单还没有上报记录」
+       （用户 2026-10-24：「常驻运单看不到上报情况，web 端也看不到」）。
+       现在先把组内所有趟次的单号捞出来，一次查完，再按趟次号标出来。 */
+    let nos = [waybillNo.value]
+    const tripSeqOf = {}
+    const main = mainRecord.value
+    const gno = String((main && main.recurring_group_no) || '').trim()
+    if (main && main.is_recurring && gno) {
+      try {
+        let q = supabase
+          .from('waybills')
+          .select('waybill_no,trip_seq')
+          .eq('recurring_group_no', gno)
+        if (isCustomer && myAccount) q = q.eq('owner_account', myAccount)
+        const { data, error } = await q
+        if (error) throw error
+        const arr = (data || []).filter((w) => w && w.waybill_no)
+        if (arr.length) {
+          arr.forEach((w) => { tripSeqOf[String(w.waybill_no).trim()] = Number(w.trip_seq) || 0 })
+          nos = arr.map((w) => w.waybill_no)
+        }
+      } catch (e) {
+        console.warn('[费用情况] 常驻组趟次读取失败（按当前这一趟查）', e)
+      }
+    }
+
     const { data, error } = await supabase
       .from('reports')
       .select('*')
-      .eq('waybill_no', waybillNo.value)
+      .in('waybill_no', nos)
       .order('create_time', { ascending: false })
     if (error) throw error
-    feeReports.value = Array.isArray(data) ? data : []
+    feeReports.value = (Array.isArray(data) ? data : []).map((r) => ({
+      ...r,
+      trip_seq: tripSeqOf[String(r.waybill_no || '').trim()] || 0,
+    }))
     feeApprovalOff.value = !!(mainRecord.value && mainRecord.value.fee_approval === 'off')
     collapsedFee.value = []
     loadImageUrls(feeReports.value)
@@ -2436,6 +2712,9 @@ const switchTab = (tab) => {
   activeTab.value = tab
   if (tab === 'fee') {
     if (!feeReports.value.length) loadFeeReports()
+    /* ⭐ 每次进费用页都补一次凭证链接：缓存里过期的会被重签，
+       页面开着放了一小时再回来也不会整片「加载失败」 */
+    else loadImageUrls(feeReports.value)
     return
   }
   if (tab !== 'logistics') return
@@ -3681,6 +3960,86 @@ onMounted(async () => {
 }
 
 /* ===== ⭐ 常驻任务：任务级操作条（暂停 / 恢复 / 结束） ===== */
+/* ===== 常驻任务信息卡（运单信息页签内，2026-10-24） ===== */
+.rec-info-card {
+  background: #fff;
+  border: 1px solid #E9EEF5;
+  border-radius: 12px;
+  padding: 14px 16px 6px;
+  margin: 12px 0;
+}
+.ric-hd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ric-bar {
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--brand-primary);
+}
+.ric-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+}
+.ric-status {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 5px;
+}
+.ric-no {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: #94A3B8;
+  font-variant-numeric: tabular-nums;
+}
+.ric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ric-item {
+  background: #F8FAFC;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.ric-k {
+  display: block;
+  font-size: 11px;
+  color: #94A3B8;
+}
+.ric-v {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0F172A;
+}
+.ric-sub {
+  font-size: 11.5px;
+  color: #64748B;
+  margin: 2px 0 6px;
+}
+.ric-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+.ric-st {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.ric-st.todo { color: #B45309; background: #FEF3C7; }
+.ric-st.doing { color: #1D4ED8; background: #EFF6FF; }
+.ric-st.done { color: #047857; background: #ECFDF5; }
+.ric-st.off { color: #64748B; background: #F1F5F9; }
+
 .rec-task-bar {
   display: flex;
   flex-wrap: wrap;
@@ -3966,6 +4325,49 @@ onMounted(async () => {
   margin-bottom: 10px;
 }
 
+/* ⭐ 上报人筛选：下拉比「状态」更靠前，因为先要分清是谁的钱 */
+.fee-who-select {
+  width: 168px;
+}
+
+.fee-by-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  background: #F5F9FF;
+  border: 1px solid #D9E8FF;
+  font-size: 12.5px;
+  color: #1D4ED8;
+}
+
+.fbb-k { color: #64748B; }
+
+.fbb-who {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.fbb-n {
+  color: #64748B;
+  font-variant-numeric: tabular-nums;
+}
+
+.fbb-x {
+  margin-left: auto;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1D4ED8;
+  cursor: pointer;
+}
+
+.fbb-x:hover { text-decoration: underline; }
+
 .fee-list {
   min-height: 160px;
 }
@@ -4043,6 +4445,7 @@ onMounted(async () => {
 .fr-type.t-overtime { background: #FEF3C7; color: #B45309; }
 .fr-type.t-receipt { background: #EFF6FF; color: #1D4ED8; }
 .fr-type.t-cardfix { background: #F1F5F9; color: #64748B; }
+.fr-type.t-repair { background: #FEF2F2; color: #C8102E; }
 .fr-type.t-violation { background: #FEE2E2; color: #B91C1C; }
 
 .fr-main {
@@ -4071,9 +4474,54 @@ onMounted(async () => {
 }
 
 .fr-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   font-size: 12.5px;
   color: #64748B;
-  margin-top: 3px;
+  margin-top: 4px;
+}
+
+/* ⭐ 上报人：色块首字 + 姓名 + 车牌，一单多人时是这一行的主视觉 */
+.fr-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.fr-ava {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.fr-who b {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.fr-plate {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  background: #EEF2F7;
+  border-radius: 5px;
+  padding: 1px 5px;
+  letter-spacing: .2px;
+}
+
+.fr-sep {
+  color: #CBD5E1;
 }
 
 .fr-arrow {
@@ -4143,6 +4591,30 @@ onMounted(async () => {
   background: #EEF2F7;
   border-radius: 5px;
   padding: 4px 9px;
+  cursor: pointer;
+}
+
+/* 加载失败：可点的重试块，而不是一块死掉的灰格子 */
+.fr-img-err {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 10.5px;
+  line-height: 1.3;
+  text-align: center;
+  color: #94A3B8;
+  background: #F8FAFC;
+  cursor: pointer;
+}
+
+.fr-img-err em {
+  font-style: normal;
+  color: var(--brand-primary);
+  font-weight: 600;
 }
 
 .fr-note {
@@ -4392,6 +4864,20 @@ onMounted(async () => {
   color: #64748b;
   letter-spacing: 0.3px;
   font-family: var(--font-num);
+}
+
+/* 常驻任务：组号下方一行「共 N 趟 · 当前第 M 趟」，把任务和趟次分清 */
+.as-trip {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.5;
+}
+.as-trip-no {
+  display: block;
+  font-family: var(--font-num);
+  color: #94a3b8;
+  font-size: 10.5px;
 }
 
 .as-status {

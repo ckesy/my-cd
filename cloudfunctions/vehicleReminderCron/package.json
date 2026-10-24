@@ -1,0 +1,9 @@
+{
+  "name": "vehicleReminderCron",
+  "version": "1.0.0",
+  "description": "车务证件到期扫描：vehicle_certs → reminders（每天 09:00）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.2.0"
+  }
+}

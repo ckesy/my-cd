@@ -72,7 +72,7 @@
                                 <span v-if="activeModule.disabled" class="pd-panel-badge lock">
                                     <el-icon>
                                         <Lock />
-                                    </el-icon> 系统管理不可配置
+                                    </el-icon> 主账号专属，不可配置
                                 </span>
                                 <span v-else-if="activeModule.adminOnly" class="pd-panel-badge">
                                     <el-icon>
@@ -140,7 +140,7 @@
 import { ref, computed, watch } from 'vue'
 import {
     HomeFilled, Van, Location, DataLine, Tickets, User, Setting, FolderOpened,
-    Lock, Select, InfoFilled, StarFilled, Wallet,
+    Lock, Select, InfoFilled, StarFilled, Wallet, Rank, DataAnalysis,
 } from '@element-plus/icons-vue'
 import { PERMISSION_MODULES } from '@/config/permissions'
 
@@ -156,6 +156,7 @@ const emit = defineEmits(['update:modelValue', 'confirm'])
 // 图标映射
 const ICON_MAP = {
     HomeFilled, Van, Location, DataLine, Tickets, User, Setting, FolderOpened, Wallet,
+    Rank, DataAnalysis,
 }
 const getIcon = (name) => ICON_MAP[name] || Setting
 
@@ -231,12 +232,64 @@ const handleModuleClick = (mod) => {
     activeModuleKey.value = mod.key
 }
 
+/* ============================================================
+   ⭐ 老权限展开 / 收拢（2026-10-24）
+   ------------------------------------------------------------
+   以前「运营管理」三个报表共用一条 operation：勾一个三个全亮，
+   看起来像"切页签不刷新"。现在拆成三条独立 key：
+     · 读到老的 operation → 展开成三条（都勾上，用户可以单独取消）
+     · 三条全勾时保存回单条约 operation，保证老客户端/小程序仍能认
+   ============================================================ */
+const OPERATION_KEYS = ['operation_summary', 'operation_energy', 'operation_driving']
+
+/* 老数据里「一个大 key 管多个菜单」的，读取时把小弟也点亮点 */
+const LEGACY_EXPAND = {
+  operation: OPERATION_KEYS,
+  fee_stats: ['fee_list'],      // 费用明细以前没有独立 key
+  waybill: ['waybill_stats'],   // 运单统计以前跟运单管理共用
+}
+
+const expandKeys = (list) => {
+    const out = new Set(list || [])
+    /* operation 是"三条合一"的老写法：展开后它自己就不该再占一格，
+       否则会出现「已选 19/18」这种超过总数的计数 */
+    if (out.has('operation')) {
+        OPERATION_KEYS.forEach((k) => out.add(k))
+        out.delete('operation')
+    }
+    Object.keys(LEGACY_EXPAND).forEach((legacy) => {
+        if (legacy === 'operation' || !out.has(legacy)) return
+        LEGACY_EXPAND[legacy].forEach((k) => out.add(k))
+    })
+    return [...out]
+}
+
+const collapseKeys = (list) => {
+    const out = (list || []).filter((k) => k !== 'operation')
+    const allOn = OPERATION_KEYS.every((k) => out.includes(k))
+    if (allOn) {
+        OPERATION_KEYS.forEach((k) => {
+            const i = out.indexOf(k)
+            if (i > -1) out.splice(i, 1)
+        })
+        out.push('operation')
+    }
+    return out
+}
+
+/* 清单里真实存在的 key（用来过滤历史遗留的无效 key，保证「已选 N/M」不超总数） */
+const ALL_ITEM_KEYS = new Set(
+    PERMISSION_MODULES.flatMap((m) => m.items.map((i) => i.key))
+)
+
 // 弹窗打开初始化
 watch(() => props.modelValue, (val) => {
     if (val) {
-        // ⭐ 过滤掉禁用模块的 key
-        const incoming = Array.isArray(props.value) ? props.value : []
-        selectedKeys.value = incoming.filter(k => !disabledKeys.value.has(k))
+        // ⭐ 过滤掉禁用项 / 已下线 key，并把老的 operation 展开成三条
+        const incoming = expandKeys(Array.isArray(props.value) ? props.value : [])
+        selectedKeys.value = incoming.filter(
+            (k) => !disabledKeys.value.has(k) && ALL_ITEM_KEYS.has(k)
+        )
         if (modules.value.length && !activeModuleKey.value) {
             activeModuleKey.value = modules.value[0].key
         }
@@ -280,7 +333,8 @@ const toggleAll = () => {
 const handleConfirm = () => {
     emit('confirm', {
         roleId: props.roleId,
-        permissions: [...selectedKeys.value],
+        /* 三条全勾 → 收拢回老的 operation，兼容还没升级的端 */
+        permissions: collapseKeys([...selectedKeys.value]),
     })
     emit('update:modelValue', false)
 }

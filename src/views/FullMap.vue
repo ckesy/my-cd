@@ -353,7 +353,7 @@
       <div v-if="isMapReady && !loadingVehicles && totalCount === 0" class="map-empty">
         <div class="empty-icon-wrap"><el-icon><Van /></el-icon></div>
         <p>暂无车辆档案</p>
-        <span>请先前往「基础数据管理 → 车辆档案」创建车辆</span>
+        <span>请先前往「档案管理 → 车辆档案」创建车辆</span>
       </div>
 
       <div v-if="isMapReady && !loadingVehicles && totalCount > 0 && locatedCount === 0" class="map-empty">
@@ -381,7 +381,9 @@ import { loadVehicleTrip, computeProgress, traveledMetersSince } from '@/utils/w
 const AMAP_KEY = '273f5c474604b71906674aac159b8f45'
 const DONGFENG_API_URL = 'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com/dongfeng-lostlocation'
 
-const CONCURRENCY = 15
+/* ⭐ 2026-10-24：车多时拉实时位置太慢，并发 15 → 24。
+   再往上（>32）容易触发东风网关限流，出现大面积"定位获取失败"，收益反而下降。 */
+const CONCURRENCY = 24
 const CACHE_TTL = 3 * 60 * 1000
 
 // ============================================================
@@ -761,14 +763,18 @@ const ensureProgress = async (plate, task, force = false) => {
   }
 }
 
-/** 后台补进度：只给「已发车 / 已到达」的车算，并发 2，最多 8 台 */
+/** 后台补进度：只给「已发车 / 已到达」的车算，并发 4（原 2），最多 12 台
+ *  —— 这块是"打开全图后慢慢补"，并发太低时车多会明显拖慢首屏可用性 */
+const PREFETCH_CONCURRENCY = 4
 const prefetchProgress = async () => {
   const targets = Object.entries(taskByPlate.value)
     .filter(([plate, t]) => ['已发车', '已到达'].includes(t.status) && vehicles.value.some(v => v.plate === plate))
-    .slice(0, 8)
-  for (let i = 0; i < targets.length; i += 2) {
+    .slice(0, 12)
+  for (let i = 0; i < targets.length; i += PREFETCH_CONCURRENCY) {
     // eslint-disable-next-line no-await-in-loop
-    await Promise.all(targets.slice(i, i + 2).map(([p, t]) => ensureProgress(p, t)))
+    await Promise.all(
+      targets.slice(i, i + PREFETCH_CONCURRENCY).map(([p, t]) => ensureProgress(p, t))
+    )
   }
 }
 

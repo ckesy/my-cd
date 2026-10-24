@@ -69,16 +69,10 @@ const routes = [
     name: 'WaybillDetail',
     component: WaybillDetail,
   },
-  {
-    path: '/vehicle-archive',
-    name: 'VehicleArchive',
-    component: () => import('../views/Dashboard.vue'),
-  },
-  {
-    path: '/driver-archive',
-    name: 'DriverArchive',
-    component: () => import('../views/Dashboard.vue'),
-  },
+  // ⭐ 车辆 / 司机档案已并入「档案管理」一级菜单（2026-10-25 用户要求）
+  //    老地址保留成跳转，收藏夹 / 历史消息里的链接不会 404
+  { path: '/vehicle-archive', redirect: '/archive/vehicle' },
+  { path: '/driver-archive', redirect: '/archive/driver' },
 
   // ⭐ 路线管理（客户端布局，和 waybill 平级）
   {
@@ -155,14 +149,88 @@ const routes = [
   },
 
   // ==========================================
-  // 👇 档案管理（客户档案 / 货物档案）
+  // 👇 维保台账（维修 / 保养 / 轮胎 + 单车维保）
+  // ==========================================
+  {
+    path: '/maintenance',
+    name: 'Maintenance',
+    component: () => import('../views/Dashboard.vue'),
+    meta: { title: '维保台账' },
+  },
+  {
+    path: '/maintenance/vehicle',
+    name: 'MaintenanceVehicle',
+    component: () => import('../views/Dashboard.vue'),
+    meta: { title: '单车维保' },
+  },
+
+  // ==========================================
+  // 👇 车务管理（证件台账 / 提醒事项 / 提醒设置）
+  // ==========================================
+  {
+    path: '/affair',
+    name: 'Affair',
+    redirect: '/affair/home',
+    meta: { title: '车务管理', icon: 'Van' },
+    children: [
+      {
+        path: 'home',
+        name: 'AffairHome',
+        component: () => import('../views/Dashboard.vue'),
+        meta: { title: '车务总览' }
+      },
+      {
+        path: 'ledger',
+        name: 'AffairLedger',
+        component: () => import('../views/Dashboard.vue'),
+        meta: { title: '证件台账' }
+      },
+      {
+        path: 'reminders',
+        name: 'AffairReminders',
+        component: () => import('../views/Dashboard.vue'),
+        meta: { title: '提醒事项' }
+      },
+      {
+        path: 'settings',
+        name: 'AffairSettings',
+        component: () => import('../views/Dashboard.vue'),
+        meta: { title: '提醒设置' }
+      }
+    ]
+  },
+
+  // ==========================================
+  // 👇 消息中心（顶栏铃铛 → 抽屉；抽屉底部 → 这一页）
+  // ==========================================
+  {
+    path: '/message',
+    name: 'MessageCenterPage',
+    component: () => import('../views/Dashboard.vue'),
+    meta: { title: '消息中心' }
+  },
+
+  // ==========================================
+  // 👇 档案管理（车辆档案 / 司机档案 / 客户档案 / 货物档案）
   // ==========================================
   {
     path: '/archive',
     name: 'Archive',
-    redirect: '/archive/customer',
+    redirect: '/archive/vehicle',
     meta: { title: '档案管理', icon: 'FolderOpened' },
     children: [
+      {
+        path: 'vehicle',
+        name: 'VehicleArchive',
+        component: () => import('../views/Dashboard.vue'),
+        meta: { title: '车辆档案' }
+      },
+      {
+        path: 'driver',
+        name: 'DriverArchive',
+        component: () => import('../views/Dashboard.vue'),
+        meta: { title: '司机档案' }
+      },
       {
         path: 'customer',
         name: 'CustomerArchive',

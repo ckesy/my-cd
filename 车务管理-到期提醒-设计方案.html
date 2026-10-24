@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>车务管理 · 到期提醒 + 消息中心 · 设计方案</title>
+<style>
+* { box-sizing: border-box; }
+:root{
+  --brand:#c8102e;
+  --brand-soft:#fdf2f4;
+  --ink:#0F172A;
+  --ink2:#334155;
+  --ink3:#64748B;
+  --ink4:#94A3B8;
+  --line:#E2E8F0;
+  --line2:#EEF2F7;
+  --bg:#F5F7FA;
+  --num-font:-apple-system,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+
+  --red:#c8102e;   --red-bg:#FDF2F4;
+  --orange:#EA580C; --orange-bg:#FFF4ED;
+  --amber:#B45309;  --amber-bg:#FFF7ED;
+  --green:#047857;  --green-bg:#ECFDF5;
+  --blue:#2563EB;   --blue-bg:#EFF4FF;
+  --gray:#64748B;   --gray-bg:#F1F5F9;
+}
+html,body{ margin:0; padding:0; }
+body{
+  background:#EEF1F5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+  color:var(--ink);
+  padding:26px 20px 70px;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{ max-width:1240px; margin:0 auto; }
+
+/* ---------- 页头 ---------- */
+.head{ margin-bottom:18px; }
+.head h1{ font-size:20px; margin:0 0 7px; letter-spacing:.2px; }
+.head p{ margin:0; font-size:13px; color:var(--ink3); line-height:1.75; }
+.head .tagline{ display:inline-flex; gap:7px; margin-top:10px; flex-wrap:wrap; }
+.tag{ font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:20px; background:#fff; border:1px solid var(--line); color:var(--ink2); }
+
+/* ---------- 切换 ---------- */
+.switcher{
+  display:flex; gap:7px; margin:16px 0 16px; flex-wrap:wrap;
+  position:sticky; top:0; z-index:60; background:#EEF1F5; padding:9px 0;
+}
+.switcher button{
+  font:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
+  padding:8px 14px; border-radius:9px; border:1px solid var(--line);
+  background:#fff; color:var(--ink2); transition:all .16s;
+}
+.switcher button:hover{ border-color:#CBD5E1; color:var(--brand); }
+.switcher button.on{ background:var(--brand); border-color:var(--brand); color:#fff; box-shadow:0 6px 16px rgba(200,16,46,.24); }
+.switcher .rec{ align-self:center; font-size:11.5px; font-weight:700; color:var(--brand); background:var(--brand-soft); border:1px dashed #F3B7C2; padding:6px 11px; border-radius:20px; margin-left:4px; }
+
+.panel{ display:none; }
+.panel.on{ display:block; animation:fadeUp .3s cubic-bezier(.25,1,.5,1); }
+@keyframes fadeUp{ from{opacity:0;transform:translateY(9px);} to{opacity:1;transform:none;} }
+
+/* ---------- 通用块 ---------- */
+.card{ background:#fff; border-radius:12px; padding:16px; box-shadow:0 4px 16px rgba(0,0,0,.045); margin-bottom:14px; }
+.card-label{ font-size:11px; font-weight:800; color:var(--ink4); letter-spacing:1.3px; margin:0 0 12px; display:flex; align-items:center; gap:8px; text-transform:uppercase; }
+.card-label::after{ content:''; flex:1; height:1px; background:var(--line2); }
+.note{ display:flex; gap:10px; background:#fff; border:1px solid var(--line); border-left:3px solid var(--brand); border-radius:10px; padding:12px 15px; margin-bottom:13px; }
+.note .dot{ width:18px;height:18px;border-radius:50%;background:var(--brand-soft);color:var(--brand);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:1px; }
+.note b{ font-size:13px; }
+.note p{ margin:4px 0 0; font-size:12.5px; color:var(--ink3); line-height:1.68; }
+.note p strong{ color:var(--ink2); }
+h2.sec{ font-size:15px; margin:20px 0 11px; display:flex; align-items:center; gap:9px; }
+h2.sec::before{ content:''; width:3px; height:15px; background:var(--brand); border-radius:2px; }
+
+/* ---------- KPI ---------- */
+.kpi{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:12px; }
+.kpi .k{ background:#fff; border-radius:10px; padding:11px 14px; box-shadow:0 2px 10px rgba(0,0,0,.04); border-left:3px solid var(--line); }
+.kpi .k.red{ border-left-color:var(--red); } .kpi .k.orange{ border-left-color:var(--orange); }
+.kpi .k.amber{ border-left-color:#D97706; } .kpi .k.blue{ border-left-color:var(--blue); }
+.kpi .k .lb{ font-size:11.5px; color:var(--ink3); font-weight:600; display:flex; align-items:center; gap:5px; }
+.kpi .k .vl{ font-family:var(--num-font); font-size:22px; font-weight:800; margin-top:4px; font-variant-numeric:tabular-nums; letter-spacing:-.3px; }
+.kpi .k .vl small{ font-size:11.5px; font-weight:600; color:var(--ink4); margin-left:3px; }
+.kpi .k.red .vl{ color:var(--red); } .kpi .k.orange .vl{ color:var(--orange); }
+.kpi .k.amber .vl{ color:#B45309; } .kpi .k.blue .vl{ color:var(--blue); }
+
+/* ---------- 表格 ---------- */
+.tbl{ width:100%; border-collapse:separate; border-spacing:0; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,.04); font-size:13px; }
+.tbl th{ background:#F7F9FC; color:#475569; font-size:12px; font-weight:700; text-align:left; padding:10px 11px; border-bottom:1px solid var(--line2); white-space:nowrap; }
+.tbl td{ padding:11px; border-bottom:1px solid #F4F7FA; color:var(--ink); font-weight:600; vertical-align:middle; }
+.tbl tr:last-child td{ border-bottom:none; }
+.tbl td.sub{ font-size:12px; color:var(--ink4); font-weight:400; }
+.tbl.dense td{ padding:8px 11px; }
+.tbl.dense th{ padding:8px 11px; }
+.num{ font-family:var(--num-font); font-variant-numeric:tabular-nums; }
+
+/* ---------- 状态 pill ---------- */
+.pill{ display:inline-flex; align-items:center; gap:5px; height:21px; padding:0 8px; border-radius:11px; font-size:11.5px; font-weight:700; white-space:nowrap; }
+.pill .d{ width:5px;height:5px;border-radius:50%;background:currentColor; }
+.pill.red{ background:var(--red-bg); color:var(--red); }
+.pill.orange{ background:var(--orange-bg); color:var(--orange); }
+.pill.amber{ background:var(--amber-bg); color:var(--amber); }
+.pill.green{ background:var(--green-bg); color:var(--green); }
+.pill.blue{ background:var(--blue-bg); color:var(--blue); }
+.pill.gray{ background:var(--gray-bg); color:var(--gray); }
+
+/* ---------- 按钮 ---------- */
+.btn{ display:inline-flex; align-items:center; gap:5px; height:29px; padding:0 11px; border-radius:7px; border:1px solid var(--line); background:#fff; color:var(--ink2); font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap; }
+.btn.primary{ background:var(--brand); border-color:var(--brand); color:#fff; }
+.btn.ghost{ background:#fff; color:var(--ink2); }
+.btn.sm{ height:25px; padding:0 9px; font-size:12px; }
+.btn.link{ border:none; background:none; color:var(--brand); padding:0 2px; height:auto; font-size:12.5px; }
+
+/* ---------- 应用外壳 mockup ---------- */
+.app{ display:flex; background:var(--bg); border:1px solid #DEE5ED; border-radius:12px; overflow:hidden; box-shadow:0 8px 26px rgba(15,23,42,.07); }
+.app .side{ width:178px; flex:0 0 auto; background:#fff; border-right:1px solid var(--line2); padding:10px 7px; }
+.app .side .brand{ display:flex; align-items:center; gap:7px; padding:4px 8px 11px; }
+.app .side .brand i{ width:18px;height:18px;border-radius:5px;background:var(--brand); display:block; }
+.app .side .brand span{ font-size:12.5px; font-weight:800; letter-spacing:.2px; }
+.app .mi{ display:flex; align-items:center; gap:7px; font-size:12.5px; color:#475569; padding:7px 9px; border-radius:7px; font-weight:600; }
+.app .mi.on{ background:var(--brand-soft); color:var(--brand); font-weight:800; }
+.app .mi.sub{ padding-left:23px; font-size:12px; color:#64748B; font-weight:500; }
+.app .mi.sub.on{ color:var(--brand); background:var(--brand-soft); }
+.app .mi .bdg{ margin-left:auto; background:var(--brand); color:#fff; font-size:10.5px; font-weight:800; border-radius:9px; padding:1px 5px; }
+.app .main{ flex:1; min-width:0; background:var(--bg); padding:12px 13px; }
+.app .topbar{ display:flex; align-items:center; gap:9px; padding:0 0 10px; border-bottom:1px solid var(--line2); margin-bottom:11px; }
+.app .topbar .ttl{ font-size:12.5px; font-weight:800; color:var(--ink2); }
+.app .topbar .right{ margin-left:auto; display:flex; align-items:center; gap:8px; }
+.bell{ position:relative; width:26px;height:26px;border-radius:7px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink3); background:#fff; }
+.bell .bd{ position:absolute; top:-5px; right:-5px; min-width:15px; height:15px; border-radius:8px; background:var(--brand); color:#fff; font-size:10px; font-weight:800; display:flex;align-items:center;justify-content:center; padding:0 4px; border:1.5px solid #fff; }
+
+/* ---------- 工具行 ---------- */
+.tool{ display:flex; align-items:center; gap:9px; margin:0 0 9px; }
+.tool .vbar{ width:3px;height:14px;background:var(--brand);border-radius:2px; }
+.tool h4{ font-size:13.5px; margin:0; font-weight:800; }
+.tool .cnt{ font-size:12px; color:var(--ink4); font-weight:600; }
+.tool .right{ margin-left:auto; display:flex; gap:6px; }
+.tabs2{ display:flex; gap:4px; margin-bottom:9px; }
+.tabs2 span{ font-size:12.5px; font-weight:700; color:var(--ink3); padding:5px 11px; border-radius:7px; cursor:pointer; }
+.tabs2 span.on{ background:#fff; color:var(--brand); box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.tabs2 span em{ font-style:normal; font-family:var(--num-font); margin-left:4px; color:var(--ink4); font-weight:700; }
+
+/* ---------- 表单 ---------- */
+.field{ margin-bottom:9px; }
+.field .lb{ font-size:12px; color:var(--ink3); font-weight:600; margin-bottom:4px; }
+.input{ height:31px; border:1px solid #DCDFE6; border-radius:7px; background:#fff; font-size:12.5px; color:var(--ink); display:flex; align-items:center; padding:0 10px; gap:6px; }
+.input.ph{ color:#A8ABB2; }
+.input .caret{ margin-left:auto; color:#A8ABB2; font-size:9px; }
+.chips{ display:flex; gap:5px; flex-wrap:wrap; }
+.chip{ height:25px; padding:0 10px; border-radius:13px; border:1px solid var(--line); background:#fff; font-size:12px; font-weight:700; color:var(--ink3); display:inline-flex; align-items:center; }
+.chip.on{ background:var(--brand); border-color:var(--brand); color:#fff; }
+.chip.dflt::after{ content:'默认'; font-size:9.5px; margin-left:4px; opacity:.75; }
+
+/* ---------- 弹窗 ---------- */
+.dlg{ background:#fff; border-radius:12px; box-shadow:0 18px 50px rgba(15,23,42,.22); overflow:hidden; border:1px solid var(--line); }
+.dlg .dh{ padding:13px 16px 11px; border-bottom:1px solid var(--line2); display:flex; align-items:center; gap:8px; }
+.dlg .dh b{ font-size:13.5px; }
+.dlg .db{ padding:14px 16px; }
+.dlg .df{ padding:11px 16px; border-top:1px solid var(--line2); display:flex; gap:8px; justify-content:flex-end; background:#FCFDFE; }
+.dlg .x{ margin-left:auto; color:var(--ink4); font-size:14px; }
+
+/* ---------- 抽屉 ---------- */
+.drawer{ width:100%; background:#fff; border-left:1px solid var(--line); display:flex; flex-direction:column; }
+.drawer .dh{ padding:12px 14px; border-bottom:1px solid var(--line2); display:flex; align-items:center; gap:8px; }
+.drawer .dh b{ font-size:13.5px; }
+.drawer .dbody{ flex:1; overflow:hidden; }
+
+/* 消息行 */
+.msg{ display:flex; gap:10px; padding:11px 14px; border-bottom:1px solid #F4F7FA; }
+.msg:hover{ background:#FCFDFE; }
+.msg .ic{ width:26px;height:26px;border-radius:8px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800; }
+.msg .ic.r{ background:var(--red-bg); color:var(--red); }
+.msg .ic.o{ background:var(--orange-bg); color:var(--orange); }
+.msg .ic.a{ background:var(--amber-bg); color:var(--amber); }
+.msg .ic.b{ background:var(--blue-bg); color:var(--blue); }
+.msg .ic.g{ background:var(--gray-bg); color:var(--gray); }
+.msg .m{ min-width:0; flex:1; }
+.msg .m b{ font-size:12.5px; display:block; line-height:1.5; }
+.msg .m p{ margin:2px 0 0; font-size:11.5px; color:var(--ink4); line-height:1.55; }
+.msg .tm{ font-size:11px; color:#B6C0CC; flex:0 0 auto; font-family:var(--num-font); }
+
+/* ---------- 流程 ---------- */
+.flow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.fbox{ background:#fff; border:1px solid var(--line); border-radius:9px; padding:8px 11px; font-size:12px; font-weight:700; color:var(--ink2); }
+.fbox.red{ border-color:#F3B7C2; background:var(--red-bg); color:var(--red); }
+.fbox.amber{ border-color:#FBD5A5; background:var(--amber-bg); color:var(--amber); }
+.fbox.green{ border-color:#A7E8CE; background:var(--green-bg); color:var(--green); }
+.fbox small{ display:block; font-size:10.5px; font-weight:600; color:var(--ink4); margin-top:2px; }
+.arw{ color:#CBD5E1; font-size:14px; font-weight:700; }
+
+/* ---------- 代码 ---------- */
+pre{ background:#0F172A; color:#E2E8F0; border-radius:10px; padding:13px 15px; font-size:12px; line-height:1.72; overflow:auto; margin:0 0 12px; font-family:"SF Mono",Menlo,Consolas,monospace; }
+pre .c{ color:#7C8DA6; } pre .k{ color:#F9A8B8; } pre .t{ color:#93C5FD; } pre .s{ color:#FCD34D; }
+
+/* ---------- 两列布局 ---------- */
+.grid2{ display:grid; grid-template-columns:1.35fr .65fr; gap:12px; align-items:start; }
+.grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:11px; align-items:start; }
+.muted{ color:var(--ink4); font-size:12px; line-height:1.7; }
+ul.tight{ margin:6px 0 0; padding-left:17px; }
+ul.tight li{ font-size:12.5px; color:var(--ink3); line-height:1.85; }
+ul.tight li b{ color:var(--ink2); }
+
+/* 手机 */
+.phone{ width:250px; border:7px solid #1F2937; border-radius:26px; background:#F5F7FA; overflow:hidden; }
+.phone .ph-t{ background:#fff; padding:10px 12px 8px; text-align:center; font-size:12px; font-weight:800; border-bottom:1px solid var(--line2); }
+.phone .ph-b{ padding:10px; }
+.phone .tabbar{ display:flex; background:#fff; border-top:1px solid var(--line2); }
+.phone .tabbar div{ flex:1; text-align:center; font-size:10.5px; padding:7px 0; color:var(--ink4); font-weight:700; }
+.phone .tabbar div.on{ color:var(--brand); }
+
+/* 对比小表 */
+.cmp{ width:100%; border-collapse:separate; border-spacing:0; background:#fff; border-radius:10px; overflow:hidden; font-size:12.5px; box-shadow:0 2px 10px rgba(0,0,0,.04); }
+.cmp th{ background:#F7F9FC; color:#475569; font-size:11.5px; font-weight:700; text-align:left; padding:9px 11px; border-bottom:1px solid var(--line2); }
+.cmp td{ padding:9px 11px; border-bottom:1px solid #F4F7FA; color:var(--ink2); vertical-align:top; line-height:1.6; }
+.cmp td:first-child{ font-weight:700; color:var(--ink); width:120px; }
+.cmp tr:last-child td{ border-bottom:none; }
+.yes{ color:var(--green); font-weight:800; }
+.no{ color:var(--red); font-weight:800; }
+.half{ color:var(--amber); font-weight:800; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>车务管理 · 证件到期提醒 + 消息中心 · 设计方案</h1>
+    <p>先做字段盘点（现有 vs 你给的 28 列），再给 3 版整体方案 + 3 种消息中心形态 + 提醒事项交互闭环。
+       本轮只出设计、不改代码。下面所有界面按你现有系统口径绘制：品牌红 <b>#C8102E</b>、页面底 #F5F7FA、控件高 32 圆角 8、表头 12px/700/#475569。</p>
+    <div class="tagline">
+      <span class="tag">到期状态机 4 态</span>
+      <span class="tag">提醒节点 90/30/15/7/3（默认 30）</span>
+      <span class="tag">主账号 + 管理端双投递</span>
+      <span class="tag">小程序只进待办</span>
+      <span class="tag">一车多证 · 证件子表</span>
+    </div>
+  </div>
+
+  <div class="switcher">
+    <button class="on" data-p="p0">① 盘点现状</button>
+    <button data-p="pA">② 方案A 独立车务</button>
+    <button data-p="pB">③ 方案B 轻量并入</button>
+    <button data-p="pC">④ 方案C 统一中心</button>
+    <button data-p="pD">⑤ 消息中心三形态</button>
+    <button data-p="pE">⑥ 提醒交互闭环</button>
+    <button data-p="pF">⑦ 数据与规则</button>
+    <button data-p="pG">⑧ 小程序待办</button>
+    <span class="rec">推荐：方案A + 消息中心「双形态」</span>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- ① 盘点现状 -->
+  <!-- ============================================================ -->
+  <section class="panel on" id="p0">
+
+    <div class="note">
+      <div class="dot">!</div>
+      <div>
+        <b>先说结论：你表格里 28 个字段，现有系统只有 8 个、2 个算半个、18 个完全没有。</b>
+        <p>而且缺的这 18 个里，<strong>真正需要「提醒」的是 6 个到期点</strong>：行驶证、营运证、交强险、商业险、超赔险，加上<strong>保养（按日期 / 按里程）</strong>。
+           其余（发动机号、初次登记、车主姓名、保单号、起期）只是档案信息，带出来即可，不单独提醒。</p>
+      </div>
+    </div>
+
+    <div class="kpi">
+      <div class="k blue"><div class="lb">需求字段总数</div><div class="vl">28<small>列</small></div></div>
+      <div class="k"><div class="lb">现有可直接用</div><div class="vl" style="color:#047857">8<small>项</small></div></div>
+      <div class="k amber"><div class="lb">有字段但口径不对</div><div class="vl">2<small>项</small></div></div>
+      <div class="k red"><div class="lb">完全缺失</div><div class="vl">18<small>项</small></div></div>
+    </div>
+
+    <h2 class="sec">1.1 逐字段对比（已核对线上 vehicles 表真实列名）</h2>
+    <table class="tbl dense">
+      <thead>
+        <tr>
+          <th style="width:40px">#</th><th style="width:150px">字段（你表格）</th>
+          <th style="width:86px">表格标记</th><th style="width:170px">现有字段</th>
+          <th style="width:90px">结论</th><th>说明 / 处理建议</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="num">1</td><td>车牌号</td><td>是</td><td><code>plate</code></td><td><span class="pill green"><i class="d"></i>已有</span></td><td class="sub">直接复用，作证件台账的主键维度</td></tr>
+        <tr><td class="num">2</td><td>挂车号</td><td>否</td><td><code>trailer</code></td><td><span class="pill green"><i class="d"></i>已有</span></td><td class="sub">现叫「关联挂车」，语义一致，改名叫「挂车号」即可</td></tr>
+        <tr><td class="num">3</td><td>车架号</td><td>是</td><td><code>vin</code></td><td><span class="pill green"><i class="d"></i>已有</span></td><td class="sub">东风接口全靠它，别再改名</td></tr>
+        <tr><td class="num">4</td><td>发动机号</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub">新增 <code>engine_no</code>，纯档案信息，不参与提醒</td></tr>
+        <tr><td class="num">5</td><td>车辆型号</td><td>自动识别</td><td><code>vehicle_type</code></td><td><span class="pill amber"><i class="d"></i>部分</span></td><td class="sub">现在是手填文本框。要么接 VIN 解析，要么改成「车型库下拉 + 手填兜底」</td></tr>
+        <tr><td class="num">6</td><td>初次登记日期</td><td>是</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub">现有 <code>purchase_date</code> 是「购买日」，不是登记日，<b>两个概念不能混用</b></td></tr>
+        <tr><td class="num">7</td><td>车辆状态</td><td>是</td><td>只有实时状态</td><td><span class="pill amber"><i class="d"></i>部分</span></td><td class="sub">现在是东风实时返回的 行驶/静止/离线，没有「营运/停运/报废」这种档案状态，建议补 <code>biz_status</code></td></tr>
+        <tr><td class="num">8</td><td>车主姓名</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub">新增 <code>owner_name</code>（挂靠车必填，跟登录租户无关）</td></tr>
+        <tr><td class="num">9</td><td>司机姓名</td><td>否</td><td><code>driver</code></td><td><span class="pill green"><i class="d"></i>已有</span></td><td class="sub">现是逗号分隔的多司机 CSV，够用</td></tr>
+        <tr style="background:#FFFDF9"><td class="num">10</td><td><b>行驶证有效期</b> 🔴</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub"><b>核心提醒点 1。</b>你表格里标黄的两个字段之一</td></tr>
+        <tr><td class="num">11</td><td>营运证号</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub">跟营运证有效期成对出现</td></tr>
+        <tr style="background:#FFFDF9"><td class="num">12</td><td><b>营运证有效期</b> 🔴</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub"><b>核心提醒点 2。</b>标黄的另一个</td></tr>
+        <tr><td class="num">13</td><td>交强险保单</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub">保单号，纯档案</td></tr>
+        <tr><td class="num">14</td><td>交强险起期</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub">起期用于「续保后核对是否接续」，不做提醒</td></tr>
+        <tr style="background:#FFFDF9"><td class="num">15</td><td><b>交强险止期</b> 🔴</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub"><b>核心提醒点 3。</b>现有 <code>insurance_date</code> 只是「保险购买日」，不能当止期</td></tr>
+        <tr><td class="num">16</td><td>商业险保单</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub">保单号</td></tr>
+        <tr><td class="num">17</td><td>商业险起期</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub">同上</td></tr>
+        <tr style="background:#FFFDF9"><td class="num">18</td><td><b>商业险止期</b> 🔴</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub"><b>核心提醒点 4。</b>车队最大的成本项，逾期＝裸奔</td></tr>
+        <tr><td class="num">19</td><td>超赔险</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub">保单号</td></tr>
+        <tr><td class="num">20</td><td>超赔险起期</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub">同上</td></tr>
+        <tr style="background:#FFFDF9"><td class="num">21</td><td><b>超赔险止期</b> 🔴</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub"><b>核心提醒点 5。</b>小公司常常忘，一忘就是几百万风险敞口</td></tr>
+        <tr><td class="num">22</td><td>最近保养日期</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub">保养提醒的日期基准</td></tr>
+        <tr><td class="num">23</td><td>最近保养里程</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub">跟东风 <code>track/history</code> 当天最大里程比，算还剩多少公里</td></tr>
+        <tr><td class="num">24</td><td>保养间隔里程</td><td>否</td><td>—</td><td><span class="pill red"><i class="d"></i>缺失</span></td><td class="sub"><b>核心提醒点 6（里程型）。</b>到期日 + 到期里程，任一命中就提醒</td></tr>
+        <tr><td class="num">25</td><td>所属车队客户ID</td><td>否</td><td><code>customer_id</code></td><td><span class="pill green"><i class="d"></i>已有</span></td><td class="sub">⚠️ 是整数，新表引用一律 <code>text</code> + 写入前 String()</td></tr>
+        <tr><td class="num">26</td><td>备注</td><td>否</td><td><code>remark</code></td><td><span class="pill green"><i class="d"></i>已有</span></td><td class="sub"><b>你表格标「否」，其实这列早就有</b>，档案编辑里没露出来而已</td></tr>
+        <tr><td class="num">27</td><td>创建时间</td><td>是</td><td><code>created_at</code></td><td><span class="pill green"><i class="d"></i>已有</span></td><td class="sub">—</td></tr>
+        <tr><td class="num">28</td><td>更新时间</td><td>是</td><td><code>updated_at</code></td><td><span class="pill green"><i class="d"></i>已有</span></td><td class="sub">—</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="sec">1.2 现有「消息中心」到底是什么</h2>
+    <div class="grid2">
+      <div class="card" style="margin:0">
+        <div class="card-label">现状 · 顶栏一个铃铛 + 一个下拉面板</div>
+        <div class="flow" style="margin-bottom:12px">
+          <div class="fbox">Dashboard 顶栏铃铛<small>todo-bell</small></div>
+          <span class="arw">→</span>
+          <div class="fbox">下拉小面板<small>只有 2 行</small></div>
+          <span class="arw">→</span>
+          <div class="fbox">待我审批 / 待付款<small>点进去跳运单列表</small></div>
+        </div>
+        <table class="cmp">
+          <tr><th style="width:130px">能力</th><th>现状</th></tr>
+          <tr><td>消息类型</td><td><span class="no">只有 1 类</span>：费用待办（审批 + 打款）</td></tr>
+          <tr><td>历史消息</td><td><span class="no">没有</span>。关掉面板就没了，无法回溯</td></tr>
+          <tr><td>已读 / 未读</td><td><span class="no">没有</span>。只有实时算出来的数字</td></tr>
+          <tr><td>独立页面</td><td><span class="no">没有</span>。<code>/message</code> 路由不存在</td></tr>
+          <tr><td>围栏提醒</td><td><span class="half">有独立查询页</span>（提醒事件查询），不进消息中心</td></tr>
+          <tr><td>到期提醒</td><td><span class="no">完全没有</span>。没有提醒表、没有定时任务</td></tr>
+          <tr><td>小程序</td><td><span class="half">有待办页</span>，但目前只有费用类</td></tr>
+        </table>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-label">数据库现状</div>
+        <table class="cmp">
+          <tr><th>表</th><th>状态</th></tr>
+          <tr><td>vehicles</td><td><span class="half">21 列，无任何证件到期字段</span></td></tr>
+          <tr><td>vehicle_certs</td><td><span class="no">不存在，需新建</span></td></tr>
+          <tr><td>reminders</td><td><span class="no">不存在，需新建</span></td></tr>
+          <tr><td>notices</td><td><span class="no">不存在，需新建</span></td></tr>
+          <tr><td>ele_fence_alerts</td><td><span class="yes">存在</span>（围栏提醒事件）</td></tr>
+          <tr><td>vehicle_inspections</td><td><span class="yes">存在</span>（外观巡检）</td></tr>
+          <tr><td>reports</td><td><span class="yes">存在</span>（费用上报，待办来源）</td></tr>
+        </table>
+        <p class="muted" style="margin-top:10px">✅ 也就是说：这次是<b>纯新增</b>，不用改任何存量数据结构，风险低。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ② 方案A -->
+  <!-- ============================================================ -->
+  <section class="panel" id="pA">
+    <div class="note">
+      <div class="dot">A</div>
+      <div>
+        <b>独立「车务管理」一级菜单（已定稿）</b>
+        <p>车务 = 车务总览 + 证件台账 + 提醒事项 + 提醒设置，四个子页。<strong>车辆档案只负责「维护数据」，车务管理负责「盯到期」</strong>，
+           职责分开，列表页不会被一堆到期列撑爆。车辆档案编辑弹窗内嵌「证件与保险」Tab，录入入口不变。</p>
+        <p style="margin-top:6px"><strong>已拍板：</strong>方案A ｜ 临近 = 剩余 ≤3 天 ｜ 默认只勾 30 天 ｜ 保养做里程型 ｜
+           子账号 = 配了车务管理员且模块开通才投递 ｜ 消息中心 = 双形态</p>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <div class="card" style="margin:0">
+          <div class="card-label">菜单结构</div>
+          <div class="app" style="box-shadow:none;border-radius:9px">
+            <div class="side" style="width:150px">
+              <div class="brand"><i></i><span>车队管理</span></div>
+              <div class="mi">首页</div>
+              <div class="mi">业务流程</div>
+              <div class="mi">行车管理</div>
+              <div class="mi">电子围栏管理</div>
+              <div class="mi">运营管理</div>
+              <div class="mi">运输管理</div>
+              <div class="mi">费用管理</div>
+              <div class="mi on">车务管理 <span class="bdg">3</span></div>
+              <div class="mi sub on">车务总览</div>
+              <div class="mi sub">证件台账</div>
+              <div class="mi sub">提醒事项</div>
+              <div class="mi sub">提醒设置</div>
+              <div class="mi">车队分析报告</div>
+              <div class="mi">基础数据管理</div>
+              <div class="mi">档案管理</div>
+              <div class="mi">系统管理</div>
+            </div>
+            <div class="main" style="padding:12px">
+              <div style="font-size:12px;color:var(--ink4);line-height:1.9">
+                <b style="color:var(--ink2)">位置</b>：费用管理 与 车队分析报告 之间<br>
+                <b style="color:var(--ink2)">权限 key</b>：<code>vehicle_affair</code>（一个新 key 管四个子页）<br>
+                <b style="color:var(--ink2)">角标</b>：待处理提醒事项数（红点）<br>
+                <b style="color:var(--ink2)">小程序</b>：不建新页，只进「待办」
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-label">四个子页各干什么</div>
+        <table class="cmp">
+          <tr><th>页面</th><th>职责</th></tr>
+          <tr><td>车务总览</td><td>4 张 KPI + 未来 90 天到期日历 + 待处理提醒事项</td></tr>
+          <tr><td>证件台账</td><td>一车一行、按证件维度筛选；批量导入/导出；<b>直接改到期日</b></td></tr>
+          <tr><td>提醒事项</td><td>自动+人工产生的待办，全部在这里处理（改期/取消/换证）</td></tr>
+          <tr><td>提醒设置</td><td>全局：提醒时间点、周末是否提醒、接收人（主账号/车务管理员/管理端）、保养默认间隔</td></tr>
+        </table>
+        <p class="muted" style="margin-top:9px">证件录入仍在「车辆档案 → 编辑 → 证件与保险」，不新开录入表单，避免两处维护同一份数据；<b>逐项的提醒节点（90/30/15/7/3）勾在证件旁边</b>，不放在提醒设置里。</p>
+      </div>
+    </div>
+
+    <h2 class="sec">A-1 车务总览（默认落地页）</h2>
+    <div class="app">
+      <div class="side">
+        <div class="brand"><i></i><span>车队管理平台</span></div>
+        <div class="mi">首页</div>
+        <div class="mi">业务流程</div>
+        <div class="mi">行车管理</div>
+        <div class="mi">电子围栏管理</div>
+        <div class="mi">运营管理</div>
+        <div class="mi">运输管理</div>
+        <div class="mi">费用管理</div>
+        <div class="mi on">车务管理 <span class="bdg">7</span></div>
+        <div class="mi sub on">车务总览</div>
+        <div class="mi sub">证件台账</div>
+        <div class="mi sub">提醒事项 <span class="bdg">7</span></div>
+        <div class="mi sub">提醒设置</div>
+        <div class="mi">车队分析报告</div>
+        <div class="mi">基础数据管理</div>
+        <div class="mi">档案管理</div>
+        <div class="mi">系统管理</div>
+      </div>
+      <div class="main">
+        <div class="topbar">
+          <span class="ttl">车务管理 / 车务总览</span>
+          <div class="right">
+            <div class="bell">🔔<span class="bd">7</span></div>
+            <span style="font-size:11.5px;color:var(--ink4)">华东一队 · 主账号</span>
+          </div>
+        </div>
+
+        <div class="kpi">
+          <div class="k red"><div class="lb">已逾期 · 立即处理</div><div class="vl">2<small>项</small></div></div>
+          <div class="k orange"><div class="lb">3 天内到期 · 临近</div><div class="vl">3<small>项</small></div></div>
+          <div class="k amber"><div class="lb">30 天内到期 · 快到期</div><div class="vl">7<small>项</small></div></div>
+          <div class="k"><div class="lb">正常在保 · 全部车辆</div><div class="vl" style="color:#334155">86<small>/98 台</small></div></div>
+        </div>
+
+        <div class="tool">
+          <span class="vbar"></span><h4>未来 90 天到期分布</h4>
+          <span class="cnt">按月 · 点柱子直接筛台账</span>
+          <div class="right"><span class="btn sm">导出</span></div>
+        </div>
+        <div class="card" style="padding:14px 16px;margin-bottom:11px">
+          <div style="display:flex;align-items:flex-end;gap:14px;height:96px">
+            <div style="flex:1;text-align:center"><div style="height:18px;background:#EEF2F7;border-radius:4px 4px 0 0"></div><div style="font-size:11px;color:var(--ink4);margin-top:5px">10月 3</div></div>
+            <div style="flex:1;text-align:center"><div style="height:56px;background:#FBD5A5;border-radius:4px 4px 0 0"></div><div style="font-size:11px;color:var(--ink4);margin-top:5px">11月 14</div></div>
+            <div style="flex:1;text-align:center"><div style="height:38px;background:#FBD5A5;border-radius:4px 4px 0 0"></div><div style="font-size:11px;color:var(--ink4);margin-top:5px">12月 9</div></div>
+            <div style="flex:1;text-align:center"><div style="height:74px;background:#FBCFE8;border-radius:4px 4px 0 0"></div><div style="font-size:11px;color:var(--ink4);margin-top:5px">1月 21</div></div>
+            <div style="flex:1;text-align:center"><div style="height:12px;background:#EEF2F7;border-radius:4px 4px 0 0"></div><div style="font-size:11px;color:var(--ink4);margin-top:5px">2月 2</div></div>
+            <div style="flex:1;text-align:center"><div style="height:30px;background:#FBD5A5;border-radius:4px 4px 0 0"></div><div style="font-size:11px;color:var(--ink4);margin-top:5px">3月 7</div></div>
+          </div>
+          <div style="display:flex;gap:14px;margin-top:11px;padding-top:9px;border-top:1px solid var(--line2);font-size:11.5px;color:var(--ink3)">
+            <span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#FBD5A5;margin-right:4px"></i>保险到期</span>
+            <span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#FBCFE8;margin-right:4px"></i>证照到期（换证周期长）</span>
+            <span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#EEF2F7;margin-right:4px"></i>保养</span>
+          </div>
+        </div>
+
+        <div class="tool">
+          <span class="vbar"></span><h4>待处理提醒事项</h4>
+          <span class="cnt">共 7 条</span>
+          <div class="right"><span class="btn sm ghost">设置下次提醒</span><span class="btn sm primary">全部处理</span></div>
+        </div>
+        <table class="tbl dense">
+          <thead><tr><th style="width:120px">车牌号</th><th style="width:110px">证件类型</th><th style="width:110px">到期日</th><th style="width:100px">剩余</th><th style="width:110px">级别</th><th>提醒内容</th><th style="width:88px">操作</th></tr></thead>
+          <tbody>
+            <tr><td>沪A·D12345</td><td>商业险</td><td class="num">2026-10-20</td><td class="num" style="color:#c8102e;font-weight:800">-4 天</td><td><span class="pill red"><i class="d"></i>已逾期</span></td><td class="sub">商业险已过期 4 天，请立即续保</td><td><span class="btn link">处理</span></td></tr>
+            <tr><td>沪B·E88888</td><td>营运证</td><td class="num">2026-10-18</td><td class="num" style="color:#c8102e;font-weight:800">-6 天</td><td><span class="pill red"><i class="d"></i>已逾期</span></td><td class="sub">营运证已过期，上路将被运管处罚</td><td><span class="btn link">处理</span></td></tr>
+            <tr><td>沪C·F66666</td><td>交强险</td><td class="num">2026-10-26</td><td class="num" style="color:#EA580C;font-weight:800">2 天</td><td><span class="pill orange"><i class="d"></i>临近</span></td><td class="sub">交强险 2 天后到期，每天提醒中</td><td><span class="btn link">处理</span></td></tr>
+            <tr><td>沪A·D12345</td><td>行驶证</td><td class="num">2026-11-18</td><td class="num">25 天</td><td><span class="pill amber"><i class="d"></i>快到期</span></td><td class="sub">行驶证 25 天后到期（提前 30 天提醒）</td><td><span class="btn link">处理</span></td></tr>
+            <tr><td>沪D·G11111</td><td>商业险</td><td class="num">2026-11-22</td><td class="num">29 天</td><td><span class="pill amber"><i class="d"></i>快到期</span></td><td class="sub">商业险 29 天后到期，可开始比价</td><td><span class="btn link">处理</span></td></tr>
+            <tr><td>沪E·H22222</td><td>保养（里程）</td><td class="num">剩 380km</td><td class="num">—</td><td><span class="pill amber"><i class="d"></i>快到期</span></td><td class="sub">距下次保养还剩 380km（间隔 10000km）</td><td><span class="btn link">处理</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h2 class="sec">A-2 证件台账（一车一行 · 到期列全部带色）</h2>
+    <div class="app" style="margin-top:0">
+      <div class="side">
+        <div class="brand"><i></i><span>车队管理平台</span></div>
+        <div class="mi">首页</div><div class="mi">业务流程</div><div class="mi">行车管理</div>
+        <div class="mi">电子围栏管理</div><div class="mi">运营管理</div><div class="mi">运输管理</div><div class="mi">费用管理</div>
+        <div class="mi on">车务管理 <span class="bdg">7</span></div>
+        <div class="mi sub">车务总览</div>
+        <div class="mi sub on">证件台账</div>
+        <div class="mi sub">提醒事项 <span class="bdg">7</span></div>
+        <div class="mi sub">提醒设置</div>
+        <div class="mi">车队分析报告</div><div class="mi">基础数据管理</div><div class="mi">档案管理</div><div class="mi">系统管理</div>
+      </div>
+      <div class="main">
+        <div class="topbar">
+          <span class="ttl">车务管理 / 证件台账</span>
+          <div class="right"><div class="bell">🔔<span class="bd">7</span></div></div>
+        </div>
+
+        <div style="display:flex;gap:7px;margin-bottom:9px;flex-wrap:wrap">
+          <div class="input" style="width:150px"><span style="color:#A8ABB2">车牌号 / 车架号</span></div>
+          <div class="input" style="width:132px"><span style="color:#A8ABB2">所属机构</span><span class="caret">▼</span></div>
+          <div class="input" style="width:120px"><span style="color:#A8ABB2">证件类型</span><span class="caret">▼</span></div>
+          <div class="input" style="width:132px"><span style="color:#A8ABB2">到期状态</span><span class="caret">▼</span></div>
+          <div class="input" style="width:150px"><span style="color:#A8ABB2">到期日区间</span><span class="caret">▼</span></div>
+          <span class="btn primary">查询</span><span class="btn ghost">重置</span><span class="btn ghost">导出</span>
+        </div>
+
+        <div class="tabs2">
+          <span class="on">全部 <em>98</em></span>
+          <span>已逾期 <em style="color:#c8102e">2</em></span>
+          <span>临近（≤3天）<em style="color:#EA580C">3</em></span>
+          <span>快到期 <em style="color:#B45309">7</em></span>
+          <span>正常 <em>86</em></span>
+        </div>
+
+        <div class="tool">
+          <span class="vbar"></span><h4>证件台账</h4><span class="cnt">共 98 台车 / 588 项证件</span>
+          <div class="right"><span class="btn sm ghost">批量导入</span><span class="btn sm ghost">列设置</span><span class="btn sm primary">+ 新增证件</span></div>
+        </div>
+
+        <table class="tbl dense">
+          <thead>
+            <tr>
+              <th style="width:110px">车牌号</th><th style="width:96px">机构</th><th style="width:88px">证件类型</th>
+              <th style="width:120px">证号 / 保单号</th><th style="width:96px">起期</th><th style="width:96px">到期日</th>
+              <th style="width:82px">剩余</th><th style="width:110px">提醒节点</th><th style="width:90px">状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>沪A·D12345</td><td class="sub">华东一队</td><td>商业险</td><td class="sub">PDAA2025…8821</td><td class="sub num">2025-10-21</td><td class="num">2026-10-20</td><td class="num" style="color:#c8102e;font-weight:800">-4 天</td><td><span class="pill gray">30/7/3</span></td><td><span class="pill red"><i class="d"></i>已逾期</span></td></tr>
+            <tr><td>沪B·E88888</td><td class="sub">华东一队</td><td>营运证</td><td class="sub">沪交运管字…3382</td><td class="sub num">2022-10-19</td><td class="num">2026-10-18</td><td class="num" style="color:#c8102e;font-weight:800">-6 天</td><td><span class="pill gray">90/30/7</span></td><td><span class="pill red"><i class="d"></i>已逾期</span></td></tr>
+            <tr><td>沪C·F66666</td><td class="sub">华东二队</td><td>交强险</td><td class="sub">PDZA2025…1102</td><td class="sub num">2025-10-27</td><td class="num">2026-10-26</td><td class="num" style="color:#EA580C;font-weight:800">2 天</td><td><span class="pill gray">30/7/3</span></td><td><span class="pill orange"><i class="d"></i>临近</span></td></tr>
+            <tr><td>沪A·D12345</td><td class="sub">华东一队</td><td>行驶证</td><td class="sub">沪A12345678</td><td class="sub num">2020-11-19</td><td class="num">2026-11-18</td><td class="num">25 天</td><td><span class="pill gray">30/7/3</span></td><td><span class="pill amber"><i class="d"></i>快到期</span></td></tr>
+            <tr><td>沪D·G11111</td><td class="sub">华东二队</td><td>商业险</td><td class="sub">PDAA2025…4437</td><td class="sub num">2025-11-23</td><td class="num">2026-11-22</td><td class="num">29 天</td><td><span class="pill gray">90/30</span></td><td><span class="pill amber"><i class="d"></i>快到期</span></td></tr>
+            <tr><td>沪E·H22222</td><td class="sub">苏南车队</td><td>超赔险</td><td class="sub">PDAE2025…0091</td><td class="sub num">2025-12-01</td><td class="num">2026-11-30</td><td class="num">37 天</td><td><span class="pill gray">30</span></td><td><span class="pill green"><i class="d"></i>正常</span></td></tr>
+            <tr><td>沪F·J33333</td><td class="sub">苏南车队</td><td>保养</td><td class="sub">上次 2026-08-12</td><td class="sub">剩余 380km</td><td class="num">2026-12-30</td><td class="num">67 天</td><td><span class="pill gray">30</span></td><td><span class="pill green"><i class="d"></i>正常</span></td></tr>
+          </tbody>
+        </table>
+        <div style="display:flex;justify-content:flex-end;gap:5px;margin-top:10px;font-size:12px;color:var(--ink3)">
+          <span class="btn sm">‹</span><span class="btn sm" style="background:var(--brand);border-color:var(--brand);color:#fff">1</span><span class="btn sm">2</span><span class="btn sm">3</span><span class="btn sm">›</span>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec">A-3 车辆档案 → 编辑弹窗里新增的「证件与保险」分组</h2>
+    <div class="grid2">
+      <div class="dlg">
+        <div class="dh"><b>编辑车辆信息</b><span class="pill gray">沪A·D12345</span><span class="x">✕</span></div>
+        <div class="db">
+          <div style="display:flex;gap:5px;margin-bottom:12px">
+            <span class="chip">基本信息</span><span class="chip on">证件与保险</span><span class="chip">车辆参数</span><span class="chip">保养</span>
+          </div>
+
+          <div style="font-size:11.5px;font-weight:800;color:var(--ink4);letter-spacing:1px;margin:0 0 8px">行驶证</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="field"><div class="lb">行驶证号</div><div class="input">沪A12345678</div></div>
+            <div class="field"><div class="lb">有效期至 <span style="color:var(--brand)">*</span></div><div class="input num">2026-11-18 <span class="caret">📅</span></div></div>
+          </div>
+          <div class="field">
+            <div class="lb">提前提醒（可多选，默认 30 天）</div>
+            <div class="chips">
+              <span class="chip">90 天</span><span class="chip on dflt">30 天</span><span class="chip">15 天</span><span class="chip">7 天</span><span class="chip">3 天</span>
+            </div>
+          </div>
+
+          <div style="font-size:11.5px;font-weight:800;color:var(--ink4);letter-spacing:1px;margin:14px 0 8px">营运证</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="field"><div class="lb">营运证号</div><div class="input">沪交运管字 3382</div></div>
+            <div class="field"><div class="lb">有效期至</div><div class="input num">2026-10-18 <span class="caret">📅</span></div></div>
+          </div>
+          <div class="field"><div class="lb">提前提醒</div><div class="chips"><span class="chip on">90 天</span><span class="chip on dflt">30 天</span><span class="chip">15 天</span><span class="chip on">7 天</span><span class="chip">3 天</span></div></div>
+
+          <div style="display:flex;align-items:center;gap:8px;margin-top:12px;padding:9px 11px;background:#FFF7ED;border:1px solid #FBD5A5;border-radius:8px">
+            <span style="font-size:12px;color:#B45309;font-weight:700">⚠️ 营运证已逾期 6 天，保存后将生成提醒事项</span>
+            <span class="btn sm" style="margin-left:auto">设为不提醒</span>
+          </div>
+        </div>
+        <div class="df"><span class="btn ghost">取消</span><span class="btn primary">保存</span></div>
+      </div>
+
+      <div class="card" style="margin:0">
+        <div class="card-label">这部分的设计取舍</div>
+        <table class="cmp">
+          <tr><th>点</th><th>做法</th></tr>
+          <tr><td>Tab 还是折叠</td><td>用 <b>Tab</b>。证件 6 类 + 起止期，折叠面板会拖到很长</td></tr>
+          <tr><td>录入位置</td><td>仍在这里。车务台账<b>只读+改到期日</b>，不重复录保单号</td></tr>
+          <tr><td>提前提醒</td><td>chip 多选，<b>默认只勾 30</b>；改了立刻重算下次提醒</td></tr>
+          <tr><td>已逾期</td><td>保存时黄条提示，不阻断；保存后走「询问是否生成提醒」</td></tr>
+          <tr><td>不填到期日</td><td>允许留空（老车没数据），但台账里标「未录入」，不进提醒</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h2 class="sec">A-4 提醒设置（子页，全局口径都在这配）</h2>
+    <div class="grid2">
+      <div class="card" style="margin:0">
+        <div class="card-label">车务管理 / 提醒设置</div>
+
+        <div style="font-size:11.5px;font-weight:800;color:var(--ink4);letter-spacing:1px;margin-bottom:8px">提醒时间</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field"><div class="lb">每天提醒时间</div><div class="input num">09:00 <span class="caret">▼</span></div></div>
+          <div class="field"><div class="lb">周末是否提醒</div><div class="input">提醒（推荐）<span class="caret">▼</span></div></div>
+        </div>
+
+        <div style="font-size:11.5px;font-weight:800;color:var(--ink4);letter-spacing:1px;margin:14px 0 8px">接收人</div>
+        <table class="cmp">
+          <tr><th style="width:114px">对象</th><th style="width:78px">状态</th><th>说明</th></tr>
+          <tr><td>主账号</td><td><span class="pill green"><i class="d"></i>必投</span></td><td class="sub">不可关闭（老板必须知道证件过期）</td></tr>
+          <tr><td>车务管理员（子账号）</td><td><span class="pill blue"><i class="d"></i>可选</span></td><td class="sub">列出<b>已勾 <code>vehicle_affair</code> 权限</b>的子账号，可多选；没权限的置灰不给勾</td></tr>
+          <tr><td>管理端</td><td><span class="pill blue"><i class="d"></i>可选</span></td><td class="sub">平台运营/客服；投 <code>receiver_scope=platform</code></td></tr>
+        </table>
+
+        <div style="font-size:11.5px;font-weight:800;color:var(--ink4);letter-spacing:1px;margin:14px 0 8px">各类证件默认提醒节点（新建车辆时套用，可逐车改）</div>
+        <table class="cmp">
+          <tr><th style="width:96px">证件</th><th>默认勾选</th></tr>
+          <tr><td>行驶证</td><td><span class="chip on" style="height:22px;font-size:11.5px">30 天</span></td></tr>
+          <tr><td>营运证</td><td><span class="chip on" style="height:22px;font-size:11.5px">90 天</span> <span class="chip on" style="height:22px;font-size:11.5px">30 天</span> <span class="sub" style="margin-left:6px">换证周期长，建议 90</span></td></tr>
+          <tr><td>交强险 / 商业险 / 超赔险</td><td><span class="chip on" style="height:22px;font-size:11.5px">30 天</span></td></tr>
+          <tr><td>保养</td><td><span class="chip on" style="height:22px;font-size:11.5px">30 天</span> <span class="chip on" style="height:22px;font-size:11.5px">500 km</span></td></tr>
+        </table>
+        <div class="field" style="margin-top:12px"><div class="lb">保养默认间隔里程</div><div class="input num" style="width:180px">10000 km</div></div>
+      </div>
+
+      <div>
+        <div class="note" style="margin:0 0 12px">
+          <div class="dot">!</div>
+          <div><b>为什么「逐项提醒节点」不放在这个页面</b>
+            <p>你的原话是「<strong>每一项的提醒时间都可以自定义</strong>」。那个必须勾在证件旁边（档案的证件与保险 Tab、台账的行内编辑），
+               因为一台车的商业险想提前 90 天、交强险只提前 15 天，是<b>每车每项不同</b>的。
+               这个页面只配「新建时的默认值」+ 全局时间/接收人。</p>
+          </div>
+        </div>
+        <div class="card" style="margin:0">
+          <div class="card-label">配置存在哪</div>
+          <table class="cmp">
+            <tr><th style="width:110px">配置</th><th>位置</th></tr>
+            <tr><td>全局提醒设置</td><td>新建 <code>tenant_settings</code> 或复用 <code>tenant_modules.config</code>（jsonb）</td></tr>
+            <tr><td>逐项提醒节点</td><td><code>vehicle_certs.remind_days</code>（int[]）</td></tr>
+            <tr><td>单项开关</td><td><code>vehicle_certs.remind_enabled</code></td></tr>
+            <tr><td>接收子账号</td><td>不存人名，读取时按 <code>vehicle_affair</code> 权限实时判定</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec">A-5 优缺点</h2>
+    <table class="cmp">
+      <tr><th style="width:110px">维度</th><th>方案A 独立车务管理</th></tr>
+      <tr><td>优点</td><td><span class="yes">职责清晰</span>：档案管录入、车务管盯到期，列表页不被 12 个到期列撑爆；<br>
+        <span class="yes">扩展性好</span>：以后加年检、二级维护、罐检、GPS 年费，只是加证件类型；<br>
+        <span class="yes">权限可单独授权</span>：可以只给调度看车务、不给改档案。</td></tr>
+      <tr><td>缺点</td><td><span class="half">多一个一级菜单</span>，客户需要多条培训；已有 11 个一级菜单，这是第 12 个。</td></tr>
+      <tr><td>工作量</td><td>前端 3 个页面（总览/台账/提醒事项）+ 车辆档案改弹窗 + 消息中心；后端 3 张表 + 1 个定时云函数。<b>约 3 个工作日</b>（不含小程序）。</td></tr>
+      <tr><td>适合</td><td>车队规模 ≥ 30 台、有专职车管/安全员的客户。</td></tr>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ③ 方案B -->
+  <!-- ============================================================ -->
+  <section class="panel" id="pB">
+    <div class="note">
+      <div class="dot">B</div>
+      <div>
+        <b>不新建菜单，全部并进车辆档案（最轻量）</b>
+        <p>车辆档案列表加到期列 + 顶部 4 张到期卡，右侧滑出「提醒事项」抽屉。
+           <strong>优点是一个菜单都不加、客户零学习成本</strong>；缺点是列表会变宽，而且车务不是一个「独立可授权」的能力。</p>
+      </div>
+    </div>
+
+    <h2 class="sec">B-1 车辆档案列表（改造后）</h2>
+    <div class="app">
+      <div class="side">
+        <div class="brand"><i></i><span>车队管理平台</span></div>
+        <div class="mi">首页</div><div class="mi">业务流程</div><div class="mi">行车管理</div>
+        <div class="mi">电子围栏管理</div><div class="mi">运营管理</div><div class="mi">运输管理</div><div class="mi">费用管理</div>
+        <div class="mi">车队分析报告</div>
+        <div class="mi on">基础数据管理</div>
+        <div class="mi sub on">车辆档案 <span class="bdg">7</span></div>
+        <div class="mi sub">司机档案</div>
+        <div class="mi">档案管理</div><div class="mi">系统管理</div>
+      </div>
+      <div class="main">
+        <div class="topbar">
+          <span class="ttl">基础数据管理 / 车辆档案</span>
+          <div class="right">
+            <span class="btn sm ghost">提醒事项 <b style="color:#c8102e">7</b></span>
+            <div class="bell">🔔<span class="bd">7</span></div>
+          </div>
+        </div>
+
+        <div class="kpi">
+          <div class="k red"><div class="lb">已逾期</div><div class="vl">2</div></div>
+          <div class="k orange"><div class="lb">临近 ≤3 天</div><div class="vl">3</div></div>
+          <div class="k amber"><div class="lb">快到期 30 天</div><div class="vl">7</div></div>
+          <div class="k blue"><div class="lb">未录入到期日</div><div class="vl">12<small>台</small></div></div>
+        </div>
+
+        <div style="display:flex;gap:7px;margin-bottom:9px;flex-wrap:wrap">
+          <div class="input" style="width:150px"><span style="color:#A8ABB2">车牌号 / VIN</span></div>
+          <div class="input" style="width:132px"><span style="color:#A8ABB2">所属机构</span><span class="caret">▼</span></div>
+          <div class="input" style="width:120px"><span style="color:#A8ABB2">燃料类型</span><span class="caret">▼</span></div>
+          <div class="input" style="width:132px"><span style="color:#A8ABB2">到期状态</span><span class="caret">▼</span></div>
+          <span class="btn primary">查询</span><span class="btn ghost">重置</span>
+        </div>
+
+        <div class="tool">
+          <span class="vbar"></span><h4>车辆档案</h4><span class="cnt">共 98 台</span>
+          <div class="right"><span class="btn sm ghost">导出</span><span class="btn sm primary">+ 新增车辆</span></div>
+        </div>
+
+        <table class="tbl dense">
+          <thead>
+            <tr>
+              <th style="width:104px">车牌号</th><th style="width:88px">机构</th><th style="width:96px">行驶证到期</th>
+              <th style="width:96px">营运证到期</th><th style="width:96px">交强险到期</th><th style="width:96px">商业险到期</th>
+              <th style="width:88px">最紧急</th><th style="width:74px">待办</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>沪A·D12345</td><td class="sub">华东一队</td><td class="num">2026-11-18</td><td class="num">2027-03-02</td><td class="num">2026-12-01</td><td class="num" style="color:#c8102e;font-weight:800">2026-10-20</td><td><span class="pill red"><i class="d"></i>逾期 4 天</span></td><td><span class="btn link">2 条</span></td></tr>
+            <tr><td>沪B·E88888</td><td class="sub">华东一队</td><td class="num">2027-01-09</td><td class="num" style="color:#c8102e;font-weight:800">2026-10-18</td><td class="num">2026-11-30</td><td class="num">2027-02-11</td><td><span class="pill red"><i class="d"></i>逾期 6 天</span></td><td><span class="btn link">1 条</span></td></tr>
+            <tr><td>沪C·F66666</td><td class="sub">华东二队</td><td class="num">2027-05-20</td><td class="num">2027-04-18</td><td class="num" style="color:#EA580C;font-weight:800">2026-10-26</td><td class="num">2027-01-08</td><td><span class="pill orange"><i class="d"></i>2 天</span></td><td><span class="btn link">1 条</span></td></tr>
+            <tr><td>沪D·G11111</td><td class="sub">华东二队</td><td class="num">2027-02-14</td><td class="num">2027-06-01</td><td class="num">2026-12-20</td><td class="num">2026-11-22</td><td><span class="pill amber"><i class="d"></i>29 天</span></td><td><span class="btn link">1 条</span></td></tr>
+            <tr><td>沪E·H22222</td><td class="sub">苏南车队</td><td class="num">2028-01-10</td><td class="num">2027-09-12</td><td class="num">2027-01-15</td><td class="num">2026-11-30</td><td><span class="pill green"><i class="d"></i>37 天</span></td><td class="sub">—</td></tr>
+            <tr><td>沪F·J33333</td><td class="sub">苏南车队</td><td class="sub">未录入</td><td class="sub">未录入</td><td class="sub">未录入</td><td class="sub">未录入</td><td><span class="pill gray"><i class="d"></i>未录入</span></td><td class="sub">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h2 class="sec">B-2 点「提醒事项 7」→ 右侧抽屉（不跳页）</h2>
+    <div class="grid2">
+      <div class="dlg" style="display:flex;height:330px">
+        <div style="flex:1;background:#F5F7FA;padding:12px">
+          <div style="font-size:11.5px;color:var(--ink4);margin-bottom:8px">← 车辆档案列表保持不动</div>
+          <div style="height:14px;background:#E8EDF3;border-radius:4px;margin-bottom:7px;width:70%"></div>
+          <div style="height:14px;background:#E8EDF3;border-radius:4px;margin-bottom:7px"></div>
+          <div style="height:14px;background:#E8EDF3;border-radius:4px;margin-bottom:7px;width:85%"></div>
+          <div style="height:14px;background:#E8EDF3;border-radius:4px;margin-bottom:7px"></div>
+          <div style="height:14px;background:#E8EDF3;border-radius:4px;width:60%"></div>
+        </div>
+        <div class="drawer" style="width:270px">
+          <div class="dh"><b>提醒事项</b><span class="pill red">7</span><span class="x">✕</span></div>
+          <div class="dbody">
+            <div class="msg"><div class="ic r">险</div><div class="m"><b>沪A·D12345 商业险已逾期</b><p>到期 2026-10-20 · 逾期 4 天</p></div><div class="tm">今天</div></div>
+            <div class="msg"><div class="ic r">证</div><div class="m"><b>沪B·E88888 营运证已逾期</b><p>到期 2026-10-18 · 逾期 6 天</p></div><div class="tm">今天</div></div>
+            <div class="msg"><div class="ic o">险</div><div class="m"><b>沪C·F66666 交强险 2 天后到期</b><p>到期 2026-10-26 · 临近</p></div><div class="tm">今天</div></div>
+            <div class="msg"><div class="ic a">证</div><div class="m"><b>沪A·D12345 行驶证 25 天后到期</b><p>到期 2026-11-18 · 快到期</p></div><div class="tm">昨天</div></div>
+            <div class="msg"><div class="ic a">险</div><div class="m"><b>沪D·G11111 商业险 29 天后到期</b><p>到期 2026-11-22 · 快到期</p></div><div class="tm">昨天</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-label">这个方案的真实代价</div>
+        <table class="cmp">
+          <tr><th>问题</th><th>说明</th></tr>
+          <tr><td>列表宽度</td><td>4 个到期列 + 最紧急 + 待办 = 多出 6 列，1280 屏要横向压到 9px 才行</td></tr>
+          <tr><td>提醒事项没家</td><td>只能挂抽屉，处理完就找不到历史；<b>「人工添加提醒」没地方放</b></td></tr>
+          <tr><td>管理端</td><td>/admin 的车辆管理是另一套页面，要再改一遍</td></tr>
+          <tr><td>权限</td><td>没办法"只看车务不改档案"，全给或全不给</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <table class="cmp" style="margin-top:4px">
+      <tr><th style="width:110px">维度</th><th>方案B 轻量并入</th></tr>
+      <tr><td>优点</td><td><span class="yes">不新增菜单</span>、客户零学习成本；<span class="yes">开发最快</span>（改 1 个页面 + 抽屉）</td></tr>
+      <tr><td>缺点</td><td><span class="no">列表撑爆</span>；提醒事项没有独立入口，人工添加无处安放；管理端要重复改</td></tr>
+      <tr><td>工作量</td><td>前端 1.5 天（车辆档案改造 + 抽屉），后端同 A</td></tr>
+      <tr><td>适合</td><td>车队 &lt; 20 台、只关心「别过期」、不想多菜单的小客户</td></tr>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ④ 方案C -->
+  <!-- ============================================================ -->
+  <section class="panel" id="pC">
+    <div class="note">
+      <div class="dot">C</div>
+      <div>
+        <b>挂进「行车管理」下 + 全平台统一提醒中心</b>
+        <p>车务管理作为「行车管理」的第三个子项（和全图监控、外观巡检并列），
+           <strong>所有提醒（围栏 / 到期 / 费用 / 系统）统一收进一个「提醒中心」</strong>，顶栏铃铛只做入口，不再自己算数。
+           这个方案最"干净"，但改动面最大——要动 Dashboard 的铃铛、侧边栏、以及围栏提醒的落点。</p>
+      </div>
+    </div>
+
+    <h2 class="sec">C-1 菜单与统一提醒中心</h2>
+    <div class="grid2">
+      <div class="app" style="box-shadow:none">
+        <div class="side" style="width:158px">
+          <div class="brand"><i></i><span>车队管理</span></div>
+          <div class="mi">首页</div><div class="mi">业务流程</div>
+          <div class="mi on">行车管理</div>
+          <div class="mi sub">全图监控</div>
+          <div class="mi sub">车辆故障管理</div>
+          <div class="mi sub">外观巡检管理</div>
+          <div class="mi sub on">车务管理 <span class="bdg">7</span></div>
+          <div class="mi">电子围栏管理</div>
+          <div class="mi">运营管理</div><div class="mi">运输管理</div><div class="mi">费用管理</div>
+          <div class="mi">车队分析报告</div><div class="mi">基础数据管理</div><div class="mi">档案管理</div>
+        </div>
+        <div class="main">
+          <div class="topbar"><span class="ttl">行车管理 / 车务管理</span><div class="right"><div class="bell">🔔<span class="bd">12</span></div></div></div>
+          <div class="card" style="padding:11px;margin:0">
+            <div style="font-size:12px;color:var(--ink3);line-height:1.9">
+              <b style="color:var(--ink)">统一提醒中心 = 四类聚合</b><br>
+              🔴 到期提醒 <b>7</b>　🟠 围栏提醒 <b>2</b>　🔵 费用待办 <b>3</b>　⚪ 系统通知 <b>0</b><br>
+              <span style="color:var(--ink4)">顶栏铃铛只读 <code>notices</code> + <code>reminders</code> 聚合数，不再各自查库</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-label">注意力变化</div>
+        <table class="cmp">
+          <tr><th>现状</th><th>方案C</th></tr>
+          <tr><td>围栏提醒 → 独立查询页</td><td>进提醒中心，可标已读</td></tr>
+          <tr><td>费用待办 → 顶栏小面板</td><td>进提醒中心，保留小面板做快捷</td></tr>
+          <tr><td>到期提醒 → 无</td><td>进提醒中心 + 车务页</td></tr>
+          <tr><td>系统通知 → 无</td><td>进提醒中心</td></tr>
+        </table>
+        <p class="muted" style="margin-top:9px">代价：要改 <code>EleFenceAlertQuery</code>、<code>feeTodo.js</code>、<code>Dashboard</code> 三处口径，回归面大。</p>
+      </div>
+    </div>
+
+    <table class="cmp" style="margin-top:14px">
+      <tr><th style="width:110px">维度</th><th>方案C 统一提醒中心</th></tr>
+      <tr><td>优点</td><td><span class="yes">心智最统一</span>：一个铃铛搞定所有事；围栏/到期/费用不再散落三个地方</td></tr>
+      <tr><td>缺点</td><td><span class="no">改动面最大</span>：动 3 个存量模块 + 侧边栏；车务藏在二级菜单里，客户不容易发现</td></tr>
+      <tr><td>工作量</td><td>在 A 的基础上 +1.5 天（改造围栏提醒落点、费用待办口径、统一聚合接口）</td></tr>
+      <tr><td>建议</td><td>作为 <b>A 的二期</b>。一期先上 A，等客户用熟了再把围栏/费用收进来，风险小、见效快</td></tr>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ⑤ 消息中心三形态 -->
+  <!-- ============================================================ -->
+  <section class="panel" id="pD">
+    <div class="note">
+      <div class="dot">D</div>
+      <div>
+        <b>消息中心重设计：三种形态，可叠加使用</b>
+        <p>三个形态不是三选一，而是<strong>「形态3 = 形态1 + 形态2」</strong>：日常点铃铛出抽屉（快），要翻历史/批量处理进独立页（全）。
+           三版都支持「全部 / 到期提醒 / 费用待办 / 围栏提醒 / 系统通知」五类，未读用左侧色条 + 加粗区分。</p>
+      </div>
+    </div>
+
+    <h2 class="sec">形态 1 · 右侧抽屉（420px）— 点铃铛即开，不打断当前页</h2>
+    <div class="dlg" style="display:flex;height:505px">
+      <div style="flex:1;background:#F5F7FA;padding:14px">
+        <div style="font-size:11.5px;color:var(--ink4);margin-bottom:9px">← 当前页面保持不动（运单列表 / 车务总览 …）</div>
+        <div style="height:15px;background:#E8EDF3;border-radius:4px;margin-bottom:8px;width:72%"></div>
+        <div style="height:15px;background:#E8EDF3;border-radius:4px;margin-bottom:8px"></div>
+        <div style="height:15px;background:#E8EDF3;border-radius:4px;margin-bottom:8px;width:88%"></div>
+        <div style="height:15px;background:#E8EDF3;border-radius:4px;width:64%"></div>
+      </div>
+      <div class="drawer" style="width:420px">
+        <div class="dh">
+          <b>消息中心</b><span class="pill red">未读 9</span>
+          <span style="margin-left:auto;font-size:12px;color:var(--ink3)">全部已读</span>
+          <span class="x">✕</span>
+        </div>
+        <div style="padding:9px 14px 0;display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line2);padding-bottom:9px">
+          <span class="chip on">全部 9</span><span class="chip">到期提醒 7</span><span class="chip">费用待办 2</span><span class="chip">围栏 0</span>
+        </div>
+        <div class="dbody">
+          <div style="padding:7px 14px;font-size:11px;font-weight:800;color:var(--ink4);letter-spacing:1px;background:#FAFCFF">今天</div>
+          <div class="msg" style="border-left:3px solid #c8102e"><div class="ic r">险</div><div class="m"><b>沪A·D12345 商业险已逾期 4 天</b><p>请立即续保 · 点击处理</p></div><div class="tm">09:00</div></div>
+          <div class="msg" style="border-left:3px solid #c8102e"><div class="ic r">证</div><div class="m"><b>沪B·E88888 营运证已逾期 6 天</b><p>上路将被运管处罚 · 点击处理</p></div><div class="tm">09:00</div></div>
+          <div class="msg" style="border-left:3px solid #EA580C"><div class="ic o">险</div><div class="m"><b>沪C·F66666 交强险 2 天后到期</b><p>临近提醒 · 每天 09:00 提醒</p></div><div class="tm">09:00</div></div>
+          <div class="msg"><div class="ic b">审</div><div class="m"><b>待我审批：2 笔费用上报</b><p>运单 YD20261024001 等 · 合计 ¥3,280</p></div><div class="tm">08:40</div></div>
+          <div style="padding:7px 14px;font-size:11px;font-weight:800;color:var(--ink4);letter-spacing:1px;background:#FAFCFF">昨天</div>
+          <div class="msg"><div class="ic a">证</div><div class="m"><b>沪A·D12345 行驶证 25 天后到期</b><p>快到期 · 提前 30 天提醒</p></div><div class="tm">昨天</div></div>
+          <div class="msg"><div class="ic a">保</div><div class="m"><b>沪F·J33333 保养里程剩 380km</b><p>下次保养 10000km 间隔</p></div><div class="tm">昨天</div></div>
+        </div>
+        <div style="padding:10px 14px;border-top:1px solid var(--line2);text-align:center">
+          <span class="btn ghost sm" style="width:100%;justify-content:center">查看全部消息 →</span>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec">形态 2 · 独立页 <code>/message</code> 三栏 — 翻历史、批量处理</h2>
+    <div class="app">
+      <div class="side" style="width:150px">
+        <div class="brand"><i></i><span>车队管理</span></div>
+        <div class="mi">首页</div><div class="mi">业务流程</div><div class="mi">行车管理</div>
+        <div class="mi">车务管理 <span class="bdg">7</span></div>
+        <div class="mi">费用管理</div><div class="mi">基础数据管理</div>
+        <div class="mi on">消息中心 <span class="bdg">9</span></div>
+      </div>
+      <div class="main" style="padding:12px 13px">
+        <div style="display:flex;gap:11px">
+          <!-- 分类 -->
+          <div style="width:146px;flex:0 0 auto;background:#fff;border-radius:9px;padding:9px 7px;box-shadow:0 2px 10px rgba(0,0,0,.04)">
+            <div style="font-size:11px;font-weight:800;color:var(--ink4);letter-spacing:1px;padding:3px 8px 7px">收件箱</div>
+            <div class="mi on" style="font-size:12.5px">全部消息 <span class="bdg">9</span></div>
+            <div class="mi" style="font-size:12.5px">到期提醒 <span class="bdg" style="background:#EA580C">7</span></div>
+            <div class="mi" style="font-size:12.5px">费用待办 <span class="bdg" style="background:#2563EB">2</span></div>
+            <div class="mi" style="font-size:12.5px">围栏提醒</div>
+            <div class="mi" style="font-size:12.5px">系统通知</div>
+            <div style="height:1px;background:var(--line2);margin:7px 8px"></div>
+            <div class="mi" style="font-size:12.5px;color:var(--ink4)">已读 / 已归档</div>
+          </div>
+          <!-- 列表 -->
+          <div style="flex:1;min-width:0;background:#fff;border-radius:9px;box-shadow:0 2px 10px rgba(0,0,0,.04);overflow:hidden">
+            <div style="display:flex;align-items:center;gap:7px;padding:9px 11px;border-bottom:1px solid var(--line2)">
+              <div class="input" style="width:150px;height:28px"><span style="color:#A8ABB2">搜索车牌 / 内容</span></div>
+              <span class="btn sm ghost">全部已读</span>
+              <span style="margin-left:auto;font-size:11.5px;color:var(--ink4)">9 条未读</span>
+            </div>
+            <div class="msg" style="border-left:3px solid #c8102e;background:#FFFCFD"><div class="ic r">险</div><div class="m"><b>沪A·D12345 商业险已逾期 4 天</b><p>到期 2026-10-20 · 已逾期 · 每日提醒中</p></div><div class="tm">09:00</div></div>
+            <div class="msg" style="border-left:3px solid #c8102e;background:#FFFCFD"><div class="ic r">证</div><div class="m"><b>沪B·E88888 营运证已逾期 6 天</b><p>到期 2026-10-18 · 已逾期</p></div><div class="tm">09:00</div></div>
+            <div class="msg" style="border-left:3px solid #EA580C;background:#FFFCFD"><div class="ic o">险</div><div class="m"><b>沪C·F66666 交强险 2 天后到期</b><p>到期 2026-10-26 · 临近（≤3 天）</p></div><div class="tm">09:00</div></div>
+            <div class="msg"><div class="ic a">证</div><div class="m"><b>沪A·D12345 行驶证 25 天后到期</b><p>到期 2026-11-18 · 快到期（提前 30 天）</p></div><div class="tm">昨天</div></div>
+            <div class="msg"><div class="ic b">审</div><div class="m"><b>待我审批：2 笔费用上报</b><p>运单 YD20261024001 等 · 合计 ¥3,280</p></div><div class="tm">昨天</div></div>
+            <div class="msg"><div class="ic g">通</div><div class="m"><b>模块开通通知</b><p>管理员已为您开通「车务管理」</p></div><div class="tm">10-22</div></div>
+          </div>
+          <!-- 详情 -->
+          <div style="width:236px;flex:0 0 auto;background:#fff;border-radius:9px;box-shadow:0 2px 10px rgba(0,0,0,.04);padding:12px">
+            <div style="font-size:13px;font-weight:800;line-height:1.55">沪A·D12345<br>商业险已逾期 4 天</div>
+            <div style="margin:9px 0 11px"><span class="pill red"><i class="d"></i>已逾期</span> <span class="pill gray">自动生成</span></div>
+            <div style="font-size:12px;color:var(--ink3);line-height:2">
+              车辆：沪A·D12345<br>机构：华东一队<br>证件：商业险　保单 PDAA2025…8821<br>到期日：<b style="color:var(--ink)">2026-10-20</b><br>剩余：<b style="color:#c8102e">-4 天</b><br>提醒节点：30 / 7 / 3 天
+            </div>
+            <div style="height:1px;background:var(--line2);margin:11px 0"></div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <span class="btn primary sm" style="justify-content:center">已续保 · 更新到期日</span>
+              <span class="btn ghost sm" style="justify-content:center">设置下次提醒</span>
+              <span class="btn ghost sm" style="justify-content:center">取消提醒</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec">形态 3 · 双形态（推荐）= 抽屉做快读，独立页做全量</h2>
+    <table class="cmp">
+      <tr><th style="width:120px">对比</th><th>抽屉</th><th>独立页</th><th>双形态（推荐）</th></tr>
+      <tr><td>触发</td><td>点铃铛</td><td>菜单 / 抽屉底部「查看全部」</td><td class="yes">两者都有</td></tr>
+      <tr><td>适合</td><td>扫一眼、点一条处理</td><td>翻历史、批量已读、按类筛</td><td class="yes">快慢分离</td></tr>
+      <tr><td>页面不被打断</td><td class="yes">是</td><td>否</td><td class="yes">默认是</td></tr>
+      <tr><td>开发量</td><td>小</td><td>中</td><td class="half">中（复用同一份列表组件）</td></tr>
+      <tr><td>结论</td><td colspan="2" style="color:var(--ink3)">单选任一个都会别扭：只做抽屉翻不了历史，只做独立页每天多两次跳转</td><td class="yes">建议双形态，共用 <code>MessageList.vue</code></td></tr>
+    </table>
+
+    <div class="card" style="margin-top:14px">
+      <div class="card-label">消息中心的关键设计点</div>
+      <table class="cmp">
+        <tr><th style="width:130px">点</th><th>做法</th></tr>
+        <tr><td>两类东西分开</td><td><b>提醒事项（reminders）</b>= 要动手处理的，有状态/可改期/可关闭；<b>通知（notices）</b>= 只读的（围栏、系统、审批结果）。<br>消息中心聚合展示，但操作按钮不同 —— 混成一张表会导致「这条到底要不要处理」永远说不清。</td></tr>
+        <tr><td>未读怎么算</td><td>按人存 <code>read_at</code>（reminders 用 <code>handled_at</code>）。不用"上次登录时间"那种假已读。</td></tr>
+        <tr><td>铃铛数字</td><td>= 未读 notices + 待处理 reminders + 实时费用待办（后者仍是现算，不进库）。超过 99 显示 <code>99+</code>。</td></tr>
+        <tr><td>管理端</td><td><code>receiver_scope='platform'</code> 的消息进 /admin 的铃铛，且能按客户分组看。主账号看不到别人的。</td></tr>
+        <tr><td>点击落点</td><td>到期提醒 → 车务台账抽屉（定位到那一行）；费用待办 → 运单列表「待我审批」；围栏 → 提醒事件查询。</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ⑥ 提醒交互闭环 -->
+  <!-- ============================================================ -->
+  <section class="panel" id="pE">
+    <div class="note">
+      <div class="dot">E</div>
+      <div>
+        <b>提醒的完整闭环（这是你需求里最核心的一段）</b>
+        <p>到期检测 → <strong>先问「是否生成提醒事项」</strong> → 生成待办 → 三种处理方式（改期 / 取消 / 取消并更新到期日）
+           → 更新日期后<strong>再问一次</strong>是否生成新的提醒。下面把每一步的界面都画出来。</p>
+      </div>
+    </div>
+
+    <h2 class="sec">E-1 四级状态机（快到期 / 临近 / 逾期 的定义）</h2>
+    <table class="tbl">
+      <thead><tr><th style="width:100px">状态</th><th style="width:210px">判定条件</th><th style="width:200px">提醒频率</th><th style="width:90px">颜色</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill green"><i class="d"></i>正常</span></td><td>剩余天数 &gt; 最大提醒节点</td><td>不提醒</td><td class="sub">灰 / 绿</td><td class="sub">只在台账里显示到期日</td></tr>
+        <tr><td><span class="pill amber"><i class="d"></i>快到期</span></td><td>剩余 ≤ 任一勾选节点（90/30/15/7/3）</td><td>每个节点各 1 次（09:00）</td><td class="sub">琥珀 #B45309</td><td class="sub">勾了 30/7/3 就是第 30、7、3 天各提醒一次</td></tr>
+        <tr><td><span class="pill orange"><i class="d"></i>临近</span></td><td>0 &lt; 剩余 ≤ 3 天</td><td><b>每天 1 次</b>（09:00）</td><td class="sub">橙 #EA580C</td><td class="sub">已经进入倒计时，避免"提醒过一次就忘了"</td></tr>
+        <tr><td><span class="pill red"><i class="d"></i>已逾期</span></td><td>剩余 &lt; 0</td><td><b>每天 1 次，直到处理</b></td><td class="sub">品牌红 #C8102E</td><td class="sub">不自动停，必须有人点「已续保/已换证/取消提醒」才停</td></tr>
+      </tbody>
+    </table>
+    <div class="note" style="margin-top:12px;border-left-color:#D97706">
+      <div class="dot" style="background:#FFF7ED;color:#B45309">!</div>
+      <div>
+        <b>口径已定：「临近」= 剩余 ≤3 天且未过期</b>
+        <p>这样「临近」和「逾期」是连续的倒计时，不会跳档。另一种做法是「临近」= 最后一个勾选节点到到期日之间天天提醒
+           （比如只勾 30 天就 30 天里天天提醒）—— 太吵，已排除。</p>
+      </div>
+    </div>
+
+    <h2 class="sec">E-2 第一步：检测到到期 → 先问，不偷偷生成</h2>
+    <div class="grid3">
+      <div class="dlg">
+        <div class="dh"><b>发现 2 项证件已逾期</b><span class="x">✕</span></div>
+        <div class="db">
+          <div style="font-size:12.5px;color:var(--ink3);line-height:1.7;margin-bottom:10px">系统检测到以下证件已过有效期，是否生成提醒事项？</div>
+          <div style="border:1px solid #FBD5A5;background:#FFFCF9;border-radius:8px;padding:9px 11px;margin-bottom:7px">
+            <div style="font-size:12.5px;font-weight:800">沪A·D12345 · 商业险</div>
+            <div style="font-size:11.5px;color:var(--ink4);margin-top:3px">到期 2026-10-20 · 已逾期 4 天</div>
+          </div>
+          <div style="border:1px solid #FBD5A5;background:#FFFCF9;border-radius:8px;padding:9px 11px">
+            <div style="font-size:12.5px;font-weight:800">沪B·E88888 · 营运证</div>
+            <div style="font-size:11.5px;color:var(--ink4);margin-top:3px">到期 2026-10-18 · 已逾期 6 天</div>
+          </div>
+          <div style="font-size:11.5px;color:var(--ink4);margin-top:9px">生成后进入「提醒事项」，逾期每天提醒</div>
+        </div>
+        <div class="df"><span class="btn ghost sm">今天不再问</span><span class="btn primary sm">生成提醒事项</span></div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-label">三个选项的差别</div>
+        <table class="cmp">
+          <tr><th>按钮</th><th>行为</th></tr>
+          <tr><td>生成提醒事项</td><td>写 reminders，进待办，按级别排期</td></tr>
+          <tr><td>今天不再问</td><td>只 snooze 到明天，<b>明天还会问</b></td></tr>
+          <tr><td>关闭 ✕</td><td>同「今天不再问」，不阻断业务</td></tr>
+        </table>
+        <p class="muted" style="margin-top:9px">不做「永久不再问」的按钮 —— 那等于静默丢提醒，客户会骂人。要静默得去档案里把该项关掉提醒。</p>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-label">什么时候问</div>
+        <table class="cmp">
+          <tr><th>端</th><th>时机</th></tr>
+          <tr><td>Web</td><td>进入车务总览/台账时；或定时任务已写入待办，登录后由铃铛提示</td></tr>
+          <tr><td>小程序</td><td>打开「待办」页时；顶部横幅「有 2 项证件已逾期」</td></tr>
+          <tr><td>管理端</td><td>进 /admin 时，按客户分组提示</td></tr>
+        </table>
+        <p class="muted" style="margin-top:9px">同一天不重复弹（<code>snooze_until</code> = 今天 23:59）。</p>
+      </div>
+    </div>
+
+    <h2 class="sec">E-3 第二步：提醒事项详情 —— 三个操作按钮</h2>
+    <div class="grid2">
+      <div class="dlg">
+        <div class="dh"><b>提醒事项</b><span class="pill red"><i class="d"></i>已逾期</span><span style="margin-left:auto;font-size:11.5px;color:var(--ink4)">TX20261024-0007</span><span class="x">✕</span></div>
+        <div class="db">
+          <div style="font-size:15px;font-weight:800;letter-spacing:-.2px">沪A·D12345 · 商业险已逾期 4 天</div>
+          <div style="margin:8px 0 12px"><span class="pill gray">自动生成</span> <span class="pill gray">提前 30/7/3 天</span> <span class="pill gray">主账号 + 管理端</span></div>
+
+          <div style="background:#FAFCFF;border:1px solid var(--line2);border-radius:8px;padding:11px 13px;font-size:12.5px;color:var(--ink2);line-height:2">
+            <div style="display:flex"><span style="width:74px;color:var(--ink4)">车辆</span><b>沪A·D12345</b><span style="color:var(--ink4);margin-left:9px">华东一队</span></div>
+            <div style="display:flex"><span style="width:74px;color:var(--ink4)">保单号</span>PDAA2025…8821</div>
+            <div style="display:flex"><span style="width:74px;color:var(--ink4)">到期日</span><b>2026-10-20</b><span style="color:#c8102e;font-weight:800;margin-left:9px">-4 天</span></div>
+            <div style="display:flex"><span style="width:74px;color:var(--ink4)">下次提醒</span>2026-10-25 09:00 <span class="btn link" style="margin-left:6px">修改</span></div>
+          </div>
+
+          <div style="font-size:11.5px;color:var(--ink4);margin:12px 0 7px;font-weight:800;letter-spacing:1px">提醒内容（可编辑）</div>
+          <div style="border:1px solid #DCDFE6;border-radius:8px;padding:9px 11px;font-size:12.5px;color:var(--ink2);line-height:1.7;min-height:56px">
+            商业险已于 2026-10-20 到期，已逾期 4 天。未续保期间发生事故不予理赔，请立即联系保险公司续保。
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:13px">
+            <span class="btn ghost sm" style="justify-content:center">设置下次提醒</span>
+            <span class="btn ghost sm" style="justify-content:center">取消提醒</span>
+            <span class="btn primary sm" style="justify-content:center">已续保 · 更新到期日</span>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-label">三个按钮各自做什么</div>
+        <table class="cmp">
+          <tr><th style="width:110px">操作</th><th>行为</th></tr>
+          <tr><td>设置下次提醒</td><td>只改 <code>next_remind_at</code>，<b>档案到期日不动</b>。比如"下周再提醒我"，今天先不烦。<br>可选：今天 18:00 / 明天 09:00 / 3 天后 / 自定义日期</td></tr>
+          <tr><td>取消提醒</td><td>关闭这条待办（<code>status=已忽略</code>），<b>档案不动</b>。<br>⚠️ 到期日还是老的，下次定时扫描会<b>重新命中并再问一次</b> —— 这是有意设计，防止"点掉就不管了"。</td></tr>
+          <tr><td>已续保·更新到期日</td><td>弹日期选择 → 写入 <code>vehicle_certs.expire_date</code> + 保单号 → 关闭旧待办 → <b>按新日期重新排期</b> → 若新日期又落在提醒窗口内，<b>再问一次是否生成新提醒</b>。</td></tr>
+        </table>
+        <div class="note" style="margin:12px 0 0;border-left-color:var(--brand)">
+          <div class="dot">✓</div>
+          <div>
+            <b>为什么「取消提醒」还要回来问？</b>
+            <p>因为取消 ≠ 已换证。如果取消了就永不出现，等于把提醒永久关掉，而证件实际还是过期的。
+               要彻底不提醒，得去档案里把这一项的「提醒开关」关掉 —— <strong>两个动作语义必须分开</strong>，否则线上一定出事。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec">E-4 第三步：更新到期日 → 再问一次</h2>
+    <div class="grid3">
+      <div class="dlg">
+        <div class="dh"><b>更新商业险信息</b><span class="x">✕</span></div>
+        <div class="db">
+          <div class="field"><div class="lb">新保单号</div><div class="input">PDAA2026…1177</div></div>
+          <div class="field"><div class="lb">起期</div><div class="input num">2026-10-21 <span class="caret">📅</span></div></div>
+          <div class="field"><div class="lb">到期日 <span style="color:var(--brand)">*</span></div><div class="input num">2027-10-20 <span class="caret">📅</span></div></div>
+          <div class="field"><div class="lb">提前提醒</div><div class="chips"><span class="chip">90 天</span><span class="chip on dflt">30 天</span><span class="chip">15 天</span><span class="chip on">7 天</span><span class="chip on">3 天</span></div></div>
+        </div>
+        <div class="df"><span class="btn ghost sm">取消</span><span class="btn primary sm">保存并关闭待办</span></div>
+      </div>
+      <div class="dlg">
+        <div class="dh"><b>新的提醒已排期</b><span class="x">✕</span></div>
+        <div class="db">
+          <div style="font-size:12.5px;color:var(--ink3);line-height:1.8">商业险到期日已更新为 <b style="color:var(--ink)">2027-10-20</b>，旧提醒已关闭。</div>
+          <div style="background:#ECFDF5;border:1px solid #A7E8CE;border-radius:8px;padding:10px 12px;margin:11px 0;font-size:12px;color:#047857;line-height:1.9">
+            ✓ 首次提醒：2027-09-20（提前 30 天）<br>
+            ✓ 二次提醒：2027-10-13（提前 7 天）<br>
+            ✓ 三次提醒：2027-10-17（提前 3 天）
+          </div>
+          <div style="font-size:12.5px;color:var(--ink2);font-weight:700">新日期当前在提醒窗口内，是否立即生成新的提醒事项？</div>
+          <div style="font-size:11.5px;color:var(--ink4);margin-top:5px">（本例不在窗口内，所以不询问，只提示已排期）</div>
+        </div>
+        <div class="df"><span class="btn ghost sm">知道了</span></div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-label">幂等与重排</div>
+        <table class="cmp">
+          <tr><th>场景</th><th>结果</th></tr>
+          <tr><td>更新到期日 → 新日期很远</td><td>只重排期，不询问（上图右）</td></tr>
+          <tr><td>更新到期日 → 新日期仍在窗口</td><td>询问「是否立即生成」</td></tr>
+          <tr><td>到期日填错、改回去</td><td>按 <code>cert_id + due_date</code> 幂等，不会重复建单</td></tr>
+          <tr><td>同一车同一证件续保 3 次</td><td>历史 reminders 保留，可回溯"上次是谁什么时候续的"</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h2 class="sec">E-5 全链路</h2>
+    <div class="card">
+      <div class="flow" style="row-gap:11px">
+        <div class="fbox">定时任务 09:00<small>扫 vehicle_certs</small></div><span class="arw">→</span>
+        <div class="fbox amber">算级别<small>快到期/临近/逾期</small></div><span class="arw">→</span>
+        <div class="fbox">命中且未生成<small>幂等：cert+due+level+date</small></div><span class="arw">→</span>
+        <div class="fbox red">写 reminders<small>投递给主账号+管理端</small></div><span class="arw">→</span>
+        <div class="fbox">铃铛 / 小程序待办<small>红点计数</small></div>
+      </div>
+      <div style="height:1px;background:var(--line2);margin:14px 0"></div>
+      <div class="flow" style="row-gap:11px">
+        <div class="fbox">用户打开待办<small>Web 车务 / 小程序待办</small></div><span class="arw">→</span>
+        <div class="fbox">三种处理</div><span class="arw">→</span>
+        <div class="fbox green">改期<small>不动档案</small></div>
+        <div class="fbox green">取消<small>不动档案，次日重问</small></div>
+        <div class="fbox green">更新日期<small>动档案，重排期</small></div>
+        <span class="arw">→</span>
+        <div class="fbox">关闭旧待办<small>handled_at 留痕</small></div>
+      </div>
+      <p class="muted" style="margin:13px 0 0">
+        ⚠️ 定时任务只做「写库」，不做推送。小程序要真推送得再挂「订阅消息」，那个需要用户一次性授权 ——
+        一期先做「进待办 + 红点」，推送作为二期。
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ⑦ 数据与规则 -->
+  <!-- ============================================================ -->
+  <section class="panel" id="pF">
+    <div class="note">
+      <div class="dot">F</div>
+      <div>
+        <b>数据模型：证件用「子表」，不要往 vehicles 上加 18 个列</b>
+        <p>原因很简单：<strong>一车多个证件、每个证件到期日不同、每个证件提醒节点不同</strong>。
+           宽表要写 5 组「到期日 + 提醒天数」，将来加"年检 / 二级维护 / 罐检"就要再加两列。
+           子表一行一个证件，加类型只加枚举值。</p>
+      </div>
+    </div>
+
+    <h2 class="sec">F-1 三张新表</h2>
+<pre><span class="c">-- ① 车辆证件（一车多行，一行一个证件/一项保养）</span>
+<span class="k">CREATE TABLE</span> <span class="t">vehicle_certs</span> (
+  id                bigserial PRIMARY KEY,
+  vehicle_id        text,             <span class="c">-- vehicles.id</span>
+  plate             text NOT NULL,
+  org               text,
+  owner_account     text,             <span class="c">-- 租户隔离（= 主账号）</span>
+  customer_id       text,             <span class="c">-- ⚠️ customers.id 是整数，这里存 text</span>
+
+  cert_type         text NOT NULL,    <span class="c">-- driving|transport|jq_insurance|sy_insurance|excess_insurance|maintain</span>
+  cert_no           text,             <span class="c">-- 行驶证号 / 营运证号 / 保单号</span>
+  issuer            text,             <span class="c">-- 发证机关 / 保险公司（可空）</span>
+  start_date        date,             <span class="c">-- 起期</span>
+  expire_date       date,             <span class="c">-- 到期日（核心依据）</span>
+
+  remind_enabled    boolean DEFAULT true,
+  remind_days       int[]   DEFAULT <span class="s">'{30}'</span>,   <span class="c">-- 90/30/15/7/3 多选</span>
+
+  <span class="c">-- 保养专用</span>
+  last_maintain_date  date,
+  last_maintain_km    int,
+  maintain_interval_km int DEFAULT 10000,
+
+  remark      text,
+  created_at  timestamptz DEFAULT now(),
+  updated_at  timestamptz DEFAULT now(),
+  UNIQUE (plate, cert_type)
+);
+
+<span class="c">-- ② 提醒事项（待办，要人处理）</span>
+<span class="k">CREATE TABLE</span> <span class="t">reminders</span> (
+  id               bigserial PRIMARY KEY,
+  reminder_no      text UNIQUE,        <span class="c">-- TX20261024-0007</span>
+  biz_type         text DEFAULT <span class="s">'vehicle_cert'</span>,
+  cert_id          bigint,
+  cert_type        text,
+  vehicle_id       text, plate text, org text,
+  owner_account    text, customer_id text,
+
+  due_date         date,
+  level            text,               <span class="c">-- 快到期|临近|已逾期</span>
+  title            text,
+  content          text,
+  source           text DEFAULT <span class="s">'auto'</span>,       <span class="c">-- auto|manual</span>
+  receiver_scope   text DEFAULT <span class="s">'tenant'</span>,     <span class="c">-- tenant|platform</span>
+  remind_days      int[],              <span class="c">-- 生成时快照</span>
+  next_remind_at   timestamptz,
+  snooze_until     timestamptz,        <span class="c">-- 「今天不再问」</span>
+  status           text DEFAULT <span class="s">'待处理'</span>,      <span class="c">-- 待处理|已处理|已忽略</span>
+  handle_action    text,               <span class="c">-- renew|cancel|ignore</span>
+  handled_by       text, handled_at timestamptz,
+  created_at       timestamptz DEFAULT now()
+);
+
+<span class="c">-- ③ 消息通知（只读，围栏/系统/审批结果）</span>
+<span class="k">CREATE TABLE</span> <span class="t">notices</span> (
+  id               bigserial PRIMARY KEY,
+  type             text,               <span class="c">-- fence|cert|fee|system</span>
+  level            text,               <span class="c">-- info|warn|danger</span>
+  title            text, content text,
+  link             text,               <span class="c">-- 点击跳转路径</span>
+  receiver_scope   text, receiver_account text,
+  read_at          timestamptz,
+  created_at       timestamptz DEFAULT now()
+);
+
+<span class="c">-- ④ vehicles 只补 4 个纯档案字段</span>
+<span class="k">ALTER TABLE</span> <span class="t">vehicles</span>
+  ADD COLUMN engine_no          text,
+  ADD COLUMN first_register_date date,
+  ADD COLUMN owner_name         text,
+  ADD COLUMN biz_status         text;   <span class="c">-- 营运|停运|报废</span>
+</pre>
+
+    <div class="note" style="border-left-color:#D97706">
+      <div class="dot" style="background:#FFF7ED;color:#B45309">!</div>
+      <div>
+        <b>必须带的两个尾巴（不然线上必踩）</b>
+        <p>① <strong>授权段</strong>：Web 走匿名登录（anon），新表只授控制台账号会 <code>permission denied</code> ——
+           现象是「列表能打开、一条数据没有，写入报错」。末尾必须跟
+           <code>GRANT SELECT,INSERT,UPDATE,DELETE ... TO anon, authenticated;</code> + <code>SELECT pg_notify('pgrst','reload schema');</code><br>
+           ② <strong>customer_id / org_id 是整数</strong>，新表一律声明 <code>text</code>，写入前 <code>String()</code>，否则报 uuid 语法错。</p>
+      </div>
+    </div>
+
+    <h2 class="sec">F-2 提醒规则矩阵</h2>
+    <table class="tbl">
+      <thead><tr><th style="width:120px">证件类型</th><th style="width:110px">key</th><th style="width:150px">提醒依据</th><th style="width:130px">默认节点</th><th>可选节点</th></tr></thead>
+      <tbody>
+        <tr><td>行驶证</td><td class="sub">driving</td><td>有效期至</td><td><span class="pill gray">30 天</span></td><td class="sub">90 / 30 / 15 / 7 / 3</td></tr>
+        <tr><td>营运证</td><td class="sub">transport</td><td>有效期至</td><td><span class="pill gray">30 天</span></td><td class="sub">90 / 30 / 15 / 7 / 3（换证周期长，建议 90）</td></tr>
+        <tr><td>交强险</td><td class="sub">jq_insurance</td><td>止期</td><td><span class="pill gray">30 天</span></td><td class="sub">90 / 30 / 15 / 7 / 3</td></tr>
+        <tr><td>商业险</td><td class="sub">sy_insurance</td><td>止期</td><td><span class="pill gray">30 天</span></td><td class="sub">90 / 30 / 15 / 7 / 3（建议 90，好提前比价）</td></tr>
+        <tr><td>超赔险</td><td class="sub">excess_insurance</td><td>止期</td><td><span class="pill gray">30 天</span></td><td class="sub">90 / 30 / 15 / 7 / 3</td></tr>
+        <tr><td>保养</td><td class="sub">maintain</td><td><b>日期 或 里程</b>（任一命中）</td><td><span class="pill gray">30 天 / 500km</span></td><td class="sub">日期：90/30/15/7/3；里程：1000/500/200 km</td></tr>
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top:9px">保养是唯一"双条件"的：<code>last_maintain_date + 间隔月数</code> 与 <code>last_maintain_km + 间隔里程 − 当前里程</code>，谁先到就按谁提醒。当前里程取东风 <code>track/history</code> 当天最大 <code>mileage</code>（米 ÷ 1000）。</p>
+
+    <h2 class="sec">F-3 提醒时间与投递</h2>
+    <div class="grid2">
+      <div>
+        <table class="tbl">
+          <thead><tr><th style="width:110px">项</th><th>口径</th></tr></thead>
+          <tbody>
+            <tr><td>提醒时间</td><td>统一每天 <b>09:00</b>（租户可配 08:00–10:00，先不给配，避免测试面变大）</td></tr>
+            <tr><td>逾期频率</td><td>每天 1 次，<b>不自动停</b>，直到有人处理</td></tr>
+            <tr><td>快到期频率</td><td>每个勾选节点各 1 次，同一天只发一条（级别取更严重的）</td></tr>
+            <tr><td>幂等键</td><td><code>cert_id + due_date + level + 日期</code>，重复跑不重复建</td></tr>
+            <tr><td>周末</td><td>照常提醒（车管的事不分周末）；可在设置里关</td></tr>
+            <tr><td>静默</td><td>档案里关 <code>remind_enabled</code> = 彻底不提醒，且有留痕</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <table class="tbl">
+          <thead><tr><th style="width:96px">提醒对象</th><th style="width:110px">范围</th><th>Web</th><th>小程序</th></tr></thead>
+          <tbody>
+            <tr><td>主账号</td><td class="sub">owner_account 匹配</td><td>铃铛 + 消息中心 + 车务页</td><td>待办页「车务提醒」</td></tr>
+            <tr><td>管理端</td><td class="sub">receiver_scope=platform</td><td>/admin 铃铛 + 消息中心（可按客户筛）</td><td>运营端待办</td></tr>
+            <tr><td>子账号</td><td class="sub">角色勾了 <code>vehicle_affair</code></td><td colspan="2" class="sub"><b>配了「车务管理员」+ 模块已开通 → 才投递</b>；只看自己机构（一级机构等同主账号）的车辆</td></tr>
+          </tbody>
+        </table>
+        <div class="note" style="margin-top:11px;border-left-color:#2563EB">
+          <div class="dot" style="background:#EFF4FF;color:#2563EB">i</div>
+          <div><b>接收人不要「生成时快照」，要「读取时判权限」</b>
+            <p>reminders 只存 <code>owner_account</code> + <code>receiver_scope</code>，谁能看由登录时的权限实时决定。
+               若把接收人 id 列表快照进去，隔天给某个子账号加了车务权限，他会看不到昨天已生成的旧提醒 —— 这种"加了权限还是收不到"的 bug 极难查。</p>
+          </div>
+        </div>
+        <div class="note" style="margin-top:11px">
+          <div class="dot">i</div>
+          <div><b>定时任务只有一种正确做法</b>
+            <p>Web 前端算出来的提醒「只有在页面打开时才存在」，小程序收不到。要真提醒必须云函数定时器（cron <code>0 0 9 * * *</code>）写库。
+               前端只做<b>兜底补算</b>（进页面时扫一遍，防止定时器挂了没人知道）。两个都要有。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec">F-4 三个方案横向对比</h2>
+    <table class="cmp">
+      <tr><th style="width:120px">维度</th><th>方案A 独立车务（推荐）</th><th>方案B 轻量并入</th><th>方案C 统一中心</th></tr>
+      <tr><td>新增菜单</td><td>1 个一级 + 3 个子页</td><td class="yes">0</td><td>1 个二级（藏得深）</td></tr>
+      <tr><td>列表压力</td><td class="yes">无（独立台账）</td><td class="no">车辆档案多 6 列</td><td class="yes">无</td></tr>
+      <tr><td>提醒事项有家吗</td><td class="yes">有独立页</td><td class="no">只有抽屉</td><td class="yes">有</td></tr>
+      <tr><td>人工添加提醒</td><td class="yes">台账/提醒事项页都能加</td><td class="no">没地方放</td><td class="yes">有</td></tr>
+      <tr><td>改动存量模块</td><td class="yes">不改（只加新页）</td><td>改车辆档案</td><td class="no">改围栏/费用/铃铛</td></tr>
+      <tr><td>前端工作量</td><td>3 天</td><td class="yes">1.5 天</td><td class="no">4.5 天</td></tr>
+      <tr><td>客户接受度</td><td class="yes">高（菜单多但清楚）</td><td class="yes">最高（零学习）</td><td class="half">中（藏在二级）</td></tr>
+      <tr><td>建议</td><td class="yes"><b>一期就上这个</b></td><td>作为小客户精简版</td><td>作为二期演进</td></tr>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ⑧ 小程序 -->
+  <!-- ============================================================ -->
+  <section class="panel" id="pG">
+    <div class="note">
+      <div class="dot">G</div>
+      <div>
+        <b>小程序不做新页面，只进「待办」</b>
+        <p>按你说的：不建车务页，只在现有「待办」里加一个 Tab。费用待办保留，车务提醒并列。
+           处理动作只保留最常用的两个（设置下次提醒 / 已续保更新日期），取消提醒这种"负向操作"放在 Web 上做。</p>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+      <div class="phone">
+        <div class="ph-t">待办事项</div>
+        <div class="ph-b">
+          <div style="display:flex;gap:4px;margin-bottom:9px">
+            <span class="chip on" style="height:23px;font-size:11px">车务 7</span>
+            <span class="chip" style="height:23px;font-size:11px">费用 2</span>
+            <span class="chip" style="height:23px;font-size:11px">围栏 0</span>
+          </div>
+
+          <div style="background:#FDF2F4;border:1px solid #F3B7C2;border-radius:8px;padding:7px 9px;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+            <span style="font-size:11.5px;color:#c8102e;font-weight:800">⚠ 2 项证件已逾期，请尽快处理</span>
+          </div>
+
+          <div style="background:#fff;border-radius:9px;padding:9px 10px;margin-bottom:8px;box-shadow:0 1px 6px rgba(0,0,0,.05);border-left:3px solid #c8102e">
+            <div style="display:flex;align-items:center;gap:5px">
+              <span style="font-size:12.5px;font-weight:800">沪A·D12345</span>
+              <span class="pill red" style="height:19px;font-size:10.5px"><i class="d"></i>逾期 4 天</span>
+            </div>
+            <div style="font-size:11.5px;color:#64748B;margin-top:3px">商业险 · 到期 2026-10-20</div>
+            <div style="display:flex;gap:5px;margin-top:7px">
+              <span class="btn sm" style="height:24px;font-size:11px;flex:1;justify-content:center">下次提醒</span>
+              <span class="btn primary sm" style="height:24px;font-size:11px;flex:1;justify-content:center">已续保</span>
+            </div>
+          </div>
+
+          <div style="background:#fff;border-radius:9px;padding:9px 10px;margin-bottom:8px;box-shadow:0 1px 6px rgba(0,0,0,.05);border-left:3px solid #EA580C">
+            <div style="display:flex;align-items:center;gap:5px">
+              <span style="font-size:12.5px;font-weight:800">沪C·F66666</span>
+              <span class="pill orange" style="height:19px;font-size:10.5px"><i class="d"></i>2 天</span>
+            </div>
+            <div style="font-size:11.5px;color:#64748B;margin-top:3px">交强险 · 到期 2026-10-26</div>
+            <div style="display:flex;gap:5px;margin-top:7px">
+              <span class="btn sm" style="height:24px;font-size:11px;flex:1;justify-content:center">下次提醒</span>
+              <span class="btn primary sm" style="height:24px;font-size:11px;flex:1;justify-content:center">已续保</span>
+            </div>
+          </div>
+
+          <div style="background:#fff;border-radius:9px;padding:9px 10px;box-shadow:0 1px 6px rgba(0,0,0,.05);border-left:3px solid #D97706">
+            <div style="display:flex;align-items:center;gap:5px">
+              <span style="font-size:12.5px;font-weight:800">沪A·D12345</span>
+              <span class="pill amber" style="height:19px;font-size:10.5px"><i class="d"></i>25 天</span>
+            </div>
+            <div style="font-size:11.5px;color:#64748B;margin-top:3px">行驶证 · 到期 2026-11-18</div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div>首页</div><div>运单</div><div class="on">待办</div><div>我的</div>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:320px">
+        <div class="card" style="margin:0 0 12px">
+          <div class="card-label">小程序侧的取舍</div>
+          <table class="cmp">
+            <tr><th style="width:110px">点</th><th>做法</th></tr>
+            <tr><td>入口</td><td>待办页加 Tab「车务提醒」，红点数同 Web 铃铛</td></tr>
+            <tr><td>操作</td><td>只给 2 个正向动作：<b>下次提醒</b> / <b>已续保（更新到期日）</b></td></tr>
+            <tr><td>为什么不给取消</td><td>手机上误触成本高，"取消提醒"是负向操作，放到 Web</td></tr>
+            <tr><td>管理端</td><td>运营端待办里同结构，加一行客户名（可按客户筛）</td></tr>
+            <tr><td>推送</td><td>一期不做订阅消息，靠红点 + 打开待办；二期再接订阅消息</td></tr>
+            <tr><td>与费用待办</td><td>同一个 Tab 组件，两套数据源；<b>不要把车务提醒塞进费用待办列表</b>，口径会乱</td></tr>
+          </table>
+        </div>
+        <div class="note" style="margin:0">
+          <div class="dot">!</div>
+          <div><b>小程序「已续保」要能改到期日</b>
+            <p>司机/车管经常在外面办完保险，就地录入才有人用。弹一个日期选择 + 保单号输入，两个字段就够，
+               不要在小程序上做完整的证件表单。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec">口径已定稿（2026-10-24 22:45）</h2>
+    <table class="cmp">
+      <tr><th style="width:44px">#</th><th style="width:250px">事项</th><th>定稿</th></tr>
+      <tr><td class="num">1</td><td>整体方案</td><td class="yes">方案A（独立车务管理，四个子页）；方案C 留二期</td></tr>
+      <tr><td class="num">2</td><td>消息中心形态</td><td class="yes">双形态：顶栏抽屉 + <code>/message</code> 三栏页，共用列表组件</td></tr>
+      <tr><td class="num">3</td><td>「临近」判定</td><td class="yes">剩余 ≤3 天且未过期，每天 09:00 提醒</td></tr>
+      <tr><td class="num">4</td><td>默认提醒节点</td><td class="yes">统一只勾 <b>30 天</b>；录入营运证/商业险时提示"建议 90"（只提示不改值）</td></tr>
+      <tr><td class="num">5</td><td>保养提醒</td><td class="yes">做里程型：日期 + 里程双条件，任一命中即提醒</td></tr>
+      <tr><td class="num">6</td><td>子账号接收</td><td class="yes">已配「车务管理员」（勾 <code>vehicle_affair</code>）<b>且</b>模块已开通 → 才投递</td></tr>
+      <tr><td class="num">7</td><td>证件字段落点</td><td class="yes">15 个证件/保险/保养字段不放 <code>vehicles</code>，进 <code>vehicle_certs</code> 子表；其余 13 项车辆本体字段留在 <code>vehicles</code>（只补 4 列）。<b>录入入口仍在车辆档案</b>，查改在台账</td></tr>
+    </table>
+    <p class="muted" style="margin-top:10px">下一步：`sql/2026-10-24_vehicle_affair.sql`（3 表 + vehicles 补 4 列 + 授权段）→ 提醒计算与定时云函数 → 车务管理四页 → 车辆档案证件 Tab → 消息中心。</p>
+  </section>
+
+</div>
+
+<script>
+function activate(id, scroll) {
+  document.querySelectorAll('.switcher button').forEach(function (x) { x.classList.toggle('on', x.dataset.p === id); });
+  document.querySelectorAll('.panel').forEach(function (x) { x.classList.toggle('on', x.id === id); });
+  if (scroll) window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+document.querySelectorAll('.switcher button').forEach(function (b) {
+  b.addEventListener('click', function () { activate(b.dataset.p, true); });
+});
+// 支持 ?p=pA 深链，方便单独发某一版给同事看（不用 hash，避免浏览器自动跳锚点）
+var m = /[?&]p=(p[0-9A-Za-z]+)/.exec(location.search || '');
+if (m && document.getElementById(m[1])) activate(m[1], false);
+</script>
+</body>
+</html>

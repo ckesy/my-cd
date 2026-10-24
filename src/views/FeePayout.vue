@@ -283,6 +283,7 @@ const moduleLoaded = computed(() => moduleFlags.loaded)
 const TYPE_LABEL = {
   expense: '费用上报', subsidy: '补贴申请', loan: '借款申请', violation: '违章上报',
   weigh: '磅单上报', receipt: '回单上报', overtime: '超时报备', cardfix: '补卡申请',
+  repair: '报修报销',
 }
 const TYPE_OPTIONS = [
   { value: 'expense', label: '费用上报' },

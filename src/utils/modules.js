@@ -73,7 +73,12 @@ export const isImpersonating = () => {
  *    服务商根本没法给客户配置（这是之前的 bug）
  */
 export const isFlowAdmin = (u) => {
-  if (u && u.role === 'admin') return true
+  /* ⭐⭐⭐ 2026-10-24 定稿：**只有"代管 / 模拟客户"才是平台视角**。
+     之前用 `u.role === 'admin'` 判断，但客户自己的主账号在 admins 里也是 role='admin'
+     （isTenantOwner 依赖登录时写字段，老会话 / phone 对不上就失效），
+     导致客户能把运营人员没授权的模块自己打开。
+     现在：服务商要给客户配功能 → 先代管该客户（currentUser 换成 customer）→ 全开；
+     其余所有账号（含客户主账号）一律按客户视角，只能开关 granted=true 的模块。 */
   return isImpersonating()
 }
 
@@ -84,11 +89,13 @@ export const currentUserForModules = () => {
 let _task = null
 
 /** 把计算结果同步到扁平字段，供老代码直接读 moduleFlags.payout */
-function applyEffective(eff, intent, configs, folded) {
+function applyEffective(eff, intent, configs, folded, granted) {
   moduleFlags.intent = intent
   moduleFlags.effective = eff
   moduleFlags.config = configs
   moduleFlags.folded = folded || {}
+  /* ⭐ granted = 运营人员是否授权过（决定客户能不能自己开），见 sql/2026-10-24_tenant_modules_granted.sql */
+  if (granted) moduleFlags.granted = granted
   MODULES.forEach((m) => {
     if (m.key in moduleFlags) moduleFlags[m.key] = eff[m.key] === true
   })
@@ -97,8 +104,9 @@ function applyEffective(eff, intent, configs, folded) {
 /** 全开（管理员 / 读失败兜底） */
 function applyAllOn(configs = {}) {
   const eff = {}
-  MODULES.forEach((m) => { eff[m.key] = true })
-  applyEffective(eff, eff, configs, {})
+  const granted = {}
+  MODULES.forEach((m) => { eff[m.key] = true; granted[m.key] = true })
+  applyEffective(eff, eff, configs, {}, granted)
 }
 
 /**
@@ -135,20 +143,23 @@ export async function ensureModuleFlags(user, opts = {}) {
     try {
       const { data, error } = await supabase
         .from('tenant_modules')
-        .select('module_key,enabled,config')
+        .select('module_key,enabled,config,granted')
         .eq('owner_account', owner)
       if (error) throw error
 
       const intent = {}
       const configs = {}
+      const granted = {}
       ;(data || []).forEach((r) => {
         if (!r || !r.module_key) return
         intent[r.module_key] = r.enabled === true
         configs[r.module_key] = r.config || {}
+        /* granted 列没建（老库）时 undefined → 后面按"有记录"降级 */
+        if (r.granted !== undefined && r.granted !== null) granted[r.module_key] = r.granted === true
       })
       /* 没记录的模块不在 intent 里 → foldDeps 会按 defaultOn 兜底 */
       const eff = foldDeps(intent)
-      applyEffective(eff, intent, configs, foldedBy(intent, eff))
+      applyEffective(eff, intent, configs, foldedBy(intent, eff), granted)
       moduleFlags.failed = false
     } catch (e) {
       console.warn('[模块开关] 读取失败，按全开降级（请先执行 sql/2026-10-20_flow_modules.sql）', e)
@@ -178,41 +189,59 @@ export async function ensureModuleFlags(user, opts = {}) {
 /**
  * 开关
  * ============================================================
- * 权限分层（2026-10-20 调整）：
- *   · 服务商 / 平台管理员：任何模块都能开关
- *   · 客户主账号：**只能开关「管理员给他配置过」的模块**
- *     —— 判断依据是该 module_key 在 tenant_modules 里有没有记录。
- *        没记录 = 服务商没卖这项，客户不能自助开启。
+ * 权限分层（2026-10-24 定稿）：
+ *   · 服务商 / 平台管理员：任何模块都能开关，并把 granted 置 true（= 授权记录）
+ *   · 客户主账号：**只能开关「运营人员授权过（granted=true）」的模块**
+ *     —— 以前判断"tenant_modules 里有没有记录"，但客户关掉的模块同样会留下
+ *        enabled=false 的记录，于是"没配过的"也能被客户打开（用户 2026-10-24 报）。
+ *        现在改用 granted 列区分；老库没有该列时降级为"有记录"。
  */
 export async function setModuleFlag(key, enabled, user) {
   const u = user || currentUserForModules()
   const owner = moduleOwner(u)
+  const isAdminFlow = isFlowAdmin(u)
 
-  if (!isFlowAdmin(u)) {
+  if (!isAdminFlow) {
     if (!u) throw new Error('未登录')
     await ensureModuleFlags(u)
-    if (!Object.prototype.hasOwnProperty.call(moduleFlags.intent || {}, key)) {
+    if (!isModuleGranted(key)) {
       throw new Error('该功能尚未开通，请联系您的服务顾问')
     }
   }
   if (!owner) throw new Error('找不到主账号，无法保存模块开关')
 
+  const payload = {
+    owner_account: owner,
+    module_key: key,
+    enabled: !!enabled,
+    updated_by: u.name || u.account || '',
+    updated_at: new Date().toISOString(),
+  }
+  /* 平台视角**开启**某模块 = 授权给这个租户（客户以后可自由开关）。
+     ⚠️ 关闭时不要回写 granted=true —— 否则"从没配过的"会被一次关闭动作变成"配过"，
+        客户又能自己开（2026-10-24 二次踩坑）。 */
+  if (isAdminFlow && enabled) payload.granted = true
+
   const { error } = await supabase
     .from('tenant_modules')
-    .upsert(
-      {
-        owner_account: owner,
-        module_key: key,
-        enabled: !!enabled,
-        updated_by: u.name || u.account || '',
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'owner_account,module_key' }
-    )
+    .upsert(payload, { onConflict: 'owner_account,module_key' })
   if (error) throw error
 
   await ensureModuleFlags(u, { force: true })
   return moduleFlags
+}
+
+/**
+ * 这个模块运营人员有没有授权过（决定客户能不能自己**开启**）
+ * ⚠️ 严格模式：只认 tenant_modules.granted = true。
+ *    老库没跑 sql/2026-10-24_tenant_modules_granted.sql 时 granted 全空 → 一律 false，
+ *    客户就开不了没授权的模块（宁可严一点，也不能让他自己开）。
+ *    关闭已开着的模块不受影响（见 FlowCanvas.canToggle）。
+ */
+export function isModuleGranted(key) {
+  if (!key) return false
+  const g = moduleFlags.granted || {}
+  return g[key] === true
 }
 
 /**

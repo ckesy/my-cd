@@ -18,8 +18,12 @@ dayjs.locale('zh-cn')
 // 3. 导入并注册所有图标
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
-/* ⭐ 先套主题再挂载：读 localStorage 的缓存，避免刷新时闪一下默认色 */
-applyTheme(readLocalTheme() || DEFAULT_THEME)
+/* ⭐ 先套主题再挂载：读 localStorage 的缓存，避免刷新时闪一下默认色
+   ⭐ 2026-10-24：主题按**当前登录账号**取，同一浏览器多账号各看各的皮肤 */
+const bootUser = (() => {
+  try { return JSON.parse(localStorage.getItem('currentUser') || 'null') } catch { return null }
+})()
+applyTheme(readLocalTheme(bootUser && bootUser.account) || DEFAULT_THEME)
 
 const app = createApp(App)
 

@@ -120,6 +120,7 @@
                 placement="bottom-start"
                 :width="380"
                 trigger="click"
+                :disabled="isReadonly"
                 popper-class="fence-picker-popper speeding-picker-popper"
                 :hide-after="0"
               >
@@ -127,6 +128,7 @@
                   <div
                     class="fence-select-trigger"
                     :class="{ active: speeding.fence_ids.length > 0, readonly: isReadonly }"
+                    :title="isReadonly ? '只读模式：提醒配置由主账号统一管理' : ''"
                     @click="!isReadonly && openPicker('speeding')"
                   >
                     <el-icon class="trigger-icon"><MapLocation /></el-icon>
@@ -340,6 +342,7 @@
                 placement="bottom-start"
                 :width="380"
                 trigger="click"
+                :disabled="isReadonly"
                 popper-class="fence-picker-popper staying-picker-popper"
                 :hide-after="0"
               >
@@ -347,6 +350,7 @@
                   <div
                     class="fence-select-trigger staying-trigger"
                     :class="{ active: staying.fence_ids.length > 0, readonly: isReadonly }"
+                    :title="isReadonly ? '只读模式：提醒配置由主账号统一管理' : ''"
                     @click="!isReadonly && openPicker('staying')"
                   >
                     <el-icon class="trigger-icon"><MapLocation /></el-icon>

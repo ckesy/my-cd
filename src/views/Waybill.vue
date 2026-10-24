@@ -236,8 +236,15 @@
                           <el-icon class="leg-toggle-icon"><ArrowDown /></el-icon>
                         </button>
                       </div>
-                      <!-- 运单编号降为副信息 -->
-                      <div class="waybill-no">{{ row.waybill_no }}</div>
+                      <!-- 编号：普通单显示运单号；**常驻任务的编号就是组号**（CZ…），
+                           下面小字给「共 N 趟 · 最新第 M 趟」——司机跑的每一趟不算新运单（2026-10-24） -->
+                      <div v-if="row.is_recurring" class="waybill-no">
+                        <span class="rec-group-no">{{ row.recurring_group_no }}</span>
+                        <span class="rec-trip-hint">
+                          共 {{ recTripCount(row) }} 趟<template v-if="recLatestSeq(row)"> · 最新第 {{ recLatestSeq(row) }} 趟</template>
+                        </span>
+                      </div>
+                      <div v-else class="waybill-no">{{ row.waybill_no }}</div>
                     </div>
                   </template>
                 </el-table-column>
@@ -321,7 +328,7 @@
                 <el-table-column v-else-if="col.prop === 'createTime'" :label="col.label"
                   :min-width="col.minWidth" :align="col.align" :fixed="col.fixed || false">
                   <template #default="{ row }">
-                    <span class="time-text">{{ new Date(row.create_time).toLocaleString() }}</span>
+                    <span class="time-text">{{ displayTimeText(row) }}</span>
                   </template>
                 </el-table-column>
 
@@ -658,58 +665,64 @@ const recurringTooltip = (row) => {
 }
 
 /* ============================================================
-   ⭐ 常驻任务的「任务级」物流状态（用户 2026-10-17 拍板）
+   ⭐ 常驻任务 = 一单（2026-10-24 19:17 定稿）
    ------------------------------------------------------------
-   一个常驻任务 = 一个 recurring_group_no = 组下若干趟运输记录。
-   列表里每条常驻行原本显示的是**它自己那一条趟次**的状态，于是组主那条会一直挂着
-   「待接单」—— 其实任务早就被司机接走、在跑了。
-   口径：任务下**任意一趟被接过**（有接单时间 / 已进入执行）→ 任务就是「执行中」；
-        已暂停 / 已结束优先显示。
+   · 列表里一个 recurring_group_no 只占一行（组主 trip_seq=1）；
+   · 司机接的每一趟不算新运单，只看详情页的「趟次」；
+   · 但组主的 create_time 是"建任务那天"，所以时间列要显示**最新一趟**的下发时间，
+     否则今天续派的一趟看起来还是昨天的。
    ============================================================ */
 const REC_ACCEPTED_STATUSES = ['待装车', '装车中', '装车完成', '已发车', '已到达', '已完成']
-/* { recurring_group_no: { status, accepted, tripCount } } */
 const recTaskMap = ref({})
 
 const loadRecurringTaskStatus = async (rows) => {
-  const groups = [
-    ...new Set(
-      (rows || [])
-        .filter((r) => r && r.is_recurring && r.recurring_group_no)
-        .map((r) => r.recurring_group_no)
-    ),
-  ]
-  if (!groups.length) {
-    recTaskMap.value = {}
-    return
-  }
+  const groups = [...new Set(
+    (rows || [])
+      .filter((r) => r && r.is_recurring && r.recurring_group_no)
+      .map((r) => r.recurring_group_no)
+  )]
+  if (!groups.length) { recTaskMap.value = {}; return }
   try {
     let q = supabase
       .from('waybills')
-      .select('recurring_group_no,status,accept_time,recurring_status')
+      .select('recurring_group_no,status,accept_time,recurring_status,trip_seq,create_time,finish_time')
       .in('recurring_group_no', groups)
-    /* ⚠️ 这里只做 owner_account 隔离，**不要**叠 applyIsolation 的「机构指派」二次过滤：
-       判定「这个任务有没有被接过」必须看到组内**全部**趟次，
-       被机构条件筛掉几条会误判成「还没人接」。 */
     if (!isAdmin && myAccount) q = q.eq('owner_account', myAccount)
     const { data, error } = await q
     if (error) throw error
+
     const map = {}
     for (const g of groups) {
       const trips = (data || []).filter((t) => String(t.recurring_group_no) === String(g))
       const withStatus = trips.find((t) => String(t.recurring_status || '').trim())
+      const status = String((withStatus && withStatus.recurring_status) || '生效中').trim() || '生效中'
+      const latest = trips
+        .slice()
+        .sort((a, b) => (Number(b.trip_seq) || 0) - (Number(a.trip_seq) || 0))[0]
+      const lastFinishTime = trips.reduce(
+        (m, t) => Math.max(m, t.finish_time ? new Date(t.finish_time).getTime() : 0),
+        0
+      )
+      const liveTrips = trips.filter((t) => {
+        const s = String(t.status || '').trim()
+        return s === '待接单' || REC_ACCEPTED_STATUSES.includes(s)
+      })
       map[g] = {
-        status: String((withStatus && withStatus.recurring_status) || '生效中').trim() || '生效中',
+        status,
         accepted: trips.some(
-          (t) =>
-            !!t.accept_time ||
-            REC_ACCEPTED_STATUSES.includes(String(t.status || '').trim())
+          (t) => !!t.accept_time || REC_ACCEPTED_STATUSES.includes(String(t.status || '').trim())
         ),
+        latestTime: (latest && latest.create_time) || '',
+        latestSeq: Number((latest && latest.trip_seq) || 0),
+        lastFinishTime,
+        todoCount: trips.filter((t) => String(t.status || '').trim() === '待接单').length,
+        liveCount: liveTrips.length,
         tripCount: trips.length,
       }
     }
     recTaskMap.value = map
   } catch (e) {
-    console.warn('常驻任务状态加载失败：', e)
+    console.warn('[运单列表] 常驻任务状态读取失败', e)
     recTaskMap.value = {}
   }
 }
@@ -776,7 +789,9 @@ const legDriverText = (row) => {
   return legVehicleText(row)
 }
 
-/* 列表「物流状态」列实际显示什么 */
+/* 列表「物流状态」列实际显示什么
+   ⭐ 常驻是**一单**（一个组一行）→ 显示任务级状态（待接单 / 执行中 / 已暂停 / 已结束），
+      组主那一趟自己的状态不代表任务。 */
 const displayStatus = (row) => {
   if (!row) return ''
   /* ⭐ 子母车：按趟聚合（执行中 1/2 = 2 趟里有 1 趟已完成） */
@@ -791,15 +806,41 @@ const displayStatus = (row) => {
   if (t) {
     if (t.status === '已暂停') return '已暂停'
     if (t.status === '已结束') return '已结束'
-    /* 还没开始跑的那条（组主 / 待重新指派）显示任务级状态：
-       任务已经有人接了就不是「待接单」了 */
-    /* 用户 2026-10-18：常驻任务只要「没结束」且被接过，就是**执行中** ——
-       不能因为某一趟跑完了就显示「已完成」（任务本身还在有效期内、还能继续接）。
-       结束 / 暂停已在上面的分支优先返回。 */
+    /* 组里只剩还没接的趟次（比如刚续派了一趟）→ 待接单 */
+    if (t.todoCount && t.todoCount === t.liveCount) return '待接单'
     if (t.accepted) return '执行中'
     return '待接单'
   }
   return row.status
+}
+
+/* 发单时间：常驻行显示**组内最新一趟**的下发时刻（今天续派的一趟要能看出来）；
+   已结束 / 已暂停的组显示最近完成时刻，跟着落到结束那天。 */
+const displayTime = (row) => {
+  if (row && row.is_recurring && row.recurring_group_no) {
+    const t = recTaskMap.value[row.recurring_group_no]
+    if (t && (t.status === '已结束' || t.status === '已暂停')) {
+      return t.lastFinishTime ? new Date(t.lastFinishTime).toISOString() : row.create_time
+    }
+    if (t && t.latestTime) return t.latestTime
+  }
+  return (row && row.create_time) || ''
+}
+const displayTimeText = (row) => {
+  const t = displayTime(row)
+  if (!t) return '--'
+  const d = new Date(t)
+  return Number.isNaN(d.getTime()) ? '--' : d.toLocaleString()
+}
+
+/* 常驻任务：编号列显示组号 + 趟次规模（司机每跑一趟不单独算运单） */
+const recTripCount = (row) => {
+  const t = row && recTaskMap.value[row.recurring_group_no]
+  return (t && t.tripCount) || 0
+}
+const recLatestSeq = (row) => {
+  const t = row && recTaskMap.value[row.recurring_group_no]
+  return (t && t.latestSeq) || 0
 }
 
 /* ⭐ 分车承运展开：按钮挪进编号行尾后，展开状态改由这里托管。
@@ -896,8 +937,7 @@ watch(auditOn, (on) => {
 // 数据获取
 // ============================================================
 const fetchData = async () => {
-  try {
-    /* 待我审批命中哪些运单（顺带刷新胶囊上的数字） */
+  try {    /* 待我审批命中哪些运单（顺带刷新胶囊上的数字） */
     let mineNos = null
     try {
       mineNos = await fetchPendingMine()
@@ -924,10 +964,15 @@ const fetchData = async () => {
     /* 待我审批：只留命中的运单 */
     if (onlyMine.value && mineNos) query = query.in('waybill_no', mineNos)
 
-    /* ⭐ 常驻任务：列表里一个组只留「组主」（trip_seq=1），
-       司机每接一趟都会新建趟次行，不该每趟多出一条运单 —— 趟次进度进详情「物流状态」。
-       过滤放在查询层，分页/计数才准（用户 2026-10-18 拍板，小程序管理端同样处理）。 */
-    query = query.or('is_recurring.is.null,is_recurring.eq.false,trip_seq.eq.1')
+    /* ⭐⭐ 2026-10-24 19:17 用户最终口径：
+       「每一个常驻任务算一单，里面司机接的每一趟不算新的运单，都包含在这一个常驻运单内，
+         但每一个常驻运单是独立的。」
+       → 常驻按 recurring_group_no 聚合成一行（组主 trip_seq=1），趟次只在详情页看；
+         组主行的时间/状态由 displayTime / displayStatus 换成"最新一趟 / 任务级"。
+       ⚠️ 待我审批时不叠加（上报可能挂在某一趟上，会被整条滤掉）。 */
+    if (!onlyMine.value) {
+      query = query.or('is_recurring.is.null,is_recurring.eq.false,trip_seq.eq.1')
+    }
 
     if (searchForm.waybillNo) query = query.ilike('waybill_no', '%' + searchForm.waybillNo + '%')
     if (searchForm.creator) query = query.ilike('creator', '%' + searchForm.creator + '%')
@@ -939,20 +984,36 @@ const fetchData = async () => {
       query = query.gte('create_time', start).lt('create_time', end + ' 23:59:59')
     }
     const activeStat = stats.value.find(s => s.active)
-    if (activeStat && activeStat.label !== '全部') {
-      query = query.eq('status', activeStat.label)
+    const statusLabel = activeStat && activeStat.label !== '全部' ? activeStat.label : ''
+    if (statusLabel) {
+      if (statusLabel === '待接单') {
+        /* 常驻组主那趟往往已经完成，但组内新派的趟次是「待接单」→ 放行常驻行，
+           否则一出新活就整个任务被筛掉（前端再按任务级状态收窄） */
+        query = query.or('status.eq.待接单,is_recurring.eq.true')
+      } else {
+        query = query.eq('status', statusLabel)
+      }
     }
 
     const { data, count, error } = await query
     if (error) throw error
 
-    tableData.value = data || []
+    let rows = data || []
+    /* 「待接单」放行的常驻行，按任务级状态再收窄一次（已结束 / 已暂停不该出现在待接单里） */
+    if (statusLabel === '待接单') {
+      rows = rows.filter(
+        (r) => !r.is_recurring || !['已结束', '已暂停'].includes(String(r.recurring_status || '').trim())
+      )
+    }
+
+    tableData.value = rows
     total.value = count || 0
     /* ⭐ 一次性聚合本页费用，别在单元格里逐行查 */
-    loadFeeSummary(data || [])
-    /* ⭐ 常驻行的「物流状态」按**任务**算（有人接过就是执行中），见 loadRecurringTaskStatus */
-    await loadRecurringTaskStatus(data || [])
+    loadFeeSummary(rows)
+    /* ⭐ 常驻行的任务级状态 + 最新一趟时间（displayStatus / displayTime 都读它） */
+    await loadRecurringTaskStatus(rows)
     updateStats()
+    lastFetchAt.value = Date.now()
   } catch (err) {
     console.error('加载数据失败', err)
     ElMessage.error('加载数据失败：' + err.message)
@@ -1044,13 +1105,40 @@ const meInfo = (() => {
 const canApproveReport = (r) => canApproveReportShared(r, meInfo)
 
 const loadFeeSummary = async (rows) => {
-  const nos = (rows || []).map((r) => r.waybill_no).filter(Boolean)
-  if (!nos.length) { feeMap.value = {}; return }
+  /* ⭐ 常驻是「一单」：司机把费用报在**某一趟**上，列表只显示组主那一行，
+     所以要把组内全部趟次的上报合到这一行（与详情页「费用 = 这个任务所有趟次的合计」一致）。
+     普通运单只算自己那一单。 */
+  const list = rows || []
+  const recGroups = Array.from(new Set(
+    list.filter((r) => r && r.is_recurring && r.recurring_group_no).map((r) => r.recurring_group_no)
+  ))
+  const groupNos = {}
+  if (recGroups.length) {
+    try {
+      const { data, error } = await supabase
+        .from('waybills')
+        .select('waybill_no,recurring_group_no')
+        .in('recurring_group_no', recGroups)
+      if (error) throw error
+      ;(data || []).forEach((w) => {
+        const g = w.recurring_group_no
+        if (!g || !w.waybill_no) return
+        ;(groupNos[g] || (groupNos[g] = [])).push(w.waybill_no)
+      })
+    } catch (e) {
+      console.warn('[运单列表] 常驻组趟次读取失败（费用按组主单算）', e)
+    }
+  }
+
+  const nos = list.map((r) => r.waybill_no).filter(Boolean)
+  Object.values(groupNos).forEach((arr) => arr.forEach((n) => n && nos.push(n)))
+  const uniq = Array.from(new Set(nos))
+  if (!uniq.length) { feeMap.value = {}; return }
   try {
     const { data, error } = await supabase
       .from('reports')
       .select('waybill_no,type,status,amount,current_level,flow')
-      .in('waybill_no', nos)
+      .in('waybill_no', uniq)
     if (error) throw error
 
     const map = {}
@@ -1060,7 +1148,25 @@ const loadFeeSummary = async (rows) => {
       if (r.status === '审核中') m.pending += 1
       if (canApproveReport(r)) m.mine += 1
     })
-    feeMap.value = map
+
+    /* 常驻：把组内所有趟次的上报合并回组主那一行（覆盖，不累加 —— 组主自己也在组里） */
+    const out = { ...map }
+    list.forEach((r) => {
+      if (!r || !r.is_recurring || !r.recurring_group_no) return
+      const arr = groupNos[r.recurring_group_no] || []
+      if (!arr.length) return
+      const agg = { total: 0, pending: 0, mine: 0 }
+      arr.forEach((n) => {
+        const m = map[n]
+        if (!m) return
+        agg.total += m.total
+        agg.pending += m.pending
+        agg.mine += m.mine
+      })
+      if (agg.total || agg.pending || agg.mine) out[r.waybill_no] = agg
+    })
+
+    feeMap.value = out
   } catch (e) {
     console.warn('[运单列表] 费用汇总失败（reports 表未初始化？）', e)
     feeMap.value = {}
@@ -1187,6 +1293,10 @@ if (needOrgFilter.value && myOrgName.value) {
 // ============================================================
 onMounted(async () => {
   document.addEventListener('keydown', onEscKeydown)
+  /* ⭐ 回到这个页面 / 切回浏览器标签时静默刷新一次（2026-10-24 用户反馈
+     「状态不会刷新」：司机在外面改了状态，列表一直挂着打开时的旧值） */
+  document.addEventListener('visibilitychange', onPageVisible)
+  window.addEventListener('focus', onPageVisible)
   /* ⭐ 审批开关来自「业务流程」画布：先读回来再取数，避免「待我审批」入口闪一下 */
   await ensureApprovalMode(currentUserForModules())
   if (!auditOn.value && onlyMine.value) {
@@ -1197,8 +1307,18 @@ onMounted(async () => {
   fetchData()
 })
 
+/* 页面重新可见 / 窗口重新聚焦 → 距上次取数超过 5 秒就静默刷一次（不打扰、不闪） */
+const lastFetchAt = ref(0)
+const onPageVisible = () => {
+  if (document.hidden) return
+  if (Date.now() - lastFetchAt.value < 5000) return
+  fetchData()
+}
+
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onEscKeydown)
+  document.removeEventListener('visibilitychange', onPageVisible)
+  window.removeEventListener('focus', onPageVisible)
 })
 </script>
 
@@ -1337,6 +1457,7 @@ onBeforeUnmount(() => {
 .mine-bar-x:hover {
   background: #FEF3C7;
 }
+
 .mine-chip {
   display: inline-flex;
   align-items: center;
@@ -1636,6 +1757,16 @@ onBeforeUnmount(() => {
   color: #94A3B8;
   line-height: 1.3;
   margin-top: 1px;
+}
+/* 常驻任务：编号是组号（CZ…），后面跟趟次规模 */
+.rec-group-no {
+  color: #B45309;
+  font-weight: 700;
+}
+.rec-trip-hint {
+  margin-left: 6px;
+  font-size: 11px;
+  color: #94A3B8;
 }
 /* 任务名称 = 主信息（用户 2026-10-19：名称比编号重要，主副对调） */
 .task-title {

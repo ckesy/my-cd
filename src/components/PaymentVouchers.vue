@@ -12,15 +12,18 @@
       <div v-if="imgList.length" class="pv-grid">
         <el-image
           v-for="(img, i) in imgList"
-          :key="img.key || img.fileID"
+          :key="(img.key || img.fileID) + '#' + (retry[img.key || img.fileID] || 0)"
           :src="img.url"
           :preview-src-list="imgList.map((x) => x.url)"
           :initial-index="i"
           fit="cover"
           class="pv-thumb"
           preview-teleported
+          @error="retryImg(img)"
         >
-          <template #error><div class="pv-thumb-err">图片加载失败</div></template>
+          <template #error>
+            <div class="pv-thumb-err" @click.stop="retryImg(img)">加载失败<br />点此重试</div>
+          </template>
         </el-image>
       </div>
 
@@ -40,7 +43,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { signGet } from '@/utils/cos'
+import { signGetCached, forgetCosUrl } from '@/utils/cos'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -50,6 +53,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const urls = ref({})
+const retry = ref({})
 const loading = ref(false)
 
 const withUrl = computed(() =>
@@ -67,12 +71,13 @@ function isImageName(name) {
   return /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(String(name || ''))
 }
 
-async function loadUrls() {
+async function loadUrls(force = false) {
   const keys = (props.images || []).map((x) => x.key).filter(Boolean)
   if (!keys.length) return
   loading.value = true
   try {
-    urls.value = await signGet(keys)
+    /* 缓存优先（50min TTL）；force=单张图失败后重签 */
+    urls.value = { ...urls.value, ...(await signGetCached(keys, { force })) }
   } catch (e) {
     console.warn('[付款凭据] 临时链接获取失败', e)
   } finally {
@@ -80,12 +85,27 @@ async function loadUrls() {
   }
 }
 
+/* 图片 403/超时 → 丢掉旧链接重签一次（上限 2 次，之后靠用户点） */
+async function retryImg(img) {
+  const key = img && (img.key || img.fileID)
+  if (!key) return
+  const n = retry.value[key] || 0
+  forgetCosUrl(key)
+  retry.value = { ...retry.value, [key]: n + 1 }
+  if (n >= 2) return
+  try {
+    const map = await signGetCached([key], { force: true })
+    if (map[key]) urls.value = { ...urls.value, [key]: map[key] }
+  } catch (e) {
+    console.warn('[付款凭据] 重签失败', e)
+  }
+}
+
 watch(
   () => props.modelValue,
   (v) => {
-    if (!v) return
-    const need = (props.images || []).some((x) => x.key && !urls.value[x.key])
-    if (need) loadUrls()
+    /* 每次打开都走一遍：缓存有效则秒开，过期则自动换新链接 */
+    if (v && (props.images || []).length) loadUrls()
   }
 )
 </script>
@@ -119,10 +139,16 @@ watch(
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2px;
   font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
   color: #94a3b8;
+  background: #f8fafc;
+  cursor: pointer;
 }
 
 .pv-files {

@@ -48,8 +48,8 @@ const clientPermissions = [
   { label: '运输管理 / 运单管理', value: 'waybill' },
   { label: '运输管理 / 路线管理', value: 'route' },
   { label: '车队运营报告', value: 'report' },
-  { label: '基础数据管理 / 车辆档案', value: 'vehicle_archive' },
-  { label: '基础数据管理 / 司机档案', value: 'driver_archive' },
+  { label: '档案管理 / 车辆档案', value: 'vehicle_archive' },
+  { label: '档案管理 / 司机档案', value: 'driver_archive' },
   { label: '系统管理', value: 'system' },
 ]
 

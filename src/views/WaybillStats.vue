@@ -160,10 +160,31 @@
         </div>
 
         <div class="panel">
-          <div class="p-hd"><span class="p-t">出车密度</span><span class="p-s">按天</span></div>
+          <div class="p-hd">
+            <span class="p-t">出车密度</span>
+            <span class="p-s">按天 · 颜色越深当天出车越多</span>
+          </div>
+          <div class="h-week">
+            <span v-for="w in WEEK" :key="w">{{ w }}</span>
+          </div>
           <div class="heat">
-            <div v-for="d in heatDays" :key="d.date" class="h-cell" :class="'l' + d.level"
-              :title="`${d.date} · ${d.count} 趟`">{{ d.day }}</div>
+            <span v-for="n in heatPad" :key="'pad' + n" class="h-pad"></span>
+            <el-tooltip
+              v-for="d in heatDays"
+              :key="d.date"
+              placement="top"
+              :show-after="60"
+              effect="dark"
+            >
+              <template #content>
+                <div style="font-size:12px;line-height:1.65;min-width:132px">
+                  <div style="font-weight:700">{{ d.date }} · 周{{ d.wd }}</div>
+                  <div style="color:#BFDBFE">{{ d.count ? d.count + ' 趟出车' : '当天没有出车' }}</div>
+                  <div v-if="d.count" style="color:#93C5FD;font-size:11px">占区间单量 {{ d.share }}%</div>
+                </div>
+              </template>
+              <div class="h-cell" :class="'l' + d.level">{{ d.day }}</div>
+            </el-tooltip>
           </div>
           <div class="h-legend">
             <span>少</span>
@@ -173,6 +194,10 @@
             <i style="background:#3B82F6"></i>
             <i style="background:#1D4ED8"></i>
             <span>多</span>
+          </div>
+          <div class="ws-hint">
+            一格一天，颜色越深表示当天出车越多，灰格是没出车。鼠标移到格子上看当天趟数与占比。
+            区间内最忙 <b>{{ heatPeak }}</b>，平均每天 <b>{{ heatAvg }}</b> 趟。
           </div>
         </div>
       </el-tab-pane>
@@ -389,6 +414,8 @@ const stageRows = computed(() => {
 })
 
 /* 热力：按创建日 */
+const WEEK = ['日', '一', '二', '三', '四', '五', '六']
+
 const heatDays = computed(() => {
   const [s, e] = range.value
   const days = dayjs(e).diff(dayjs(s), 'day') + 1
@@ -404,9 +431,30 @@ const heatDays = computed(() => {
     const date = d.format('YYYY-MM-DD')
     const count = map[date] || 0
     const level = count === 0 ? 0 : count >= max * 0.8 ? 4 : count >= max * 0.5 ? 3 : count >= max * 0.25 ? 2 : 1
-    out.push({ date, day: d.format('D'), count, level })
+    out.push({ date, day: d.format('D'), wd: WEEK[d.day()], count, level, share: 0 })
+  }
+  /* 占比按区间内总单量算，hover 时能看出「这一天吃掉多少量」 */
+  const total = out.reduce((a, b) => a + b.count, 0) || 0
+  if (total) {
+    out.forEach((x) => { x.share = Math.round((x.count / total) * 1000) / 10 })
   }
   return out
+})
+
+/* 日历从周日开始排，月初那几天前面留空，周几就能对上 */
+const heatPad = computed(() => dayjs(range.value[0]).day())
+
+const heatPeak = computed(() => {
+  const list = heatDays.value
+  if (!list.length) return '—'
+  const top = list.reduce((a, b) => (b.count > a.count ? b : a), list[0])
+  return top.count ? `${Number(top.date.slice(5))} 日（${top.count} 趟）` : '—'
+})
+const heatAvg = computed(() => {
+  const list = heatDays.value
+  if (!list.length) return '—'
+  const total = list.reduce((a, b) => a + b.count, 0)
+  return (Math.round((total / list.length) * 10) / 10).toFixed(1)
 })
 
 /* ================= 工具 ================= */
@@ -481,10 +529,23 @@ onMounted(load)
 
 /* 热力 */
 .heat { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+/* 星期表头：日历从周日排，跟下面的格子同列宽才对得上 */
+.h-week {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;
+  margin-bottom: 5px; font-size: 10px; color: #94A3B8; text-align: center;
+}
+.h-pad { display: block; }
 .h-cell {
   aspect-ratio: 1; border-radius: 4px; background: #F1F5F9;
   display: flex; align-items: center; justify-content: center;
   font-size: 10px; color: #94A3B8;
+  cursor: default;
+  transition: transform .12s cubic-bezier(.22,1,.36,1), box-shadow .12s;
+}
+.h-cell:hover {
+  transform: scale(1.1);
+  box-shadow: 0 3px 10px rgba(29, 78, 216, .22);
+  z-index: 2;
 }
 .h-cell.l1 { background: #DBEAFE; color: #1E40AF; }
 .h-cell.l2 { background: #93C5FD; color: #1E3A8A; }

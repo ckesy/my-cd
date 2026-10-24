@@ -67,8 +67,15 @@
         <!-- 运单 -->
         <el-table-column v-if="colOn('waybill')" label="运单 / 任务" min-width="180">
           <template #default="{ row }">
-            <div class="cell-main">{{ row.task_name || '—' }}</div>
-            <div class="cell-sub num">{{ row.waybill_no || '—' }}</div>
+            <div class="cell-main">
+              {{ row.task_name || '—' }}
+              <span v-if="row.is_rec" class="rec-mini">常驻</span>
+            </div>
+            <!-- ⭐ 常驻任务按组号聚合：显示组号 + 涉及几趟，不再堆成一堆单号 -->
+            <div v-if="row.is_rec" class="cell-sub num">
+              {{ row.rec_group_no }} · {{ row.tripCount }} 趟 · {{ row.items.length }} 笔
+            </div>
+            <div v-else class="cell-sub num">{{ row.waybill_no || '—' }}</div>
           </template>
         </el-table-column>
 
@@ -117,20 +124,54 @@
               <span class="dt-amt-inline num">· ¥{{ fmtMoney(cur.total) }}</span>
             </div>
             <div class="dt-s num">
-              {{ cur.waybill_no || '—' }} · {{ cur.driver_name || '—' }} · {{ cur.plate || '—' }}
+              {{ cur.is_rec ? cur.rec_group_no : (cur.waybill_no || '—') }} · {{ cur.driver_name || '—' }} · {{ cur.plate || '—' }}<template v-if="cur.is_rec"> · {{ cur.tripCount }} 趟</template>
             </div>
           </div>
           <span class="dt-x" @click="drawer = false">×</span>
         </div>
 
         <div class="dt-body">
-          <div class="dt-label">费用明细 · {{ cur.items.length }} 笔</div>
+          <!-- ⭐ 分上报人查看：一单多司机时常驻任务会混多个人的费用 -->
+          <div class="dt-rep" v-if="curReporters.length > 1">
+            <span class="dtr" :class="{ on: !reporterFilter }" @click="reporterFilter = ''">
+              全部 {{ cur.items.length }}
+            </span>
+            <span
+              v-for="n in curReporters"
+              :key="n"
+              class="dtr"
+              :class="{ on: reporterFilter === n }"
+              @click="reporterFilter = n"
+            >{{ n }} {{ repCount(n) }}</span>
+          </div>
+
+          <div class="dt-label">费用明细 · {{ curCards.length }} 笔</div>
 
           <!-- ⭐ 每笔费用一张卡：上半是这笔的信息，下半只放这笔自己的凭证，
                这样图片和费用天然对应，不用靠顺序去猜 -->
           <div class="dt-cards">
-            <div v-for="c in curCards" :key="c.id" class="fc">
+            <div v-for="c in curCards" :key="c.id" class="fc" :class="{ 'is-picked': isPicked(c) }">
               <div class="fc-hd">
+                <!-- ⭐ 待审核的费用可以单独勾选：只驳回勾中的那几笔，其余保留，
+                     不用整组驳回再让司机全部重传 -->
+                <button
+                  v-if="canPick(c)"
+                  type="button"
+                  class="fc-pick"
+                  :class="{ on: isPicked(c) }"
+                  :title="isPicked(c) ? '取消选择' : '选择这笔'"
+                  @click.stop="togglePick(c)"
+                >
+                  <svg viewBox="0 0 24 24"><path d="M5 12.5 L10 17.5 L19 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </button>
+                <!-- 非待审核的笔：给个灰色占位 + 原因，避免"点不动像是坏了" -->
+                <span
+                  v-else-if="pickBlockedReason(c)"
+                  class="fc-pick is-off"
+                  :title="pickBlockedReason(c)"
+                >
+                  <svg viewBox="0 0 24 24"><path d="M5 12.5 L10 17.5 L19 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </span>
                 <span class="fc-ico">{{ (TYPE_LABEL[c.type] || '费').slice(0, 1) }}</span>
                 <div class="fc-tt">
                   <div class="fc-t">
@@ -150,10 +191,14 @@
                   <div class="dt-imgs">
                     <template v-for="im in c.imgs" :key="im.key">
                       <!-- 图片：预览列表只含本笔的图，左右切换不会串到别的费用 -->
-                      <el-image v-if="im.isImage && im.url" :src="im.url" fit="cover"
+                      <el-image v-if="im.isImage && im.url" :key="im.key + '#' + (imgRetry[im.key] || 0)"
+                        :src="im.url" fit="cover"
                         class="dt-img" :preview-src-list="c.previewUrls"
-                        :initial-index="im.idx" preview-teleported>
-                        <template #error><div class="dt-img-err">加载失败</div></template>
+                        :initial-index="im.idx" preview-teleported
+                        @error="retryImg(im)">
+                        <template #error>
+                          <div class="dt-img-err" @click.stop="retryImg(im)">加载失败<br />点击重试</div>
+                        </template>
                       </el-image>
                       <!-- 非图片（pdf / 表格等）：给个可点的文件块 -->
                       <a v-else-if="im.url" :href="im.url" target="_blank" rel="noopener"
@@ -199,7 +244,7 @@ import dayjs from 'dayjs'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/utils/supabase'
 import { moduleFlags, approvalOn } from '@/utils/modules'
-import { signGet } from '@/utils/cos'
+import { signGetCached, forgetCosUrl } from '@/utils/cos'
 import TableTools from '@/components/TableTools.vue'
 
 /* ================= 用户与范围 ================= */
@@ -215,6 +260,7 @@ const scope = (q) => (isAdmin ? q : q.eq('owner_account', myAccount))
 const TYPE_LABEL = {
   expense: '费用上报', weigh: '过磅单', subsidy: '补贴申请', violation: '违章处理',
   overtime: '超时报备', receipt: '回单', loan: '借款申请', cardfix: '油卡补录',
+  repair: '报修报销',
 }
 const TYPE_OPTIONS = Object.entries(TYPE_LABEL).map(([value, label]) => ({ value, label }))
 
@@ -300,15 +346,27 @@ async function load() {
     const nameMap = {}
     if (nos.length) {
       try {
-        let wq = supabase.from('waybills').select('waybill_no,task_name').in('waybill_no', nos.slice(0, 500))
+        /* ⭐ 顺带取常驻组号：同一常驻运单的多笔费用要归到一条显示（2026-10-24 用户要求） */
+        let wq = supabase
+          .from('waybills')
+          .select('waybill_no,task_name,recurring_group_no,trip_seq,is_recurring')
+          .in('waybill_no', nos.slice(0, 500))
         wq = scope(wq)
         const { data: wbs } = await wq
-        ;(wbs || []).forEach((w) => { if (w.waybill_no) nameMap[w.waybill_no] = w.task_name || '' })
+        ;(wbs || []).forEach((w) => { if (w.waybill_no) nameMap[w.waybill_no] = w })
       } catch (e) {
         /* 拿不到就只显示运单号，不影响主流程 */
       }
     }
-    raw.value = list.map((r) => ({ ...r, task_name: nameMap[r.waybill_no] || '' }))
+    raw.value = list.map((r) => {
+      const info = nameMap[r.waybill_no] || {}
+      return {
+        ...r,
+        task_name: info.task_name || '',
+        rec_group_no: info.is_recurring ? String(info.recurring_group_no || '') : '',
+        trip_seq: Number(info.trip_seq) || 0,
+      }
+    })
   } catch (e) {
     ElMessage.error(e.message || '加载失败')
     raw.value = []
@@ -317,15 +375,20 @@ async function load() {
   }
 }
 
-/** 按运单号聚合：一趟车一行 */
+/** 聚合一行：
+ *  · 普通运单 → 按运单号（一趟车一行）
+ *  · 常驻运单 → 按 **recurring_group_no**（一个常驻任务一行，里面含多趟的费用） */
 const groups = computed(() => {
   const map = new Map()
   raw.value.forEach((r) => {
-    const key = r.waybill_no || ('NO-' + r.id)
+    const key = r.rec_group_no || r.waybill_no || ('NO-' + r.id)
     if (!map.has(key)) {
       map.set(key, {
         key,
         waybill_no: r.waybill_no || '',
+        rec_group_no: r.rec_group_no || '',
+        is_rec: !!r.rec_group_no,
+        tripCount: 0,
         task_name: r.task_name || '',
         driver_name: r.driver_name || '',
         plate: r.plate || '',
@@ -356,7 +419,9 @@ const groups = computed(() => {
     const set = new Set(g.items.map((x) => normalizeStatus(x.status)))
     let main = STATUS_ORDER.value[0] || '已上报'
     for (const s of STATUS_ORDER.value) { if (set.has(s)) { main = s; break } }
-    return { ...g, status: main }
+    /* 常驻任务里涉及几趟（不同运单号的数量） */
+    const tripCount = new Set(g.items.map((x) => x.waybill_no).filter(Boolean)).size
+    return { ...g, status: main, tripCount }
   })
 })
 
@@ -438,8 +503,7 @@ function itemDesc(it) {
       老数据里也可能只剩一串 fileID 或裸字符串，这里统一归一化后再签链接。
       （不签直接用 → 每张都会走 error 插槽，也就是之前"全部显示无图"的原因） */
 const imgUrls = ref({})
-const imgAt = ref({})               // key → 拿到链接的时间，用于 TTL
-const IMG_TTL = 50 * 60 * 1000      // COS 签名 1 小时有效，缓存留 10 分钟余量
+const imgRetry = ref({})            // key → 重试次数（同时当 el-image 的 key，逼它重新发请求）
 const imgLoading = ref(false)
 
 /** 明确是附件（不当图片渲染）的扩展名；判断不出来的一律按图片试 */
@@ -461,11 +525,25 @@ function normImgs(raw) {
 
 const imgsOf = (it) => normImgs(it && it.images)
 
+/** 抽屉里按「上报人」筛选（常驻任务一单多司机时，3 笔费用可能来自 2 个人） */
+const reporterFilter = ref('')
+const curReporters = computed(() => {
+  const names = ((cur.value && cur.value.items) || [])
+    .map((i) => String(i.driver_name || '').trim())
+    .filter(Boolean)
+  return [...new Set(names)]
+})
+const repCount = (n) =>
+  ((cur.value && cur.value.items) || []).filter((i) => String(i.driver_name || '').trim() === n).length
+
 /** 抽屉里的费用卡：把每笔费用的凭证就地展开成 { url, isImage, idx }
  *  —— 图片永远跟着它所属的那笔费用，不汇总、不混排。
  *  依赖 imgUrls，所以签名链接一回来会自动重渲染。 */
 const curCards = computed(() => {
-  const items = (cur.value && cur.value.items) || []
+  const all = (cur.value && cur.value.items) || []
+  const items = reporterFilter.value
+    ? all.filter((i) => String(i.driver_name || '').trim() === reporterFilter.value)
+    : all
   return items.map((it) => {
     const imgs = imgsOf(it).map((im) => ({
       ...im,
@@ -479,26 +557,38 @@ const curCards = computed(() => {
 
 async function loadImgUrls(items) {
   const keys = []
-  const now = Date.now()
   ;(items || []).forEach((it) => {
     imgsOf(it).forEach((im) => {
       if (!im.key || /^https?:/i.test(im.key)) return
-      /* 没签过，或者缓存已经接近签名有效期 → 重新签 */
-      if (!imgUrls.value[im.key] || now - (imgAt.value[im.key] || 0) > IMG_TTL) keys.push(im.key)
+      /* 交给 signGetCached：缓存 50min，过期/没签过的才真去签 */
+      keys.push(im.key)
     })
   })
   if (!keys.length) return
   imgLoading.value = true
   try {
-    const map = await signGet([...new Set(keys)])
-    const stamp = {}
-    Object.keys(map).forEach((k) => { stamp[k] = Date.now() })
+    const map = await signGetCached([...new Set(keys)])
     imgUrls.value = { ...imgUrls.value, ...map }
-    imgAt.value = { ...imgAt.value, ...stamp }
   } catch (e) {
     console.warn('[费用明细] 凭证临时链接获取失败', e)
   } finally {
     imgLoading.value = false
+  }
+}
+
+/* 图片 403/超时 → 丢掉旧链接重签（同 key 自动最多 2 次，之后靠用户点） */
+async function retryImg(im) {
+  const key = im && im.key
+  if (!key || /^https?:/i.test(key)) return
+  const n = imgRetry.value[key] || 0
+  forgetCosUrl(key)
+  imgRetry.value = { ...imgRetry.value, [key]: n + 1 }
+  if (n >= 2) return
+  try {
+    const map = await signGetCached([key], { force: true })
+    if (map[key]) imgUrls.value = { ...imgUrls.value, [key]: map[key] }
+  } catch (e) {
+    console.warn('[费用明细] 凭证重签失败', e)
   }
 }
 
@@ -511,13 +601,63 @@ async function loadImgUrls(items) {
 const acting = ref(false)
 const actingKey = ref('')
 
+/* ⭐ 勾选：只有「待审核」的这笔能被选中/驳回。
+   不勾 = 整组处理（老行为），勾了就只处理勾中的那几笔。 */
+const pickedIds = ref([])
+const canPick = (c) => auditOn.value && normalizeStatus(c.status) === '待审核'
+const isPicked = (c) => pickedIds.value.includes(c.id)
+const togglePick = (c) => {
+  if (!canPick(c)) return
+  const i = pickedIds.value.indexOf(c.id)
+  if (i > -1) pickedIds.value.splice(i, 1)
+  else pickedIds.value.push(c.id)
+}
+/** 为什么这一笔不能勾（不能勾时给一句人话，别让用户以为点坏了） */
+const pickBlockedReason = (c) => {
+  const s = normalizeStatus(c.status)
+  if (s === '待打款' || s === '已通过') {
+    return '这笔已经通过审批，不能再驳回；要退回请先在「付款登记」里处理'
+  }
+  if (s === '已打款') return '这笔已经付款，不能直接驳回；需要先撤销付款'
+  return ''
+}
+/** 勾中的、且确实还在待审的（防止列表刷新后勾到已处理的单） */
+const pickedPending = computed(() => {
+  const pend = pendingIdsOf(cur.value)
+  return pickedIds.value.filter((id) => pend.includes(id))
+})
+
+/* ⭐ 「送老板终审」只给财务 / 主账号（管理员）用（2026-10-24 用户要求） */
+const meInfo = (() => {
+  try { return JSON.parse(localStorage.getItem('currentUser') || '{}') } catch (e) { return {} }
+})()
+const canEscalateRole = (() => {
+  const isMaster = meInfo.role === 'admin' || !meInfo.isSubAccount
+  const isFinance = String(meInfo.roleName || '').includes('财务')
+  return isMaster || isFinance
+})()
+
 const drawerActions = computed(() => {
   const st = cur.value && cur.value.status
-  const out = []
-  /* 还在等审批：三种动作 */
+  const out = []  /* 还在等审批：三种动作 */
   if (auditOn.value && st === '待审核') {
-    out.push({ key: 'reject', label: '驳回', cls: 'ghost' })
-    out.push({ key: 'approve', label: '通过', cls: 'ok' })
+    const n = pickedPending.value.length
+    const all = pendingIdsOf(cur.value).length
+    out.push({
+      key: 'reject',
+      label: n ? `驳回选中的 ${n} 笔` : `驳回全部 ${all} 笔`,
+      cls: 'ghost',
+    })
+    out.push({
+      key: 'approve',
+      label: n ? `通过选中的 ${n} 笔` : '全部通过',
+      cls: 'ok',
+    })
+    /* ⭐ 财务节点：可以要求老板终审（和运单详情里的「送老板」同一个动作） */
+    const canEscalate = canEscalateRole && (cur.value.items || []).some(
+      (i) => normalizeStatus(i.status) === '待审核' && Number(i.current_level) >= 2
+    )
+    if (canEscalate) out.push({ key: 'escalate', label: '送老板终审', cls: 'esc' })
     if (payoutOn.value) out.push({ key: 'approvePay', label: '通过并付款', cls: 'warn' })
     return out
   }
@@ -572,23 +712,32 @@ async function doAction(action) {
     return
   }
 
-  const ids = pendingIdsOf(row)
+  /* 处理范围：勾了哪几笔就只处理哪几笔；一笔没勾 = 整组（老行为） */
+  const allPending = pendingIdsOf(row)
+  const ids = pickedPending.value.length ? pickedPending.value : allPending
   if (!ids.length) {
     ElMessage.info('这笔已经处理过了')
     await refreshAndKeep()
     return
   }
+  const partial = ids.length < allPending.length
 
   acting.value = true
   actingKey.value = action
   try {
     if (action === 'reject') {
-      const { value } = await ElMessageBox.prompt('填写驳回原因', '驳回', {
-        confirmButtonText: '确认驳回',
-        cancelButtonText: '取消',
-        inputPlaceholder: '比如：票据不清晰、金额与运单不符',
-        inputValidator: (v) => (v && v.trim() ? true : '请填写驳回原因'),
-      })
+      const { value } = await ElMessageBox.prompt(
+        partial
+          ? `只驳回勾选的 ${ids.length} 笔，其余 ${allPending.length - ids.length} 笔继续走审批`
+          : `将驳回全部 ${ids.length} 笔，司机需要重新提交`,
+        '驳回',
+        {
+          confirmButtonText: '确认驳回',
+          cancelButtonText: '取消',
+          inputPlaceholder: '比如：票据不清晰、金额与运单不符',
+          inputValidator: (v) => (v && v.trim() ? true : '请填写驳回原因'),
+        }
+      )
       /* reject_reason 不一定是既有列，写不进去就只改状态，别让驳回失败 */
       try {
         await updateReports(ids, {
@@ -599,7 +748,42 @@ async function doAction(action) {
       } catch (e) {
         await updateReports(ids, { status: '已驳回', update_time: new Date().toISOString() })
       }
-      ElMessage.success('已驳回')
+      ElMessage.success(partial ? `已驳回 ${ids.length} 笔，其余保留` : '已驳回')
+      pickedIds.value = []
+      await refreshAndKeep()
+      return
+    }
+
+    if (action === 'escalate') {
+      /* 送老板：当前节点标记通过 + 追加主账号终审（与运单详情同一口径） */
+      const target = (row.items || []).filter((i) => ids.includes(i.id))
+      for (const it of target) {
+        const flow = JSON.parse(JSON.stringify(it.flow || []))
+        const idx = Math.max(0, (Number(it.current_level) || 1) - 1)
+        if (flow[idx]) {
+          flow[idx].status = '已通过'
+          flow[idx].acted_at = new Date().toISOString()
+          flow[idx].acted_by = currentUser.name || currentUser.account || '财务'
+          flow[idx].comment = '要求老板终审'
+        }
+        if (!flow.some((s) => Number(s.level) === 3)) {
+          flow.push({
+            level: 3,
+            role: 'owner',
+            approver_id: null,
+            name: '主账号',
+            status: '待处理',
+          })
+        }
+        await updateReports([it.id], {
+          flow,
+          status: '审核中',
+          current_level: 3,
+          update_time: new Date().toISOString(),
+        })
+      }
+      ElMessage.success(`已送老板终审（${target.length} 笔）`)
+      pickedIds.value = []
       await refreshAndKeep()
       return
     }
@@ -610,7 +794,10 @@ async function doAction(action) {
       status: nextStatus,
       update_time: new Date().toISOString(),
     })
-    ElMessage.success(action === 'approvePay' ? '已通过，去登记付款' : '已通过')
+    ElMessage.success(
+      action === 'approvePay' ? '已通过，去登记付款' : partial ? `已通过 ${ids.length} 笔` : '已通过'
+    )
+    pickedIds.value = []
     await refreshAndKeep()
 
     if (action === 'approvePay') {
@@ -630,6 +817,8 @@ async function doAction(action) {
 function openDetail(row) {
   cur.value = row
   drawer.value = true
+  pickedIds.value = []
+  reporterFilter.value = ''
   loadImgUrls(row.items)
 }
 
@@ -726,6 +915,17 @@ onMounted(load)
 }
 .cell-main { font-size: 13px; color: #0F172A; font-weight: 600; }
 .cell-sub { font-size: 12px; color: #94A3B8; margin-top: 3px; }
+/* 常驻小标：跟运单任务名并排 */
+.rec-mini {
+  margin-left: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #B45309;
+  background: #FEF3C7;
+  border-radius: 4px;
+  padding: 0 5px;
+  vertical-align: 1px;
+}
 .cell-time { font-size: 12.5px; color: #64748B; }
 
 /* 状态 */
@@ -754,6 +954,31 @@ onMounted(load)
   letter-spacing: .4px; margin-bottom: 9px;
 }
 
+/* 分上报人 chips */
+.dt-rep {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.dtr {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #F1F5F9;
+  color: #475569;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: .15s;
+}
+.dtr.on {
+  background: var(--brand-primary, #c8102e);
+  color: #fff;
+}
+
 /* ===== 每笔费用一张卡（信息 + 自己的凭证，绑在一起） ===== */
 .dt-cards { display: flex; flex-direction: column; gap: 10px; }
 .fc {
@@ -761,6 +986,26 @@ onMounted(load)
   background: #fff; overflow: hidden;
 }
 .fc-hd { display: flex; align-items: flex-start; gap: 11px; padding: 13px 13px 12px; }
+/* ⭐ 待审核这笔的勾选圆点：只有勾中的才会被「驳回 / 通过」处理 */
+.fc-pick {
+  flex: 0 0 auto; width: 20px; height: 20px; margin-top: 5px;
+  border: 1.5px solid #CBD5E1; border-radius: 50%; background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 0; transition: .15s;
+}
+.fc-pick svg { width: 11px; height: 11px; color: #fff; opacity: 0; transform: scale(.7); transition: .15s; }
+.fc-pick:hover { border-color: var(--brand-primary); }
+.fc-pick.on {
+  background: var(--brand-primary); border-color: var(--brand-primary);
+}
+.fc-pick.on svg { opacity: 1; transform: scale(1); }
+.fc.is-picked { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(var(--brand-rgb), .1); }
+/* 已通过 / 已打款：灰圈说明"不是坏了，是不能再驳回" */
+.fc-pick.is-off {
+  background: #F8FAFC; border-style: dashed; border-color: #CBD5E1;
+  cursor: not-allowed; color: #CBD5E1;
+}
+.fc-pick.is-off svg { opacity: 1; transform: scale(.9); }
 .fc-ico {
   width: 30px; height: 30px; border-radius: 8px; flex: 0 0 auto;
   background: #EEF2F7; color: #475569; font-size: 12.5px; font-weight: 800;
@@ -806,16 +1051,19 @@ onMounted(load)
 /* 底部操作栏 */
 .dt-foot {
   flex: 0 0 auto;
-  display: flex; gap: 10px;
+  display: flex; gap: 10px; flex-wrap: wrap;
   padding: 14px 16px 16px;
   border-top: 1px solid #F1F5F9;
   background: #fff;
 }
-.dt-foot :deep(.el-button) { flex: 1; margin: 0; height: 44px; font-size: 14px; border-radius: 10px; padding: 0 14px; }
+.dt-foot :deep(.el-button) { flex: 1 1 auto; min-width: 104px; margin: 0; height: 44px; font-size: 14px; border-radius: 10px; padding: 0 14px; }
 .dt-ghost { background: #fff; border: 1px solid #E2E8F0; color: #64748B; }
 /* 通过 = 绿 */
 .dt-ok { background: #15803D; border-color: #15803D; color: #fff; font-weight: 700; }
 .dt-ok:hover { background: #166534; border-color: #166534; }
+/* 送老板 = 蓝（不用黄色，避免和「通过并付款」混） */
+.dt-esc { background: #fff; border: 1px solid #BFDBFE; color: #1D4ED8; font-weight: 700; }
+.dt-esc:hover { background: #EFF6FF; border-color: #93C5FD; }
 /* 通过并付款 = 黄 */
 .dt-warn { background: #D97706; border-color: #D97706; color: #fff; font-weight: 700; }
 .dt-warn:hover { background: #B45309; border-color: #B45309; }
@@ -823,8 +1071,9 @@ onMounted(load)
 
 .dt-imgs { display: flex; gap: 9px; flex-wrap: wrap; }
 .dt-img-err {
-  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-  font-size: 11px; color: #B4BECB; background: #F7F9FC;
+  width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; text-align: center; line-height: 1.3;
+  font-size: 11px; color: #94A3B8; background: #F7F9FC; cursor: pointer;
 }
 .dt-img { width: 76px; height: 76px; border-radius: 9px; border: 1px solid #E9EEF5; background: #fff; cursor: zoom-in; }
 /* 链接没签下来 / 签名失败的占位：灰块 + 文字，别留空白 */
