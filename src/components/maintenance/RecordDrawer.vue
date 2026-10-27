@@ -174,6 +174,10 @@
       <button class="b-solid" @click="answerAsk(true)">放弃填写</button>
     </template>
   </el-dialog>
+
+  <!-- 图片预览：页内大图（不再新开标签页） -->
+  <el-image-viewer v-if="viewer.open" :url-list="viewer.urls" :initial-index="viewer.index"
+    :z-index="3000" teleported hide-on-click-modal @close="viewer.open = false" />
 </template>
 
 <script setup>
@@ -183,8 +187,8 @@
  * 维修 / 保养 / 轮胎共用：从台账哪个 tab 点新增，就带哪个 kind。
  * 保存保养记录时会自动回写车务（见 utils/maintenance.syncMaintainToCert）。
  */
-import { ref, computed, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, reactive, computed, watch } from 'vue'
+import { ElMessage, ElImageViewer } from 'element-plus'
 import { supabase } from '@/utils/supabase'
 import { signPut, putToCos, cosKey, signGetCached } from '@/utils/cos'
 import {
@@ -323,11 +327,18 @@ const blank = () => ({
 
 const form = ref(blank())
 
+/** 页内预览状态（el-image-viewer 用，不再 window.open 新标签页）
+    ⚠️ 必须声明在下面 immediate 的 watch 之前，否则首次执行会踩 TDZ */
+const viewer = reactive({ open: false, index: 0, urls: [] })
+
 /* 打开时初始化 */
 watch(
   () => props.modelValue,
   async (v) => {
-    if (!v) return
+    if (!v) {
+      viewer.open = false      /* 抽屉关掉时别把预览留在大屏上 */
+      return
+    }
     form.value = blank()
     if (props.record) {
       const r = props.record
@@ -397,7 +408,14 @@ async function onPick(e) {
       await putToCos(url, f)
       ok.push({ key, name: f.name, size: f.size })
     } catch (err) {
-      ElMessage.error('上传失败：' + (err.message || ''))
+      const msg = String((err && err.message) || '')
+      /* 跨域这类长提示需要停留久一点，否则来不及看就被顶掉了 */
+      ElMessage({
+        type: 'error',
+        message: '上传失败：' + (msg || '未知错误'),
+        duration: msg.length > 40 ? 12000 : 3000,
+        showClose: true,
+      })
     }
   }
   if (ok.length) {
@@ -414,15 +432,9 @@ function preview(i) {
   const urls = form.value.images.map((im) => im.url).filter(Boolean)
   if (!urls.length) return
   const cur = form.value.images[i] && form.value.images[i].url
-  openPreview(urls, cur)
-}
-
-/** 简单预览：新窗口打开（不引 el-image-viewer 依赖） */
-function openPreview(urls, cur) {
-  const html = `<!doctype html><meta charset="utf-8"><body style="margin:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:100vh">
-  <img src="${cur || urls[0]}" style="max-width:96vw;max-height:96vh"></body>`
-  const w = window.open('', '_blank')
-  if (w) w.document.write(html)
+  viewer.urls = urls
+  viewer.index = Math.max(0, urls.indexOf(cur))
+  viewer.open = true
 }
 
 function togglePos(p) {

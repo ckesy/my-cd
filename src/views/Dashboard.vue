@@ -50,12 +50,16 @@
 
         <div v-else class="content-wrapper animate-fade-up" :class="{ 'screen-wrap': isScreenRoute }">
           <!-- 数据大屏（沉浸模式） -->
-          <template v-if="isScreenFleet">
-            <FleetScreen />
-          </template>
-
-          <template v-else-if="isScreenFee">
-            <FeeScreen />
+          <!-- ⭐ keep-alive：两块大屏来回切不销毁，地图与已取到的数据都留着，切回来是瞬时的 -->
+          <!-- ⭐ transition：两块屏都是 absolute 铺满，交叉淡入淡出，不会露出底色 -->
+          <!--   key 必须写死：transition 靠 key/type 判断换屏，否则可能不触发动画 -->
+          <template v-if="isScreenRoute">
+            <transition name="screen-swap">
+              <keep-alive :max="2">
+                <FleetScreen v-if="isScreenFleet" key="fleet" />
+                <FeeScreen v-else key="fee" />
+              </keep-alive>
+            </transition>
           </template>
 
           <!-- 客户端首页 -->

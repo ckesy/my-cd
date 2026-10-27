@@ -1,5 +1,5 @@
 <template>
-  <div class="screen-root">
+  <div class="screen-root" ref="rootRef">
     <div v-if="!allowed" class="deny">
       <div class="deny-box">
         <h2>暂无访问权限</h2>
@@ -31,27 +31,27 @@
         <!-- ===== 左栏：运单 ===== -->
         <aside class="col">
           <section class="p" style="flex:0 0 288px">
-            <div class="p-h"><i></i><b>运单总览</b><em>WAYBILL</em></div>
+            <div class="p-h" v-on="tip.hot(tipOnTime())"><i></i><b>运单总览</b><em>WAYBILL</em></div>
             <div class="ov">
-              <div class="ring" :style="{ '--p': wb.onTimeRate }">
+              <div class="ring" :style="{ '--p': wb.onTimeRate }" v-on="tip.hot(tipOnTime())">
                 <div class="rv"><b>{{ wb.onTimeRate }}%</b><span>准时率</span></div>
               </div>
               <div class="ovk">
-                <div class="kv"><b>{{ wb.todayCount }}</b><span>今日新增</span></div>
-                <div class="kv"><b class="cy">{{ wb.activeCount }}</b><span>当前未完成</span></div>
-                <div class="kv"><b class="gn">{{ wb.todayDone }}</b><span>今日送达</span></div>
+                <div class="kv" v-on="tip.hot(tipWbKv('today'))"><b>{{ wb.todayCount }}</b><span>今日新增</span></div>
+                <div class="kv" v-on="tip.hot(tipWbKv('active'))"><b class="cy">{{ wb.activeCount }}</b><span>当前未完成</span></div>
+                <div class="kv" v-on="tip.hot(tipWbKv('done'))"><b class="gn">{{ wb.todayDone }}</b><span>今日送达</span></div>
               </div>
             </div>
             <div class="mini4">
-              <div><b class="dm">{{ wb.g.待接单 }}</b><span>待接单</span></div>
-              <div><b class="am">{{ wb.g.装车中 }}</b><span>装车中</span></div>
-              <div><b class="cy">{{ wb.g.已发车 }}</b><span>已发车</span></div>
-              <div><b class="gn">{{ wb.g.已到达 }}</b><span>已到达</span></div>
+              <div v-on="tip.hot(tipWbStatus('待接单'))"><b class="dm">{{ wb.g.待接单 }}</b><span>待接单</span></div>
+              <div v-on="tip.hot(tipWbStatus('装车中'))"><b class="am">{{ wb.g.装车中 }}</b><span>装车中</span></div>
+              <div v-on="tip.hot(tipWbStatus('已发车'))"><b class="cy">{{ wb.g.已发车 }}</b><span>已发车</span></div>
+              <div v-on="tip.hot(tipWbStatus('已到达'))"><b class="gn">{{ wb.g.已到达 }}</b><span>已到达</span></div>
             </div>
           </section>
 
           <section class="p" style="flex:0 0 268px">
-            <div class="p-h"><i></i><b>近 7 日运单量</b><em>VOLUME</em></div>
+            <div class="p-h" v-on="tip.hot(tipWeekWb())"><i></i><b>近 7 日运单量</b><em>VOLUME</em></div>
             <div class="lg" style="margin:0 0 6px">
               <span><i style="background:#FF3355"></i>新增</span>
               <span><i style="background:#33D6FF"></i>完成</span>
@@ -65,9 +65,11 @@
                 </g>
                 <g>
                   <rect v-for="(b, i) in mkBars(wb.trendNew, '#FF3355', 0)" :key="'a' + i"
-                    :x="b.x" :y="b.y" :width="b.w" :height="b.h" fill="rgba(255,51,85,.75)"/>
+                    :x="b.x" :y="b.y" :width="b.w" :height="b.h" fill="rgba(255,51,85,.75)"
+                    v-on="tip.hot(tipWbDay(i))"/>
                   <rect v-for="(b, i) in mkBars(wb.trendDone, '#33D6FF', 1)" :key="'b' + i"
-                    :x="b.x" :y="b.y" :width="b.w" :height="b.h" fill="rgba(51,214,255,.55)"/>
+                    :x="b.x" :y="b.y" :width="b.w" :height="b.h" fill="rgba(51,214,255,.55)"
+                    v-on="tip.hot(tipWbDay(i))"/>
                 </g>
               </svg>
             </div>
@@ -77,9 +79,9 @@
           </section>
 
           <section class="p" style="flex:1">
-            <div class="p-h"><i></i><b>线路 TOP5</b><em>LANE</em></div>
+            <div class="p-h" v-on="tip.hot(tipLaneTop())"><i></i><b>线路 TOP5</b><em>LANE</em></div>
             <div v-if="wb.lanes.length" class="lanes">
-              <div v-for="(l, i) in wb.lanes" :key="i" class="lane">
+              <div v-for="(l, i) in wb.lanes" :key="i" class="lane" v-on="tip.hot(tipLane(l, i))">
                 <span class="ln">
                   <span class="from">{{ l.from }}</span>
                   <span class="arw">→</span>
@@ -103,16 +105,20 @@
             <div v-if="!mapReady" class="map-mask"><span>地图加载中</span></div>
 
             <div class="mkpi">
-              <div :class="{ on: detailKey === 'active' }" @click="toggleDetail('active')">
+              <div :class="{ on: detailKey === 'active' }" @click="toggleDetail('active')"
+                v-on="tip.hot(tipKpi('active'))">
                 <b class="cy">{{ wb.activeCount }}</b><span>在途运单</span>
               </div>
-              <div :class="{ on: detailKey === 'cars' }" @click="toggleDetail('cars')">
+              <div :class="{ on: detailKey === 'cars' }" @click="toggleDetail('cars')"
+                v-on="tip.hot(tipKpi('cars'))">
                 <b>{{ wb.taskCars }}</b><span>有任务车辆</span>
               </div>
-              <div :class="{ on: detailKey === 'done' }" @click="toggleDetail('done')">
+              <div :class="{ on: detailKey === 'done' }" @click="toggleDetail('done')"
+                v-on="tip.hot(tipKpi('done'))">
                 <b class="gn">{{ wb.todayDone }}</b><span>今日送达</span>
               </div>
-              <div :class="{ on: detailKey === 'ontime' }" @click="toggleDetail('ontime')">
+              <div :class="{ on: detailKey === 'ontime' }" @click="toggleDetail('ontime')"
+                v-on="tip.hot(tipKpi('ontime'))">
                 <b>{{ wb.onTimeRate }}%</b><span>准时率</span>
               </div>
             </div>
@@ -163,7 +169,7 @@
           </div>
 
           <section class="p chart">
-            <div class="p-h"><i></i><b>今日运单节奏</b>
+            <div class="p-h" v-on="tip.hot(tipRhythmSum())"><i></i><b>今日运单节奏</b>
               <div class="lg">
                 <span><i style="background:#FF3355"></i>发车</span>
                 <span><i style="background:#33D6FF"></i>到达</span>
@@ -177,9 +183,9 @@
                   <line x1="0" y1="90" x2="1000" y2="90"/>
                 </g>
                 <rect v-for="(b, i) in rhythm.depart" :key="'dp' + i" :x="b.x" :y="b.y"
-                  :width="b.w" :height="b.h" fill="rgba(255,51,85,.8)"/>
+                  :width="b.w" :height="b.h" fill="rgba(255,51,85,.8)" v-on="tip.hot(tipRhythm(i))"/>
                 <rect v-for="(b, i) in rhythm.arrive" :key="'ar' + i" :x="b.x" :y="b.y"
-                  :width="b.w" :height="b.h" fill="rgba(51,214,255,.6)"/>
+                  :width="b.w" :height="b.h" fill="rgba(51,214,255,.6)" v-on="tip.hot(tipRhythm(i))"/>
               </svg>
             </div>
             <div class="axis7" style="padding:0 20px">
@@ -203,18 +209,18 @@
 
           <template v-else>
             <section class="p" style="flex:0 0 288px">
-              <div class="p-h"><i></i><b>费用总览</b><em>{{ periodLabel }}</em></div>
-              <div class="big">
+              <div class="p-h" v-on="tip.hot(tipFeeTotal())"><i></i><b>费用总览</b><em>{{ periodLabel }}</em></div>
+              <div class="big" v-on="tip.hot(tipFeeTotal())">
                 <span class="cur">¥</span><span class="bn">{{ fmt(fee.total) }}</span>
               </div>
               <div class="sub">上报 {{ fee.count }} 笔 · 本月合计</div>
 
               <div class="mini4">
-                <div v-if="vis.canAudit"><b class="am">{{ feeStatus('待审核').count }}</b><span>待审核</span></div>
-                <div v-if="vis.canAudit"><b class="am">{{ feeStatus('审核中').count }}</b><span>审核中</span></div>
-                <div v-if="vis.canPay"><b class="cy">{{ feeStatus('待打款').count }}</b><span>待打款</span></div>
-                <div v-if="vis.canPay"><b class="gn">{{ feeStatus('已打款').count }}</b><span>已打款</span></div>
-                <div v-if="vis.canAudit"><b class="dm">{{ feeStatus('已驳回').count }}</b><span>已驳回</span></div>
+                <div v-if="vis.canAudit" v-on="tip.hot(tipFeeStatus('待审核'))"><b class="am">{{ feeStatus('待审核').count }}</b><span>待审核</span></div>
+                <div v-if="vis.canAudit" v-on="tip.hot(tipFeeStatus('审核中'))"><b class="am">{{ feeStatus('审核中').count }}</b><span>审核中</span></div>
+                <div v-if="vis.canPay" v-on="tip.hot(tipFeeStatus('待打款'))"><b class="cy">{{ feeStatus('待打款').count }}</b><span>待打款</span></div>
+                <div v-if="vis.canPay" v-on="tip.hot(tipFeeStatus('已打款'))"><b class="gn">{{ feeStatus('已打款').count }}</b><span>已打款</span></div>
+                <div v-if="vis.canAudit" v-on="tip.hot(tipFeeStatus('已驳回'))"><b class="dm">{{ feeStatus('已驳回').count }}</b><span>已驳回</span></div>
                 <div v-if="!vis.canAudit && !vis.canPay"><b>--</b><span>未授权</span></div>
               </div>
 
@@ -234,8 +240,8 @@
             </section>
 
             <section class="p" style="flex:0 0 252px">
-              <div class="p-h"><i></i><b>费用类型构成</b><em>BY TYPE</em></div>
-              <div class="rowbar" v-for="t in feeTypeBars" :key="t.key">
+              <div class="p-h" v-on="tip.hot(tipFeeTypeSum())"><i></i><b>费用类型构成</b><em>BY TYPE</em></div>
+              <div class="rowbar" v-for="t in feeTypeBars" :key="t.key" v-on="tip.hot(tipFeeType(t))">
                 <span class="lb">{{ t.label }}</span>
                 <span class="tk"><i :class="{ r: t.red }" :style="{ width: t.pct + '%' }"></i></span>
                 <span class="vl">{{ fmt(t.amount) }}</span>
@@ -248,9 +254,9 @@
             </section>
 
             <section class="p" style="flex:1">
-              <div class="p-h"><i></i><b>{{ vis.canAudit ? '审批流转' : '费用状态' }}</b><em>{{ periodLabel }}</em></div>
+              <div class="p-h" v-on="tip.hot(tipFunnelSum())"><i></i><b>{{ vis.canAudit ? '审批流转' : '费用状态' }}</b><em>{{ periodLabel }}</em></div>
               <div v-if="funnel.length" class="funnel">
-                <div v-for="f in funnel" :key="f.label" class="fn-row">
+                <div v-for="f in funnel" :key="f.label" class="fn-row" v-on="tip.hot(tipFunnel(f))">
                   <span class="fn-lb">{{ f.label }}</span>
                   <span class="fn-track">
                     <i class="fn-bar" :style="{ width: f.pct + '%', background: f.bg }">{{ f.count }}</i>
@@ -272,15 +278,20 @@
         当前缩放 {{ Math.round(scale * 100) }}% · 点此进入全屏（F11）
       </button>
     </div>
+
+    <!-- 悬停数据卡（所有板块共用一张） -->
+    <ScreenTip :tip="tip.tip" />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, onActivated, onDeactivated, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import ScreenTabs from '@/components/screen/ScreenTabs.vue'
+import ScreenTip from '@/components/screen/ScreenTip.vue'
+import { useScreenTip } from '@/utils/screenTip'
 import { ensureModuleFlags, ensureApprovalMode } from '@/utils/modules'
 import {
   screenScope, loadScreenVehicles, pullRealtime,
@@ -304,6 +315,8 @@ const clockText = ref('')
 const dateText = ref('')
 const linkText = ref('数据链路正常')
 const stageStyle = computed(() => ({ transform: `scale(${scale.value})` }))
+const rootRef = ref(null)
+const tip = useScreenTip()
 
 const view = ref('v1')
 const mapReady = ref(false)
@@ -336,7 +349,7 @@ const vis = reactive({
 })
 const periodLabel = ref('本月')
 
-const rhythm = reactive({ labels: [], depart: [], arrive: [] })
+const rhythm = reactive({ labels: [], depart: [], arrive: [], dep: [], arr: [] })
 
 /* 明细面板（4 个 KPI 共用） */
 const detailKey = ref('')
@@ -349,6 +362,7 @@ let map = null
 let AMapRef = null
 let overlays = []
 let tClock = null, tRefresh = null
+let lastDataAt = 0
 
 /* ============================================================
    工具
@@ -403,6 +417,254 @@ const funnel = computed(() => {
   }
   return list.map((x) => ({ ...x, pct: Math.max(8, Math.round((x.count / max) * 100)), bg: BG[x.label] }))
 })
+
+/* ============================================================
+   悬停数据卡内容
+   ============================================================ */
+const T = (k, v, c) => ({ k, v, c })
+const pctOfWb = (n) => (waybills.length ? ((n / waybills.length) * 100).toFixed(1) + '%' : '--')
+
+function tipOnTime() {
+  const done = wbList.ontime.length
+  const onTime = Math.round((wb.onTimeRate / 100) * done)
+  return {
+    title: '准时率', sub: `${wb.onTimeRate}%`,
+    rows: [
+      T('已完成运单', `${done} 单`),
+      T('准时', `${onTime} 单`, '#2BE08A'),
+      T('迟到', `${done - onTime} 单`, '#FF4D66'),
+    ],
+    foot: '口径：实际到达 ≤ 计划到达 记准时，只算「已完成」',
+  }
+}
+
+function tipWbKv(kind) {
+  if (kind === 'today') {
+    return {
+      title: '今日新增', sub: `${wb.todayCount} 单`,
+      rows: [T('今日新增', `${wb.todayCount} 单`, '#33D6FF'), T('当前未完成', `${wb.activeCount} 单`), T('今日送达', `${wb.todayDone} 单`, '#2BE08A')],
+      foot: '按 create_time 落在今天统计',
+    }
+  }
+  if (kind === 'active') {
+    return {
+      title: '当前未完成', sub: `${wb.activeCount} 单`,
+      rows: [T('涉及车辆', `${wb.taskCars} 辆`), T('待接单', `${wb.g.待接单} 单`, '#6B7F94'), T('在途', `${wb.g.已发车} 单`, '#33D6FF')],
+      foot: '不含已完成 / 已取消',
+    }
+  }
+  return {
+    title: '今日送达', sub: `${wb.todayDone} 单`,
+    rows: [T('今日完成', `${wb.todayDone} 单`, '#2BE08A'), T('准时率', `${wb.onTimeRate}%`)],
+    foot: '按 finish_time 落在今天统计',
+  }
+}
+
+function tipWbStatus(st) {
+  const n = wb.g[st] || 0
+  const desc = {
+    待接单: '含「待重新指派」',
+    装车中: '待装车 / 装车中 / 装车完成',
+    已发车: '在途运输中',
+    已到达: '已到达待完成',
+  }[st] || ''
+  return {
+    title: st, sub: `${n} 单`,
+    rows: [T('运单数', `${n} 单`, '#33D6FF'), T('占全部运单', pctOfWb(n))],
+    foot: desc,
+  }
+}
+
+function tipWbDay(i) {
+  const a = wb.trendNew[i] || 0
+  const b = wb.trendDone[i] || 0
+  return {
+    title: wb.dayLabels[i] || '--',
+    rows: [
+      T('新增', `${a} 单`, '#FF3355'),
+      T('完成', `${b} 单`, '#33D6FF'),
+      T('净增', `${a - b > 0 ? '+' : ''}${a - b} 单`),
+    ],
+    foot: '近 7 日 · 新增按创建时间、完成按完成时间',
+  }
+}
+
+function tipLane(l, i) {
+  return {
+    title: `${l.from} → ${l.to}`, sub: `第 ${i + 1} 名`,
+    rows: [
+      T('运单量', `${l.count} 单`, '#33D6FF'),
+      T('全部线路', `${wb.laneTotal} 条`),
+    ],
+    foot: '按装货地 → 卸货地文本分组，取单量前 5',
+  }
+}
+
+function tipKpi(k) {
+  if (k === 'active') {
+    return {
+      title: '在途运单', sub: `${wb.activeCount} 单`,
+      rows: [T('涉及车辆', `${wb.taskCars} 辆`), T('已发车', `${wb.g.已发车} 单`, '#33D6FF'), T('已到达', `${wb.g.已到达} 单`, '#2BE08A')],
+      foot: '点击展开逐单明细',
+    }
+  }
+  if (k === 'cars') {
+    return {
+      title: '有任务车辆', sub: `${wb.taskCars} 辆`,
+      rows: [T('口径', '有未完成运单'), T('在途运单', `${wb.activeCount} 单`)],
+      foot: '车牌取指派里 method=vehicle 的那辆',
+    }
+  }
+  if (k === 'done') {
+    return {
+      title: '今日送达', sub: `${wb.todayDone} 单`,
+      rows: [T('完成单量', `${wb.todayDone} 单`, '#2BE08A'), T('准时率', `${wb.onTimeRate}%`)],
+      foot: '点击展开今日送达明细',
+    }
+  }
+  return {
+    title: '准时率', sub: `${wb.onTimeRate}%`,
+    rows: [T('已完成', `${wbList.ontime.length} 单`), T('口径', '实际到达 ≤ 计划到达')],
+    foot: '点击展开逐单对比',
+  }
+}
+
+function tipRhythm(i) {
+  const h = 6 + i
+  const pad = (n) => String(n).padStart(2, '0')
+  return {
+    title: `${pad(h)}:00 – ${pad(h + 1)}:00`,
+    rows: [
+      T('发车', `${rhythm.dep[i] || 0} 单`, '#FF3355'),
+      T('到达', `${rhythm.arr[i] || 0} 单`, '#33D6FF'),
+    ],
+    foot: '今日运单 · 按发车 / 到达小时分布',
+  }
+}
+
+function tipFeeTotal() {
+  return {
+    title: '本月费用合计', sub: `${fee.count} 笔`,
+    rows: [
+      T('合计', `¥${fmt(fee.total)}`, '#FF3355'),
+      T('单均', fee.count ? `¥${fmt(Math.round(fee.total / fee.count))}` : '--'),
+      T('统计周期', periodLabel.value),
+    ],
+    foot: '来源 reports：费用上报 / 补贴 / 借款 / 违章',
+  }
+}
+
+function tipFeeStatus(s) {
+  const x = feeStatus(s)
+  return {
+    title: s, sub: `${x.count} 笔`,
+    rows: [
+      T('笔数', `${x.count} 笔`),
+      T('金额', `¥${fmt(x.amount)}`),
+      T('占总额', fee.total ? `${((x.amount / fee.total) * 100).toFixed(1)}%` : '--'),
+    ],
+    foot: s === '待审核' ? '等你或财务审核' : s === '待打款' ? '已审批，等待付款' : '',
+  }
+}
+
+function tipFeeType(t) {
+  return {
+    title: `费用类型 · ${t.label}`,
+    rows: [
+      T('金额', `¥${fmt(t.amount)}`, '#FF3355'),
+      T('笔数', `${t.count} 笔`),
+      T('占总额', fee.total ? `${((t.amount / fee.total) * 100).toFixed(1)}%` : '--'),
+    ],
+    foot: '类型取自费用上报的分类字段',
+  }
+}
+
+function tipFunnel(f) {
+  return {
+    title: f.label, sub: `${f.count} 笔`,
+    rows: [
+      T('笔数', `${f.count} 笔`),
+      T('金额', `¥${fmt(f.amount)}`),
+      T('相对最大环节', `${f.pct}%`),
+    ],
+    foot: vis.canAudit ? '只显示当前开关允许的审批环节' : '未开通审批，仅显示费用状态',
+  }
+}
+
+/* ---------- 面板标题栏汇总 ---------- */
+function tipWeekWb() {
+  const a = wb.trendNew.reduce((s, x) => s + (x || 0), 0)
+  const b = wb.trendDone.reduce((s, x) => s + (x || 0), 0)
+  return {
+    title: '近 7 日运单量', sub: `${wb.dayLabels.length} 天`,
+    rows: [
+      T('新增', `${a} 单`, '#FF3355'),
+      T('完成', `${b} 单`, '#33D6FF'),
+      T('净增', `${a - b > 0 ? '+' : ''}${a - b} 单`),
+    ],
+    foot: '悬停柱子看单日新增 / 完成',
+  }
+}
+
+function tipLaneTop() {
+  const top = wb.lanes[0]
+  return {
+    title: '线路 TOP5', sub: `共 ${wb.laneTotal} 条`,
+    rows: [
+      T('最热线路', top ? `${top.from} → ${top.to}` : '--'),
+      T('该线单量', top ? `${top.count} 单` : '--', '#33D6FF'),
+      T('常驻任务', `${wb.recurringGroups} 组`),
+    ],
+    foot: '按装货地 → 卸货地文本分组',
+  }
+}
+
+function tipRhythmSum() {
+  const d = rhythm.dep.reduce((s, x) => s + (x || 0), 0)
+  const a = rhythm.arr.reduce((s, x) => s + (x || 0), 0)
+  return {
+    title: '今日运单节奏',
+    rows: [
+      T('今日发车', `${d} 单`, '#FF3355'),
+      T('今日到达', `${a} 单`, '#33D6FF'),
+      T('统计时段', '06:00 – 20:00'),
+    ],
+    foot: '按发车 / 到达的小时分布',
+  }
+}
+
+function tipFeeTypeSum() {
+  return {
+    title: '费用类型构成', sub: `${feeTypeBars.value.length} 类`,
+    rows: feeTypeBars.value.slice(0, 3).map((t) => T(t.label, `¥${fmt(t.amount)}`, '#FF3355')),
+    foot: '按金额降序，悬停每行看笔数与占比',
+  }
+}
+
+function tipFunnelSum() {
+  return {
+    title: vis.canAudit ? '审批流转' : '费用状态', sub: `${fee.count} 笔`,
+    rows: funnel.value.slice(0, 4).map((f) => T(f.label, `${f.count} 笔`)),
+    foot: vis.canAudit ? `平均审批时长 ${fee.avgHours} h · 超 24h 未审 ${fee.staleCount} 笔` : '未开通审批流程',
+  }
+}
+
+/** 地图点位悬停 */
+function markerTip(plate, rt, e) {
+  const oe = e && (e.originEvent || e)
+  if (!oe || !rt) return
+  const v = vehicles.find((x) => x.plate === plate) || { plate }
+  tip.set(oe, {
+    title: plate,
+    sub: `${rt.status || '--'} · ${Math.round(rt.speed || 0)} km/h`,
+    rows: [
+      { k: '司机', v: v.driver || '未绑定' },
+      { k: '机构', v: v.org || '--' },
+      { k: '上报', v: rt.reportTime ? dayjs(rt.reportTime).format('MM-DD HH:mm') : '--' },
+    ],
+    foot: '点击点位看完整信息',
+  })
+}
 
 function colStyle(c) {
   if (!c || c.w === '1fr') return { flex: '1 1 0', minWidth: 0 }
@@ -487,16 +749,48 @@ function mkBars(data, color, offset) {
 /* ============================================================
    地图
    ============================================================ */
+/* ⭐ 初始视野 = 整个中国：进屏先看全国，数据到齐后再按实际线路/车辆缩放 */
+const MAP_HOME = {
+  zoom: 4,
+  center: [104.4, 35.2],
+  bounds: [[73.4, 18.0], [135.1, 53.6]],
+}
+let didChina = false
+let didFit = false
+
+function fitChina() {
+  if (!map || !AMapRef) return
+  try {
+    map.setBounds(new AMapRef.Bounds(MAP_HOME.bounds[0], MAP_HOME.bounds[1]), false, [16, 16, 16, 16])
+  } catch (e) {
+    try { map.setZoomAndCenter(MAP_HOME.zoom, MAP_HOME.center) } catch (e2) { /* 忽略 */ }
+  }
+}
+
+/** 在「全部可见」的前提下放到最大 */
+function fitOverlays(arr) {
+  if (!map || !AMapRef || !arr || !arr.length) return false
+  try {
+    map.setFitView(arr, false, [70, 50, 70, 50], 13)
+    return true
+  } catch (e) {
+    try { map.setFitView(arr); return true } catch (e2) { return false }
+  }
+}
+
 async function initMap() {
   try {
     AMapRef = await AMapLoader.load({ key: AMAP_KEY, version: '2.0', plugins: [] })
     map = new AMapRef.Map('fee-screen-map', {
-      zoom: 7, center: [112.3, 37.6],
+      zoom: MAP_HOME.zoom, center: MAP_HOME.center,
       mapStyle: 'amap://styles/darkblue',
       viewMode: '2D',
       features: ['bg', 'road', 'building'],
     })
     map.on('complete', () => {
+      /* 有图层就直接贴合，没有就先铺全国（didChina 防 setBounds 二次触发 complete 死循环） */
+      if (overlays.length && !didFit) didFit = fitOverlays(overlays)
+      else if (!didChina) { didChina = true; fitChina() }
       /* 图块刚 complete 时还会补绘一帧，留 260ms 再揭开，彻底防白闪 */
       setTimeout(() => { mapReady.value = true }, 260)
     })
@@ -576,9 +870,11 @@ function openVehicleInfo(v, rt) {
   infoWin.open(map, [rt.lng, rt.lat])
 }
 
-function renderView() {
+function renderView(opts = {}) {
   if (!map || !AMapRef) return
   clearOverlays()
+  /* 只在「首次出图 / 手动切视图」时贴合视野；60s 刷新不抢用户正在拖的地图 */
+  const wantFit = !!opts.fit || !didFit
 
   if (view.value === 'v1') {
     vehicles.forEach((v) => {
@@ -589,9 +885,12 @@ function renderView() {
         offset: new AMapRef.Pixel(-11, -11), title: v.plate,
       })
       mk.on('click', () => openVehicleInfo(v, rt))
+      mk.on('mouseover', (e) => markerTip(v.plate, rt, e))
+      mk.on('mouseout', () => tip.hide())
       overlays.push(mk)
     })
     if (overlays.length) map.add(overlays)
+    if (wantFit) didFit = fitOverlays(overlays)
     return
   }
 
@@ -616,9 +915,12 @@ function renderView() {
         offset: new AMapRef.Pixel(-11, -11), title: plate,
       })
       carMk.on('click', () => openVehicleInfo(vehicles.find((x) => x.plate === plate) || { plate }, rt))
+      carMk.on('mouseover', (e) => markerTip(plate, rt, e))
+      carMk.on('mouseout', () => tip.hide())
       overlays.push(carMk)
     })
     if (overlays.length) map.add(overlays)
+    if (wantFit) didFit = fitOverlays(overlays)
     return
   }
 
@@ -657,7 +959,7 @@ function renderView() {
   })
   if (overlays.length) {
     map.add(overlays)
-    try { map.setFitView(overlays, false, [80, 80, 80, 80]) } catch (e) { /* ignore */ }
+    if (wantFit) didFit = fitOverlays(overlays)
   }
 }
 
@@ -677,7 +979,8 @@ function singlePlate(w) {
 
 function switchView(k) {
   view.value = k
-  renderView()
+  didFit = false            /* 换视图要重新贴合新图层 */
+  renderView({ fit: true })
 }
 
 /* ============================================================
@@ -825,6 +1128,8 @@ function buildRhythm(dep, arr) {
   })
   rhythm.depart = mk(dep, 0)
   rhythm.arrive = mk(arr, slot * 0.45)
+  rhythm.dep = dep           /* 原始值留一份，悬停出数用 */
+  rhythm.arr = arr
   rhythm.labels = []
   for (let i = 0; i < n; i += 2) {
     rhythm.labels.push(`${String(6 + i).padStart(2, '0')}:00`)
@@ -873,12 +1178,28 @@ function tickClock() {
   dateText.value = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${wd}`
 }
 
-onMounted(async () => {
-  if (!allowed.value) return
-  fit()
-  window.addEventListener('resize', fit)
+function startTimers() {
+  if (tClock) return
   tickClock()
   tClock = setInterval(tickClock, 1000)
+  tRefresh = setInterval(async () => {
+    await refreshVehicles()
+    await loadWaybillData()
+    renderView()
+    lastDataAt = Date.now()
+  }, 60000)
+}
+
+function stopTimers() {
+  clearInterval(tClock); clearInterval(tRefresh)
+  tClock = tRefresh = null
+}
+
+onMounted(async () => {
+  if (!allowed.value) return
+  tip.bind(rootRef.value)
+  fit()
+  window.addEventListener('resize', fit)
 
   /* ⭐ 费用两把开关必须先就位，否则 vis 全是默认值 */
   try {
@@ -891,19 +1212,30 @@ onMounted(async () => {
   await initMap()
   await refreshVehicles()
   await loadWaybillData()
-  renderView()
+  renderView({ fit: true })
   await loadFeeData()
+  lastDataAt = Date.now()
 
-  tRefresh = setInterval(async () => {
-    await refreshVehicles()
-    await loadWaybillData()
-    renderView()
-  }, 60000)
+  startTimers()
 })
+
+/* keep-alive：切走暂停轮询，切回来 resize + 数据过期就补一次（地图实例保留，不重载） */
+onActivated(async () => {
+  if (!map) return
+  await nextTick()                       /* 等 DOM 挂回文档再量尺寸 */
+  try { map.resize() } catch (e) { /* 忽略 */ }
+  startTimers()
+  if (Date.now() - lastDataAt > 55000) {
+    refreshVehicles().then(() => loadWaybillData()).then(() => renderView()).catch(() => {})
+    lastDataAt = Date.now()
+  }
+})
+
+onDeactivated(() => { stopTimers() })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', fit)
-  clearInterval(tClock); clearInterval(tRefresh)
+  stopTimers()
   if (map) { map.destroy(); map = null }
 })
 </script>

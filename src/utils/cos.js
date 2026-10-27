@@ -17,12 +17,34 @@
 const COS_API =
   'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com/uploadPhoto'
 
+/** 桶名（报错文案里要指名道姓，方便照着去控制台加规则） */
+const COS_BUCKET = 'wuxian-fleet-1447716425'
+
+/**
+ * ⭐ 浏览器直传 COS 命中跨域时，fetch 只会抛 `TypeError: Failed to fetch`，
+ *    看不出是 CORS 还是网络。这里统一翻译成能照着修的提示。
+ *    判定依据：PUT + content-type 必然触发 OPTIONS 预检，
+ *    桶没配 CORS（或不含 PUT）就一定走到这里。
+ */
+function corsHint(action) {
+  console.warn('[COS] ' + action + '预检失败：桶 ' + COS_BUCKET + ' 未放行跨域。' +
+    '需在 COS 控制台加 CORS：来源 *、方法 PUT/GET/HEAD/POST、Allow-Headers *、Expose-Headers ETag')
+  return `${action}被浏览器拦截（Failed to fetch）：COS 桶未配置跨域。` +
+    '请到 COS 控制台 → 该桶 → 安全管理 → 跨域访问CORS，添加规则：' +
+    '来源 *、方法 PUT/GET/HEAD/POST、Allow-Headers *、Expose-Headers ETag'
+}
+
 async function post(body) {
-  const res = await fetch(COS_API, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  })
+  let res
+  try {
+    res = await fetch(COS_API, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  } catch (e) {
+    throw new Error('签名服务不可达（网络或跨域）：' + COS_API)
+  }
   if (!res.ok) throw new Error('签名服务返回 HTTP ' + res.status)
   const data = await res.json()
   if (!data || !data.ok) throw new Error((data && data.error) || '签名失败')
@@ -108,12 +130,19 @@ export async function signGetCached(keys, opts = {}) {
 
 /** 把文件 PUT 到 COS */
 export async function putToCos(url, file) {
-  const res = await fetch(url, {
-    method: 'PUT',
-    headers: { 'content-type': (file && file.type) || 'application/octet-stream' },
-    body: file,
-  })
+  let res
+  try {
+    res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'content-type': (file && file.type) || 'application/octet-stream' },
+      body: file,
+    })
+  } catch (e) {
+    /* 走不到 Response 就说明请求被浏览器拦了（预检失败 / CORS / 断网） */
+    throw new Error(corsHint('照片直传 COS '))
+  }
   if (!res.ok) throw new Error('上传返回 HTTP ' + res.status)
+  return res
 }
 
 /** 生成对象 key：目录 + 时间戳 + 随机串 + 扩展名 */

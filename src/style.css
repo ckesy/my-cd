@@ -360,3 +360,20 @@ code, pre {
 .v-info .vi-k{width:40px;color:#6E88A6;flex:0 0 auto}
 .v-info .vi-v{color:#C6D6E8;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .v-info .vi-ft{font-size:9.5px;color:#4E6885;margin-top:7px;letter-spacing:.3px}
+
+/* ============================================================
+   数据大屏 · 两块屏切换动画（车辆运行 ⇄ 运单费用）
+   ------------------------------------------------------------
+   两块屏都是 position:absolute 铺满主区，所以用「交叉淡化 + 微缩放」，
+   不做位移、不加 mode="out-in"，新屏淡入的同时旧屏淡出，中间不会露底色。
+   ============================================================ */
+.screen-swap-enter-active{
+  transition:opacity .28s ease, transform .34s cubic-bezier(.22,1,.36,1);
+  z-index:2;
+}
+.screen-swap-leave-active{
+  transition:opacity .2s ease, transform .24s ease-in;
+  z-index:1;
+}
+.screen-swap-enter-from{opacity:0;transform:scale(.986)}
+.screen-swap-leave-to{opacity:0;transform:scale(1.008)}

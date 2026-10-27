@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>全图监控 · 沉浸态 · 数据渲染稿</title>
+<script>
+  window._AMapSecurityConfig = { securityJsCode: '3885fd4bf9abda7eeda984c2bfe3c9de' };
+</script>
+<script src="https://webapi.amap.com/maps?v=2.0&key=273f5c474604b71906674aac159b8f45&plugin=AMap.Driving"></script>
+<style>
+  :root{
+    --ink:#E8EEFF; --ink2:#A9BBD8; --ink3:#8EA3C8; --ink4:#6B7F9F; --ink5:#5F7398;
+    --cyan:#22D3EE; --cyan-l:#67E8F9; --indigo:#6366F1; --indigo-d:#4338CA;
+    --panel:rgba(15,24,44,.80); --panel-strong:rgba(15,24,44,.93);
+    --line:rgba(129,140,248,.28); --line-strong:rgba(129,140,248,.38);
+    --num:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;height:100%;background:#0B1220;overflow:hidden;
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  }
+  .viewport{position:fixed;inset:0;display:grid;place-items:center;background:#0B1220;}
+  .stage{
+    width:1920px;height:1080px;padding:8px;background:#0B1220;
+    transform-origin:center center;
+  }
+  .map-stage{
+    position:relative;width:100%;height:100%;border-radius:10px;overflow:hidden;
+    background:#0B1220;isolation:isolate;
+  }
+  #map{
+    position:absolute;inset:0;
+    filter:invert(1) hue-rotate(188deg) saturate(.38) brightness(1.42) contrast(.95);
+  }
+  .tint{position:absolute;inset:0;pointer-events:none;z-index:1;background:rgba(18,40,78,.28);}
+  /* 四角压暗，让 HUD 浮起来 */
+  .vignette{
+    position:absolute;inset:0;pointer-events:none;z-index:2;
+    background:
+      radial-gradient(128% 96% at 50% 46%, rgba(6,10,20,0) 42%, rgba(6,10,20,.42) 82%, rgba(5,8,16,.62) 100%),
+      linear-gradient(180deg, rgba(8,12,24,.5) 0%, rgba(8,12,24,0) 16%, rgba(8,12,24,0) 76%, rgba(8,12,24,.55) 100%);
+  }
+  .route-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;overflow:visible;}
+
+  /* ================= 顶部 HUD ================= */
+  .focus-top{
+    position:absolute;left:16px;right:16px;top:14px;z-index:20;
+    display:flex;align-items:flex-start;gap:8px;
+  }
+  .fbtn{
+    height:32px;padding:0 12px;border-radius:9px;
+    border:1px solid var(--line-strong);background:rgba(15,24,44,.78);color:#DBE4FF;
+    font-size:11.5px;font-weight:700;font-family:inherit;
+    display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    flex:0 0 auto;
+  }
+  .fbtn.icon{padding:0 10px;}
+  .fbtn.icon.on{border-color:rgba(34,211,238,.6);color:#A5F3FC;}
+  .fbtn-txt{font-size:11px;}
+  .fbtn svg{flex:0 0 auto;}
+
+  .fplate{
+    height:32px;padding:0 13px;border-radius:9px;
+    background:rgba(15,24,44,.78);border:1px solid rgba(129,140,248,.3);
+    color:var(--ink);font-size:12px;font-weight:800;letter-spacing:.3px;
+    display:inline-flex;align-items:center;gap:7px;
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex:0 0 auto;
+  }
+  .fplate .live{
+    width:6px;height:6px;border-radius:50%;background:var(--cyan);
+    animation:livePulse 1.8s ease-in-out infinite;
+  }
+  @keyframes livePulse{
+    0%,100%{box-shadow:0 0 0 2px rgba(34,211,238,.18);}
+    50%{box-shadow:0 0 0 6px rgba(34,211,238,.04);}
+  }
+
+  .focus-metrics{margin-left:auto;display:flex;gap:7px;align-items:flex-start;}
+  .fmetric{
+    min-width:92px;padding:6px 12px;border-radius:10px;
+    background:rgba(15,24,44,.8);border:1px solid var(--line);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  }
+  .fmetric .k{display:block;font-size:9px;font-weight:700;color:var(--ink3);letter-spacing:.4px;}
+  .fmetric .v{
+    display:block;font-size:17px;font-weight:800;color:#F8FAFC;
+    font-variant-numeric:tabular-nums;line-height:1.3;letter-spacing:.2px;
+  }
+  .fmetric .v small{font-size:10px;color:var(--ink2);font-weight:700;margin-left:2px;}
+  .fmetric.accent .v{color:var(--cyan-l);text-shadow:0 0 18px rgba(34,211,238,.5);}
+
+  /* ================= 右侧任务进度 ================= */
+  .focus-side{
+    position:absolute;right:16px;top:144px;width:188px;padding:11px 13px;
+    border-radius:12px;background:var(--panel);border:1px solid var(--line);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:20;
+  }
+  .fs-title{font-size:10px;font-weight:800;color:var(--ink3);letter-spacing:.6px;margin-bottom:8px;}
+  .fs-timeline{position:relative;padding-left:13px;}
+  .fs-timeline::before{
+    content:'';position:absolute;left:3px;top:8px;bottom:8px;width:1px;
+    background:rgba(99,102,241,.3);
+  }
+  .fs-node{
+    position:relative;display:flex;align-items:baseline;gap:6px;padding:3px 0;
+    font-size:10.5px;color:#7C8DB0;
+  }
+  .fs-dot{
+    position:absolute;left:-13px;top:7px;width:6px;height:6px;border-radius:50%;
+    background:#33415C;border:1px solid rgba(129,140,248,.4);
+  }
+  .fs-node.done .fs-dot{background:var(--indigo);border-color:#818CF8;}
+  .fs-node.done .fs-label{color:var(--ink2);}
+  .fs-node.on .fs-dot{
+    background:var(--cyan);border-color:var(--cyan-l);
+    box-shadow:0 0 0 3px rgba(34,211,238,.18),0 0 12px rgba(34,211,238,.8);
+    animation:nodePulse 2.4s ease-in-out infinite;
+  }
+  @keyframes nodePulse{
+    0%,100%{box-shadow:0 0 0 3px rgba(34,211,238,.16),0 0 12px rgba(34,211,238,.7);}
+    50%{box-shadow:0 0 0 6px rgba(34,211,238,.06),0 0 18px rgba(34,211,238,.95);}
+  }
+  .fs-node.on .fs-label{color:var(--ink);font-weight:800;}
+  .fs-label{flex:1;min-width:0;}
+  .fs-time{font-size:9px;color:var(--ink5);font-variant-numeric:tabular-nums;}
+
+  /* ================= 底部进度带 ================= */
+  .focus-bottom{
+    position:absolute;left:16px;right:16px;bottom:14px;padding:11px 16px 13px;
+    border-radius:13px;background:var(--panel-strong);border:1px solid var(--line);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);z-index:20;
+  }
+  .fb-row{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    font-size:11px;color:var(--ink2);
+  }
+  .fb-row b{color:var(--ink);font-weight:800;}
+  .fb-row.sub{font-size:10px;color:var(--ink4);}
+  .fb-track{
+    position:relative;height:5px;border-radius:3px;background:rgba(99,102,241,.2);margin:9px 0 7px;
+  }
+  .fb-fill{
+    position:absolute;left:0;top:0;bottom:0;border-radius:3px;
+    background:linear-gradient(90deg,#4338CA,#22D3EE);
+    box-shadow:0 0 14px rgba(34,211,238,.5);
+  }
+  .fb-knob{
+    position:absolute;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;
+    background:#E0F2FE;box-shadow:0 0 0 3px rgba(34,211,238,.35),0 0 18px rgba(34,211,238,.85);
+  }
+  .fb-loc{display:inline-flex;align-items:center;gap:5px;}
+  .fb-loc i{
+    width:5px;height:5px;border-radius:50%;background:#34D399;
+    box-shadow:0 0 8px rgba(52,211,153,.9);display:inline-block;
+  }
+
+  /* ================= 地图标记 ================= */
+  .mk{position:absolute;z-index:10;transform:translate(-50%,-50%);pointer-events:none;}
+  .mk-veh{margin-top:-2px;}
+  .mk-veh .mv-plate{
+    position:absolute;left:50%;bottom:27px;transform:translateX(-50%);
+    font-size:11px;font-weight:800;color:#E0F2FE;white-space:nowrap;
+    letter-spacing:.4px;text-shadow:0 2px 10px rgba(0,0,0,.85),0 0 14px rgba(34,211,238,.35);
+  }
+  .mk-veh .mv-core{
+    position:relative;display:block;width:26px;height:26px;border-radius:50%;
+    background:rgba(34,211,238,.14);border:1.4px solid rgba(103,232,249,.85);
+    box-shadow:0 0 0 4px rgba(34,211,238,.08),0 0 20px rgba(34,211,238,.45);
+    display:grid;place-items:center;
+  }
+  .mk-veh .mv-core i{
+    width:9px;height:9px;border-radius:50%;background:#E0F2FE;
+    box-shadow:0 0 0 2.5px #0EA5E9 inset,0 0 12px rgba(224,242,254,.9);
+  }
+  .mk-veh .mv-pulse{
+    position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;
+    border-radius:50%;border:1px solid rgba(103,232,249,.55);
+    animation:vehPulse 2.6s cubic-bezier(.3,.7,.4,1) infinite;
+  }
+  @keyframes vehPulse{
+    0%{transform:scale(1);opacity:.65;}
+    70%{transform:scale(2.35);opacity:0;}
+    100%{transform:scale(2.35);opacity:0;}
+  }
+  .mk-endpoint{display:grid;place-items:center;}
+  .mk-start .ep-core{
+    width:16px;height:16px;border-radius:50%;background:#0B1220;
+    border:2.5px solid #818CF8;box-shadow:0 0 14px rgba(99,102,241,.6);
+    display:grid;place-items:center;
+  }
+  .mk-start .ep-core i{width:5.6px;height:5.6px;border-radius:50%;background:#A5B4FC;}
+  .mk-end .ep-core{
+    width:20px;height:20px;border-radius:50%;background:#0B1220;
+    border:2.8px solid var(--cyan);box-shadow:0 0 18px rgba(34,211,238,.7);
+    display:grid;place-items:center;
+  }
+  .mk-end .ep-core i{width:7.2px;height:7.2px;border-radius:50%;background:var(--cyan-l);}
+  .ep-label{
+    position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap;
+    font-size:10.5px;font-weight:700;letter-spacing:.2px;
+  }
+  .mk-start .ep-label{left:auto;right:13px;bottom:calc(100% + 3px);top:auto;transform:none;color:#C7D2FE;text-shadow:0 2px 8px rgba(0,0,0,.95),0 0 12px rgba(0,0,0,.8);}
+  .mk-end .ep-label{top:-27px;color:#A5F3FC;text-shadow:0 2px 8px rgba(0,0,0,.95),0 0 12px rgba(0,0,0,.8);}
+
+  /* 起点/终点小卡片（右侧聚合数据用） */
+  .chip-note{
+    position:absolute;left:16px;top:56px;z-index:20;display:flex;gap:7px;
+  }
+  .chip{
+    height:26px;padding:0 10px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;
+    background:rgba(15,24,44,.7);border:1px solid rgba(129,140,248,.22);
+    font-size:10.5px;color:var(--ink2);font-weight:700;
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  }
+  .chip b{color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums;}
+  .chip .d{width:5px;height:5px;border-radius:50%;background:#818CF8;}
+  .chip .d.cy{background:var(--cyan);}
+</style>
+</head>
+<body>
+<div class="viewport">
+  <div class="stage">
+    <div class="map-stage">
+      <div id="map"></div>
+      <div class="tint" id="tint"></div>
+      <div class="vignette"></div>
+
+      <svg class="route-svg" id="routeSvg">
+        <defs>
+          <linearGradient id="gradDone" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1200" y2="0">
+            <stop offset="0%" stop-color="#4338CA"/>
+            <stop offset="55%" stop-color="#6366F1"/>
+            <stop offset="100%" stop-color="#22D3EE"/>
+          </linearGradient>
+        </defs>
+        <!-- 整段光晕：宽线 + 低透明度，不用模糊滤镜 -->
+        <path id="pGlow" fill="none" stroke="#5B4FE8" stroke-opacity=".10" stroke-width="14"
+              stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- 未行驶：细实线、低对比 -->
+        <path id="pRest" fill="none" stroke="#7B86F0" stroke-opacity=".68" stroke-width="4"
+              stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- 已行驶：渐变主色 -->
+        <path id="pDone" fill="none" stroke="url(#gradDone)" stroke-width="4.2"
+              stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- 已行驶外侧微弱高光 -->
+        <path id="pDoneGlow" fill="none" stroke="#7DD3FC" stroke-opacity=".12" stroke-width="12"
+              stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- 缓慢流光：长间隔 -->
+        <path id="pFlow" fill="none" stroke="#EAFBFF" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" stroke-dasharray="44 396" opacity=".9" class="flow"/>
+      </svg>
+
+      <!-- 标记 -->
+      <div class="mk mk-start mk-endpoint" id="mkStart">
+        <span class="ep-core"><i></i></span>
+        <span class="ep-label" id="lbStart">起点 · 云南装货点</span>
+      </div>
+      <div class="mk mk-end mk-endpoint" id="mkEnd">
+        <span class="ep-core"><i></i></span>
+        <span class="ep-label" id="lbEnd">终点 · 厦门集货点</span>
+      </div>
+      <div class="mk mk-veh" id="mkVeh">
+        <span class="mv-pulse"></span>
+        <span class="mv-core"><i></i></span>
+        <span class="mv-plate" id="mvPlate">晋K03115D</span>
+      </div>
+
+      <!-- 顶部 -->
+      <div class="focus-top">
+        <button class="fbtn back">← 返回全图</button>
+        <div class="fplate">
+          <span class="live"></span>
+          <span id="fpText">晋K03115D · 已发车</span>
+        </div>
+        <div class="focus-metrics">
+          <div class="fmetric accent">
+            <span class="k">预计送达</span>
+            <span class="v" id="mEta">23:10</span>
+          </div>
+          <div class="fmetric">
+            <span class="k">剩余里程</span>
+            <span class="v"><span id="mRemain">1136</span><small>km</small></span>
+          </div>
+          <div class="fmetric">
+            <span class="k">剩余时间</span>
+            <span class="v" id="mRemainT">14h35m</span>
+          </div>
+          <button class="fbtn icon on" title="退出全屏">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>
+            </svg>
+            <span class="fbtn-txt">退出全屏</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 右侧 -->
+      <aside class="focus-side">
+        <div class="fs-title">任务进度</div>
+        <div class="fs-timeline" id="fsTimeline"></div>
+      </aside>
+
+      <!-- 底部 -->
+      <div class="focus-bottom">
+        <div class="fb-row">
+          <span><b id="fbPickup">云南装货点</b> <span id="fbDep">10-26 14:20 发车</span></span>
+          <span>已行 <b id="fbDone">823</b> / 计划 <b id="fbPlan">1959.44</b> km</span>
+          <span><b id="fbDelivery">厦门集货点</b> 预计 <span id="fbEta">10-28 23:10</span></span>
+        </div>
+        <div class="fb-track">
+          <div class="fb-fill" id="fbFill" style="width:42%"></div>
+          <div class="fb-knob" id="fbKnob" style="left:42%"></div>
+        </div>
+        <div class="fb-row sub">
+          <span class="fb-loc"><i></i>定位 <span id="fbLocAt">08:35:12</span> 上传 · <span id="fbSpeed">68</span> km/h</span>
+          <span>进度 <span id="fbPct">42</span>% · 剩余 <span id="fbRest">1136</span> km · 预计 <span id="fbEta2">10-28 23:10</span> 送达</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   数据：改这里就能换一单
+   ============================================================ */
+const DATA = {
+  plate: '晋K03115D',
+  statusLabel: '已发车',
+  pickupName: '云南装货点',
+  deliveryName: '厦门集货点',
+  // 装货点（昆明·官渡）/ 卸货点（厦门·海沧）
+  start: [102.7549, 24.9750],
+  end:   [118.0320, 24.4810],
+  // 途经点（真实路径规划失败时的兜底路径）
+  via: [
+    [103.7966, 25.4900], [104.9003, 25.0899], [106.6163, 23.9022],
+    [107.5521, 24.3400], [109.4157, 24.3140], [111.5520, 24.4040],
+    [111.2790, 23.4770], [112.0440, 22.9310], [113.4000, 23.1300],
+    [114.7030, 23.7430], [116.1220, 24.2880], [117.6470, 24.5130]
+  ],
+  planKm: 1959.44,
+  traveledKm: 823,
+  pct: 42,
+  speed: 68,
+  etaFull: '10-28 23:10',
+  etaShort: '23:10',
+  remainText: '14h35m',
+  depText: '10-26 14:20 发车',
+  locAt: '08:35:12',
+  nodes: [
+    { label: '接单',    time: '10-26 13:02', state: 'done' },
+    { label: '已发车',  time: '10-26 14:20', state: 'on'   },
+    { label: '确认到达', time: '',            state: ''     },
+    { label: '完成运单', time: '',            state: ''     }
+  ]
+};
+
+/* 文本注入 */
+const $ = (s) => document.querySelector(s);
+const remainKm = Math.round(DATA.planKm - DATA.traveledKm);
+$('#fpText').textContent = `${DATA.plate} · ${DATA.statusLabel}`;
+$('#mvPlate').textContent = DATA.plate;
+$('#lbStart').textContent = `起点 · ${DATA.pickupName}`;
+$('#lbEnd').textContent = `终点 · ${DATA.deliveryName}`;
+$('#mEta').textContent = DATA.etaShort;
+$('#mRemain').textContent = remainKm;
+$('#mRemainT').textContent = DATA.remainText;
+$('#fbPickup').textContent = DATA.pickupName;
+$('#fbDelivery').textContent = DATA.deliveryName;
+$('#fbDep').textContent = DATA.depText;
+$('#fbDone').textContent = Math.round(DATA.traveledKm);
+$('#fbPlan').textContent = DATA.planKm.toFixed(2);
+$('#fbEta').textContent = DATA.etaFull;
+$('#fbEta2').textContent = DATA.etaFull;
+$('#fbLocAt').textContent = DATA.locAt;
+$('#fbSpeed').textContent = DATA.speed;
+$('#fbPct').textContent = DATA.pct;
+$('#fbRest').textContent = remainKm;
+$('#fbFill').style.width = DATA.pct + '%';
+$('#fbKnob').style.left = DATA.pct + '%';
+
+$('#fsTimeline').innerHTML = DATA.nodes.map(n => `
+  <div class="fs-node ${n.state}">
+    <span class="fs-dot"></span>
+    <span class="fs-label">${n.label}</span>
+    <span class="fs-time">${n.time || ''}</span>
+  </div>`).join('');
+
+/* ============================================================
+   适配：1920×1080 等比缩放
+   ============================================================ */
+function fitStage() {
+  const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+  document.querySelector('.stage').style.transform = `scale(${s})`;
+  const q = new URLSearchParams(location.search);
+  if (q.get('flt')) document.getElementById('map').style.filter = q.get('flt');
+  if (q.get('ov')) document.getElementById('tint').style.background = q.get('ov');
+  if (q.get('ov') === 'none') document.getElementById('tint').style.display = 'none';
+}
+fitStage();
+window.addEventListener('resize', fitStage);
+
+/* ============================================================
+   地图
+   ============================================================ */
+let map, routePts = [];   // [{lng,lat,x,y}] 像素坐标
+let ready = false;
+
+function initMap() {
+  const qs = new URLSearchParams(location.search);
+  const style = qs.get('style') || 'amap://styles/fresh';
+  map = new AMap.Map('map', {
+    zoom: 7.15,
+    center: [110.35, 25.35],
+    mapStyle: style,
+    viewMode: '2D',
+    dragEnable: false,
+    zoomEnable: false,
+    doubleClickZoom: false,
+    scrollWheel: false,
+    keyboardEnable: false,
+    features: ['bg', 'road', 'point']
+  });
+
+  map.on('complete', () => {
+    if (!routePts.length) buildRoute();
+  });
+}
+
+/* 路径规划（跨省长途可能失败 → 用途经点兜底） */
+function buildRoute() {
+  const fallback = () => setRoute([DATA.start, ...DATA.via, DATA.end]);
+  if (!window.AMap || !AMap.Driving) { fallback(); return; }
+
+  const driving = new AMap.Driving({ policy: AMap.DrivingPolicy.LEAST_TIME, hideMarkers: true });
+  driving.search(
+    new AMap.LngLat(DATA.start[0], DATA.start[1]),
+    new AMap.LngLat(DATA.end[0], DATA.end[1]),
+    (status, result) => {
+      let pts = null;
+      try {
+        if (status === 'complete' && result.routes && result.routes[0]) {
+          pts = [];
+          result.routes[0].steps.forEach(step => {
+            (step.path || []).forEach(p => pts.push([p.lng, p.lat]));
+          });
+        }
+      } catch (e) { pts = null; }
+      if (pts && pts.length > 20) setRoute(pts); else fallback();
+    }
+  );
+}
+
+/* 用像素坐标串起路径，并在 pct 处切分 */
+function setRoute(llList) {
+  const pts = llList.map(([lng, lat]) => {
+    const px = map.lngLatToContainer(new AMap.LngLat(lng, lat));
+    return { lng, lat, x: px.x, y: px.y };
+  }).filter(p => isFinite(p.x) && isFinite(p.y));
+
+  if (pts.length < 2) return;
+
+  // 累积长度
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) {
+    cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+  }
+  const total = cum[cum.length - 1];
+  const target = total * (DATA.pct / 100);
+
+  // 找切分点
+  let k = 1;
+  while (k < cum.length && cum[k] < target) k++;
+  const segLen = cum[k] - cum[k - 1] || 1;
+  const r = (target - cum[k - 1]) / segLen;
+  const cut = {
+    x: pts[k - 1].x + (pts[k].x - pts[k - 1].x) * r,
+    y: pts[k - 1].y + (pts[k].y - pts[k - 1].y) * r
+  };
+
+  const donePts = pts.slice(0, k).concat([cut]);
+  const restPts = [cut].concat(pts.slice(k));
+
+  const d = (arr) => arr.map((p, i) => (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join(' ');
+
+  const dDone = d(donePts);
+  const dRest = d(restPts);
+  const dAll = d(pts);
+
+  $('#pGlow').setAttribute('d', dAll);
+  $('#pRest').setAttribute('d', dRest);
+  $('#pDone').setAttribute('d', dDone);
+  $('#pDoneGlow').setAttribute('d', dDone);
+  $('#pFlow').setAttribute('d', dAll);
+
+  // 渐变沿整条路径的包围盒铺开
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  const g = $('#gradDone');
+  g.setAttribute('x1', Math.min(...xs)); g.setAttribute('y1', Math.min(...ys));
+  g.setAttribute('x2', Math.max(...xs)); g.setAttribute('y2', Math.max(...ys));
+
+  // 标记定位
+  const place = (el, p) => { el.style.left = p.x + 'px'; el.style.top = p.y + 'px'; };
+  place($('#mkStart'), pts[0]);
+  place($('#mkEnd'), pts[pts.length - 1]);
+  place($('#mkVeh'), cut);
+
+  routePts = pts;
+  ready = true;
+}
+
+/* 地图还没 ready 时的兜底：不断重试直到成功 */
+let tries = 0;
+const timer = setInterval(() => {
+  tries++;
+  if (map && ready && tries > 6) { clearInterval(timer); return; }
+  if (map && !ready) buildRouteRetry();
+  if (tries > 40) clearInterval(timer);
+}, 900);
+
+let retrying = false;
+function buildRouteRetry() {
+  if (retrying) return;
+  retrying = true;
+  setTimeout(() => { retrying = false; buildRoute(); }, 0);
+}
+
+/* 启动 */
+if (window.AMap && AMap.Map) {
+  initMap();
+} else {
+  window.addEventListener('load', () => { if (window.AMap) initMap(); });
+}
+</script>
+</body>
+</html>

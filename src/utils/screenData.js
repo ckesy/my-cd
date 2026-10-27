@@ -89,9 +89,13 @@ export function normalizeRealtime(rt) {
 
 /**
  * 批量拉实时定位
- * ⭐ 逐车一个 HTTP，必须限流：默认 6 并发，单台 8s 超时，失败的车辆返回 null 跳过
+ * ⭐ 逐车一个 HTTP，必须限流：默认 12 并发，单台 8s 超时，失败的车辆返回 null 跳过
+ * ⭐ onVehicle(plate, rt, v, failed)：每台车返回即回调一次 —— 大屏用它「边到边画点」，
+ *    不再等整批跑完才渲染（30 台车时能省掉好几秒的空白等待）。
+ *    failed=true 表示请求本身失败（网络/超时），与「接口正常但今天没数据」要分开对待：
+ *    前者保留上一轮结果，后者必须让车掉成离线。
  */
-export async function pullRealtime(vehicles, { concurrency = 6, onProgress } = {}) {
+export async function pullRealtime(vehicles, { concurrency = 12, onProgress, onVehicle } = {}) {
   const list = (vehicles || []).filter((v) => v && v.vin)
   const out = new Map()
   let cursor = 0
@@ -101,15 +105,21 @@ export async function pullRealtime(vehicles, { concurrency = 6, onProgress } = {
     while (cursor < list.length) {
       const i = cursor++
       const v = list[i]
+      let norm = null
+      let failed = false
       try {
         const rt = await fetchRealtime(v.vin, v.plate)
-        out.set(v.plate, rt ? normalizeRealtime(rt) : null)
+        norm = rt ? normalizeRealtime(rt) : null
       } catch (e) {
-        out.set(v.plate, null)
-      } finally {
-        done++
-        if (onProgress) onProgress(done, list.length)
+        norm = null
+        failed = true
       }
+      out.set(v.plate, norm)
+      done++
+      if (onVehicle) {
+        try { onVehicle(v.plate, norm, v, failed) } catch (e) { /* 单台渲染异常不能拖垮整批 */ }
+      }
+      if (onProgress) onProgress(done, list.length)
     }
   }
 
@@ -145,6 +155,7 @@ export function summarizeRealtime(vehicles, rtMap) {
    ============================================================ */
 
 const MILE_TTL = 5 * 60 * 1000
+const MILE_TIMEOUT = 12000
 const mileCache = new Map() // vin|date -> { km, at }
 
 async function fetchDayMileage(vin, dateStr) {
@@ -159,10 +170,11 @@ async function fetchDayMileage(vin, dateStr) {
     endTime: `${dateStr} 23:59:59`,
   })
   const ac = new AbortController()
-  const timer = setTimeout(() => ac.abort(), 20000)
+  const timer = setTimeout(() => ac.abort(), MILE_TIMEOUT)
   try {
     const res = await fetch(`${DONGFENG_TRACK_URL}?${params.toString()}`, { signal: ac.signal })
-    if (!res.ok) return null
+    /* ⭐ 失败也要落缓存（值 null）：否则每轮刷新都会重打一遍超时的车 */
+    if (!res.ok) { mileCache.set(key, { km: null, at: Date.now() }); return null }
     const json = await res.json()
     if (json.code !== 1 || !Array.isArray(json.data) || json.data.length < 2) {
       mileCache.set(key, { km: null, at: Date.now() })
@@ -171,7 +183,7 @@ async function fetchDayMileage(vin, dateStr) {
     const ms = json.data
       .map((p) => parseFloat(p.mileage))
       .filter((n) => Number.isFinite(n))
-    if (ms.length < 2) return null
+    if (ms.length < 2) { mileCache.set(key, { km: null, at: Date.now() }); return null }
     const km = (Math.max(...ms) - Math.min(...ms)) / 1000
     /* 里程表跳变（换表/异常）兜底：单日 > 2000km 视为脏数据 */
     const val = km > 0 && km < 2000 ? Math.round(km * 10) / 10 : null
@@ -186,14 +198,19 @@ async function fetchDayMileage(vin, dateStr) {
 
 /**
  * 批量算今日里程
- * ⭐ 只跑「在线」的车（离线车今天大概率没出车，白等 20s 超时不值）
+ * ⭐ 定位还没回来时不再空过滤（旧逻辑会返回空、白跑一轮）：
+ *    只要「没有明确离线」就先算，离线车由缓存/快速返回兜底
+ * ⭐ 并发 8：50 台车 ≈ 6 轮，比原来 5 并发快近一倍
  */
-export async function pullTodayMileage(vehicles, rtMap, { concurrency = 5, dateStr } = {}) {
+export async function pullTodayMileage(vehicles, rtMap, { concurrency = 8, dateStr } = {}) {
   const day = dateStr || dayjs().format('YYYY-MM-DD')
+  const hasRt = rtMap && rtMap.size
   const targets = (vehicles || []).filter((v) => {
     if (!v.vin) return false
+    if (!hasRt) return true
     const rt = rtMap.get(v.plate)
-    return rt && rt.status !== '离线'
+    if (rt === undefined) return true
+    return !!rt && rt.status !== '离线'
   })
 
   const rows = []
