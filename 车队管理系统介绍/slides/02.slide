@@ -1,0 +1,66 @@
+<Slide style={{ width: 1280, height: 720, background: '#FFFFFF', padding: '40px 64px 24px 64px', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 78, flexDirection: 'row', alignItems: 'flex-start' }}>
+        <Box style={{ width: 4, height: 30, background: '#C8102E', marginTop: 4 }} />
+        <Box style={{ marginLeft: 14, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#C8102E', fontWeight: 700, letterSpacing: 2 }}>01　平台是什么</Text>
+            <Text style={{ fontSize: 34, color: '#111827', fontWeight: 700, lineHeight: 1.2, marginTop: 6 }}>一个平台，三本账</Text>
+        </Box>
+        <Box style={{ flex: 1 }} />
+        <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 34 }}>车 · 单 · 钱，同一份数据</Text>
+    </Box>
+
+    {/* B 内容区 */}
+    <Box style={{ flex: 1, flexDirection: 'column', paddingTop: 10 }}>
+        <Text style={{ fontSize: 16, color: '#374151', lineHeight: 1.7, width: 1010 }}>
+            车队管不好的三件事，说到底就是三句话：<Text style={{ color: '#C8102E', fontWeight: 700 }}>车不知道在哪、单不知道走到哪、钱不知道花在哪。</Text><br />
+            平台把这三件事放到同一张桌上——管车的、管单的、管钱的是同一份记录。
+        </Text>
+
+        <Box style={{ flexDirection: 'row', gap: 20, marginTop: 24, flex: 1 }}>
+            {[
+                { k: '车', t: '看得见', d: '一台车从买到用到修，一条记录跟到底。', items: ['车辆档案：车牌、司机、所属分公司', '保养与年检到期，提前提醒', '电耗、里程、驾驶行为排得上名'], m: '在管 24 台', m2: '出车率 81%' },
+                { k: '单', t: '管得住', d: '建单到签收，九个状态自己往前走。', items: ['建单派车：指派到车、到人', '司机手机接单，装车发车到场打卡', '谁在什么时候做了什么，都有时间'], m: '9 种状态', m2: '10 步闭环' },
+                { k: '钱', t: '算得清', d: '一句话对上"这趟到底赚没赚"。', items: ['费用上报必须带凭证照片', '按金额分级审批，审过才能打款', '台账自动汇总，按车按人随查'], m: '一笔一凭证', m2: '零纸质单' }
+            ].map((c, i) => (
+                <Box key={i} style={{ flex: 1, background: '#F4F5F7', borderRadius: 6, padding: '26px 26px 24px 26px', flexDirection: 'column' }}>
+                    <Box style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <Box style={{ width: 46, height: 46, borderRadius: 4, background: '#C8102E', justifyContent: 'center', alignItems: 'center' }}>
+                            <Text style={{ fontSize: 24, color: '#FFFFFF', fontWeight: 800 }}>{c.k}</Text>
+                        </Box>
+                        <Text style={{ fontSize: 21, color: '#111827', fontWeight: 700, letterSpacing: 1 }}>{c.t}</Text>
+                    </Box>
+                    <Text style={{ fontSize: 14.5, color: '#111827', fontWeight: 600, lineHeight: 1.7, marginTop: 18 }}>{c.d}</Text>
+                    <Box style={{ flexDirection: 'column', gap: 9, marginTop: 12 }}>
+                        {c.items.map((it, j) => (
+                            <Box key={j} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                                <Box style={{ width: 5, height: 5, background: '#C8102E', marginTop: 9 }} />
+                                <Text style={{ fontSize: 13.5, color: '#4B5563', lineHeight: 1.6, width: 300 }}>{it}</Text>
+                            </Box>
+                        ))}
+                    </Box>
+                    <Box style={{ flex: 1 }} />
+                    <Box style={{ flexDirection: 'row', gap: 8, marginTop: 18 }}>
+                        <Text style={{ fontSize: 12, color: '#111827', fontWeight: 700, background: '#FFFFFF', padding: '6px 12px', borderRadius: 3 }}>{c.m}</Text>
+                        <Text style={{ fontSize: 12, color: '#111827', fontWeight: 700, background: '#FFFFFF', padding: '6px 12px', borderRadius: 3 }}>{c.m2}</Text>
+                    </Box>
+                </Box>
+            ))}
+        </Box>
+
+        {/* 结论条 */}
+        <Box style={{ marginTop: 22, flexDirection: 'row', alignItems: 'center', background: '#111827', borderRadius: 4, padding: '18px 26px' }}>
+            <Box style={{ width: 3, height: 20, background: '#C8102E', marginRight: 16 }} />
+            <Text style={{ fontSize: 15.5, color: '#F3F4F6', lineHeight: 1.6 }}>
+                管理端负责<Text style={{ color: '#FF4D63', fontWeight: 700 }}>看数据和定规则</Text>，手机端负责<Text style={{ color: '#FF4D63', fontWeight: 700 }}>在现场把动作做掉</Text>——两端同一份账，不会出现"两套数"。
+            </Text>
+        </Box>
+    </Box>
+
+    {/* C 页脚 */}
+    <Box style={{ height: 24, flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={{ fontSize: 12, color: '#9AA3AF' }}>车队一体化运营平台</Text>
+        <Box style={{ flex: 1 }} />
+        <Text style={{ fontSize: 12, color: '#9AA3AF' }}>02 / 14</Text>
+    </Box>
+</Slide>

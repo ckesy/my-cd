@@ -12,6 +12,17 @@ const routes = [
     name: 'Dashboard',
     component: () => import('../views/Dashboard.vue'),
   },
+  /* ⭐ 数据大屏（沉浸模式：Dashboard 隐藏侧边栏/顶栏，见 isScreenRoute） */
+  {
+    path: '/screen/fleet',
+    name: 'FleetScreen',
+    component: () => import('../views/Dashboard.vue'),
+  },
+  {
+    path: '/screen/fee',
+    name: 'FeeScreen',
+    component: () => import('../views/Dashboard.vue'),
+  },
   {
     path: '/fullmap',
     name: 'FullMap',

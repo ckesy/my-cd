@@ -1,0 +1,48 @@
+<Slide style={{ width: 1280, height: 720, background: 'linear-gradient(135deg, #111827 0%, #1E2635 100%)', padding: '0px', position: 'relative', overflow: 'hidden' }}>
+    {/* 右侧装饰：细环 + 点 */}
+    <Box style={{ position: 'absolute', right: 24, top: 62, width: 550, height: 550, borderRadius: '50%', border: '1px solid rgba(200,16,46,0.50)' }} />
+    <Box style={{ position: 'absolute', right: 149, top: 187, width: 300, height: 300, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.12)' }} />
+    <Box style={{ position: 'absolute', right: 262, top: 300, width: 82, height: 82, borderRadius: '50%', background: 'rgba(200,16,46,0.18)' }} />
+    <Box style={{ position: 'absolute', right: 298, top: 336, width: 10, height: 10, borderRadius: '50%', background: '#C8102E' }} />
+
+    {/* 左侧文字 */}
+    <Box style={{ position: 'absolute', left: 84, top: 118, width: 700, flexDirection: 'column' }}>
+        <Box style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 26 }}>
+            <Box style={{ width: 28, height: 3, background: '#C8102E' }} />
+            <Text style={{ fontSize: 13, color: '#E5E7EB', fontWeight: 700, letterSpacing: 3 }}>东风车队 · 运营管理</Text>
+        </Box>
+
+        <Text style={{ fontSize: 66, color: '#FFFFFF', fontWeight: 800, lineHeight: 1.14, letterSpacing: 1 }}>
+            车队一体化<Text style={{ fontSize: 66, color: '#FF4D63', fontWeight: 800, lineHeight: 1.14 }}>运营</Text>平台
+        </Text>
+
+        <Text style={{ fontSize: 19, color: '#C3CAD6', fontWeight: 400, lineHeight: 1.9, marginTop: 26, width: 620 }}>
+            一辆车、一趟货、一笔钱，从派车到结算全程留痕。<br />
+            管理端负责看和定，手机端负责干和报——同一份数据，两头都对得上。
+        </Text>
+
+        <Box style={{ flexDirection: 'row', gap: 10, marginTop: 40 }}>
+            {['Web 管理端', '司机小程序', '财务小程序'].map((t, i) => (
+                <Box key={i} style={{ padding: '9px 18px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(255,255,255,0.05)' }}>
+                    <Text style={{ fontSize: 13, color: '#E5E7EB', fontWeight: 600, letterSpacing: 1 }}>{t}</Text>
+                </Box>
+            ))}
+        </Box>
+    </Box>
+
+    {/* 底部信息 */}
+    <Box style={{ position: 'absolute', left: 84, bottom: 52, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <Box style={{ width: 40, height: 1, background: 'rgba(255,255,255,0.35)' }} />
+        <Text style={{ fontSize: 12.5, color: '#9AA3AF', letterSpacing: 1 }}>业务介绍与推广 · 2026.10</Text>
+    </Box>
+
+    {/* 右下角三个数 */}
+    <Box style={{ position: 'absolute', right: 64, bottom: 44, flexDirection: 'row', alignItems: 'flex-end', gap: 26 }}>
+        {[['3', '端同源'], ['9', '种运单状态'], ['10', '步全流程闭环']].map((it, i) => (
+            <Box key={i} style={{ flexDirection: 'column', alignItems: 'center' }}>
+                <Text style={{ fontSize: 30, color: '#FFFFFF', fontWeight: 800, lineHeight: 1.0 }}>{it[0]}</Text>
+                <Text style={{ fontSize: 11.5, color: '#9AA3AF', marginTop: 8, letterSpacing: 1 }}>{it[1]}</Text>
+            </Box>
+        ))}
+    </Box>
+</Slide>

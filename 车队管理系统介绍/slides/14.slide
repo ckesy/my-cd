@@ -1,0 +1,57 @@
+<Slide style={{ width: 1280, height: 720, background: 'linear-gradient(135deg, #111827 0%, #1E2635 100%)', padding: '0px', position: 'relative', overflow: 'hidden' }}>
+    <Box style={{ position: 'absolute', right: 60, top: 70, width: 430, height: 430, borderRadius: '50%', border: '1px solid rgba(200,16,46,0.35)' }} />
+    <Box style={{ position: 'absolute', right: 165, top: 175, width: 220, height: 220, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.09)' }} />
+
+    <Box style={{ position: 'absolute', left: 84, top: 196, width: 780, flexDirection: 'column' }}>
+        <Box style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+            <Box style={{ width: 28, height: 3, background: '#C8102E' }} />
+            <Text style={{ fontSize: 12.5, color: '#E5E7EB', fontWeight: 700, letterSpacing: 3 }}>怎 么 落 地</Text>
+        </Box>
+        <Text style={{ fontSize: 58, color: '#FFFFFF', fontWeight: 800, lineHeight: 1.18, letterSpacing: 1 }}>
+            让每一趟车，<Text style={{ fontSize: 58, color: '#FF4D63', fontWeight: 800 }}>都算得清。</Text>
+        </Text>
+
+        <Box style={{ flexDirection: 'row', gap: 18, marginTop: 48 }}>
+            {[['①', '挑一条线试跑两周', '先跑一条常跑的线，把单、车、钱跑通'], ['②', '把台账搬上来', '运价、客户、货物先录，报表才有底'], ['③', '按角色开账号', '调度、司机、财务各开各的，跑顺再铺']].map((it, i) => (
+                <Box key={i} style={{ width: 244, flexDirection: 'column' }}>
+                    <Text style={{ fontSize: 20, color: '#FF4D63', fontWeight: 800 }}>{it[0]}</Text>
+                    <Text style={{ fontSize: 14.5, color: '#FFFFFF', fontWeight: 700, marginTop: 8 }}>{it[1]}</Text>
+                    <Text style={{ fontSize: 11.5, color: '#9AA3AF', lineHeight: 1.7, marginTop: 6 }}>{it[2]}</Text>
+                </Box>
+            ))}
+        </Box>
+
+        <Box style={{ width: 720, height: 1, background: 'rgba(255,255,255,0.14)', marginTop: 58 }} />
+        <Box style={{ flexDirection: 'row', alignItems: 'baseline', gap: 12, marginTop: 24 }}>
+            <Text style={{ fontSize: 30, color: '#FFFFFF', fontWeight: 800, letterSpacing: 1 }}>两周</Text>
+            <Text style={{ fontSize: 13, color: '#9AA3AF' }}>先跑一条线，两周就能看出差别——单子清不清、账对不对、车在哪一眼能不能看到。</Text>
+        </Box>
+
+        <Box style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 22 }}>
+            <Box style={{ background: '#C8102E', borderRadius: 3, padding: '12px 22px' }}>
+                <Text style={{ fontSize: 14, color: '#FFFFFF', fontWeight: 700, letterSpacing: 1 }}>下一步 · 约一次现场演示</Text>
+            </Box>
+            <Text style={{ fontSize: 12, color: '#9AA3AF' }}>30 分钟，从建单到打款走一遍，看完再定</Text>
+        </Box>
+    </Box>
+
+    <Box style={{ position: 'absolute', right: 76, top: 330, width: 300, flexDirection: 'column', gap: 18 }}>
+        {[['Web 管理端', '电脑上看全局：运单、在途、报表、车务'], ['司机小程序', '手机上报和打卡：接单、装车、发车、到达'], ['财务小程序', '手机审批和打款：待办、审批、台账']].map((it, i) => (
+            <Box key={i} style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
+                <Text style={{ fontSize: 15, color: '#FFFFFF', fontWeight: 700, letterSpacing: 1 }}>{it[0]}</Text>
+                <Text style={{ fontSize: 11.5, color: '#9AA3AF', marginTop: 4, textAlign: 'right' }}>{it[1]}</Text>
+                <Box style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.12)', marginTop: 14 }} />
+            </Box>
+        ))}
+    </Box>
+
+    <Box style={{ position: 'absolute', left: 84, bottom: 54, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <Box style={{ width: 40, height: 1, background: 'rgba(255,255,255,0.35)' }} />
+        <Text style={{ fontSize: 12.5, color: '#9AA3AF', letterSpacing: 1 }}>欢迎现场看演示 · 车队一体化运营平台</Text>
+    </Box>
+
+    <Box style={{ position: 'absolute', right: 64, bottom: 50, flexDirection: 'column', alignItems: 'flex-end' }}>
+        <Text style={{ fontSize: 12, color: '#9AA3AF', letterSpacing: 1 }}>谢谢</Text>
+        <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>14 / 14</Text>
+    </Box>
+</Slide>

@@ -438,6 +438,39 @@ const syncFromVehiclesToDrivers = async () => {
   } catch (e) { console.error(e) }
 }
 
+/* ⭐⭐ 只把「车辆本体列」写给 vehicles
+   editFormData 来自宽表视图 v_vehicle_export（40 列 = 车辆 + 6 类证件），
+   整包 spread 会把 driving_expire / sy_end 这类证件列当成 vehicles 的列，
+   PostgREST 直接 42703：
+     Could not find the 'driving_expire' column of 'vehicles' in the schema cache
+   证件字段本来就走 certForm + upsertCert 写 vehicle_certs，不该进这张表。 */
+const VEHICLE_FIELD_SET = new Set(
+  VEHICLE_COLUMNS.filter(c => c.target === 'vehicle').map(c => c.col)
+)
+const pickVehicleFields = (src) => {
+  const out = {}
+  Object.keys(src || {}).forEach((k) => {
+    if (VEHICLE_FIELD_SET.has(k)) out[k] = src[k]
+  })
+  return out
+}
+
+/* 兜底：万一以后又出现库里没有的列（视图加了、表没加），按报错剥掉再试，
+   不让一次 schema 不一致把整次保存打挂 */
+const updateVehicleTolerant = async (id, payload) => {
+  const data = { ...payload, updated_at: new Date().toISOString() }
+  for (let i = 0; i < 8; i++) {
+    const { error } = await supabase.from('vehicles').update(data).eq('id', id)
+    if (!error) return null
+    const msg = String(error.message || '')
+    const m = msg.match(/'([^']+)' column of 'vehicles'/) || msg.match(/column "?([a-z0-9_]+)"? does not exist/i)
+    if (!m || !(m[1] in data)) return error
+    console.warn('[车辆档案] 库里没有该列，已跳过：', m[1])
+    delete data[m[1]]
+  }
+  return null
+}
+
 const saveEdit = async () => {
   if (!editFormData.value) return
 
@@ -451,7 +484,7 @@ const saveEdit = async () => {
   editSaving.value = true
   try {
     const { id, created_at, updated_at, driverDisplay, ...fields } = editFormData.value
-    const { error } = await supabase.from('vehicles').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', id)
+    const error = await updateVehicleTolerant(id, pickVehicleFields(fields))
     if (error) throw error
 
     /* ⭐ 证件：逐项 upsert；整组空且从未存过 → 不建记录 */

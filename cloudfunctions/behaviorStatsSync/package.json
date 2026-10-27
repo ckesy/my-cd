@@ -1,0 +1,9 @@
+{
+  "name": "behaviorStatsSync",
+  "version": "1.0.0",
+  "description": "驾驶行为日汇总：东风轨迹 → 超速段/停留超时 → vehicle_behavior_daily",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.2.0"
+  }
+}

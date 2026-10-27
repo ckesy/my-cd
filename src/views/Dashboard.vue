@@ -1,7 +1,7 @@
 <template>
   <el-container style="height:100vh; overflow: hidden; background-color: #F8FAFC;">
     <!-- 侧边栏：窄条 64px，悬停临时展开，图钉固定 -->
-    <el-aside :width="navPinned ? '220px' : '64px'" class="sidebar-container">
+    <el-aside v-if="!isScreenRoute" :width="navPinned ? '220px' : '64px'" class="sidebar-container">
       <div class="nav-shell" :class="{ expanded: navPinned || navHover, pinned: navPinned }"
         @mouseenter="navHover = true" @mouseleave="navHover = false">
         <SidebarMenu :active-path="activeMenu" :expanded="navPinned || navHover" :pinned="navPinned"
@@ -11,7 +11,7 @@
     </el-aside>
     <el-container>
       <!-- 顶部标题栏 -->
-      <el-header class="dashboard-header">
+      <el-header v-if="!isScreenRoute" class="dashboard-header">
         <div class="dashboard-title">车队管理平台</div>
         <div class="dashboard-actions">
           <!-- ⭐ 消息中心：到期提醒 + 费用待办 统一收口（点铃铛出抽屉，底部进独立页） -->
@@ -32,7 +32,7 @@
       </el-header>
 
       <!-- 标签页栏 -->
-      <div class="page-tabs">
+      <div v-if="!isScreenRoute" class="page-tabs">
         <el-tag v-for="tab in tabs" :key="tab.path" :type="tab.path === route.path ? 'danger' : 'info'" size="small"
           closable @click="openTab(tab)" @close="closeTab(tab)" class="tab-item">
           {{ tab.title }}
@@ -40,7 +40,7 @@
       </div>
 
       <!-- 主内容区 -->
-      <el-main class="main-content">
+      <el-main class="main-content" :class="{ 'screen-main': isScreenRoute }">
         <div v-if="!isPermitted" class="no-permission">
           <div class="no-permission-icon">🔒</div>
           <h2>暂无访问权限</h2>
@@ -48,9 +48,18 @@
           <button class="back-btn-home" @click="goHome">返回首页</button>
         </div>
 
-        <div v-else class="content-wrapper animate-fade-up">
+        <div v-else class="content-wrapper animate-fade-up" :class="{ 'screen-wrap': isScreenRoute }">
+          <!-- 数据大屏（沉浸模式） -->
+          <template v-if="isScreenFleet">
+            <FleetScreen />
+          </template>
+
+          <template v-else-if="isScreenFee">
+            <FeeScreen />
+          </template>
+
           <!-- 客户端首页 -->
-          <template v-if="isClientHome">
+          <template v-else-if="isClientHome">
             <ClientHome />
           </template>
 
@@ -204,6 +213,8 @@ import SidebarMenu from '../components/SidebarMenu.vue'
 import PersonalSettings from '../components/PersonalSettings.vue'
 import ClientHome from '../views/ClientHome.vue'
 import FullMap from '../views/FullMap.vue'
+import FleetScreen from '@/views/screen/FleetScreen.vue'
+import FeeScreen from '@/views/screen/FeeScreen.vue'
 import WaybillCreate from '../views/WaybillCreate.vue'
 import Waybill from '../views/Waybill.vue'
 import Report from '../views/Report.vue'
@@ -305,6 +316,8 @@ const isAppearancePage = computed(() => {
 // 路由 → 权限 key
 const routePermissionMap = {  '/dashboard': 'home',
   '/fullmap': 'driving_fullmap',
+  '/screen/fleet': 'screen_fleet',
+  '/screen/fee': 'screen_fee',
   '/dashboard/车辆故障管理': 'vehicle_fault',
   '/dashboard/外观巡检管理': 'appearance_inspect',
   '/ele-fence/setting': 'ele_fence',
@@ -326,14 +339,17 @@ const routePermissionMap = {  '/dashboard': 'home',
   // '/route/manage': 'route',
   '/report': 'report',
   '/archive/vehicle': 'vehicle_archive',
-  /* ⭐ 车务管理：主账号必有；子账号要在功能配置里勾 vehicle_affair */
+  /* ⭐ 车务管理：2026-10-25 拆成 5 条独立权限（与侧边栏 5 个菜单一一对应）；
+     老角色只有 vehicle_affair，子页靠 PERM_ALIAS 认老钥匙，不会掉权限。
+     主账号 clientPerms 为 null，上面第 370 行已直接放行，这里不用再判 isMaster */
   '/affair/home': 'vehicle_affair',
-  '/affair/ledger': 'vehicle_affair',
-  '/affair/reminders': 'vehicle_affair',
-  '/affair/settings': 'vehicle_affair',
-  /* 维保台账与车务同一把钥匙（保养要回写车务，本来就是一件事） */
-  '/maintenance': 'vehicle_affair',
-  '/maintenance/vehicle': 'vehicle_affair',
+  '/affair/ledger': 'affair_ledger',
+  '/affair/reminders': 'affair_reminders',
+  /* 提醒设置是管理员专属（配置里置灰），读侧仍认 vehicle_affair，避免老账号被锁在门外 */
+  '/affair/settings': 'affair_settings',
+  /* 维保台账：以前与车务共用一把钥匙，现在独立 */
+  '/maintenance': 'maintenance_ledger',
+  '/maintenance/vehicle': 'maintenance_ledger',
   '/archive/driver': 'driver_archive',
   // ⭐ 档案管理暂时不做权限限制（新功能，等权限数据补齐后再放开这两行）
   // '/archive/customer': 'customer_archive',
@@ -386,13 +402,14 @@ const isPermitted = computed(() => {
   if (route.path === '/report') {
     return isMaster.value || clientPerms.value.includes('report')
   }
-  // 车务管理：主账号始终可见；子账号必须被勾了 vehicle_affair
-  if (route.path.startsWith('/affair')) {
-    return isMaster.value || permHit(clientPerms.value, 'vehicle_affair')
+  // 车务管理 / 维保台账：5 个菜单各走各的 key（见上方 routePermissionMap），
+  // 但主账号必须始终可见（客户主账号的 permissions.client 常是一串老 key，不含车务）
+  if (route.path.startsWith('/affair') || route.path.startsWith('/maintenance')) {
+    return isMaster.value || permHit(clientPerms.value, routePermissionMap[route.path] || 'vehicle_affair')
   }
-  // 维保台账：与车务同一把钥匙
-  if (route.path.startsWith('/maintenance')) {
-    return isMaster.value || permHit(clientPerms.value, 'vehicle_affair')
+  // 数据大屏：主账号始终可见；其他角色按功能配置里的 screen_* 勾选
+  if (route.path.startsWith('/screen/')) {
+    return isMaster.value || permHit(clientPerms.value, routePermissionMap[route.path] || 'screen_fleet')
   }
   // 运单统计：独立权限（老配置里跟 waybill 共用，permHit 走别名兼容）
   if (route.path === '/waybill/stats') {
@@ -469,6 +486,10 @@ const isClientHome = computed(() => {
   return route.path === '/dashboard' && !route.params.page
 })
 
+const isScreenFleet = computed(() => route.path === '/screen/fleet')
+const isScreenFee = computed(() => route.path === '/screen/fee')
+const isScreenRoute = computed(() => route.path.startsWith('/screen/'))
+
 const isFullMap = computed(() => {
   return route.path === '/fullmap' || route.params.page === 'fullmap'
 })
@@ -491,6 +512,8 @@ watch(
 )
 
 const pathLabels = {
+  '/screen/fleet': '车辆运行大屏',
+  '/screen/fee': '运单费用大屏',
   '/dashboard': '首页',
   '/fullmap': '全图监控',
   '/dashboard/车辆故障管理': '车辆故障管理',
@@ -520,6 +543,15 @@ const pathLabels = {
   '/archive/customer': '客户档案',
   '/archive/cargo': '货物档案',
   '/dashboard/档案管理': '档案管理',
+  /* ⭐ 车务管理（2026-10-25 拆成 5 项后，标签页一直显示「新页面」——以前这几条漏在表外） */
+  '/affair/home': '车务总览',
+  '/affair/ledger': '证件台账',
+  '/affair/reminders': '提醒事项',
+  '/affair/settings': '提醒设置',
+  '/maintenance': '维保台账',
+  '/maintenance/vehicle': '单车维保',
+  /* ⭐ 消息中心（顶栏铃铛 → 抽屉底部 → 这一页） */
+  '/message': '消息中心',
   '/ele-fence/setting': '围栏设置',
   '/ele-fence/alert-setting': '提醒设置',
   '/ele-fence/alert-query': '提醒事件查询',
@@ -535,6 +567,8 @@ const currentPage = computed(() => {
 const tabs = ref([])
 
 const addTab = (path) => {
+  /* ⭐ 数据大屏是沉浸页（无外壳、无标签栏），不进标签页，否则退出后会留一个空白标签 */
+  if (String(path).startsWith('/screen/')) return
   const title = pathLabels[path] || '新页面'
   if (!tabs.value.find((tab) => tab.path === path)) {
     tabs.value.push({ path, title })
@@ -1004,6 +1038,26 @@ const goLogin = () => {
 .content-wrapper {
   padding: 0 16px 16px 0;
   min-height: 100%;
+}
+
+/* ⭐ 数据大屏：外壳（侧栏/顶栏/标签页）已 v-if 掉，这里要让主区真正吃满全屏。
+   必须 transform:none —— content-wrapper 上的动画 transform 会把内部 absolute 变成相对祖先定位 */
+.main-content.screen-main {
+  height: 100vh;
+  max-height: 100vh;
+  padding: 0;
+  overflow: hidden;
+  position: relative;
+  background: #050A14;
+}
+
+.content-wrapper.screen-wrap {
+  padding: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  animation: none !important;
+  transform: none !important;
 }
 
 .content-wrapper:has(.client-home),

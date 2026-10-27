@@ -67,6 +67,17 @@ export const PERMISSION_MODULES = [
       { key: 'operation_driving', name: '驾驶行为报表', sort: 3 },
     ],
   },
+  /* ⭐ 数据大屏：沉浸式只读看板（/screen/*），与普通菜单页区分 */
+  {
+    key: 'screen',
+    name: '数据大屏',
+    icon: 'Monitor',
+    sort: 15,
+    items: [
+      { key: 'screen_fleet', name: '车辆运行大屏', sort: 1 },
+      { key: 'screen_fee', name: '运单费用大屏', sort: 2 },
+    ],
+  },
   {
     key: 'transport',
     name: '运输管理',
@@ -100,9 +111,16 @@ export const PERMISSION_MODULES = [
     icon: 'Van',
     sort: 8.5,
     items: [
-      /* ⭐ 2026-10-24：一个 key 管四个子页（总览/台账/提醒事项/提醒设置）。
-         子账号只有勾了它、且模块已开通，才会收到到期提醒（口径见 vehicleAffair.js） */
-      { key: 'vehicle_affair', name: '车务管理', sort: 1 },
+      /* ⭐ 2026-10-25：车务管理拆成 5 项，与侧边栏 5 个菜单一一对应
+         （以前一个 vehicle_affair 管四个子页，配置弹窗里只有 1/1）。
+         · 车务总览沿用老 key `vehicle_affair`：老角色勾过它就都还在
+         · 三个子页给独立 key，菜单/路由侧走 PERM_ALIAS 兼容老数据
+         · 提醒设置是「管理员专属」：任何角色都勾不上（与「费用审批设置」同一套置灰机制） */
+      { key: 'vehicle_affair', name: '车务总览', sort: 1 },
+      { key: 'maintenance_ledger', name: '维保台账', sort: 2 },
+      { key: 'affair_ledger', name: '证件台账', sort: 3 },
+      { key: 'affair_reminders', name: '提醒事项', sort: 4 },
+      { key: 'affair_settings', name: '提醒设置', sort: 5, adminOnly: true },
     ],
   },
   {
@@ -168,6 +186,12 @@ export const PERM_ALIAS = {
   operation_driving: ['operation'],
   fee_list: ['fee_stats'],
   waybill_stats: ['waybill'],
+  /* 车务管理 2026-10-25 拆成 5 项：老角色 CSV 里只有 vehicle_affair，
+     三个子页 + 提醒设置都要认这把老钥匙（读得到就放行，写库不写） */
+  maintenance_ledger: ['vehicle_affair'],
+  affair_ledger: ['vehicle_affair'],
+  affair_reminders: ['vehicle_affair'],
+  affair_settings: ['vehicle_affair'],
 }
 
 /** key 是否命中（perms 为 null 表示不过滤） */

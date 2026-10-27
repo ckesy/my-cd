@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>2 号屏 · 运单与费用监控中心</title>
+<style>
+  :root{
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",Arial,sans-serif;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#04060B;overflow:hidden;font-family:var(--font);
+    -webkit-font-smoothing:antialiased}
+  body{display:flex;align-items:center;justify-content:center}
+  .stage{position:relative;width:1920px;height:1080px;flex:none;background:#050A14;color:#DCE9F9;
+    overflow:hidden;transform-origin:center center;display:flex;flex-direction:column}
+  .stage::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(1000px 520px at 50% -6%,rgba(22,78,150,.30),transparent 72%),
+      radial-gradient(760px 420px at 50% 104%,rgba(130,10,34,.20),transparent 72%),
+      linear-gradient(180deg,#050A14 0%,#04070D 100%)}
+  .stage::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
+    background-image:
+      linear-gradient(rgba(96,158,226,.055) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(96,158,226,.055) 1px,transparent 1px);
+    background-size:60px 60px;
+    -webkit-mask-image:radial-gradient(ellipse at 50% 40%,#000 25%,transparent 78%);
+    mask-image:radial-gradient(ellipse at 50% 40%,#000 25%,transparent 78%)}
+
+  .a-head{position:relative;z-index:3;flex:0 0 86px;height:86px;display:flex;align-items:center;
+    padding:0 26px;border-bottom:1px solid rgba(90,150,220,.13)}
+  .a-head::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,45,75,.55) 50%,transparent)}
+  .a-hl{display:flex;flex-direction:column;gap:3px;min-width:230px}
+  .a-clock{font-family:var(--mono);font-size:24px;font-weight:700;color:#F2F8FF;letter-spacing:1.5px;
+    text-shadow:0 0 18px rgba(70,170,255,.35)}
+  .a-clock small{font-size:11.5px;font-weight:500;color:#6E88A6;letter-spacing:.5px;margin-left:8px}
+  .a-chip{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px;font-size:11px;
+    color:#9DB6D2;border:1px solid rgba(90,150,220,.22);background:rgba(10,22,40,.6);border-radius:3px;width:fit-content}
+  .a-chip i{width:6px;height:6px;border-radius:50%;background:#2BE08A;box-shadow:0 0 8px #2BE08A}
+  .a-chip i.cy{background:#33D6FF;box-shadow:0 0 8px #33D6FF}
+  .a-chip i.rd{background:#FF3355;box-shadow:0 0 8px #FF3355}
+  .a-hc{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}
+  .a-title{font-size:29px;font-weight:800;letter-spacing:11px;text-indent:11px;
+    background:linear-gradient(180deg,#FFFFFF 25%,#9EC4E8 100%);-webkit-background-clip:text;
+    background-clip:text;color:transparent;filter:drop-shadow(0 0 22px rgba(80,180,255,.28))}
+  .a-sub{margin-top:5px;font-size:10px;letter-spacing:3.2px;color:#5A7695}
+  .a-hc::after{content:"";position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);
+    width:460px;height:2px;background:linear-gradient(90deg,transparent,rgba(255,45,75,.85),transparent);
+    box-shadow:0 0 12px rgba(255,45,75,.5)}
+  .a-hr{margin-left:auto;display:flex;gap:9px}
+
+  .a-body{position:relative;z-index:2;flex:1;min-height:0;display:grid;
+    grid-template-columns:412px 1fr 412px;gap:14px;padding:14px 16px}
+  .a-col{display:flex;flex-direction:column;gap:12px;min-height:0}
+
+  .p{position:relative;display:flex;flex-direction:column;min-height:0;padding:12px 14px;
+    background:linear-gradient(160deg,rgba(12,24,42,.82),rgba(7,14,26,.72));
+    border:1px solid rgba(84,144,214,.16);box-shadow:inset 0 0 34px rgba(28,90,170,.07)}
+  .p::before,.p::after{content:"";position:absolute;width:11px;height:11px;
+    border:1px solid rgba(255,45,75,.65);pointer-events:none}
+  .p::before{left:-1px;top:-1px;border-right:0;border-bottom:0}
+  .p::after{right:-1px;bottom:-1px;border-left:0;border-top:0}
+  .p-h{flex:0 0 auto;display:flex;align-items:center;gap:9px;margin-bottom:10px}
+  .p-h i{width:3px;height:14px;background:linear-gradient(180deg,#FF6B81,#FF1F3D);
+    box-shadow:0 0 10px rgba(255,45,75,.85)}
+  .p-h b{font-size:14.5px;font-weight:700;letter-spacing:1.4px;color:#EAF4FF}
+  .p-h em{font-style:normal;margin-left:auto;font-size:9.5px;letter-spacing:1.6px;color:#4E6885}
+
+  .bn{font-family:var(--mono);font-weight:700;color:#fff;line-height:1;letter-spacing:-1.2px;
+    text-shadow:0 0 22px rgba(51,214,255,.26)}
+  .unit{font-size:11.5px;color:#6E88A6;margin-left:4px;letter-spacing:0}
+  .delta{font-size:10.5px;font-family:var(--mono)}
+  .delta.up{color:#2BE08A}
+  .delta.down{color:#FF6B81}
+  .kv{display:flex;flex-direction:column;gap:4px}
+  .kv b{font-family:var(--mono);font-size:24px;color:#fff;line-height:1;letter-spacing:-.5px}
+  .kv span{font-size:11px;color:#7089A6}
+
+  .ring{position:relative;width:146px;height:146px;border-radius:50%;flex:0 0 auto;
+    background:conic-gradient(from -90deg,#33D6FF 0 calc(var(--p) * 1%),rgba(255,255,255,.055) 0)}
+  .ring::after{content:"";position:absolute;inset:15px;border-radius:50%;background:#07101C;
+    box-shadow:inset 0 0 26px rgba(51,214,255,.16)}
+  .ring .rv{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:3px}
+  .ring .rv b{font-family:var(--mono);font-size:32px;font-weight:700;color:#fff;line-height:1;letter-spacing:-1px}
+  .ring .rv span{font-size:10.5px;color:#6E88A6;letter-spacing:.5px}
+  .ring.red{background:conic-gradient(from -90deg,#FF3355 0 calc(var(--p) * 1%),rgba(255,255,255,.055) 0)}
+  .ring.red::after{box-shadow:inset 0 0 26px rgba(255,45,75,.2)}
+
+  .mini4{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+    background:rgba(90,150,220,.14);border:1px solid rgba(90,150,220,.14)}
+  .mini4>div{background:rgba(8,17,30,.9);padding:9px 6px;text-align:center}
+  .mini4 b{display:block;font-family:var(--mono);font-size:21px;font-weight:700;line-height:1;color:#EAF4FF}
+  .mini4 span{display:block;font-size:10.5px;color:#6E88A6;margin-top:5px}
+  .cy{color:#33D6FF !important}.wt{color:#C9D8E8 !important}.dm{color:#6B7F94 !important}
+  .rd{color:#FF4D66 !important}.am{color:#FFB020 !important}.gn{color:#2BE08A !important}
+
+  .a-tabs{display:inline-flex;gap:3px;background:rgba(255,255,255,.045);padding:3px;border-radius:2px}
+  .a-tabs span{font-size:11px;padding:4px 12px;color:#7C93AC;cursor:default;border-radius:1px}
+  .a-tabs span.on{background:linear-gradient(135deg,rgba(255,45,75,.9),rgba(190,10,40,.9));
+    color:#fff;font-weight:700;box-shadow:0 0 14px rgba(255,45,75,.4)}
+
+  .axis7{display:flex;justify-content:space-between;font-size:10px;color:#5E7895;
+    font-family:var(--mono);padding:0 2px}
+
+  .rowbar{display:grid;grid-template-columns:78px 1fr 54px;align-items:center;gap:9px;margin-bottom:8px}
+  .rowbar .lb{font-size:11.5px;color:#9DB4CC;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rowbar .tk{position:relative;height:9px;background:rgba(255,255,255,.05);overflow:hidden}
+  .rowbar .tk i{position:absolute;left:0;top:0;bottom:0;min-width:5px;
+    background:linear-gradient(90deg,rgba(51,214,255,.35),#33D6FF);box-shadow:0 0 10px rgba(51,214,255,.5)}
+  .rowbar .tk i.r{background:linear-gradient(90deg,rgba(255,45,75,.3),#FF3355);box-shadow:0 0 10px rgba(255,45,75,.5)}
+  .rowbar .vl{text-align:right;font-family:var(--mono);font-size:11.5px;color:#C8DAEE}
+
+  .route-row{display:grid;grid-template-columns:1fr 62px;align-items:center;gap:8px;
+    padding:7px 0;border-bottom:1px dashed rgba(90,150,220,.12);font-size:11.5px}
+  .route-row:last-child{border-bottom:none}
+  .route-row .rn2{display:flex;align-items:center;gap:6px;color:#B7CBE0;min-width:0}
+  .route-row .rn2 .from,.route-row .rn2 .to{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .route-row .rn2 .to{color:#FFB3BE}
+  .route-row .arw{color:#FF3355;flex:0 0 auto;font-size:10px}
+  .route-row .rc{text-align:right;font-family:var(--mono);font-size:12.5px;color:#EAF4FF}
+  .route-row .rc small{font-size:9.5px;color:#6E88A6;margin-left:2px}
+
+  /* ===== 地图 ===== */
+  .a-map{position:relative;flex:1;min-height:0;overflow:hidden;border:1px solid rgba(84,144,214,.2);
+    background-color:#04070F;
+    background-image:
+      linear-gradient(rgba(96,158,226,.05) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(96,158,226,.05) 1px,transparent 1px);
+    background-size:52px 52px}
+  .map-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .a-mkpi{position:absolute;z-index:4;top:11px;left:11px;right:11px;display:flex;gap:9px}
+  .a-mkpi>div{flex:1;padding:7px 12px;background:rgba(6,14,26,.74);
+    border:1px solid rgba(84,144,214,.22);backdrop-filter:blur(8px)}
+  .a-mkpi b{display:block;font-family:var(--mono);font-size:22px;font-weight:700;color:#fff;
+    line-height:1.1;letter-spacing:-.5px}
+  .a-mkpi span{display:block;font-size:10.5px;color:#6E88A6;margin-top:3px;letter-spacing:.5px}
+  .a-mlegend{position:absolute;z-index:4;left:12px;bottom:11px;display:flex;gap:14px;
+    padding:6px 12px;background:rgba(6,14,26,.74);border:1px solid rgba(84,144,214,.18);
+    font-size:10.5px;color:#8AA4C0}
+  .a-mlegend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  .a-mlegend i.dia{width:7px;height:7px;border-radius:0;transform:rotate(45deg)}
+  .a-mtime{position:absolute;z-index:4;right:12px;bottom:11px;display:flex;align-items:center;gap:8px;
+    padding:6px 12px;background:rgba(6,14,26,.74);border:1px solid rgba(84,144,214,.18);
+    font-size:10.5px;color:#7E97B4}
+  .a-mtime b{font-family:var(--mono);color:#33D6FF;font-weight:600}
+
+  .map-tabs{position:absolute;z-index:6;top:70px;left:11px;display:flex;gap:3px;padding:3px;
+    background:rgba(6,14,26,.86);border:1px solid rgba(84,144,214,.24);backdrop-filter:blur(8px)}
+  .map-tabs button{border:0;background:transparent;font-family:inherit;font-size:11.5px;font-weight:600;
+    color:#7C93AC;padding:6px 14px;cursor:pointer;letter-spacing:.6px;transition:.2s;border-radius:1px}
+  .map-tabs button:hover{color:#DCE9F9}
+  .map-tabs button.on{background:linear-gradient(135deg,#FF3355,#B00D22);color:#fff;
+    box-shadow:0 0 16px rgba(255,45,75,.45)}
+
+  .view{display:none}
+  .view.on{display:block}
+
+  .vp{fill:none;stroke:rgba(51,214,255,.3);stroke-width:1}
+  .vp.r{stroke:rgba(255,51,85,.32)}
+
+  .line-flow{stroke-dasharray:44 396;animation:flowSlow 12s linear infinite;
+    opacity:.75;stroke-linecap:round}
+  @keyframes flowSlow{from{stroke-dashoffset:0}to{stroke-dashoffset:-440}}
+
+  /* ===== 漏斗 ===== */
+  .funnel{flex:1;display:flex;flex-direction:column;justify-content:center;gap:7px}
+  .fn-row{display:flex;align-items:center;gap:8px}
+  .fn-lb{width:56px;flex:0 0 auto;font-size:11px;color:#8AA4C0;letter-spacing:.5px}
+  .fn-track{flex:1;height:20px;position:relative}
+  .fn-bar{height:100%;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;
+    font-family:var(--mono);font-size:11px;color:#fff;
+    clip-path:polygon(0 0,100% 0,calc(100% - 9px) 100%,0 100%)}
+  .fn-sub{width:78px;flex:0 0 auto;text-align:right;font-family:var(--mono);font-size:11px;color:#7E97B4}
+
+  .chart-wrap{flex:1;min-height:0;display:flex;flex-direction:column}
+  .chart-box{flex:1;min-height:0;position:relative}
+  .chart-box svg{position:absolute;inset:0;width:100%;height:100%}
+  .chart-lg{display:flex;gap:14px;font-size:10px;color:#7E97B4;margin-left:auto}
+  .chart-lg i{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle}
+  .a-chart{flex:0 0 168px}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <div class="a-head">
+    <div class="a-hl">
+      <div class="a-clock">17:55:31<small>2026-10-25 周日</small></div>
+      <div class="a-chip" style="margin-top:4px"><i></i>数据链路正常 · 30s 刷新</div>
+    </div>
+    <div class="a-hc">
+      <div class="a-title">运单与费用监控中心</div>
+      <div class="a-sub">WAYBILL &amp; COST MONITOR</div>
+    </div>
+    <div class="a-hr">
+      <div class="a-chip"><i class="cy"></i>今日运单 32</div>
+      <div class="a-chip"><i class="rd"></i>待审 5 笔</div>
+    </div>
+  </div>
+
+  <div class="a-body">
+
+    <!-- ================= 左栏：运单 ================= -->
+    <div class="a-col">
+
+      <section class="p" style="flex:0 0 288px">
+        <div class="p-h"><i></i><b>运单总览</b><em>WAYBILL OVERVIEW</em></div>
+        <div style="display:flex;align-items:center;gap:18px">
+          <div class="ring" style="--p:92">
+            <div class="rv"><b>92%</b><span>准时率</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="kv"><b>32</b><span>今日新增</span></div>
+            <div class="kv"><b class="cy">26</b><span>当前未完成</span></div>
+            <div class="kv"><b class="gn">24</b><span>今日送达</span></div>
+          </div>
+        </div>
+        <div class="mini4" style="margin-top:14px">
+          <div><b class="dm">6</b><span>待接单</span></div>
+          <div><b class="am">5</b><span>装车中</span></div>
+          <div><b class="cy">11</b><span>已发车</span></div>
+          <div><b class="gn">4</b><span>已到达</span></div>
+        </div>
+      </section>
+
+      <section class="p" style="flex:0 0 268px">
+        <div class="p-h"><i></i><b>近 7 日运单量</b><em>VOLUME</em></div>
+        <div class="chart-lg" style="margin:0 0 6px">
+          <span><i style="background:#FF3355"></i>新增</span>
+          <span><i style="background:#33D6FF"></i>完成</span>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-box">
+            <svg viewBox="0 0 384 120" preserveAspectRatio="none">
+              <g stroke="rgba(120,170,220,.10)" stroke-width="1">
+                <line x1="0" y1="30" x2="384" y2="30"/>
+                <line x1="0" y1="62" x2="384" y2="62"/>
+                <line x1="0" y1="94" x2="384" y2="94"/>
+              </g>
+              <g>
+                <rect x="10" y="42" width="20" height="60" fill="rgba(255,51,85,.75)"/>
+                <rect x="62" y="34" width="20" height="68" fill="rgba(255,51,85,.75)"/>
+                <rect x="114" y="50" width="20" height="52" fill="rgba(255,51,85,.75)"/>
+                <rect x="166" y="26" width="20" height="76" fill="rgba(255,51,85,.75)"/>
+                <rect x="218" y="38" width="20" height="64" fill="rgba(255,51,85,.75)"/>
+                <rect x="270" y="30" width="20" height="72" fill="rgba(255,51,85,.75)"/>
+                <rect x="322" y="40" width="20" height="62" fill="#FF3355"/>
+              </g>
+              <g>
+                <rect x="34" y="52" width="20" height="50" fill="rgba(51,214,255,.45)"/>
+                <rect x="86" y="46" width="20" height="56" fill="rgba(51,214,255,.45)"/>
+                <rect x="138" y="58" width="20" height="44" fill="rgba(51,214,255,.45)"/>
+                <rect x="190" y="38" width="20" height="64" fill="rgba(51,214,255,.45)"/>
+                <rect x="242" y="48" width="20" height="54" fill="rgba(51,214,255,.45)"/>
+                <rect x="294" y="42" width="20" height="60" fill="rgba(51,214,255,.45)"/>
+                <rect x="346" y="50" width="20" height="52" fill="#33D6FF"/>
+              </g>
+            </svg>
+          </div>
+          <div class="axis7" style="padding:0 6px">
+            <span>19</span><span>20</span><span>21</span><span>22</span>
+            <span>23</span><span>24</span><span>今日</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="p" style="flex:1">
+        <div class="p-h"><i></i><b>线路 TOP5</b><em>LANE</em></div>
+        <div class="route-row">
+          <span class="rn2"><span class="from">吕梁·孝义</span><span class="arw">→</span><span class="to">长治·潞州</span></span>
+          <span class="rc">8<small>单</small></span>
+        </div>
+        <div class="route-row">
+          <span class="rn2"><span class="from">太原·小店</span><span class="arw">→</span><span class="to">运城·盐湖</span></span>
+          <span class="rc">6<small>单</small></span>
+        </div>
+        <div class="route-row">
+          <span class="rn2"><span class="from">晋中·介休</span><span class="arw">→</span><span class="to">太原·清徐</span></span>
+          <span class="rc">5<small>单</small></span>
+        </div>
+        <div class="route-row">
+          <span class="rn2"><span class="from">大同·云冈</span><span class="arw">→</span><span class="to">太原·尖草坪</span></span>
+          <span class="rc">4<small>单</small></span>
+        </div>
+        <div class="route-row">
+          <span class="rn2"><span class="from">临汾·尧都</span><span class="arw">→</span><span class="to">长治·上党</span></span>
+          <span class="rc">3<small>单</small></span>
+        </div>
+        <div style="margin-top:auto;padding-top:9px;border-top:1px dashed rgba(90,150,220,.18);
+          display:flex;justify-content:space-between;font-size:10.5px;color:#6E88A6">
+          <span>共 12 条线路</span><span>常驻任务 <b style="font-family:var(--mono);color:#33D6FF">3</b> 组</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- ================= 中栏：地图 ================= -->
+    <div class="a-col" style="gap:12px">
+
+      <div class="a-map">
+        <svg class="map-svg" viewBox="0 0 1000 780" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <marker id="arw" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto">
+              <path d="M1 1.5 L8.5 5 L1 8.5 z" fill="#FF3355"/>
+            </marker>
+          </defs>
+
+          <rect width="1000" height="780" fill="#04070F"/>
+          <g fill="#0A1524" opacity=".85">
+            <path d="M360 250 L520 235 L560 330 L470 372 L372 340 Z"/>
+            <path d="M545 395 L650 380 L700 470 L610 512 L540 460 Z"/>
+            <path d="M250 330 L345 340 L352 430 L262 452 Z"/>
+            <path d="M330 520 L440 505 L470 610 L360 640 Z"/>
+          </g>
+          <path d="M-20 452 C 180 402 300 486 520 452 S 800 396 1020 438"
+            fill="none" stroke="#0B2C46" stroke-width="20" opacity=".9"/>
+          <path d="M-20 452 C 180 402 300 486 520 452 S 800 396 1020 438"
+            fill="none" stroke="#2E8FC0" stroke-width="1.6" opacity=".45"/>
+          <g fill="none" stroke="#2C5D8C" stroke-width="9" opacity=".1">
+            <path d="M-20 250 C 150 220 260 300 420 300 S 700 250 1020 300"/>
+            <path d="M120 -20 C 160 180 220 340 200 800"/>
+            <path d="M420 -20 C 430 160 470 330 500 520 S 520 700 540 800"/>
+            <path d="M720 -20 C 700 200 660 380 700 560 S 730 700 760 800"/>
+            <path d="M-20 520 C 180 480 380 560 560 540 S 820 470 1020 520"/>
+            <path d="M-20 680 C 200 640 420 700 640 660 S 860 620 1020 650"/>
+          </g>
+          <g fill="none" stroke="#6FA3D0" stroke-width="1.8" opacity=".2">
+            <path d="M-20 250 C 150 220 260 300 420 300 S 700 250 1020 300"/>
+            <path d="M120 -20 C 160 180 220 340 200 800"/>
+            <path d="M420 -20 C 430 160 470 330 500 520 S 520 700 540 800"/>
+            <path d="M720 -20 C 700 200 660 380 700 560 S 730 700 760 800"/>
+            <path d="M-20 520 C 180 480 380 560 560 540 S 820 470 1020 520"/>
+            <path d="M-20 680 C 200 640 420 700 640 660 S 860 620 1020 650"/>
+            <path d="M-20 360 C 240 340 420 400 640 370 S 880 330 1020 350"/>
+            <path d="M840 -20 C 820 200 860 400 840 620 S 850 720 870 800"/>
+          </g>
+          <g fill="none" stroke="#6FA3D0" stroke-width="1" opacity=".1">
+            <path d="M260 -20 C 300 200 340 400 300 800"/>
+            <path d="M580 -20 C 560 200 600 420 580 800"/>
+            <path d="M-20 180 C 200 200 400 160 620 190 S 880 220 1020 190"/>
+            <path d="M-20 600 C 240 580 460 620 700 590 S 900 560 1020 580"/>
+          </g>
+          <g font-family="PingFang SC,sans-serif" font-size="11" fill="#5F7A99">
+            <g><circle cx="480" cy="340" r="3.2" fill="#8FB6DA"/><text x="480" y="326" text-anchor="middle" font-size="12" fill="#A8C4DF">太原</text></g>
+            <g><circle cx="540" cy="392" r="2.4" fill="#6F92B4"/><text x="552" y="396">晋中</text></g>
+            <g><circle cx="300" cy="360" r="2.4" fill="#6F92B4"/><text x="288" y="355" text-anchor="end">吕梁</text></g>
+            <g><circle cx="620" cy="482" r="2.4" fill="#6F92B4"/><text x="632" y="486">长治</text></g>
+            <g><circle cx="480" cy="92" r="2.4" fill="#6F92B4"/><text x="480" y="78" text-anchor="middle">大同</text></g>
+            <g><circle cx="420" cy="210" r="2.2" fill="#5C7D9C"/><text x="432" y="214">忻州</text></g>
+            <g><circle cx="620" cy="300" r="2.2" fill="#5C7D9C"/><text x="632" y="304">阳泉</text></g>
+            <g><circle cx="400" cy="560" r="2.2" fill="#5C7D9C"/><text x="388" y="565" text-anchor="end">临汾</text></g>
+            <g><circle cx="380" cy="700" r="2.2" fill="#5C7D9C"/><text x="392" y="704">运城</text></g>
+          </g>
+
+          <!-- ===== 视图 1：车辆定位 ===== -->
+          <g class="view on" id="view1">
+            <g transform="translate(500 350)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/><circle r="2.6" fill="#7FE8FF"/></g>
+            <g transform="translate(330 368)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/><circle r="2.6" fill="#7FE8FF"/></g>
+            <g transform="translate(700 420)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/><circle r="2.6" fill="#7FE8FF"/></g>
+            <g transform="translate(250 522)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/><circle r="2.6" fill="#7FE8FF"/></g>
+            <g transform="translate(452 604)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/><circle r="2.6" fill="#7FE8FF"/></g>
+            <g transform="translate(610 220)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/><circle r="2.6" fill="#7FE8FF"/></g>
+            <g transform="translate(420 470)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#FFB020" stroke-width="1.8"/><circle r="2.6" fill="#FFD98A"/></g>
+            <g transform="translate(560 560)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#FFB020" stroke-width="1.8"/><circle r="2.6" fill="#FFD98A"/></g>
+            <g transform="translate(340 620)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#FFB020" stroke-width="1.8"/><circle r="2.6" fill="#FFD98A"/></g>
+            <g transform="translate(660 660)" opacity=".55"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#6B7F94" stroke-width="1.6"/><circle r="2.4" fill="#8FA3B8"/></g>
+            <g transform="translate(300 120)" opacity=".55"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#6B7F94" stroke-width="1.6"/><circle r="2.4" fill="#8FA3B8"/></g>
+          </g>
+
+          <!-- ===== 视图 2：任务路线（车 → 卸货地） ===== -->
+          <g class="view" id="view2">
+            <path d="M500 350 Q 566 404 618 478" fill="none" stroke="#FF3355" stroke-width="3.9" stroke-opacity=".12"/>
+            <path d="M500 350 Q 566 404 618 478" fill="none" stroke="#FF3355" stroke-width="1.5" marker-end="url(#arw)"/>
+            <path d="M500 350 Q 566 404 618 478" fill="none" stroke="#FFB3BE" stroke-width="1.5" class="line-flow" style="animation-delay:-0.0s"/>
+
+            <path d="M330 368 Q 300 540 378 694" fill="none" stroke="#FF3355" stroke-width="3.9" stroke-opacity=".12"/>
+            <path d="M330 368 Q 300 540 378 694" fill="none" stroke="#FF3355" stroke-width="1.5" marker-end="url(#arw)"/>
+            <path d="M330 368 Q 300 540 378 694" fill="none" stroke="#FFB3BE" stroke-width="1.5" class="line-flow" style="animation-delay:-2.7s"/>
+
+            <path d="M560 302 Q 520 180 482 98" fill="none" stroke="#FF3355" stroke-width="3.9" stroke-opacity=".12"/>
+            <path d="M560 302 Q 520 180 482 98" fill="none" stroke="#FF3355" stroke-width="1.5" marker-end="url(#arw)"/>
+            <path d="M560 302 Q 520 180 482 98" fill="none" stroke="#FFB3BE" stroke-width="1.5" class="line-flow" style="animation-delay:-5.4s"/>
+
+            <path d="M420 470 Q 490 440 536 396" fill="none" stroke="#FF3355" stroke-width="3.6" stroke-opacity=".12"/>
+            <path d="M420 470 Q 490 440 536 396" fill="none" stroke="#FF3355" stroke-width="1.4" marker-end="url(#arw)" opacity=".85"/>
+            <path d="M420 470 Q 490 440 536 396" fill="none" stroke="#FFB3BE" stroke-width="1.4" class="line-flow" style="animation-delay:-8.1s"/>
+
+            <g transform="translate(618 478)">
+              <circle r="10" fill="none" stroke="rgba(255,51,85,.45)"/>
+              <path d="M0 -6 L6 0 L0 6 L-6 0 Z" fill="#FF3355"/>
+              <text y="25" text-anchor="middle" font-size="10.5" fill="#FF9BAA">长治·潞州</text>
+            </g>
+            <g transform="translate(378 694)">
+              <circle r="10" fill="none" stroke="rgba(255,51,85,.45)"/>
+              <path d="M0 -6 L6 0 L0 6 L-6 0 Z" fill="#FF3355"/>
+              <text y="-16" text-anchor="middle" font-size="10.5" fill="#FF9BAA">运城·盐湖</text>
+            </g>
+            <g transform="translate(482 98)">
+              <circle r="10" fill="none" stroke="rgba(255,51,85,.45)"/>
+              <path d="M0 -6 L6 0 L0 6 L-6 0 Z" fill="#FF3355"/>
+              <text y="26" text-anchor="middle" font-size="10.5" fill="#FF9BAA">大同·云冈</text>
+            </g>
+            <g transform="translate(536 396)">
+              <circle r="9" fill="none" stroke="rgba(255,51,85,.4)"/>
+              <path d="M0 -5 L5 0 L0 5 L-5 0 Z" fill="#FF3355"/>
+              <text x="14" y="4" font-size="10.5" fill="#FF9BAA">晋中·榆次</text>
+            </g>
+
+            <g transform="translate(500 350)">
+              <circle r="18" class="vp r"/>
+              <circle r="9" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+              <circle r="3.2" fill="#FFD6DD"/>
+              <text y="-24" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋A·D8821</text>
+            </g>
+            <g transform="translate(330 368)">
+              <circle r="18" class="vp r"/>
+              <circle r="9" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+              <circle r="3.2" fill="#FFD6DD"/>
+              <text y="-24" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋K·1H003</text>
+            </g>
+            <g transform="translate(560 302)">
+              <circle r="18" class="vp r"/>
+              <circle r="9" fill="#0B1220" stroke="#FF4D66" stroke-width="2"/>
+              <circle r="3.2" fill="#FFD6DD"/>
+              <text y="-24" text-anchor="middle" font-size="11" font-weight="700" fill="#FFE3E8">晋J·D5566</text>
+            </g>
+            <g transform="translate(420 470)">
+              <circle r="16" class="vp r"/>
+              <circle r="8" fill="#0B1220" stroke="#FF4D66" stroke-width="1.9"/>
+              <circle r="3" fill="#FFD6DD"/>
+              <text y="-22" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFE3E8">晋A·D6633</text>
+            </g>
+          </g>
+
+          <!-- ===== 视图 3：运单流向（装货城市 → 卸货城市） ===== -->
+          <g class="view" id="view3">
+            <path d="M300 360 Q 460 300 620 482" fill="none" stroke="#FF3355" stroke-width="6.2" stroke-opacity=".12"/>
+            <path d="M300 360 Q 460 300 620 482" fill="none" stroke="#FF3355" stroke-width="2.4" marker-end="url(#arw)"/>
+            <path d="M300 360 Q 460 300 620 482" fill="none" stroke="#FFB3BE" stroke-width="2.4" class="line-flow" style="animation-delay:-0.0s"/>
+            <path d="M480 340 Q 470 520 380 700" fill="none" stroke="#FF3355" stroke-width="5.5" stroke-opacity=".12"/>
+            <path d="M480 340 Q 470 520 380 700" fill="none" stroke="#FF3355" stroke-width="2.1" marker-end="url(#arw)"/>
+            <path d="M480 340 Q 470 520 380 700" fill="none" stroke="#FFB3BE" stroke-width="2.1" class="line-flow" style="animation-delay:-2.7s"/>
+            <path d="M540 392 Q 500 300 480 340" fill="none" stroke="#FF3355" stroke-width="4.9" stroke-opacity=".12"/>
+            <path d="M540 392 Q 500 300 480 340" fill="none" stroke="#FF3355" stroke-width="1.9" marker-end="url(#arw)"/>
+            <path d="M540 392 Q 500 300 480 340" fill="none" stroke="#FFB3BE" stroke-width="1.9" class="line-flow" style="animation-delay:-5.4s"/>
+            <path d="M480 92 Q 460 220 480 340" fill="none" stroke="#FF3355" stroke-width="4.4" stroke-opacity=".12"/>
+            <path d="M480 92 Q 460 220 480 340" fill="none" stroke="#FF3355" stroke-width="1.7" marker-end="url(#arw)"/>
+            <path d="M480 92 Q 460 220 480 340" fill="none" stroke="#FFB3BE" stroke-width="1.7" class="line-flow" style="animation-delay:-8.1s"/>
+            <path d="M400 560 Q 470 520 620 482" fill="none" stroke="#FF3355" stroke-width="3.9" stroke-opacity=".12"/>
+            <path d="M400 560 Q 470 520 620 482" fill="none" stroke="#FF3355" stroke-width="1.5" marker-end="url(#arw)"/>
+            <path d="M400 560 Q 470 520 620 482" fill="none" stroke="#FFB3BE" stroke-width="1.5" class="line-flow" style="animation-delay:-10.8s"/>
+            <path d="M480 340 Q 560 300 620 300" fill="none" stroke="#FF3355" stroke-width="3.4" stroke-opacity=".12"/>
+            <path d="M480 340 Q 560 300 620 300" fill="none" stroke="#FF3355" stroke-width="1.3" marker-end="url(#arw)"/>
+            <path d="M480 340 Q 560 300 620 300" fill="none" stroke="#FFB3BE" stroke-width="1.3" class="line-flow" style="animation-delay:-13.5s"/>
+
+            <g>
+              <circle cx="300" cy="360" r="5" fill="#FF3355"/>
+              <circle cx="480" cy="340" r="7" fill="#FF3355"/>
+              <circle cx="540" cy="392" r="4.5" fill="#FF3355"/>
+              <circle cx="480" cy="92" r="4.5" fill="#FF3355"/>
+              <circle cx="400" cy="560" r="4.5" fill="#FF3355"/>
+              <circle cx="620" cy="482" r="6" fill="#FF3355"/>
+              <circle cx="380" cy="700" r="5" fill="#FF3355"/>
+              <circle cx="620" cy="300" r="4.5" fill="#FF3355"/>
+            </g>
+            <g font-family="var(--mono)" font-size="10.5" fill="#FFC8D1" font-weight="700">
+              <text x="316" y="352">8 单</text>
+              <text x="470" y="470">6 单</text>
+              <text x="494" y="330">11 单</text>
+              <text x="490" y="200">4 单</text>
+              <text x="410" y="545">3 单</text>
+            </g>
+          </g>
+        </svg>
+
+        <div class="a-mkpi">
+          <div><b class="cy">26</b><span>在途运单</span></div>
+          <div><b>18</b><span>有任务车辆</span></div>
+          <div><b class="gn">24</b><span>今日送达</span></div>
+          <div><b>92%</b><span>准时率</span></div>
+        </div>
+
+        <div class="map-tabs">
+          <button class="on" data-view="view1">车辆定位</button>
+          <button data-view="view2">任务路线</button>
+          <button data-view="view3">运单流向</button>
+        </div>
+
+        <div class="a-mlegend" id="mlegend">
+          <span><i style="background:#33D6FF"></i>行驶中</span>
+          <span><i style="background:#FFB020"></i>静止</span>
+          <span><i style="background:#6B7F94"></i>离线</span>
+        </div>
+        <div class="a-mtime">轨迹更新 <b>3s</b> 前 · 高德暗色底图</div>
+      </div>
+
+      <section class="p a-chart">
+        <div class="p-h"><i></i><b>今日运单节奏</b>
+          <div class="chart-lg">
+            <span><i style="background:#FF3355"></i>发车</span>
+            <span><i style="background:#33D6FF"></i>到达</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-box">
+            <svg viewBox="0 0 1000 110" preserveAspectRatio="none">
+              <g stroke="rgba(120,170,220,.10)" stroke-width="1">
+                <line x1="0" y1="30" x2="1000" y2="30"/>
+                <line x1="0" y1="60" x2="1000" y2="60"/>
+                <line x1="0" y1="90" x2="1000" y2="90"/>
+              </g>
+              <g fill="rgba(255,51,85,.8)">
+                <rect x="28" y="82" width="26" height="20"/><rect x="86" y="70" width="26" height="32"/>
+                <rect x="144" y="52" width="26" height="50"/><rect x="202" y="38" width="26" height="64"/>
+                <rect x="260" y="46" width="26" height="56"/><rect x="318" y="30" width="26" height="72"/>
+                <rect x="376" y="44" width="26" height="58"/><rect x="434" y="58" width="26" height="44"/>
+                <rect x="492" y="66" width="26" height="36"/><rect x="550" y="60" width="26" height="42"/>
+                <rect x="608" y="48" width="26" height="54"/><rect x="666" y="56" width="26" height="46"/>
+                <rect x="724" y="72" width="26" height="30"/><rect x="782" y="86" width="26" height="16"/>
+              </g>
+              <g fill="rgba(51,214,255,.6)">
+                <rect x="57" y="88" width="26" height="14"/><rect x="115" y="78" width="26" height="24"/>
+                <rect x="173" y="64" width="26" height="38"/><rect x="231" y="52" width="26" height="50"/>
+                <rect x="289" y="58" width="26" height="44"/><rect x="347" y="42" width="26" height="60"/>
+                <rect x="405" y="54" width="26" height="48"/><rect x="463" y="66" width="26" height="36"/>
+                <rect x="521" y="74" width="26" height="28"/><rect x="579" y="68" width="26" height="34"/>
+                <rect x="637" y="58" width="26" height="44"/><rect x="695" y="64" width="26" height="38"/>
+                <rect x="753" y="78" width="26" height="24"/><rect x="811" y="90" width="26" height="12"/>
+              </g>
+            </svg>
+          </div>
+          <div class="axis7" style="padding:0 20px">
+            <span>06:00</span><span>08:00</span><span>10:00</span><span>12:00</span>
+            <span>14:00</span><span>16:00</span><span>18:00</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ================= 右栏：费用 ================= -->
+    <div class="a-col">
+
+      <section class="p" style="flex:0 0 288px">
+        <div class="p-h"><i></i><b>费用总览</b><em>COST OVERVIEW</em></div>
+        <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:4px">
+          <div class="bn" style="font-size:34px"><span style="font-size:16px;color:#6E88A6;margin-right:3px">¥</span>48,620</div>
+          <div style="padding-bottom:5px"><span class="delta up">▲ 12.4%</span></div>
+        </div>
+        <div style="font-size:10.5px;color:#6E88A6">今日上报 12 笔 · 较昨日 +5,360</div>
+
+        <div class="mini4" style="margin-top:14px">
+          <div><b class="am">5</b><span>待审核</span></div>
+          <div><b class="cy">3</b><span>待打款</span></div>
+          <div><b class="gn">8</b><span>已打款</span></div>
+          <div><b class="rd">1</b><span>已驳回</span></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:10px;
+          background:rgba(90,150,220,.14);border:1px solid rgba(90,150,220,.14)">
+          <div style="background:rgba(8,17,30,.9);padding:8px 10px">
+            <div style="font-size:10px;color:#6E88A6">待审金额</div>
+            <div style="font-family:var(--mono);font-size:16px;color:#FFB020;margin-top:3px">¥18,400</div>
+          </div>
+          <div style="background:rgba(8,17,30,.9);padding:8px 10px">
+            <div style="font-size:10px;color:#6E88A6">待打款金额</div>
+            <div style="font-family:var(--mono);font-size:16px;color:#33D6FF;margin-top:3px">¥12,600</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="p" style="flex:0 0 252px">
+        <div class="p-h"><i></i><b>费用类型构成</b><em>BY TYPE</em></div>
+        <div class="a-tabs" style="margin-bottom:11px"><span class="on">本月</span><span>上月</span></div>
+        <div class="rowbar"><span class="lb">费用上报</span><span class="tk"><i style="width:100%"></i></span><span class="vl">64,200</span></div>
+        <div class="rowbar"><span class="lb">借款</span><span class="tk"><i style="width:31%"></i></span><span class="vl">20,000</span></div>
+        <div class="rowbar"><span class="lb">补贴</span><span class="tk"><i style="width:10%"></i></span><span class="vl">6,500</span></div>
+        <div class="rowbar"><span class="lb">过磅</span><span class="tk"><i style="width:6%"></i></span><span class="vl">3,800</span></div>
+        <div class="rowbar" style="margin-bottom:0"><span class="lb">违章</span><span class="tk"><i class="r" style="width:3%"></i></span><span class="vl">1,800</span></div>
+        <div style="margin-top:auto;padding-top:9px;border-top:1px dashed rgba(90,150,220,.18);
+          display:flex;justify-content:space-between;font-size:10.5px;color:#6E88A6">
+          <span>合计 <b style="font-family:var(--mono);color:#EAF4FF">¥96,300</b></span>
+          <span>单均 ¥3,010</span>
+        </div>
+      </section>
+
+      <section class="p" style="flex:1">
+        <div class="p-h"><i></i><b>审批流转</b><em>FUNNEL · 本月</em></div>
+        <div class="funnel">
+          <div class="fn-row">
+            <span class="fn-lb">待审核</span>
+            <span class="fn-track"><i class="fn-bar" style="width:18%;background:linear-gradient(90deg,rgba(255,176,32,.75),rgba(255,176,32,.4))">12</i></span>
+            <span class="fn-sub">¥42,600</span>
+          </div>
+          <div class="fn-row">
+            <span class="fn-lb">审核中</span>
+            <span class="fn-track"><i class="fn-bar" style="width:14%;background:linear-gradient(90deg,rgba(255,138,61,.75),rgba(255,138,61,.4))">8</i></span>
+            <span class="fn-sub">¥28,400</span>
+          </div>
+          <div class="fn-row">
+            <span class="fn-lb">已通过</span>
+            <span class="fn-track"><i class="fn-bar" style="width:52%;background:linear-gradient(90deg,rgba(51,214,255,.75),rgba(51,214,255,.35))">34</i></span>
+            <span class="fn-sub">¥118,600</span>
+          </div>
+          <div class="fn-row">
+            <span class="fn-lb">待打款</span>
+            <span class="fn-track"><i class="fn-bar" style="width:26%;background:linear-gradient(90deg,rgba(43,224,138,.75),rgba(43,224,138,.35))">15</i></span>
+            <span class="fn-sub">¥62,300</span>
+          </div>
+          <div class="fn-row">
+            <span class="fn-lb">已打款</span>
+            <span class="fn-track"><i class="fn-bar" style="width:100%;background:linear-gradient(90deg,rgba(255,51,85,.8),rgba(255,51,85,.35))">96</i></span>
+            <span class="fn-sub">¥328,400</span>
+          </div>
+          <div class="fn-row">
+            <span class="fn-lb">已驳回</span>
+            <span class="fn-track"><i class="fn-bar" style="width:9%;background:linear-gradient(90deg,rgba(107,127,148,.6),rgba(107,127,148,.3))">4</i></span>
+            <span class="fn-sub">¥9,200</span>
+          </div>
+        </div>
+        <div style="margin-top:auto;padding-top:9px;border-top:1px dashed rgba(90,150,220,.18);
+          display:flex;justify-content:space-between;font-size:10.5px;color:#6E88A6">
+          <span>平均审批时长 <b style="font-family:var(--mono);color:#EAF4FF">8.4h</b></span>
+          <span style="color:#FF7A8E">超 24h 未审 3 笔</span>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var stage = document.getElementById('stage')
+    function fit() {
+      var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080)
+      stage.style.transform = 'scale(' + s + ')'
+    }
+    fit()
+    window.addEventListener('resize', fit)
+
+    var clock = document.querySelector('.a-clock')
+    var wd = ['周日','周一','周二','周三','周四','周五','周六']
+    function tick() {
+      var d = new Date()
+      var p = function (n) { return String(n).padStart(2, '0') }
+      clock.innerHTML = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds())
+        + '<small>' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+        + ' ' + wd[d.getDay()] + '</small>'
+    }
+    tick()
+    setInterval(tick, 1000)
+
+    var LEGENDS = {
+      view1: '<span><i style="background:#33D6FF"></i>行驶中</span>'
+        + '<span><i style="background:#FFB020"></i>静止</span>'
+        + '<span><i style="background:#6B7F94"></i>离线</span>',
+      view2: '<span><i style="background:#FF3355"></i>有任务车辆</span>'
+        + '<span><i class="dia" style="background:#FF3355"></i>卸货地</span>'
+        + '<span><i style="background:#FF8A9B"></i>任务路线</span>',
+      view3: '<span><i style="background:#FF3355"></i>线路流量（线宽=单量）</span>'
+        + '<span><i style="background:#FF8A9B"></i>流向</span>'
+    }
+    var META = {
+      view1: '定位更新 <b>3s</b> 前 · 高德暗色底图',
+      view2: '任务路线 <b>26</b> 条 · 卸货地坐标取自运单',
+      view3: '运单流向 <b>12</b> 条线路 · 按城市聚合'
+    }
+
+    var tabs = document.querySelectorAll('.map-tabs button')
+    var views = document.querySelectorAll('.view')
+    var legend = document.getElementById('mlegend')
+    var mtime = document.querySelector('.a-mtime')
+
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].addEventListener('click', function () {
+        var key = this.dataset.view
+        for (var k = 0; k < tabs.length; k++) tabs[k].classList.toggle('on', tabs[k] === this)
+        for (var j = 0; j < views.length; j++) views[j].classList.toggle('on', views[j].id === key)
+        legend.innerHTML = LEGENDS[key]
+        mtime.innerHTML = META[key]
+      })
+    }
+  })()
+</script>
+</body>
+</html>

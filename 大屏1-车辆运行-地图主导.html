@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>1 号屏 · 车辆运行监控中心（地图主导）</title>
+<style>
+  :root{
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",Arial,sans-serif;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#04060B;overflow:hidden;font-family:var(--font);
+    -webkit-font-smoothing:antialiased}
+  body{display:flex;align-items:center;justify-content:center}
+  .stage{position:relative;width:1920px;height:1080px;flex:none;background:#050A14;color:#DCE9F9;
+    overflow:hidden;transform-origin:center center;display:flex;flex-direction:column}
+  .stage::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(1000px 520px at 50% -6%,rgba(22,78,150,.30),transparent 72%),
+      radial-gradient(760px 420px at 50% 104%,rgba(130,10,34,.20),transparent 72%),
+      linear-gradient(180deg,#050A14 0%,#04070D 100%)}
+  .stage::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
+    background-image:
+      linear-gradient(rgba(96,158,226,.055) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(96,158,226,.055) 1px,transparent 1px);
+    background-size:60px 60px;
+    -webkit-mask-image:radial-gradient(ellipse at 50% 40%,#000 25%,transparent 78%);
+    mask-image:radial-gradient(ellipse at 50% 40%,#000 25%,transparent 78%)}
+
+  /* ===== 头部 ===== */
+  .a-head{position:relative;z-index:3;flex:0 0 86px;height:86px;display:flex;align-items:center;
+    padding:0 26px;border-bottom:1px solid rgba(90,150,220,.13)}
+  .a-head::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,45,75,.55) 50%,transparent)}
+  .a-hl{display:flex;flex-direction:column;gap:3px;min-width:230px}
+  .a-clock{font-family:var(--mono);font-size:24px;font-weight:700;color:#F2F8FF;letter-spacing:1.5px;
+    text-shadow:0 0 18px rgba(70,170,255,.35)}
+  .a-clock small{font-size:11.5px;font-weight:500;color:#6E88A6;letter-spacing:.5px;margin-left:8px}
+  .a-chip{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px;font-size:11px;
+    color:#9DB6D2;border:1px solid rgba(90,150,220,.22);background:rgba(10,22,40,.6);border-radius:3px;width:fit-content}
+  .a-chip i{width:6px;height:6px;border-radius:50%;background:#2BE08A;box-shadow:0 0 8px #2BE08A}
+  .a-chip i.cy{background:#33D6FF;box-shadow:0 0 8px #33D6FF}
+  .a-chip i.rd{background:#FF3355;box-shadow:0 0 8px #FF3355}
+  .a-hc{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}
+  .a-title{font-size:29px;font-weight:800;letter-spacing:11px;text-indent:11px;
+    background:linear-gradient(180deg,#FFFFFF 25%,#9EC4E8 100%);-webkit-background-clip:text;
+    background-clip:text;color:transparent;filter:drop-shadow(0 0 22px rgba(80,180,255,.28))}
+  .a-sub{margin-top:5px;font-size:10px;letter-spacing:3.2px;color:#5A7695}
+  .a-hc::after{content:"";position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);
+    width:460px;height:2px;background:linear-gradient(90deg,transparent,rgba(255,45,75,.85),transparent);
+    box-shadow:0 0 12px rgba(255,45,75,.5)}
+  .a-hr{margin-left:auto;display:flex;gap:9px}
+
+  /* ===== 栅格 ===== */
+  .a-body{position:relative;z-index:2;flex:1;min-height:0;display:grid;
+    grid-template-columns:412px 1fr 412px;gap:14px;padding:14px 16px}
+  .a-col{display:flex;flex-direction:column;gap:12px;min-height:0}
+
+  .p{position:relative;display:flex;flex-direction:column;min-height:0;padding:12px 14px;
+    background:linear-gradient(160deg,rgba(12,24,42,.82),rgba(7,14,26,.72));
+    border:1px solid rgba(84,144,214,.16);box-shadow:inset 0 0 34px rgba(28,90,170,.07)}
+  .p::before,.p::after{content:"";position:absolute;width:11px;height:11px;
+    border:1px solid rgba(255,45,75,.65);pointer-events:none}
+  .p::before{left:-1px;top:-1px;border-right:0;border-bottom:0}
+  .p::after{right:-1px;bottom:-1px;border-left:0;border-top:0}
+  .p-h{flex:0 0 auto;display:flex;align-items:center;gap:9px;margin-bottom:10px}
+  .p-h i{width:3px;height:14px;background:linear-gradient(180deg,#FF6B81,#FF1F3D);
+    box-shadow:0 0 10px rgba(255,45,75,.85)}
+  .p-h b{font-size:14.5px;font-weight:700;letter-spacing:1.4px;color:#EAF4FF}
+  .p-h em{font-style:normal;margin-left:auto;font-size:9.5px;letter-spacing:1.6px;color:#4E6885}
+
+  .bn{font-family:var(--mono);font-weight:700;color:#fff;line-height:1;letter-spacing:-1.2px;
+    text-shadow:0 0 22px rgba(51,214,255,.26)}
+  .unit{font-size:11.5px;color:#6E88A6;margin-left:4px;letter-spacing:0}
+  .delta{font-size:10.5px;font-family:var(--mono)}
+  .delta.up{color:#2BE08A}
+  .delta.down{color:#FF6B81}
+  .kv{display:flex;flex-direction:column;gap:4px}
+  .kv b{font-family:var(--mono);font-size:24px;color:#fff;line-height:1;letter-spacing:-.5px}
+  .kv span{font-size:11px;color:#7089A6}
+
+  .ring{position:relative;width:146px;height:146px;border-radius:50%;flex:0 0 auto;
+    background:conic-gradient(from -90deg,#33D6FF 0 calc(var(--p) * 1%),rgba(255,255,255,.055) 0)}
+  .ring::after{content:"";position:absolute;inset:15px;border-radius:50%;background:#07101C;
+    box-shadow:inset 0 0 26px rgba(51,214,255,.16)}
+  .ring .rv{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:3px}
+  .ring .rv b{font-family:var(--mono);font-size:34px;font-weight:700;color:#fff;line-height:1;letter-spacing:-1px}
+  .ring .rv span{font-size:10.5px;color:#6E88A6;letter-spacing:.5px}
+
+  .mini4{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+    background:rgba(90,150,220,.14);border:1px solid rgba(90,150,220,.14)}
+  .mini4>div{background:rgba(8,17,30,.9);padding:9px 6px;text-align:center}
+  .mini4 b{display:block;font-family:var(--mono);font-size:21px;font-weight:700;line-height:1;color:#EAF4FF}
+  .mini4 span{display:block;font-size:10.5px;color:#6E88A6;margin-top:5px}
+  .cy{color:#33D6FF !important}.wt{color:#C9D8E8 !important}.dm{color:#6B7F94 !important}
+  .rd{color:#FF4D66 !important}.am{color:#FFB020 !important}.gn{color:#2BE08A !important}
+
+  .a-tabs{display:inline-flex;gap:3px;background:rgba(255,255,255,.045);padding:3px;border-radius:2px}
+  .a-tabs span{font-size:11px;padding:4px 12px;color:#7C93AC;cursor:default;border-radius:1px}
+  .a-tabs span.on{background:linear-gradient(135deg,rgba(255,45,75,.9),rgba(190,10,40,.9));
+    color:#fff;font-weight:700;box-shadow:0 0 14px rgba(255,45,75,.4)}
+
+  .spark{width:100%;height:78px;display:block;margin:2px 0 0}
+  .axis7{display:flex;justify-content:space-between;font-size:10px;color:#5E7895;
+    font-family:var(--mono);padding:0 2px}
+
+  .rowbar{display:grid;grid-template-columns:78px 1fr 54px;align-items:center;gap:9px;margin-bottom:8px}
+  .rowbar .lb{font-size:11.5px;color:#9DB4CC;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rowbar .tk{position:relative;height:9px;background:rgba(255,255,255,.05);overflow:hidden}
+  .rowbar .tk i{position:absolute;left:0;top:0;bottom:0;min-width:5px;
+    background:linear-gradient(90deg,rgba(51,214,255,.35),#33D6FF);box-shadow:0 0 10px rgba(51,214,255,.5)}
+  .rowbar .tk i.r{background:linear-gradient(90deg,rgba(255,45,75,.3),#FF3355);box-shadow:0 0 10px rgba(255,45,75,.5)}
+  .rowbar .vl{text-align:right;font-family:var(--mono);font-size:11.5px;color:#C8DAEE}
+
+  .list{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+  .li{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:9px;
+    padding:6px 9px;background:rgba(255,255,255,.022);border-left:2px solid rgba(51,214,255,.45)}
+  .li .t{font-family:var(--mono);font-size:10.5px;color:#5E7895}
+  .li .m{font-size:11.5px;color:#B7CBE0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .li .m b{color:#EAF4FF;font-weight:700;margin-right:5px}
+  .li .tag{font-size:10px;padding:1px 6px;border:1px solid rgba(51,214,255,.35);color:#6FE0FF}
+  .li .tag.r{border-color:rgba(255,45,75,.45);color:#FF7A8E}
+  .li .tag.a{border-color:rgba(255,176,32,.45);color:#FFC45E}
+  .li .tag.g{border-color:rgba(43,224,138,.4);color:#5CEBA4}
+  .li.fault{border-left-color:#FF3355;background:rgba(255,45,75,.07)}
+
+  /* ===== 地图 ===== */
+  .a-map{position:relative;flex:1;min-height:0;overflow:hidden;border:1px solid rgba(84,144,214,.2);
+    background-color:#04070F;
+    background-image:
+      linear-gradient(rgba(96,158,226,.05) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(96,158,226,.05) 1px,transparent 1px);
+    background-size:52px 52px}
+  .map-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .a-mkpi{position:absolute;z-index:4;top:11px;left:11px;right:11px;display:flex;gap:9px}
+  .a-mkpi>div{flex:1;padding:7px 12px;background:rgba(6,14,26,.74);
+    border:1px solid rgba(84,144,214,.22);backdrop-filter:blur(8px)}
+  .a-mkpi b{display:block;font-family:var(--mono);font-size:22px;font-weight:700;color:#fff;
+    line-height:1.1;letter-spacing:-.5px}
+  .a-mkpi span{display:block;font-size:10.5px;color:#6E88A6;margin-top:3px;letter-spacing:.5px}
+  .a-mlegend{position:absolute;z-index:4;left:12px;bottom:11px;display:flex;gap:14px;
+    padding:6px 12px;background:rgba(6,14,26,.74);border:1px solid rgba(84,144,214,.18);
+    font-size:10.5px;color:#8AA4C0}
+  .a-mlegend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  .a-mtime{position:absolute;z-index:4;right:12px;bottom:11px;display:flex;align-items:center;gap:8px;
+    padding:6px 12px;background:rgba(6,14,26,.74);border:1px solid rgba(84,144,214,.18);
+    font-size:10.5px;color:#7E97B4}
+  .a-mtime b{font-family:var(--mono);color:#33D6FF;font-weight:600}
+
+  .vp{fill:none;stroke:rgba(51,214,255,.3);stroke-width:1}
+  .vp.r{stroke:rgba(255,51,85,.32)}
+
+  /* ===== 故障浮窗 ===== */
+  .fault-pop{
+    position:absolute;z-index:7;top:82px;right:12px;width:322px;display:none;
+    background:linear-gradient(158deg,rgba(52,12,20,.95),rgba(11,10,16,.94));
+    border:1px solid rgba(255,45,75,.5);
+    box-shadow:0 0 34px rgba(255,45,75,.3),inset 0 0 46px rgba(255,45,75,.09);
+    backdrop-filter:blur(12px);
+    clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));
+    overflow:hidden;
+  }
+  .fault-pop.on{display:block;animation:faultIn .45s cubic-bezier(.34,1.4,.64,1)}
+  @keyframes faultIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:translateX(0)}}
+  .fp-hd{display:flex;align-items:center;gap:8px;padding:9px 12px;
+    background:linear-gradient(90deg,rgba(255,45,75,.26),rgba(255,45,75,.04));
+    border-bottom:1px solid rgba(255,45,75,.28)}
+  .fp-hd .fi{width:16px;height:16px;flex:0 0 auto}
+  .fp-hd b{font-size:12.5px;font-weight:700;letter-spacing:1.4px;color:#FFD9DF}
+  .fp-hd .cnt{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:#FFA8B6;letter-spacing:1px}
+  .fp-hd .x{width:16px;height:16px;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;color:#C98A95;font-size:13px;line-height:1;border:1px solid rgba(255,45,75,.3)}
+  .fp-body{padding:11px 13px 12px}
+  .fp-plate{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+  .fp-plate b{font-family:var(--mono);font-size:15px;letter-spacing:1px;color:#fff}
+  .fp-lv{font-size:9.5px;padding:1px 7px;letter-spacing:1px;border:1px solid currentColor;margin-left:auto}
+  .fp-lv.hi{color:#FF4D66;background:rgba(255,77,102,.12)}
+  .fp-lv.mid{color:#FFB020;background:rgba(255,176,32,.1)}
+  .fp-title{font-size:13px;color:#FFE9EC;line-height:1.5;margin-bottom:7px;font-weight:600}
+  .fp-meta{display:flex;flex-direction:column;gap:5px;font-size:11px;color:#B99AA3}
+  .fp-meta div{display:flex;gap:7px}
+  .fp-meta .k{color:#8A6B75;width:46px;flex:0 0 auto}
+  .fp-meta .v{color:#D6C1C7;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fp-meta .v b{color:#FF8A9B;font-family:var(--mono);font-weight:600}
+  .fp-ft{display:flex;gap:7px;margin-top:11px;padding-top:10px;border-top:1px dashed rgba(255,45,75,.24)}
+  .fp-btn{flex:1;text-align:center;font-size:11px;padding:5px 0;letter-spacing:.8px;cursor:pointer;
+    border:1px solid rgba(255,45,75,.35);color:#FFB3BE;background:rgba(255,45,75,.08)}
+  .fp-btn.primary{background:linear-gradient(135deg,#FF3355,#B00D22);border-color:transparent;color:#fff;font-weight:600}
+  .fp-src{padding:0 13px 9px;font-size:9px;color:#6E5A61;letter-spacing:.4px}
+
+
+  .fault-mark .fm-ring{opacity:.55}
+
+  /* ===== 底部趋势 ===== */
+  .a-chart{flex:0 0 168px}
+  .chart-wrap{flex:1;min-height:0;display:flex;flex-direction:column}
+  .chart-box{flex:1;min-height:0;position:relative}
+  .chart-box svg{position:absolute;inset:0;width:100%;height:100%}
+  .chart-lg{display:flex;gap:14px;font-size:10px;color:#7E97B4;margin-left:auto}
+  .chart-lg i{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle}
+
+  .note{font-size:9.5px;color:#4E6885;letter-spacing:.3px}
+
+  /* ===== KPI 可点 ===== */
+  .a-mkpi>div{position:relative;cursor:pointer;transition:border-color .2s,background .2s,transform .2s}
+  .a-mkpi>div::after{content:"详情";position:absolute;right:9px;top:7px;font-size:9px;
+    letter-spacing:.5px;color:#3F5773;transition:color .2s}
+  .a-mkpi>div:hover{border-color:rgba(255,45,75,.5);background:rgba(24,34,54,.9);transform:translateY(-1px)}
+  .a-mkpi>div:hover::after{color:#FF7A8E}
+  .a-mkpi>div.active{border-color:rgba(255,45,75,.75);background:rgba(40,18,26,.9);
+    box-shadow:0 0 18px rgba(255,45,75,.28)}
+  .a-mkpi>div.active::after{content:"展开中";color:#FF3355}
+
+  /* ===== 明细面板 ===== */
+  .detail-panel{position:absolute;z-index:9;top:64px;right:0;bottom:0;width:624px;
+    display:flex;flex-direction:column;
+    background:linear-gradient(160deg,rgba(9,18,32,.975),rgba(5,10,18,.975));
+    border-left:1px solid rgba(255,45,75,.38);
+    box-shadow:-28px 0 64px rgba(0,0,0,.6);backdrop-filter:blur(12px);
+    transform:translateX(102%);transition:transform .34s cubic-bezier(.22,1,.36,1)}
+  .detail-panel.on{transform:translateX(0)}
+  .a-map.has-detail .fault-pop{display:none !important}
+  .a-map.has-detail .a-mlegend{opacity:.35}
+
+  .dp-hd{flex:0 0 46px;display:flex;align-items:center;gap:9px;padding:0 14px;
+    border-bottom:1px solid rgba(255,45,75,.22);
+    background:linear-gradient(90deg,rgba(255,45,75,.13),rgba(255,45,75,.02))}
+  .dp-bar{width:3px;height:15px;background:linear-gradient(180deg,#FF6B81,#FF1F3D);
+    box-shadow:0 0 10px rgba(255,45,75,.85)}
+  .dp-title{font-size:14.5px;font-weight:700;letter-spacing:1.2px;color:#EAF4FF}
+  .dp-sub{font-size:10.5px;color:#6E88A6;letter-spacing:.4px}
+  .dp-x{margin-left:auto;width:22px;height:22px;display:flex;align-items:center;justify-content:center;
+    border:1px solid rgba(255,45,75,.3);color:#C98A95;cursor:pointer;font-size:14px;line-height:1}
+  .dp-x:hover{background:rgba(255,45,75,.18);color:#fff}
+
+  .dp-dist{flex:0 0 auto;padding:11px 14px 10px;border-bottom:1px solid rgba(90,150,220,.14)}
+  .dist-bar{display:flex;height:9px;gap:2px;margin-bottom:8px}
+  .dist-bar i{display:block;height:100%;min-width:3px}
+  .dist-lg{display:flex;gap:16px;font-size:10px;color:#7E97B4}
+  .dist-lg b{font-family:var(--mono);color:#DCE9F9;margin-left:3px}
+
+  .dp-tb{flex:1;min-height:0;overflow:auto}
+  .dp-tb::-webkit-scrollbar{width:5px}
+  .dp-tb::-webkit-scrollbar-thumb{background:rgba(84,144,214,.35)}
+  .dp-head,.dp-row{display:grid;gap:8px;align-items:center;padding:0 14px}
+  .dp-head{position:sticky;top:0;z-index:2;height:28px;font-size:10px;color:#5E7895;letter-spacing:.8px;
+    background:rgba(6,12,22,.97);border-bottom:1px solid rgba(90,150,220,.14)}
+  .dp-row{height:30px;font-size:11.5px;color:#B7CBE0;border-bottom:1px solid rgba(90,150,220,.07)}
+  .dp-row:hover{background:rgba(51,214,255,.055)}
+  .dp-row .num{font-family:var(--mono);color:#EAF4FF;text-align:right;letter-spacing:.3px}
+  .dp-row .em{font-family:var(--mono);color:#FF7A8E;text-align:right;letter-spacing:.3px}
+  .dp-row .gn2{font-family:var(--mono);color:#2BE08A;text-align:right;letter-spacing:.3px}
+  .dp-row .plate{font-family:var(--mono);color:#DCE9F9;letter-spacing:.4px}
+  .dp-row .clip{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8AA4C0}
+  .dp-row.fault{background:rgba(255,45,75,.07);border-bottom-color:rgba(255,45,75,.16)}
+  .dp-row .lv{font-size:9.5px;padding:1px 6px;border:1px solid currentColor;text-align:center}
+  .dp-row .lv.hi{color:#FF4D66}
+  .dp-row .lv.mid{color:#FFB020}
+
+  .dp-ft{flex:0 0 30px;display:flex;align-items:center;gap:10px;padding:0 14px;font-size:9.5px;
+    color:#4E6885;border-top:1px solid rgba(90,150,220,.12)}
+  .dp-ft b{font-family:var(--mono);color:#7E97B4;font-weight:600}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- ============ 头部 ============ -->
+  <div class="a-head">
+    <div class="a-hl">
+      <div class="a-clock">17:55:31<small>2026-10-25 周日</small></div>
+      <div class="a-chip" style="margin-top:4px"><i></i>数据链路正常 · 30s 刷新</div>
+    </div>
+    <div class="a-hc">
+      <div class="a-title">车队运行监控中心</div>
+      <div class="a-sub">VEHICLE OPERATION MONITOR</div>
+    </div>
+    <div class="a-hr">
+      <div class="a-chip"><i class="cy"></i>在线 42 / 50</div>
+      <div class="a-chip"><i class="rd"></i>故障 2</div>
+    </div>
+  </div>
+
+  <!-- ============ 主体 ============ -->
+  <div class="a-body">
+
+    <!-- ---------- 左栏 ---------- -->
+    <div class="a-col">
+
+      <section class="p" style="flex:0 0 288px">
+        <div class="p-h"><i></i><b>车辆总览</b><em>FLEET OVERVIEW</em></div>
+        <div style="display:flex;align-items:center;gap:18px">
+          <div class="ring" style="--p:84">
+            <div class="rv"><b>84%</b><span>在线率</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="kv"><b>50</b><span>车辆总数</span></div>
+            <div class="kv"><b class="cy">42</b><span>在线车辆</span></div>
+            <div class="kv"><b class="dm">3</b><span>长期离线（&gt;24h）</span></div>
+          </div>
+        </div>
+        <div class="mini4" style="margin-top:14px">
+          <div><b class="gn">26</b><span>行驶中</span></div>
+          <div><b class="am">16</b><span>静止</span></div>
+          <div><b class="dm">8</b><span>离线</span></div>
+          <div><b class="rd">2</b><span>故障</span></div>
+        </div>
+      </section>
+
+      <section class="p" style="flex:1">
+        <div class="p-h"><i></i><b>今日运行</b><em>DAY / WEEK / MONTH</em></div>
+        <div class="a-tabs" style="margin-bottom:14px">
+          <span class="on">今日</span><span>本周</span><span>本月</span>
+        </div>
+
+        <div style="display:flex;align-items:flex-end;gap:10px">
+          <div class="bn" style="font-size:38px">7,842<span class="unit">km</span></div>
+          <div style="padding-bottom:5px"><span class="delta up">▲ 8.2%</span></div>
+        </div>
+        <div style="font-size:10.5px;color:#6E88A6;margin-top:6px">
+          今日行驶里程 · 轨迹批量实算（42 辆出车）
+        </div>
+
+        <svg class="spark" viewBox="0 0 340 78" preserveAspectRatio="none" style="margin-top:10px">
+          <defs>
+            <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#33D6FF" stop-opacity=".42"/>
+              <stop offset="1" stop-color="#33D6FF" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M0 58 L48 50 L96 54 L144 38 L192 44 L240 28 L288 32 L340 18 L340 78 L0 78 Z" fill="url(#gA)"/>
+          <path d="M0 58 L48 50 L96 54 L144 38 L192 44 L240 28 L288 32 L340 18"
+            fill="none" stroke="#33D6FF" stroke-width="2"/>
+          <circle cx="340" cy="18" r="3" fill="#7FE8FF"/>
+        </svg>
+        <div class="axis7" style="margin-bottom:12px">
+          <span>10-19</span><span>10-20</span><span>10-21</span><span>10-22</span>
+          <span>10-23</span><span>10-24</span><span>今日</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+          background:rgba(90,150,220,.14);border:1px solid rgba(90,150,220,.14);margin-top:auto">
+          <div style="background:rgba(8,17,30,.9);padding:9px 6px;text-align:center">
+            <b style="display:block;font-family:var(--mono);font-size:17px;color:#EAF4FF">84.0%</b>
+            <span style="font-size:10px;color:#6E88A6">出勤率</span>
+          </div>
+          <div style="background:rgba(8,17,30,.9);padding:9px 6px;text-align:center">
+            <b style="display:block;font-family:var(--mono);font-size:17px;color:#EAF4FF">46.2</b>
+            <span style="font-size:10px;color:#6E88A6">均速 km/h</span>
+          </div>
+          <div style="background:rgba(8,17,30,.9);padding:9px 6px;text-align:center">
+            <b style="display:block;font-family:var(--mono);font-size:17px;color:#EAF4FF">6.4</b>
+            <span style="font-size:10px;color:#6E88A6">单车均里程</span>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px;margin-top:11px;padding-top:9px;
+          border-top:1px dashed rgba(90,150,220,.18);font-size:11px;color:#7089A6">
+          百公里电耗 <b style="font-family:var(--mono);font-size:15px;color:#33D6FF">138.6</b>
+          <span style="font-size:10px;color:#4E6885">kWh · 截至 10-24</span>
+        </div>
+      </section>
+
+      <section class="p" style="flex:0 0 196px">
+        <div class="p-h"><i></i><b>车辆构成</b><em>COMPOSITION</em></div>
+        <div style="font-size:10px;color:#5E7895;letter-spacing:1px;margin-bottom:8px">按燃料类型</div>
+        <div class="rowbar"><span class="lb">纯电动</span><span class="tk"><i style="width:100%"></i></span><span class="vl">32</span></div>
+        <div class="rowbar"><span class="lb">燃气车</span><span class="tk"><i class="r" style="width:31%"></i></span><span class="vl">10</span></div>
+        <div class="rowbar" style="margin-bottom:6px"><span class="lb">燃油车</span><span class="tk"><i class="r" style="width:25%"></i></span><span class="vl">8</span></div>
+        <div style="display:flex;gap:14px;font-size:11.5px;color:#9DB4CC;padding-top:7px;
+          border-top:1px dashed rgba(90,150,220,.18)">
+          <span>牵引车 <b style="font-family:var(--mono);color:#EAF4FF">30</b></span>
+          <span>自卸车 <b style="font-family:var(--mono);color:#EAF4FF">12</b></span>
+          <span>厢式 <b style="font-family:var(--mono);color:#EAF4FF">8</b></span>
+        </div>
+      </section>
+    </div>
+
+    <!-- ---------- 中栏 ---------- -->
+    <div class="a-col" style="gap:12px">
+
+      <div class="a-map">
+        <svg class="map-svg" viewBox="0 0 1000 780" preserveAspectRatio="xMidYMid slice">
+          <rect width="1000" height="780" fill="#04070F"/>
+          <g fill="#0A1524" opacity=".85">
+            <path d="M360 250 L520 235 L560 330 L470 372 L372 340 Z"/>
+            <path d="M545 395 L650 380 L700 470 L610 512 L540 460 Z"/>
+            <path d="M250 330 L345 340 L352 430 L262 452 Z"/>
+            <path d="M330 520 L440 505 L470 610 L360 640 Z"/>
+          </g>
+          <path d="M-20 452 C 180 402 300 486 520 452 S 800 396 1020 438"
+            fill="none" stroke="#0B2C46" stroke-width="20" opacity=".9"/>
+          <path d="M-20 452 C 180 402 300 486 520 452 S 800 396 1020 438"
+            fill="none" stroke="#2E8FC0" stroke-width="1.6" opacity=".45"/>
+          <g fill="none" stroke="#2C5D8C" stroke-width="9" opacity=".1">
+            <path d="M-20 250 C 150 220 260 300 420 300 S 700 250 1020 300"/>
+            <path d="M120 -20 C 160 180 220 340 200 800"/>
+            <path d="M420 -20 C 430 160 470 330 500 520 S 520 700 540 800"/>
+            <path d="M720 -20 C 700 200 660 380 700 560 S 730 700 760 800"/>
+            <path d="M-20 520 C 180 480 380 560 560 540 S 820 470 1020 520"/>
+            <path d="M-20 680 C 200 640 420 700 640 660 S 860 620 1020 650"/>
+          </g>
+          <g fill="none" stroke="#6FA3D0" stroke-width="1.8" opacity=".2">
+            <path d="M-20 250 C 150 220 260 300 420 300 S 700 250 1020 300"/>
+            <path d="M120 -20 C 160 180 220 340 200 800"/>
+            <path d="M420 -20 C 430 160 470 330 500 520 S 520 700 540 800"/>
+            <path d="M720 -20 C 700 200 660 380 700 560 S 730 700 760 800"/>
+            <path d="M-20 520 C 180 480 380 560 560 540 S 820 470 1020 520"/>
+            <path d="M-20 680 C 200 640 420 700 640 660 S 860 620 1020 650"/>
+            <path d="M-20 360 C 240 340 420 400 640 370 S 880 330 1020 350"/>
+            <path d="M840 -20 C 820 200 860 400 840 620 S 850 720 870 800"/>
+          </g>
+          <g fill="none" stroke="#6FA3D0" stroke-width="1" opacity=".1">
+            <path d="M260 -20 C 300 200 340 400 300 800"/>
+            <path d="M580 -20 C 560 200 600 420 580 800"/>
+            <path d="M-20 180 C 200 200 400 160 620 190 S 880 220 1020 190"/>
+            <path d="M-20 600 C 240 580 460 620 700 590 S 900 560 1020 580"/>
+          </g>
+          <g font-family="PingFang SC,sans-serif" font-size="11" fill="#5F7A99">
+            <g><circle cx="480" cy="340" r="3.2" fill="#8FB6DA"/><text x="480" y="326" text-anchor="middle" font-size="12" fill="#A8C4DF">太原</text></g>
+            <g><circle cx="540" cy="392" r="2.4" fill="#6F92B4"/><text x="552" y="396">晋中</text></g>
+            <g><circle cx="300" cy="360" r="2.4" fill="#6F92B4"/><text x="288" y="355" text-anchor="end">吕梁</text></g>
+            <g><circle cx="620" cy="482" r="2.4" fill="#6F92B4"/><text x="632" y="486">长治</text></g>
+            <g><circle cx="480" cy="92" r="2.4" fill="#6F92B4"/><text x="480" y="78" text-anchor="middle">大同</text></g>
+            <g><circle cx="420" cy="210" r="2.2" fill="#5C7D9C"/><text x="432" y="214">忻州</text></g>
+            <g><circle cx="620" cy="300" r="2.2" fill="#5C7D9C"/><text x="632" y="304">阳泉</text></g>
+            <g><circle cx="400" cy="560" r="2.2" fill="#5C7D9C"/><text x="388" y="565" text-anchor="end">临汾</text></g>
+            <g><circle cx="380" cy="700" r="2.2" fill="#5C7D9C"/><text x="392" y="704">运城</text></g>
+          </g>
+
+          <g>
+            <g transform="translate(500 350)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/><circle r="2.6" fill="#7FE8FF"/></g>
+            <g transform="translate(330 368)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/><circle r="2.6" fill="#7FE8FF"/></g>
+            <g transform="translate(700 420)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/><circle r="2.6" fill="#7FE8FF"/></g>
+            <g transform="translate(250 522)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/><circle r="2.6" fill="#7FE8FF"/></g>
+            <g transform="translate(452 604)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/><circle r="2.6" fill="#7FE8FF"/></g>
+            <g transform="translate(610 220)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/><circle r="2.6" fill="#7FE8FF"/></g>
+            <g transform="translate(230 250)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#33D6FF" stroke-width="1.8"/><circle r="2.6" fill="#7FE8FF"/></g>
+
+            <g transform="translate(420 470)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#FFB020" stroke-width="1.8"/><circle r="2.6" fill="#FFD98A"/></g>
+            <g transform="translate(560 560)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#FFB020" stroke-width="1.8"/><circle r="2.6" fill="#FFD98A"/></g>
+            <g transform="translate(340 620)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#FFB020" stroke-width="1.8"/><circle r="2.6" fill="#FFD98A"/></g>
+            <g transform="translate(760 340)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#FFB020" stroke-width="1.8"/><circle r="2.6" fill="#FFD98A"/></g>
+            <g transform="translate(180 430)"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#FFB020" stroke-width="1.8"/><circle r="2.6" fill="#FFD98A"/></g>
+
+            <g transform="translate(660 660)" opacity=".55"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#6B7F94" stroke-width="1.6"/><circle r="2.4" fill="#8FA3B8"/></g>
+            <g transform="translate(300 120)" opacity=".55"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#6B7F94" stroke-width="1.6"/><circle r="2.4" fill="#8FA3B8"/></g>
+            <g transform="translate(560 140)" opacity=".55"><circle r="15" class="vp"/><circle r="7.5" fill="#0B1220" stroke="#6B7F94" stroke-width="1.6"/><circle r="2.4" fill="#8FA3B8"/></g>
+
+            <g class="fault-mark" transform="translate(430 300)">
+              <circle class="fm-ring" r="16" fill="none" stroke="#FF3355" stroke-width="1.4"/>
+              <circle r="17" fill="rgba(255,45,75,.14)"/>
+              <path class="fm-tri" d="M0 -9 L9 7 L-9 7 Z" fill="#FF3355"/>
+              <text y="4.5" text-anchor="middle" font-size="8.5" font-weight="700" fill="#2A0008">!</text>
+              <text y="-24" text-anchor="middle" font-size="11" font-weight="700" fill="#FFB3BE">晋A·D8821</text>
+            </g>
+            <g class="fault-mark" transform="translate(640 500)">
+              <circle class="fm-ring" r="16" fill="none" stroke="#FF3355" stroke-width="1.4" style="animation-delay:1.2s"/>
+              <circle r="17" fill="rgba(255,45,75,.14)"/>
+              <path class="fm-tri" d="M0 -9 L9 7 L-9 7 Z" fill="#FF3355"/>
+              <text y="4.5" text-anchor="middle" font-size="8.5" font-weight="700" fill="#2A0008">!</text>
+              <text y="26" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFB3BE">晋J·D5566</text>
+            </g>
+          </g>
+        </svg>
+
+        <div class="a-mkpi">
+          <div data-kpi="running"><b class="gn">26</b><span>行驶中</span></div>
+          <div data-kpi="mileage"><b>7,842</b><span>今日里程 km</span></div>
+          <div data-kpi="speed"><b>46.2</b><span>平均车速 km/h</span></div>
+          <div data-kpi="fault"><b class="rd">2</b><span>故障车辆</span></div>
+        </div>
+
+        <!-- 明细面板 -->
+        <div class="detail-panel" id="dpanel">
+          <div class="dp-hd">
+            <span class="dp-bar"></span>
+            <b class="dp-title"></b>
+            <span class="dp-sub"></span>
+            <span class="dp-x" id="dpClose">×</span>
+          </div>
+          <div class="dp-dist" id="dpDist" style="display:none">
+            <div class="dist-bar" id="dpDistBar"></div>
+            <div class="dist-lg" id="dpDistLg"></div>
+          </div>
+          <div class="dp-tb">
+            <div class="dp-head" id="dpHead"></div>
+            <div id="dpBody"></div>
+          </div>
+          <div class="dp-ft" id="dpFoot"></div>
+        </div>
+
+        <!-- 故障浮窗 ① -->
+        <div class="fault-pop on" data-fault="0">
+          <div class="fp-hd">
+            <svg class="fi" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2.5 L18 16.5 L2 16.5 Z" stroke="#FF3355" stroke-width="1.5" fill="rgba(255,45,75,.18)"/>
+              <path d="M10 7.5 V11.5" stroke="#FF6B81" stroke-width="1.6" stroke-linecap="round"/>
+              <circle cx="10" cy="13.6" r=".9" fill="#FF6B81"/>
+            </svg>
+            <b>故障告警</b>
+            <span class="cnt">1 / 2</span>
+            <span class="x">×</span>
+          </div>
+          <div class="fp-body">
+            <div class="fp-plate">
+              <b>晋A·D8821</b>
+              <span class="fp-lv hi">严重</span>
+            </div>
+            <div class="fp-title">驱动电机控制器过热，请立即停驶检查</div>
+            <div class="fp-meta">
+              <div><span class="k">故障码</span><span class="v"><b>P0A3F</b> · 电机控制器温度过高</span></div>
+              <div><span class="k">发生时间</span><span class="v">10-25 10:12:38（已持续 1h43m）</span></div>
+              <div><span class="k">位置</span><span class="v">太原市小店区 · 太长高速 K12+400</span></div>
+              <div><span class="k">车辆状态</span><span class="v">静止 · 车速 0 km/h · 距最近服务点 8.2 km</span></div>
+              <div><span class="k">司机</span><span class="v">张建国 · 138****6621</span></div>
+            </div>
+            <div class="fp-ft">
+              <span class="fp-btn">定位到该车</span>
+              <span class="fp-btn primary">派单维修</span>
+            </div>
+          </div>
+          <div class="fp-src">数据源：车联网故障码通道 · 待接入</div>
+        </div>
+
+        <!-- 故障浮窗 ② -->
+        <div class="fault-pop" data-fault="1">
+          <div class="fp-hd">
+            <svg class="fi" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2.5 L18 16.5 L2 16.5 Z" stroke="#FF3355" stroke-width="1.5" fill="rgba(255,45,75,.18)"/>
+              <path d="M10 7.5 V11.5" stroke="#FF6B81" stroke-width="1.6" stroke-linecap="round"/>
+              <circle cx="10" cy="13.6" r=".9" fill="#FF6B81"/>
+            </svg>
+            <b>故障告警</b>
+            <span class="cnt">2 / 2</span>
+            <span class="x">×</span>
+          </div>
+          <div class="fp-body">
+            <div class="fp-plate">
+              <b>晋J·D5566</b>
+              <span class="fp-lv mid">一般</span>
+            </div>
+            <div class="fp-title">动力电池单体压差过大，建议返场检修</div>
+            <div class="fp-meta">
+              <div><span class="k">故障码</span><span class="v"><b>P1B22</b> · 电池组压差异常</span></div>
+              <div><span class="k">发生时间</span><span class="v">10-25 09:47:12（已持续 2h08m）</span></div>
+              <div><span class="k">位置</span><span class="v">长治市潞州区 · 西环路辅道</span></div>
+              <div><span class="k">车辆状态</span><span class="v">行驶 · 车速 42 km/h · 可继续行驶</span></div>
+              <div><span class="k">司机</span><span class="v">李海涛 · 139****3348</span></div>
+            </div>
+            <div class="fp-ft">
+              <span class="fp-btn">定位到该车</span>
+              <span class="fp-btn primary">派单维修</span>
+            </div>
+          </div>
+          <div class="fp-src">数据源：车联网故障码通道 · 待接入</div>
+        </div>
+
+        <div class="a-mlegend">
+          <span><i style="background:#33D6FF"></i>行驶中</span>
+          <span><i style="background:#FFB020"></i>静止</span>
+          <span><i style="background:#6B7F94"></i>离线</span>
+          <span><i style="background:#FF3355"></i>故障</span>
+        </div>
+        <div class="a-mtime">定位更新 <b>3s</b> 前 · 高德暗色底图</div>
+      </div>
+
+      <section class="p a-chart">
+        <div class="p-h"><i></i><b>近 7 日里程 / 电耗</b>
+          <div class="chart-lg">
+            <span><i style="background:#33D6FF"></i>里程</span>
+            <span><i style="background:#FF3355"></i>电耗（截至 10-24）</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-box">
+            <svg viewBox="0 0 1000 110" preserveAspectRatio="none">
+              <g stroke="rgba(120,170,220,.10)" stroke-width="1">
+                <line x1="0" y1="28" x2="1000" y2="28"/>
+                <line x1="0" y1="58" x2="1000" y2="58"/>
+                <line x1="0" y1="88" x2="1000" y2="88"/>
+              </g>
+              <g>
+                <rect x="34" y="46" width="52" height="64" fill="rgba(51,214,255,.55)"/>
+                <rect x="176" y="52" width="52" height="58" fill="rgba(51,214,255,.55)"/>
+                <rect x="318" y="42" width="52" height="68" fill="rgba(51,214,255,.55)"/>
+                <rect x="460" y="58" width="52" height="52" fill="rgba(51,214,255,.55)"/>
+                <rect x="602" y="38" width="52" height="72" fill="rgba(51,214,255,.55)"/>
+                <rect x="744" y="50" width="52" height="60" fill="rgba(51,214,255,.55)"/>
+                <rect x="886" y="26" width="52" height="84" fill="rgba(51,214,255,.85)"/>
+              </g>
+              <polyline points="60,58 202,64 344,52 486,68 628,44 770,56 912,32"
+                fill="none" stroke="#FF3355" stroke-width="2.2"/>
+              <g fill="#FF8A9B">
+                <circle cx="60" cy="58" r="2.6"/><circle cx="202" cy="64" r="2.6"/>
+                <circle cx="344" cy="52" r="2.6"/><circle cx="486" cy="68" r="2.6"/>
+                <circle cx="628" cy="44" r="2.6"/><circle cx="770" cy="56" r="2.6"/>
+                <circle cx="912" cy="32" r="3.4" fill="#FF3355"/>
+              </g>
+            </svg>
+          </div>
+          <div class="axis7" style="padding:0 24px">
+            <span>10-19</span><span>10-20</span><span>10-21</span><span>10-22</span>
+            <span>10-23</span><span>10-24</span><span>今日</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ---------- 右栏 ---------- -->
+    <div class="a-col">
+
+      <section class="p" style="flex:0 0 330px">
+        <div class="p-h"><i></i><b>驾驶行为汇总</b><em>DAY SUM</em></div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;
+          background:rgba(90,150,220,.14);border:1px solid rgba(90,150,220,.14)">
+          <div style="background:rgba(8,17,30,.9);padding:11px 12px">
+            <div style="font-size:10.5px;color:#6E88A6;letter-spacing:.5px">今日超速</div>
+            <div style="display:flex;align-items:baseline;gap:4px;margin-top:6px">
+              <b style="font-family:var(--mono);font-size:26px;color:#FF4D66;line-height:1">6</b>
+              <span style="font-size:11px;color:#8A6B75">段</span>
+              <span style="margin-left:auto;font-size:10.5px;color:#FF7A8E">3 辆</span>
+            </div>
+          </div>
+          <div style="background:rgba(8,17,30,.9);padding:11px 12px">
+            <div style="font-size:10.5px;color:#6E88A6;letter-spacing:.5px">停留超时</div>
+            <div style="display:flex;align-items:baseline;gap:4px;margin-top:6px">
+              <b style="font-family:var(--mono);font-size:26px;color:#FFB020;line-height:1">4</b>
+              <span style="font-size:11px;color:#8A6B75">次</span>
+              <span style="margin-left:auto;font-size:10.5px;color:#FFC45E">最长 52′</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;margin:12px 0 7px">
+          <span style="font-size:10px;color:#5E7895;letter-spacing:1px">近 7 日超速段数</span>
+          <span style="margin-left:auto;font-size:9.5px;color:#4E6885">日汇总 · 不做逐车精算</span>
+        </div>
+        <svg viewBox="0 0 384 62" preserveAspectRatio="none" style="width:100%;height:52px;display:block">
+          <g>
+            <rect x="12" y="30" width="30" height="28" fill="rgba(255,51,85,.45)"/>
+            <rect x="70" y="20" width="30" height="38" fill="rgba(255,51,85,.45)"/>
+            <rect x="128" y="38" width="30" height="20" fill="rgba(255,51,85,.45)"/>
+            <rect x="186" y="14" width="30" height="44" fill="rgba(255,51,85,.45)"/>
+            <rect x="244" y="26" width="30" height="32" fill="rgba(255,51,85,.45)"/>
+            <rect x="302" y="36" width="30" height="22" fill="rgba(255,51,85,.45)"/>
+            <rect x="352" y="42" width="30" height="16" fill="#FF3355"/>
+          </g>
+          <g font-size="9" fill="#5E7895" font-family="var(--mono)">
+            <text x="27" y="61" text-anchor="middle">19</text><text x="85" y="61" text-anchor="middle">20</text>
+            <text x="143" y="61" text-anchor="middle">21</text><text x="201" y="61" text-anchor="middle">22</text>
+            <text x="259" y="61" text-anchor="middle">23</text><text x="317" y="61" text-anchor="middle">24</text>
+            <text x="367" y="61" text-anchor="middle" fill="#FF7A8E">今</text>
+          </g>
+        </svg>
+
+        <div style="font-size:10px;color:#5E7895;letter-spacing:1px;margin:10px 0 8px">超速最多 · TOP3</div>
+        <div class="rowbar" style="margin-bottom:7px"><span class="lb">晋K·1H003</span><span class="tk"><i class="r" style="width:100%"></i></span><span class="vl">3 段</span></div>
+        <div class="rowbar" style="margin-bottom:7px"><span class="lb">晋A·D9012</span><span class="tk"><i class="r" style="width:67%"></i></span><span class="vl">2 段</span></div>
+        <div class="rowbar" style="margin-bottom:0"><span class="lb">晋A·D8821</span><span class="tk"><i class="r" style="width:33%"></i></span><span class="vl">1 段</span></div>
+
+        <div style="margin-top:auto;padding-top:9px;border-top:1px dashed rgba(90,150,220,.18);
+          font-size:10px;color:#4E6885">
+          阈值：超速 80 km/h · 停留 30 分钟（跟随「提醒设置」配置）
+        </div>
+      </section>
+
+      <section class="p" style="flex:0 0 292px">
+        <div class="p-h"><i></i><b>能耗 TOP5</b><em>kWh/100km</em></div>
+        <div class="rowbar"><span class="lb">晋A·D8821</span><span class="tk"><i class="r" style="width:100%"></i></span><span class="vl">168.4</span></div>
+        <div class="rowbar"><span class="lb">晋K·1H003</span><span class="tk"><i class="r" style="width:94%"></i></span><span class="vl">162.7</span></div>
+        <div class="rowbar"><span class="lb">晋A·D9012</span><span class="tk"><i class="r" style="width:88%"></i></span><span class="vl">159.2</span></div>
+        <div class="rowbar"><span class="lb">晋J·D5566</span><span class="tk"><i class="r" style="width:82%"></i></span><span class="vl">154.8</span></div>
+        <div class="rowbar" style="margin-bottom:0"><span class="lb">晋K·1H001</span><span class="tk"><i class="r" style="width:76%"></i></span><span class="vl">151.3</span></div>
+        <div style="margin-top:12px;padding-top:9px;border-top:1px dashed rgba(90,150,220,.2);
+          display:flex;justify-content:space-between;font-size:10.5px;color:#6E88A6">
+          <span>车队均值 138.6</span><span style="color:#FFB020">高于均值 5 辆</span>
+        </div>
+        <div style="margin-top:7px;font-size:9.5px;color:#3F5773">
+          东风能耗接口延迟 1 天，展示截至 10-24
+        </div>
+      </section>
+
+      <section class="p" style="flex:1">
+        <div class="p-h"><i></i><b>实时动态</b><em>LIVE FEED</em></div>
+        <div class="list">
+          <div class="li fault">
+            <span class="t">10:12</span>
+            <span class="m"><b>晋A·D8821</b>故障 P0A3F · 电机控制器过热</span>
+            <span class="tag r">故障</span>
+          </div>
+          <div class="li">
+            <span class="t">10:15</span>
+            <span class="m"><b>晋K·1H003</b>超速 78 km/h · 限速 70</span>
+            <span class="tag r">超速</span>
+          </div>
+          <div class="li">
+            <span class="t">10:02</span>
+            <span class="m"><b>晋A·D6633</b>停留超 52 分钟 · 运城北</span>
+            <span class="tag a">停留</span>
+          </div>
+          <div class="li">
+            <span class="t">09:58</span>
+            <span class="m"><b>晋J·D5566</b>驶出围栏「吕梁装货区」</span>
+            <span class="tag">围栏</span>
+          </div>
+          <div class="li">
+            <span class="t">09:41</span>
+            <span class="m"><b>晋K·1H001</b>定位中断 34 分钟后恢复</span>
+            <span class="tag">定位</span>
+          </div>
+          <div class="li">
+            <span class="t">09:12</span>
+            <span class="m"><b>晋A·D6633</b>营运证 12 天后到期</span>
+            <span class="tag a">车务</span>
+          </div>
+          <div class="li">
+            <span class="t">09:05</span>
+            <span class="m"><b>晋A·D9012</b>点火上线 · 小店区</span>
+            <span class="tag g">上线</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var stage = document.getElementById('stage')
+    function fit() {
+      var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080)
+      stage.style.transform = 'scale(' + s + ')'
+    }
+    fit()
+    window.addEventListener('resize', fit)
+
+    var clock = document.querySelector('.a-clock')
+    var wd = ['周日','周一','周二','周三','周四','周五','周六']
+    function tick() {
+      var d = new Date()
+      var p = function (n) { return String(n).padStart(2, '0') }
+      clock.innerHTML = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds())
+        + '<small>' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+        + ' ' + wd[d.getDay()] + '</small>'
+    }
+    tick()
+    setInterval(tick, 1000)
+
+    var pops = document.querySelectorAll('.fault-pop')
+    var cur = 0
+    var timer = null
+    function show(i) {
+      for (var k = 0; k < pops.length; k++) pops[k].classList.toggle('on', k === i)
+      cur = i
+    }
+    function startLoop() {
+      clearInterval(timer)
+      timer = setInterval(function () { show((cur + 1) % pops.length) }, 7000)
+    }
+    for (var i = 0; i < pops.length; i++) {
+      (function (idx) {
+        pops[idx].querySelector('.x').addEventListener('click', function () {
+          pops[idx].classList.remove('on')
+          clearInterval(timer)
+        })
+      })(i)
+    }
+    show(0)
+    startLoop()
+
+    /* ============ KPI 明细 ============ */
+    var KPIS = {
+      running: {
+        title: '行驶中车辆',
+        sub: '共 26 辆 · 平均 46.2 km/h',
+        cols: [
+          { k: 'plate', t: '车牌', w: '104px', c: 'plate' },
+          { k: 'speed', t: '速度 km/h', w: '74px', c: 'gn2' },
+          { k: 'loc', t: '所在位置', w: '1fr', c: 'clip' },
+          { k: 'time', t: '上报', w: '58px', c: 'num' }
+        ],
+        rows: [
+          { plate: '晋K·1H003', speed: 78, loc: '太原市小店区 · 太长高速 K12+400', time: '10:15' },
+          { plate: '晋A·D7712', speed: 71, loc: '晋中市榆次区 · 迎宾街', time: '10:12' },
+          { plate: '晋A·D6633', speed: 68, loc: '运城市盐湖区 · 机场大道', time: '10:13' },
+          { plate: '晋J·D3312', speed: 64, loc: '临汾市尧都区 · 鼓楼南街', time: '10:11' },
+          { plate: '晋A·D9012', speed: 62, loc: '太原市小店区 · 坞城南路', time: '10:14' },
+          { plate: '晋J·D6620', speed: 58, loc: '晋中市介休市 · 新华街', time: '10:09' },
+          { plate: '晋K·1H001', speed: 55, loc: '吕梁市离石区 · 滨河北路', time: '10:14' },
+          { plate: '晋K·1H015', speed: 52, loc: '大同市平城区 · 御东街', time: '10:10' },
+          { plate: '晋K·1H008', speed: 49, loc: '忻州市忻府区 · 和平街', time: '10:12' },
+          { plate: '晋A·D8877', speed: 45, loc: '阳泉市城区 · 泉中路', time: '10:10' },
+          { plate: '晋J·D5566', speed: 42, loc: '长治市潞州区 · 西环路辅道', time: '10:13' },
+          { plate: '晋A·D9905', speed: 38, loc: '太原市迎泽区 · 建设南路', time: '10:11' }
+        ],
+        foot: '按实时定位速度降序 · <b>30s</b> 刷新 · 仅展示前 12 条，共 26 条'
+      },
+
+      mileage: {
+        title: '今日里程明细',
+        sub: '合计 7,842 km · 42 辆出车',
+        cols: [
+          { k: 'plate', t: '车牌', w: '104px', c: 'plate' },
+          { k: 'km', t: '今日里程 km', w: '96px', c: 'num' },
+          { k: 'dur', t: '出车时长', w: '86px', c: 'num' },
+          { k: 'bar', t: '占比', w: '1fr', c: '' },
+          { k: 'avg', t: '均速', w: '56px', c: 'num' }
+        ],
+        rows: [
+          { plate: '晋K·1H003', km: '226.8', dur: '10h04m', bar: 100, avg: '52.4' },
+          { plate: '晋A·D8821', km: '218.4', dur: '9h12m', bar: 96, avg: '49.7' },
+          { plate: '晋K·1H001', km: '209.6', dur: '9h40m', bar: 92, avg: '47.2' },
+          { plate: '晋J·D5566', km: '198.2', dur: '8h55m', bar: 87, avg: '45.8' },
+          { plate: '晋A·D9012', km: '192.7', dur: '8h30m', bar: 85, avg: '48.1' },
+          { plate: '晋A·D6633', km: '186.4', dur: '8h12m', bar: 82, avg: '46.3' },
+          { plate: '晋A·D7712', km: '175.9', dur: '7h48m', bar: 78, avg: '44.9' },
+          { plate: '晋K·1H008', km: '168.3', dur: '7h30m', bar: 74, avg: '43.6' },
+          { plate: '晋A·D9905', km: '154.6', dur: '6h55m', bar: 68, avg: '41.2' },
+          { plate: '晋J·D3312', km: '148.2', dur: '6h40m', bar: 65, avg: '40.8' },
+          { plate: '晋K·1H015', km: '139.7', dur: '6h12m', bar: 62, avg: '39.4' },
+          { plate: '晋A·D8877', km: '128.4', dur: '5h48m', bar: 57, avg: '37.9' }
+        ],
+        foot: '今日里程由轨迹接口批量实算 · <b>30s</b> 刷新 · 昨日同期 7,246 km'
+      },
+
+      speed: {
+        title: '在途车速分布',
+        sub: '26 辆在途 · 均速 46.2 km/h',
+        dist: [
+          { label: '0–20', v: 4, color: 'rgba(107,127,148,.75)' },
+          { label: '20–40', v: 7, color: 'rgba(51,214,255,.65)' },
+          { label: '40–60', v: 11, color: '#33D6FF' },
+          { label: '60–80', v: 3, color: '#FFB020' },
+          { label: '80+', v: 1, color: '#FF3355' }
+        ],
+        cols: [
+          { k: 'plate', t: '车牌', w: '104px', c: 'plate' },
+          { k: 'speed', t: '当前速度 km/h', w: '104px', c: 'num' },
+          { k: 'seg', t: '区间', w: '66px', c: '' },
+          { k: 'loc', t: '所在位置', w: '1fr', c: 'clip' }
+        ],
+        rows: [
+          { plate: '晋K·1H003', speed: 78, seg: '60–80', loc: '太原市小店区 · 太长高速 K12+400' },
+          { plate: '晋A·D7712', speed: 71, seg: '60–80', loc: '晋中市榆次区 · 迎宾街' },
+          { plate: '晋A·D6633', speed: 68, seg: '60–80', loc: '运城市盐湖区 · 机场大道' },
+          { plate: '晋J·D3312', speed: 64, seg: '60–80', loc: '临汾市尧都区 · 鼓楼南街' },
+          { plate: '晋A·D9012', speed: 62, seg: '60–80', loc: '太原市小店区 · 坞城南路' },
+          { plate: '晋J·D6620', speed: 58, seg: '40–60', loc: '晋中市介休市 · 新华街' },
+          { plate: '晋K·1H001', speed: 55, seg: '40–60', loc: '吕梁市离石区 · 滨河北路' },
+          { plate: '晋K·1H015', speed: 52, seg: '40–60', loc: '大同市平城区 · 御东街' },
+          { plate: '晋K·1H008', speed: 49, seg: '40–60', loc: '忻州市忻府区 · 和平街' },
+          { plate: '晋A·D8877', speed: 45, seg: '40–60', loc: '阳泉市城区 · 泉中路' }
+        ],
+        foot: '仅统计行驶中车辆 · 静止/离线不计入 · 均速取算术平均'
+      },
+
+      fault: {
+        title: '故障车辆',
+        sub: '2 辆 · 1 严重 / 1 一般',
+        cols: [
+          { k: 'plate', t: '车牌', w: '100px', c: 'plate' },
+          { k: 'desc', t: '故障描述', w: '1fr', c: 'clip' },
+          { k: 'code', t: '故障码', w: '62px', c: 'em' },
+          { k: 'lv', t: '等级', w: '46px', c: '' },
+          { k: 'dur', t: '持续', w: '58px', c: 'num' }
+        ],
+        rows: [
+          { plate: '晋A·D8821', desc: '驱动电机控制器过热，建议立即停驶', code: 'P0A3F', lv: 'hi', lvText: '严重', dur: '1h43m', fault: true },
+          { plate: '晋J·D5566', desc: '动力电池单体压差过大，建议返场检修', code: 'P1B22', lv: 'mid', lvText: '一般', dur: '2h08m', fault: true }
+        ],
+        foot: '数据源：车联网故障码通道 · <b>待接入</b> · 点击行可查看详情浮窗'
+      }
+    }
+
+    var mapEl = document.querySelector('.a-map')
+    var panel = document.getElementById('dpanel')
+    var elTitle = panel.querySelector('.dp-title')
+    var elSub = panel.querySelector('.dp-sub')
+    var elHead = document.getElementById('dpHead')
+    var elBody = document.getElementById('dpBody')
+    var elFoot = document.getElementById('dpFoot')
+    var elDist = document.getElementById('dpDist')
+    var elDistBar = document.getElementById('dpDistBar')
+    var elDistLg = document.getElementById('dpDistLg')
+    var kpiEls = document.querySelectorAll('.a-mkpi>div')
+    var activeKey = ''
+
+    function cellHtml(col, row) {
+      if (col.k === 'bar') {
+        return '<span style="display:block;height:7px;background:rgba(255,255,255,.06);position:relative">'
+          + '<i style="position:absolute;left:0;top:0;bottom:0;width:' + row.bar + '%;'
+          + 'background:linear-gradient(90deg,rgba(51,214,255,.3),#33D6FF);box-shadow:0 0 8px rgba(51,214,255,.5)"></i></span>'
+      }
+      if (col.k === 'lv') {
+        return '<span class="lv ' + row.lv + '">' + row.lvText + '</span>'
+      }
+      return '<span class="' + (col.c || '') + '">' + row[col.k] + '</span>'
+    }
+
+    function openKpi(key) {
+      var d = KPIS[key]
+      if (!d) return
+      activeKey = key
+      elTitle.textContent = d.title
+      elSub.textContent = d.sub
+
+      var tpl = d.cols.map(function (c) { return c.w }).join(' ')
+      elHead.style.gridTemplateColumns = tpl
+      elHead.innerHTML = d.cols.map(function (c) { return '<span>' + c.t + '</span>' }).join('')
+
+      elBody.innerHTML = d.rows.map(function (r) {
+        return '<div class="dp-row ' + (r.fault ? 'fault' : '') + '" style="grid-template-columns:' + tpl + '">'
+          + d.cols.map(function (c) { return cellHtml(c, r) }).join('') + '</div>'
+      }).join('')
+
+      elFoot.innerHTML = d.foot || ''
+
+      if (d.dist) {
+        var total = d.dist.reduce(function (a, b) { return a + b.v }, 0)
+        elDist.style.display = 'block'
+        elDistBar.innerHTML = d.dist.map(function (s) {
+          return '<i style="width:' + (s.v / total * 100) + '%;background:' + s.color + '"></i>'
+        }).join('')
+        elDistLg.innerHTML = d.dist.map(function (s) {
+          return '<span><i style="display:inline-block;width:7px;height:7px;background:' + s.color
+            + ';margin-right:4px"></i>' + s.label + '<b>' + s.v + '</b></span>'
+        }).join('')
+      } else {
+        elDist.style.display = 'none'
+      }
+
+      for (var i = 0; i < kpiEls.length; i++) {
+        kpiEls[i].classList.toggle('active', kpiEls[i].dataset.kpi === key)
+      }
+      mapEl.classList.add('has-detail')
+      panel.classList.add('on')
+      panel.querySelector('.dp-tb').scrollTop = 0
+    }
+
+    function closeKpi() {
+      activeKey = ''
+      panel.classList.remove('on')
+      mapEl.classList.remove('has-detail')
+      for (var i = 0; i < kpiEls.length; i++) kpiEls[i].classList.remove('active')
+    }
+
+    for (var i = 0; i < kpiEls.length; i++) {
+      kpiEls[i].addEventListener('click', function () {
+        var k = this.dataset.kpi
+        if (activeKey === k) closeKpi()
+        else openKpi(k)
+      })
+    }
+    document.getElementById('dpClose').addEventListener('click', closeKpi)
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeKpi()
+    })
+  })()
+</script>
+</body>
+</html>

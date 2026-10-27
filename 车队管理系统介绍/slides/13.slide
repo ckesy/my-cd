@@ -1,0 +1,56 @@
+<Slide style={{ width: 1280, height: 720, background: '#FFFFFF', padding: '40px 64px 24px 64px', flexDirection: 'column' }}>
+    <Box style={{ height: 78, flexDirection: 'row', alignItems: 'flex-start' }}>
+        <Box style={{ width: 4, height: 30, background: '#C8102E', marginTop: 4 }} />
+        <Box style={{ marginLeft: 14, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#C8102E', fontWeight: 700, letterSpacing: 2 }}>12　值多少</Text>
+            <Text style={{ fontSize: 34, color: '#111827', fontWeight: 700, lineHeight: 1.2, marginTop: 6 }}>四件事，最直接的改变</Text>
+        </Box>
+        <Box style={{ flex: 1 }} />
+        <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 34 }}>都能在下个月的对账单上看见</Text>
+    </Box>
+
+    <Box style={{ flex: 1, flexDirection: 'column', paddingTop: 4 }}>
+        <Box style={{ flexDirection: 'row', flex: 1 }}>
+            {[
+                ['01', '省时间', '派单、催进度、对账，原来半天的事，现在几分钟。调度不用再当"传话筒"。', '原来：3 天对一次账'],
+                ['02', '省成本', '哪台车费电、谁急加速多、哪条线空跑，报告里点得出名字，就知道该管谁。', '原来：月底才知道超支']
+            ].map((it, i) => (
+                <Box key={i} style={{ flex: 1, flexDirection: 'column', paddingRight: 34, borderRight: i === 0 ? '1px solid #E7E9EE' : 'none', paddingLeft: i === 1 ? 34 : 0 }}>
+                    <Text style={{ fontSize: 46, color: '#C8102E', fontWeight: 800, lineHeight: 1.0, letterSpacing: -1 }}>{it[0]}</Text>
+                    <Text style={{ fontSize: 24, color: '#111827', fontWeight: 700, marginTop: 10, letterSpacing: 2 }}>{it[1]}</Text>
+                    <Text style={{ fontSize: 13.5, color: '#4B5563', lineHeight: 1.85, marginTop: 10, width: 470 }}>{it[2]}</Text>
+                    <Box style={{ flex: 1 }} />
+                    <Text style={{ fontSize: 11.5, color: '#9AA3AF' }}>{it[3]}</Text>
+                </Box>
+            ))}
+        </Box>
+
+        <Box style={{ height: 1, background: '#E7E9EE', marginTop: 22, marginBottom: 22 }} />
+
+        <Box style={{ flexDirection: 'row', flex: 1 }}>
+            {[
+                ['03', '少纠纷', '到场时间、费用凭证、审批记录都留着，扯皮时不用互相猜，翻记录就能说清。', '原来：各说各的，最后各让一步'],
+                ['04', '好决策', '哪条线赚钱、哪台车该换、哪个客户值不值得保，年底不再靠拍脑袋。', '原来：报表靠人拼，结论靠经验']
+            ].map((it, i) => (
+                <Box key={i} style={{ flex: 1, flexDirection: 'column', paddingRight: 34, borderRight: i === 0 ? '1px solid #E7E9EE' : 'none', paddingLeft: i === 1 ? 34 : 0 }}>
+                    <Text style={{ fontSize: 46, color: '#C8102E', fontWeight: 800, lineHeight: 1.0, letterSpacing: -1 }}>{it[0]}</Text>
+                    <Text style={{ fontSize: 24, color: '#111827', fontWeight: 700, marginTop: 10, letterSpacing: 2 }}>{it[1]}</Text>
+                    <Text style={{ fontSize: 13.5, color: '#4B5563', lineHeight: 1.85, marginTop: 10, width: 470 }}>{it[2]}</Text>
+                    <Box style={{ flex: 1 }} />
+                    <Text style={{ fontSize: 11.5, color: '#9AA3AF' }}>{it[3]}</Text>
+                </Box>
+            ))}
+        </Box>
+
+        <Box style={{ flexDirection: 'row', alignItems: 'center', background: '#111827', borderRadius: 4, padding: '16px 24px', marginTop: 20 }}>
+            <Text style={{ fontSize: 12, color: '#C8102E', fontWeight: 800, letterSpacing: 2, marginRight: 18 }}>一 套 系 统</Text>
+            <Text style={{ fontSize: 15, color: '#E5E7EB' }}>管理端看和定　·　司机端干和报　·　财务端审和付　——　三端同一份账</Text>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 24, flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+        <Text style={{ fontSize: 12, color: '#9AA3AF' }}>车队一体化运营平台</Text>
+        <Box style={{ flex: 1 }} />
+        <Text style={{ fontSize: 12, color: '#9AA3AF' }}>13 / 14</Text>
+    </Box>
+</Slide>

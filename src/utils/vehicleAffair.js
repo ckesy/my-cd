@@ -423,6 +423,51 @@ export async function loadReminders({ status = '待处理', org, plate, scope } 
   }
 }
 
+/**
+ * 车辆下拉候选（人工添加提醒用）
+ * ------------------------------------------------------------
+ * ⭐ 只读证件台账会漏车：一台车一条证件都没录时，下拉就是「无数据」，
+ *    所以必须并上「车辆档案」（权威来源）。
+ *    客户按 customer_id 过滤（与车辆档案/司机档案同口径），平台管理员看全部。
+ */
+export async function loadVehiclePlates() {
+  const set = new Set()
+
+  /* ① 证件台账里出现过的车牌（可能比车辆档案多：老数据只录了证件） */
+  try {
+    const rows = await loadCerts()
+    rows.forEach((r) => { if (r.plate) set.add(r.plate) })
+  } catch { /* ignore */ }
+
+  /* ② 车辆档案（权威来源）
+     ⚠️ vehicles 没有 owner_account 列（2026-10-25 实测），只有 customer_id，
+        所以只按 customer_id 过滤；客户没关联客户号时按"全部可见车辆"兜底 */
+  try {
+    const u = (() => {
+      try { return JSON.parse(localStorage.getItem('currentUser') || '{}') } catch { return {} }
+    })()
+    const isPlatform = u.role === 'admin' && !u.isTenantOwner && !u.customerId && !u.masterAccount
+    let cid = u.customerId || null
+    if (!isPlatform && !cid) {
+      const phone = u.masterPhone || u.phone || ''
+      if (phone) {
+        const { data } = await supabase.from('customers').select('id').eq('phone', phone).maybeSingle()
+        cid = data?.id || null
+      }
+    }
+
+    let q = supabase.from('vehicles').select('plate')
+    if (!isPlatform && cid) q = q.eq('customer_id', cid)
+    const { data, error } = await q
+    if (error) throw error
+    ;(data || []).forEach((v) => { if (v.plate) set.add(v.plate) })
+  } catch (e) {
+    console.warn('[车务] 读车辆档案失败', e?.message)
+  }
+
+  return [...set].sort()
+}
+
 /** 人工添加提醒（不挂证件，或挂证件） */
 export async function createManualReminder(payload) {
   const ownerAccount = scopeAccount()

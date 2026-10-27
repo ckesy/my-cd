@@ -1,0 +1,55 @@
+<Slide style={{ width: 1280, height: 720, background: '#FFFFFF', padding: '40px 64px 24px 64px', flexDirection: 'column' }}>
+    <Box style={{ height: 78, flexDirection: 'row', alignItems: 'flex-start' }}>
+        <Box style={{ width: 4, height: 30, background: '#C8102E', marginTop: 4 }} />
+        <Box style={{ marginLeft: 14, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#C8102E', fontWeight: 700, letterSpacing: 2 }}>09　司机端 · 小程序</Text>
+            <Text style={{ fontSize: 34, color: '#111827', fontWeight: 700, lineHeight: 1.2, marginTop: 6 }}>手机就是工作台，不用回办公室</Text>
+        </Box>
+        <Box style={{ flex: 1 }} />
+        <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 34 }}>微信打开就能用，不用装新软件</Text>
+    </Box>
+
+    <Box style={{ flex: 1, flexDirection: 'row', gap: 40, paddingTop: 2 }}>
+        <Box style={{ width: 470, flexDirection: 'column' }}>
+            <Box style={{ background: '#F4F5F7', borderRadius: 6, padding: '24px 24px 18px 24px', flexDirection: 'column' }}>
+                <Image src="assets/card_recurring.png" style={{ width: 430, height: 306 }} />
+                <Box style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14 }}>
+                    <Box style={{ width: 5, height: 5, background: '#C8102E' }} />
+                    <Text style={{ fontSize: 11.5, color: '#6B7280' }}>常驻任务：一趟排好，司机每趟点"接一趟"即可</Text>
+                </Box>
+            </Box>
+            <Text style={{ fontSize: 13.5, color: '#4B5563', lineHeight: 1.8, marginTop: 16 }}>
+                司机不用记流程，手机上只有<Text style={{ fontWeight: 700 }}>该他做的那一步</Text>；<br />
+                做完点一下，管理端马上就能看到。
+            </Text>
+        </Box>
+
+        <Box style={{ flex: 1, flexDirection: 'column', gap: 12, height: 484 }}>
+            {[
+                ['接单', '一键接这一趟', '看到起点、终点、货物和约定时间，点"接一趟"就算接了，谁接的自动记上'],
+                ['装车', '拍张照就算装完', '到装货地拍货、拍车厢，位置和时间一起带上，不需要另填单子'],
+                ['发车 / 到达', '到点打卡，不用打电话', '确认发车、确认到达各点一次，管理端立刻看到车到哪了'],
+                ['上报费用', '路上花的钱当场报', '过路费、加油、装卸，拍票据就能报，不用等回公司补单']
+            ].map((it, i) => (
+                <Box key={i} style={{ flex: 1, flexDirection: 'row', gap: 14, background: '#F4F5F7', borderRadius: 4, padding: '16px 18px' }}>
+                    <Box style={{ width: 34, height: 34, borderRadius: '50%', background: '#111827', justifyContent: 'center', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 11, color: '#FFFFFF', fontWeight: 800 }}>{'0' + (i + 1)}</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'column', flex: 1 }}>
+                        <Box style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
+                            <Text style={{ fontSize: 16, color: '#111827', fontWeight: 700 }}>{it[0]}</Text>
+                            <Text style={{ fontSize: 12.5, color: '#C8102E', fontWeight: 700 }}>{it[1]}</Text>
+                        </Box>
+                        <Text style={{ fontSize: 12.5, color: '#6B7280', lineHeight: 1.7, marginTop: 4 }}>{it[2]}</Text>
+                    </Box>
+                </Box>
+            ))}
+        </Box>
+    </Box>
+
+    <Box style={{ height: 24, flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={{ fontSize: 12, color: '#9AA3AF' }}>车队一体化运营平台</Text>
+        <Box style={{ flex: 1 }} />
+        <Text style={{ fontSize: 12, color: '#9AA3AF' }}>10 / 14</Text>
+    </Box>
+</Slide>

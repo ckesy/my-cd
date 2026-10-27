@@ -1,0 +1,47 @@
+<Slide style={{ width: 1280, height: 720, background: '#F4F5F7', padding: '40px 64px 24px 64px', flexDirection: 'column' }}>
+    <Box style={{ height: 78, flexDirection: 'row', alignItems: 'flex-start' }}>
+        <Box style={{ width: 4, height: 30, background: '#C8102E', marginTop: 4 }} />
+        <Box style={{ marginLeft: 14, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#C8102E', fontWeight: 700, letterSpacing: 2 }}>06　管理端 · 到场有据</Text>
+            <Text style={{ fontSize: 34, color: '#111827', fontWeight: 700, lineHeight: 1.2, marginTop: 6 }}>到场不靠一张嘴，靠一个圈</Text>
+        </Box>
+    </Box>
+
+    <Box style={{ flex: 1, flexDirection: 'row', gap: 34, paddingTop: 6 }}>
+        <Box style={{ width: 700, flexDirection: 'column' }}>
+            <Image src="assets/shot_fence.png" style={{ width: 700, height: 456 }} />
+            <Text style={{ fontSize: 11.5, color: '#9AA3AF', marginTop: 10 }}>
+                装货地、卸货地、提醒区域分开管，图上圈好，名单一眼看清
+            </Text>
+        </Box>
+
+        <Box style={{ flex: 1, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 15, color: '#374151', lineHeight: 1.8 }}>
+                以前"几点到的"全凭司机一句话，扯皮时谁都说不清。<br />
+                现在给装货地、卸货地各画一个圈，<Text style={{ fontWeight: 700 }}>车进圈、出圈，时间自己记下来。</Text>
+            </Text>
+            <Box style={{ flexDirection: 'column', gap: 14, marginTop: 22 }}>
+                {[
+                    ['圈得准', '圆形、多边形、按行政区划三种圈法，厂区、仓库、整片城区都能圈住'],
+                    ['记得住', '进圈出圈自动打卡，司机不用手动报到，管理端不用盯着看'],
+                    ['查得到', '哪台车、几点到的、停了多久，列表里排得清清楚楚'],
+                    ['管得住', '不该去的区域可以设提醒，车一进就亮灯，避免绕路和私用']
+                ].map((it, i) => (
+                    <Box key={i} style={{ flexDirection: 'row', gap: 12, background: '#FFFFFF', borderRadius: 4, padding: '13px 15px' }}>
+                        <Text style={{ fontSize: 11, color: '#C8102E', fontWeight: 800, marginTop: 3, width: 16 }}>{'0' + (i + 1)}</Text>
+                        <Box style={{ flexDirection: 'column', width: 300 }}>
+                            <Text style={{ fontSize: 14, color: '#111827', fontWeight: 700 }}>{it[0]}</Text>
+                            <Text style={{ fontSize: 12.5, color: '#6B7280', lineHeight: 1.7, marginTop: 3 }}>{it[1]}</Text>
+                        </Box>
+                    </Box>
+                ))}
+            </Box>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 24, flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={{ fontSize: 12, color: '#9AA3AF' }}>车队一体化运营平台</Text>
+        <Box style={{ flex: 1 }} />
+        <Text style={{ fontSize: 12, color: '#9AA3AF' }}>07 / 14</Text>
+    </Box>
+</Slide>

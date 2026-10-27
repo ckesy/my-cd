@@ -1,0 +1,51 @@
+<Slide style={{ width: 1280, height: 720, background: '#F4F5F7', padding: '40px 64px 24px 64px', flexDirection: 'column' }}>
+    <Box style={{ height: 78, flexDirection: 'row', alignItems: 'flex-start' }}>
+        <Box style={{ width: 4, height: 30, background: '#C8102E', marginTop: 4 }} />
+        <Box style={{ marginLeft: 14, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#C8102E', fontWeight: 700, letterSpacing: 2 }}>11　组织与权限</Text>
+            <Text style={{ fontSize: 34, color: '#111827', fontWeight: 700, lineHeight: 1.2, marginTop: 6 }}>谁能看什么，按角色配好</Text>
+        </Box>
+    </Box>
+
+    <Box style={{ flex: 1, flexDirection: 'row', gap: 34, paddingTop: 4 }}>
+        <Box style={{ width: 400, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 14.5, color: '#374151', lineHeight: 1.85 }}>
+                集团、分公司、车队、司机，本来就是一层管一层。<br />
+                系统里照这个样子搭起来：<Text style={{ fontWeight: 700 }}>各看各的，越权看不到。</Text>
+            </Text>
+            <Box style={{ flexDirection: 'column', gap: 12, marginTop: 20 }}>
+                {[
+                    ['按组织分', '集团看全局，分公司只看自己那片车和人'],
+                    ['按角色分', '管理员、调度、财务、司机，能点的按钮不一样'],
+                    ['按业务分', '运单、费用、报表、车务，可以只开其中几项'],
+                    ['换人不用改系统', '人走了把角色一换就行，历史记录照样留着']
+                ].map((it, i) => (
+                    <Box key={i} style={{ background: '#FFFFFF', borderRadius: 4, padding: '13px 16px', flexDirection: 'row', gap: 10 }}>
+                        <Text style={{ fontSize: 11, color: '#C8102E', fontWeight: 800, marginTop: 3 }}>▪</Text>
+                        <Box style={{ flexDirection: 'column', width: 340 }}>
+                            <Text style={{ fontSize: 13.5, color: '#111827', fontWeight: 700 }}>{it[0]}</Text>
+                            <Text style={{ fontSize: 11.5, color: '#6B7280', lineHeight: 1.65, marginTop: 3 }}>{it[1]}</Text>
+                        </Box>
+                    </Box>
+                ))}
+            </Box>
+            <Box style={{ flex: 1 }} />
+            <Text style={{ fontSize: 11.5, color: '#9AA3AF', lineHeight: 1.6 }}>
+                上线不用全公司一起动，先开一个分公司，跑顺了再往外铺。
+            </Text>
+        </Box>
+
+        <Box style={{ flex: 1, flexDirection: 'column' }}>
+            <Image src="assets/shot_org.png" style={{ width: 646, height: 473 }} />
+            <Text style={{ fontSize: 11.5, color: '#9AA3AF', marginTop: 10 }}>
+                一个账号挂在哪个组织、管几台车、有几个司机，一眼看清
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 24, flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={{ fontSize: 12, color: '#9AA3AF' }}>车队一体化运营平台</Text>
+        <Box style={{ flex: 1 }} />
+        <Text style={{ fontSize: 12, color: '#9AA3AF' }}>12 / 14</Text>
+    </Box>
+</Slide>

@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>1 号屏 · 车辆运行监控中心（数字墙驾驶舱）</title>
+<style>
+  :root{
+    --bg:#060A12;
+    --panel:rgba(11,19,32,.82);
+    --line:rgba(56,189,248,.15);
+    --line-hi:rgba(56,189,248,.42);
+    --red:#E11D48;
+    --red-dim:rgba(225,29,72,.16);
+    --cyan:#22D3EE;
+    --green:#34D399;
+    --amber:#F59E0B;
+    --txt:#E8F0FA;
+    --dim:#7C8FA9;
+    --dim2:#54677F;
+    --num:'DIN Alternate','Bahnschrift',ui-monospace,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:100%;height:100%;overflow:hidden;background:#03060C;}
+  body{display:flex;align-items:center;justify-content:center;font-family:'PingFang SC','Microsoft YaHei',-apple-system,sans-serif;}
+
+  #stage{
+    width:1920px;height:1080px;position:relative;flex:none;
+    background:
+      radial-gradient(1100px 620px at 12% -8%,rgba(225,29,72,.16),transparent 62%),
+      radial-gradient(900px 560px at 92% 104%,rgba(34,211,238,.10),transparent 60%),
+      linear-gradient(180deg,#060A12 0%,#04070E 100%);
+    color:var(--txt);
+    display:flex;flex-direction:column;
+    padding:16px 24px 16px;
+    gap:16px;
+    overflow:hidden;
+  }
+  #stage::before{
+    content:'';position:absolute;inset:0;pointer-events:none;opacity:.30;
+    background-image:
+      linear-gradient(rgba(56,189,248,.055) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(56,189,248,.055) 1px,transparent 1px);
+    background-size:48px 48px;
+    mask-image:radial-gradient(1200px 700px at 50% 40%,#000 30%,transparent 85%);
+  }
+
+  /* ============ 标题栏 ============ */
+  .topbar{
+    height:72px;flex:none;display:flex;align-items:center;gap:20px;position:relative;
+  }
+  .topbar::after{
+    content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(225,29,72,.55) 22%,rgba(225,29,72,.55) 78%,transparent);
+  }
+  .brand{display:flex;align-items:center;gap:12px;min-width:300px;}
+  .brand-mark{
+    width:34px;height:34px;border-radius:8px;flex:none;
+    background:linear-gradient(140deg,var(--red),#8B0E2A);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 22px rgba(225,29,72,.55);
+  }
+  .brand-mark svg{width:19px;height:19px;}
+  .brand-txt b{display:block;font-size:15px;font-weight:600;letter-spacing:3px;}
+  .brand-txt span{display:block;font-size:9.5px;letter-spacing:1.6px;color:var(--dim2);margin-top:2px;}
+
+  .title-wrap{flex:1;text-align:center;position:relative;}
+  .title-wrap h1{
+    font-size:31px;font-weight:700;letter-spacing:7px;line-height:1;
+    background:linear-gradient(180deg,#FFFFFF 20%,#9FC4E4 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .title-wrap p{
+    font-size:10px;letter-spacing:5px;color:var(--dim2);margin-top:9px;
+  }
+  .title-wrap .wing{
+    position:absolute;top:16px;width:120px;height:1px;
+  }
+  .title-wrap .wing.l{left:calc(50% - 340px);background:linear-gradient(90deg,transparent,rgba(225,29,72,.75));}
+  .title-wrap .wing.r{right:calc(50% - 340px);background:linear-gradient(90deg,rgba(225,29,72,.75),transparent);}
+
+  .topbar-right{display:flex;align-items:center;gap:16px;min-width:300px;justify-content:flex-end;}
+  .seg-tabs{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+  .seg-tabs button{
+    background:transparent;border:none;color:var(--dim);font-family:inherit;
+    font-size:12px;padding:6px 15px;cursor:pointer;letter-spacing:1px;
+  }
+  .seg-tabs button.on{background:var(--red);color:#fff;font-weight:600;}
+  .clock{text-align:right;}
+  .clock b{display:block;font-family:var(--num);font-size:24px;font-weight:700;letter-spacing:1px;font-variant-numeric:tabular-nums;}
+  .clock span{display:block;font-size:10.5px;color:var(--dim2);letter-spacing:1px;margin-top:1px;}
+  .live-dot{
+    display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--green);
+    padding:4px 10px;border:1px solid rgba(52,211,153,.3);border-radius:20px;background:rgba(52,211,153,.07);
+  }
+  .live-dot i{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.8s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(52,211,153,.6);}50%{opacity:.5;box-shadow:0 0 0 5px rgba(52,211,153,0);}}
+
+  /* ============ 面板通用 ============ */
+  .panel{
+    position:relative;background:var(--panel);border:1px solid var(--line);
+    border-radius:4px;overflow:hidden;
+    clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));
+    display:flex;flex-direction:column;
+  }
+  .panel::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,var(--line-hi) 30%,rgba(225,29,72,.65) 50%,var(--line-hi) 70%,transparent);
+  }
+  .panel-hd{
+    height:40px;flex:none;display:flex;align-items:center;gap:9px;padding:0 14px;
+    border-bottom:1px solid rgba(56,189,248,.10);
+  }
+  .panel-hd .bar{width:3px;height:13px;border-radius:1px;background:var(--red);box-shadow:0 0 9px rgba(225,29,72,.9);}
+  .panel-hd h3{font-size:14px;font-weight:600;letter-spacing:2px;color:#DCE9F7;}
+  .panel-hd .tag{
+    margin-left:auto;font-size:9.5px;font-style:normal;letter-spacing:1px;
+    color:var(--dim2);border:1px solid rgba(56,189,248,.14);border-radius:3px;padding:2px 6px;
+  }
+  .panel-hd .tag.warn{color:var(--amber);border-color:rgba(245,158,11,.32);background:rgba(245,158,11,.08);}
+  .panel-hd .tag.live{color:var(--green);border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.07);}
+  .panel-bd{flex:1;min-height:0;padding:12px 14px;display:flex;flex-direction:column;}
+
+  /* ============ KPI 数字带 ============ */
+  .kpi-row{flex:none;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px;height:148px;}
+  .kpi{
+    position:relative;background:var(--panel);border:1px solid var(--line);
+    clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));
+    padding:16px 18px 14px;display:flex;flex-direction:column;justify-content:center;gap:5px;
+    overflow:hidden;
+  }
+  .kpi::after{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+    background:linear-gradient(180deg,transparent,var(--k,var(--red)),transparent);opacity:.85;
+  }
+  .kpi .k-label{font-size:11.5px;color:var(--dim);letter-spacing:1.5px;}
+  .kpi .k-main{display:flex;align-items:baseline;gap:5px;}
+  .kpi .k-num{
+    font-family:var(--num);font-size:40px;font-weight:700;line-height:1;letter-spacing:-.5px;
+    font-variant-numeric:tabular-nums;color:#fff;
+    text-shadow:0 0 24px rgba(120,180,255,.28);
+  }
+  .kpi .k-unit{font-size:12.5px;color:var(--dim);letter-spacing:.5px;}
+  .kpi .k-sub{font-size:11px;color:var(--dim2);letter-spacing:.6px;}
+  .kpi .k-sub b{color:var(--k,var(--red));font-weight:600;font-family:var(--num);}
+  .kpi .delta{font-size:10.5px;font-family:var(--num);padding:1px 5px;border-radius:2px;letter-spacing:.3px;}
+  .delta.up{color:#FB7185;background:rgba(251,113,133,.12);}
+  .delta.down{color:var(--green);background:rgba(52,211,153,.12);}
+
+  /* ============ 主区栅格 ============ */
+  .row-mid{flex:none;height:400px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
+  .row-bot{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
+
+  /* ---- 状态环 ---- */
+  .ring-wrap{display:flex;gap:6px;align-items:center;padding-top:2px;}
+  .ring-box{position:relative;width:180px;height:180px;flex:none;}
+  .ring-box svg{width:180px;height:180px;transform:rotate(-90deg);}
+  .ring-center{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  }
+  .ring-center .rn{font-family:var(--num);font-size:34px;font-weight:700;line-height:1;color:#fff;}
+  .ring-center .rn small{font-size:14px;color:var(--dim);margin-left:1px;}
+  .ring-center .rl{font-size:10.5px;color:var(--dim2);letter-spacing:1.6px;}
+
+  .stat-list{flex:1;display:flex;flex-direction:column;gap:9px;padding-left:10px;}
+  .stat-list .sr{display:flex;align-items:center;gap:8px;font-size:12px;}
+  .stat-list .sr i{width:7px;height:7px;border-radius:2px;flex:none;}
+  .stat-list .sr .sl{color:var(--dim);letter-spacing:.8px;}
+  .stat-list .sr .sv{margin-left:auto;font-family:var(--num);font-size:19px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;}
+  .stat-list .sr .sp{font-family:var(--num);font-size:11px;color:var(--dim2);width:40px;text-align:right;}
+
+  .mini-block{border-top:1px solid rgba(56,189,248,.10);margin-top:11px;padding-top:10px;}
+  .mini-title{font-size:10.5px;color:var(--dim2);letter-spacing:1.6px;margin-bottom:8px;display:flex;}
+  .mini-title em{font-style:normal;margin-left:auto;color:var(--dim);letter-spacing:0;}
+  .brow{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:11.5px;}
+  .brow .bl{width:44px;color:var(--dim);flex:none;}
+  .brow .bt{flex:1;height:5px;border-radius:3px;background:rgba(124,143,169,.13);overflow:hidden;}
+  .brow .bt i{display:block;height:100%;border-radius:3px;}
+  .brow .bv{width:30px;text-align:right;font-family:var(--num);font-size:12px;color:#C6D6E8;}
+
+  /* ---- 趋势图 ---- */
+  .tabs-sm{display:flex;gap:4px;margin-left:auto;}
+  .tabs-sm button{
+    background:transparent;border:1px solid rgba(56,189,248,.16);color:var(--dim2);
+    font-family:inherit;font-size:10.5px;padding:2px 9px;border-radius:3px;cursor:pointer;letter-spacing:.5px;
+  }
+  .tabs-sm button.on{border-color:rgba(225,29,72,.6);color:#fff;background:var(--red-dim);}
+  .chart-legend{display:flex;gap:16px;font-size:10.5px;color:var(--dim2);padding:2px 0 6px;}
+  .chart-legend span{display:inline-flex;align-items:center;gap:5px;}
+  .chart-legend i{width:12px;height:2px;border-radius:1px;}
+
+  /* ---- 地图 ---- */
+  .map-bd{padding:0;position:relative;flex:1;min-height:0;}
+  .map-svg{position:absolute;inset:0;width:100%;height:100%;}
+  .map-legend{
+    position:absolute;left:12px;bottom:10px;display:flex;gap:14px;
+    font-size:10.5px;color:var(--dim);background:rgba(4,8,15,.75);
+    padding:5px 10px;border:1px solid rgba(56,189,248,.14);border-radius:4px;
+  }
+  .map-legend span{display:inline-flex;align-items:center;gap:5px;}
+  .map-legend i{width:6px;height:6px;border-radius:50%;}
+  .map-meta{
+    position:absolute;right:12px;top:10px;font-size:10px;color:var(--dim2);letter-spacing:.8px;
+    background:rgba(4,8,15,.7);padding:4px 9px;border-radius:3px;border:1px solid rgba(56,189,248,.12);
+  }
+  .map-meta b{color:var(--green);font-family:var(--num);}
+
+  /* ---- 驾驶行为 ---- */
+  .beh-wrap{display:flex;gap:16px;align-items:center;flex:1;min-height:0;}
+  .beh-ring{position:relative;width:150px;height:150px;flex:none;}
+  .beh-ring svg{width:150px;height:150px;transform:rotate(-90deg);}
+  .beh-ring .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;}
+  .beh-ring .c b{font-family:var(--num);font-size:36px;line-height:1;color:#fff;}
+  .beh-ring .c span{font-size:10px;color:var(--dim2);letter-spacing:1.4px;}
+  .beh-list{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;}
+  .beh-item{
+    display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:4px;
+    background:rgba(56,189,248,.045);border-left:2px solid var(--c,var(--cyan));
+  }
+  .beh-item .bt2{font-size:11.5px;color:var(--dim);letter-spacing:.8px;}
+  .beh-item .bn2{margin-left:auto;font-family:var(--num);font-size:21px;font-weight:700;color:#fff;line-height:1;}
+  .beh-item .bu2{font-size:10.5px;color:var(--dim2);}
+  .beh-item.off{opacity:.42;border-left-style:dashed;border-left-color:var(--dim2);}
+  .beh-item.off .bn2{color:var(--dim);}
+
+  /* ---- 能耗 ---- */
+  .e-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px;}
+  .e-kpi{background:rgba(56,189,248,.045);border-radius:4px;padding:9px 11px;border-bottom:1px solid rgba(56,189,248,.14);}
+  .e-kpi .el2{font-size:10.5px;color:var(--dim2);letter-spacing:1px;margin-bottom:4px;}
+  .e-kpi .ev{font-family:var(--num);font-size:23px;font-weight:700;color:#fff;line-height:1;}
+  .e-kpi .ev small{font-size:10.5px;color:var(--dim2);margin-left:2px;font-weight:400;}
+  .top-list{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:2px;}
+  .top-row{display:flex;align-items:center;gap:9px;font-size:11.5px;}
+  .top-row .idx{
+    width:16px;height:16px;flex:none;display:flex;align-items:center;justify-content:center;
+    font-family:var(--num);font-size:10px;font-weight:700;color:#fff;border-radius:2px;background:rgba(124,143,169,.2);
+  }
+  .top-row.hot .idx{background:var(--red);box-shadow:0 0 10px rgba(225,29,72,.6);}
+  .top-row .plate{width:82px;font-family:var(--num);font-size:12px;color:#D3E2F2;letter-spacing:.5px;}
+  .top-row .bar2{flex:1;height:6px;border-radius:3px;background:rgba(124,143,169,.12);overflow:hidden;}
+  .top-row .bar2 i{display:block;height:100%;background:linear-gradient(90deg,rgba(225,29,72,.35),var(--red));border-radius:3px;}
+  .top-row .val{width:44px;text-align:right;font-family:var(--num);font-size:12px;color:#fff;}
+
+  /* ---- 事件流 ---- */
+  .feed{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:0;}
+  .feed-item{
+    display:flex;align-items:center;gap:9px;padding:8px 0;
+    border-bottom:1px dashed rgba(56,189,248,.09);font-size:11.5px;
+  }
+  .feed-item:last-child{border-bottom:none;}
+  .feed-item .ft{font-family:var(--num);font-size:11.5px;color:var(--dim2);width:42px;flex:none;}
+  .feed-item .fp{font-family:var(--num);font-size:11.5px;color:#A9C4DE;width:74px;flex:none;letter-spacing:.3px;}
+  .feed-item .fm{color:#9FB3CB;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .feed-item .fg{
+    flex:none;font-size:9.5px;padding:1px 6px;border-radius:2px;letter-spacing:.5px;
+    border:1px solid currentColor;
+  }
+  .fg.r{color:#FB7185;background:rgba(251,113,133,.1);}
+  .fg.a{color:var(--amber);background:rgba(245,158,11,.1);}
+  .fg.c{color:var(--cyan);background:rgba(34,211,238,.1);}
+  .fg.g{color:var(--green);background:rgba(52,211,153,.1);}
+  .feed-item.new{background:linear-gradient(90deg,rgba(225,29,72,.16),transparent 70%);animation:flash 2.4s ease-out infinite;}
+  @keyframes flash{0%,100%{background:linear-gradient(90deg,rgba(225,29,72,.05),transparent 70%);}50%{background:linear-gradient(90deg,rgba(225,29,72,.22),transparent 70%);}}
+
+  .affair-bar{
+    flex:none;margin-top:auto;border-top:1px solid rgba(56,189,248,.12);padding-top:10px;
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;
+  }
+  .affair-bar .ab{text-align:center;position:relative;}
+  .affair-bar .ab b{display:block;font-family:var(--num);font-size:19px;font-weight:700;line-height:1;color:var(--c,#fff);}
+  .affair-bar .ab span{display:block;font-size:10px;color:var(--dim2);margin-top:4px;letter-spacing:.6px;}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ===== 标题栏 ===== -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 16V7h11v9"/><path d="M12 10h4.5L21 14v2h-9"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>
+        </svg>
+      </div>
+      <div class="brand-txt">
+        <b>东风车队</b>
+        <span>FLEET OPERATION</span>
+      </div>
+    </div>
+
+    <div class="title-wrap">
+      <div class="wing l"></div>
+      <div class="wing r"></div>
+      <h1>车辆运行监控中心</h1>
+      <p>VEHICLE OPERATION MONITOR</p>
+    </div>
+
+    <div class="topbar-right">
+      <span class="live-dot"><i></i>实时</span>
+      <div class="seg-tabs">
+        <button class="on">今日</button>
+        <button>本周</button>
+        <button>本月</button>
+      </div>
+      <div class="clock">
+        <b>17:55:31</b>
+        <span>2026-10-25 周日</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== KPI 数字带 ===== -->
+  <div class="kpi-row">
+    <div class="kpi" style="--k:var(--cyan)">
+      <div class="k-label">车辆总数</div>
+      <div class="k-main"><span class="k-num">128</span><span class="k-unit">辆</span></div>
+      <div class="k-sub">在线 <b>96</b> · 离线 32</div>
+    </div>
+
+    <div class="kpi" style="--k:var(--green)">
+      <div class="k-label">在线率</div>
+      <div class="k-main"><span class="k-num">75.0</span><span class="k-unit">%</span></div>
+      <div class="k-sub">定位停更 <b>4</b> 辆 · 超 30 分钟</div>
+    </div>
+
+    <div class="kpi" style="--k:#FB7185">
+      <div class="k-label">今日里程</div>
+      <div class="k-main"><span class="k-num">8,642</span><span class="k-unit">km</span><span class="delta up">▲6.4%</span></div>
+      <div class="k-sub">轨迹实算 · 昨日同期 8,121</div>
+    </div>
+
+    <div class="kpi" style="--k:var(--amber)">
+      <div class="k-label">在途平均车速</div>
+      <div class="k-main"><span class="k-num">46</span><span class="k-unit">km/h</span></div>
+      <div class="k-sub">行驶中 <b>63</b> 辆参与统计</div>
+    </div>
+
+    <div class="kpi" style="--k:#FB7185">
+      <div class="k-label">今日超速</div>
+      <div class="k-main"><span class="k-num">6</span><span class="k-unit">段</span></div>
+      <div class="k-sub">涉及 <b>3</b> 辆 · 阈值 80 km/h</div>
+    </div>
+
+    <div class="kpi" style="--k:var(--amber)">
+      <div class="k-label">今日停留超时</div>
+      <div class="k-main"><span class="k-num">4</span><span class="k-unit">次</span></div>
+      <div class="k-sub">最长 <b>52</b> 分钟 · 阈值 30 分钟</div>
+    </div>
+  </div>
+
+  <!-- ===== 中部三列 ===== -->
+  <div class="row-mid">
+
+    <!-- 车辆状态分布 -->
+    <section class="panel">
+      <div class="panel-hd">
+        <span class="bar"></span><h3>车辆状态分布</h3>
+        <em class="tag live">实时</em>
+      </div>
+      <div class="panel-bd">
+        <div class="ring-wrap">
+          <div class="ring-box">
+            <svg viewBox="0 0 180 180">
+              <circle cx="90" cy="90" r="74" fill="none" stroke="rgba(124,143,169,.10)" stroke-width="15"/>
+              <circle cx="90" cy="90" r="74" fill="none" stroke="#34D399" stroke-width="15"
+                      stroke-dasharray="228.7 236.3" stroke-linecap="butt"
+                      style="filter:drop-shadow(0 0 6px rgba(52,211,153,.55))"/>
+              <circle cx="90" cy="90" r="74" fill="none" stroke="#F59E0B" stroke-width="15"
+                      stroke-dasharray="119.7 345.3" stroke-dashoffset="-228.7" stroke-linecap="butt"
+                      style="filter:drop-shadow(0 0 6px rgba(245,158,11,.5))"/>
+              <circle cx="90" cy="90" r="74" fill="none" stroke="#54677F" stroke-width="15"
+                      stroke-dasharray="116.4 348.6" stroke-dashoffset="-348.4" stroke-linecap="butt"/>
+            </svg>
+            <div class="ring-center">
+              <div class="rn">75<small>%</small></div>
+              <div class="rl">在线率</div>
+            </div>
+          </div>
+          <div class="stat-list">
+            <div class="sr"><i style="background:#34D399"></i><span class="sl">行驶中</span><span class="sv">63</span><span class="sp">49%</span></div>
+            <div class="sr"><i style="background:#F59E0B"></i><span class="sl">静止</span><span class="sv">33</span><span class="sp">26%</span></div>
+            <div class="sr"><i style="background:#54677F"></i><span class="sl">离线</span><span class="sv">32</span><span class="sp">25%</span></div>
+            <div class="sr"><i style="background:#E11D48"></i><span class="sl">告警车</span><span class="sv">6</span><span class="sp">5%</span></div>
+          </div>
+        </div>
+
+        <div class="mini-block">
+          <div class="mini-title">按燃料类型<em>共 128 辆</em></div>
+          <div class="brow"><span class="bl">纯电动</span><span class="bt"><i style="width:67%;background:linear-gradient(90deg,rgba(52,211,153,.3),#34D399)"></i></span><span class="bv">86</span></div>
+          <div class="brow"><span class="bl">燃气车</span><span class="bt"><i style="width:19%;background:linear-gradient(90deg,rgba(245,158,11,.3),#F59E0B)"></i></span><span class="bv">24</span></div>
+          <div class="brow" style="margin-bottom:0"><span class="bl">燃油车</span><span class="bt"><i style="width:14%;background:linear-gradient(90deg,rgba(34,211,238,.3),#22D3EE)"></i></span><span class="bv">18</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 里程 / 电耗趋势 -->
+    <section class="panel">
+      <div class="panel-hd">
+        <span class="bar"></span><h3>里程 / 电耗趋势</h3>
+        <div class="tabs-sm">
+          <button class="on">日</button><button>周</button><button>月</button>
+        </div>
+      </div>
+      <div class="panel-bd">
+        <div class="chart-legend">
+          <span><i style="background:#FB7185"></i>里程 km</span>
+          <span><i style="background:#22D3EE"></i>电耗 kWh（截至 10-24）</span>
+        </div>
+        <svg viewBox="0 0 570 250" width="100%" style="flex:1;min-height:0;">
+          <defs>
+            <linearGradient id="gKm" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#FB7185" stop-opacity=".28"/>
+              <stop offset="100%" stop-color="#FB7185" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="gFuel" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#22D3EE" stop-opacity=".18"/>
+              <stop offset="100%" stop-color="#22D3EE" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+
+          <g stroke="rgba(56,189,248,.10)" stroke-width="1">
+            <line x1="50" y1="40" x2="550" y2="40"/>
+            <line x1="50" y1="83" x2="550" y2="83"/>
+            <line x1="50" y1="126" x2="550" y2="126"/>
+            <line x1="50" y1="169" x2="550" y2="169"/>
+            <line x1="50" y1="212" x2="550" y2="212"/>
+          </g>
+
+          <path d="M50,92.9 L133.3,75.9 L216.7,100.4 L300,53.2 L383.3,60.8 L466.7,47.6 L550,46.8 L550,212 L50,212 Z" fill="url(#gKm)"/>
+          <path d="M50,88.2 L133.3,71.2 L216.7,98.1 L300,48.5 L383.3,55.6 L466.7,42.8 L550,40.3 L550,212 L50,212 Z" fill="url(#gFuel)"/>
+
+          <path d="M50,92.9 L133.3,75.9 L216.7,100.4 L300,53.2 L383.3,60.8 L466.7,47.6 L550,46.8"
+                fill="none" stroke="#FB7185" stroke-width="2" stroke-linejoin="round"
+                style="filter:drop-shadow(0 0 7px rgba(251,113,133,.55))"/>
+          <path d="M50,88.2 L133.3,71.2 L216.7,98.1 L300,48.5 L383.3,55.6 L466.7,42.8 L550,40.3"
+                fill="none" stroke="#22D3EE" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round"/>
+
+          <g fill="#FB7185">
+            <circle cx="50" cy="92.9" r="2.8"/><circle cx="133.3" cy="75.9" r="2.8"/>
+            <circle cx="216.7" cy="100.4" r="2.8"/><circle cx="300" cy="53.2" r="2.8"/>
+            <circle cx="383.3" cy="60.8" r="2.8"/><circle cx="466.7" cy="47.6" r="2.8"/>
+            <circle cx="550" cy="46.8" r="4" stroke="#fff" stroke-width="1.6"/>
+          </g>
+
+          <g font-size="10" fill="#54677F" font-family="'DIN Alternate',monospace">
+            <text x="50" y="230">10-19</text><text x="133" y="230">10-20</text>
+            <text x="217" y="230">10-21</text><text x="300" y="230">10-22</text>
+            <text x="383" y="230">10-23</text><text x="467" y="230">10-24</text>
+            <text x="550" y="230" text-anchor="end" fill="#FB7185">今日</text>
+          </g>
+          <g font-size="10" fill="#54677F" text-anchor="end" font-family="'DIN Alternate',monospace">
+            <text x="42" y="44">9k</text><text x="42" y="87">6k</text>
+            <text x="42" y="130">3k</text><text x="42" y="173">0</text>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 实时地图 -->
+    <section class="panel">
+      <div class="panel-hd">
+        <span class="bar"></span><h3>实时位置</h3>
+        <em class="tag live">3s 刷新</em>
+      </div>
+      <div class="panel-bd map-bd">
+        <svg class="map-svg" viewBox="0 0 570 356" preserveAspectRatio="xMidYMid slice">
+          <rect width="570" height="356" fill="#050A14"/>
+          <g stroke="rgba(56,189,248,.055)" stroke-width="1">
+            <path d="M0 60H570M0 120H570M0 180H570M0 240H570M0 300H570"/>
+            <path d="M70 0V356M150 0V356M230 0V356M310 0V356M390 0V356M470 0V356"/>
+          </g>
+          <g fill="none" stroke="rgba(124,143,169,.22)" stroke-width="4" stroke-linecap="round">
+            <path d="M-10 250 C 90 210, 140 150, 240 130 S 400 120, 590 60"/>
+            <path d="M40 356 C 90 280, 170 250, 250 210 S 380 190, 470 110"/>
+          </g>
+          <g fill="none" stroke="rgba(124,143,169,.14)" stroke-width="2">
+            <path d="M-10 180 C 80 190, 150 230, 230 250 S 400 280, 590 250"/>
+            <path d="M120 356 C 150 280, 210 220, 300 180 S 420 150, 520 130"/>
+            <path d="M0 100 C 100 80, 160 110, 250 90 S 420 40, 570 20"/>
+          </g>
+          <path d="M120 262 C 160 240, 190 208, 240 196 S 330 178, 380 148"
+                fill="none" stroke="#E11D48" stroke-width="1.8" stroke-dasharray="6 5" opacity=".8"/>
+          <path d="M240 196 C 290 210, 330 240, 390 246"
+                fill="none" stroke="#22D3EE" stroke-width="1.6" stroke-dasharray="5 5" opacity=".55"/>
+
+          <g>
+            <circle cx="120" cy="262" r="5" fill="#34D399"/>
+            <circle cx="120" cy="262" r="12" fill="none" stroke="#34D399" stroke-width="1" opacity=".45"/>
+            <circle cx="180" cy="228" r="5" fill="#34D399"/>
+            <circle cx="240" cy="196" r="5" fill="#F59E0B"/>
+            <circle cx="300" cy="182" r="5" fill="#34D399"/>
+            <circle cx="380" cy="148" r="5" fill="#34D399"/>
+            <circle cx="390" cy="246" r="5" fill="#54677F"/>
+            <circle cx="320" cy="250" r="5" fill="#F59E0B"/>
+            <circle cx="190" cy="150" r="5" fill="#34D399"/>
+            <circle cx="430" cy="205" r="5" fill="#54677F"/>
+            <circle cx="480" cy="140" r="5" fill="#34D399"/>
+            <circle cx="280" cy="120" r="5" fill="#E11D48"/>
+            <circle cx="280" cy="120" r="13" fill="none" stroke="#E11D48" stroke-width="1.2" opacity=".55"/>
+            <circle cx="200" cy="300" r="5" fill="#34D399"/>
+            <circle cx="350" cy="300" r="5" fill="#F59E0B"/>
+            <circle cx="500" cy="250" r="5" fill="#34D399"/>
+          </g>
+        </svg>
+        <div class="map-meta">定位更新 <b>3s</b> 前</div>
+        <div class="map-legend">
+          <span><i style="background:#34D399"></i>行驶</span>
+          <span><i style="background:#F59E0B"></i>静止</span>
+          <span><i style="background:#54677F"></i>离线</span>
+          <span><i style="background:#E11D48"></i>告警车</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===== 底部三列 ===== -->
+  <div class="row-bot">
+
+    <!-- 驾驶行为 -->
+    <section class="panel">
+      <div class="panel-hd">
+        <span class="bar"></span><h3>驾驶行为</h3>
+        <em class="tag">今日累计</em>
+      </div>
+      <div class="panel-bd">
+        <div class="beh-wrap">
+          <div class="beh-ring">
+            <svg viewBox="0 0 150 150">
+              <circle cx="75" cy="75" r="62" fill="none" stroke="rgba(124,143,169,.12)" stroke-width="11"/>
+              <circle cx="75" cy="75" r="62" fill="none" stroke="#E11D48" stroke-width="11"
+                      stroke-dasharray="319.3 70.3" stroke-linecap="round"
+                      style="filter:drop-shadow(0 0 7px rgba(225,29,72,.6))"/>
+            </svg>
+            <div class="c"><b>82</b><span>安全评分</span></div>
+          </div>
+          <div class="beh-list">
+            <div class="beh-item" style="--c:#FB7185">
+              <span class="bt2">超速</span><span class="bn2">6</span><span class="bu2">段 / 3 辆</span>
+            </div>
+            <div class="beh-item" style="--c:#F59E0B">
+              <span class="bt2">停留超时</span><span class="bn2">4</span><span class="bu2">次 / 4 辆</span>
+            </div>
+            <div class="beh-item off">
+              <span class="bt2">急加速</span><span class="bn2">--</span><span class="bu2">待接入</span>
+            </div>
+            <div class="beh-item off">
+              <span class="bt2">急减速</span><span class="bn2">--</span><span class="bu2">待接入</span>
+            </div>
+          </div>
+        </div>
+        <div class="mini-block" style="margin-top:auto">
+          <div class="mini-title">评分构成<em>超速 50% · 停留 30% · 其他 20%</em></div>
+          <div class="brow" style="margin-bottom:0">
+            <span class="bl" style="width:auto;color:var(--dim2);font-size:10.5px">急加速 / 急减速 / 急转弯 待采集，接入后自动并入评分</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 能耗 -->
+    <section class="panel">
+      <div class="panel-hd">
+        <span class="bar"></span><h3>能耗概览</h3>
+        <em class="tag warn">截至 10-24</em>
+      </div>
+      <div class="panel-bd">
+        <div class="e-kpis">
+          <div class="e-kpi">
+            <div class="el2">昨日电耗</div>
+            <div class="ev">11,978<small>kWh</small></div>
+          </div>
+          <div class="e-kpi">
+            <div class="el2">百公里电耗</div>
+            <div class="ev">138.6<small>kWh</small></div>
+          </div>
+          <div class="e-kpi">
+            <div class="el2">环比上周</div>
+            <div class="ev" style="color:#FB7185">+3.2<small>%</small></div>
+          </div>
+        </div>
+        <div class="mini-title">单车百公里电耗 TOP5<em>车队均值 138.6</em></div>
+        <div class="top-list">
+          <div class="top-row hot">
+            <span class="idx">1</span><span class="plate">晋A·D8821</span>
+            <span class="bar2"><i style="width:100%"></i></span><span class="val">168.4</span>
+          </div>
+          <div class="top-row">
+            <span class="idx">2</span><span class="plate">晋K·1H003</span>
+            <span class="bar2"><i style="width:94%"></i></span><span class="val">162.7</span>
+          </div>
+          <div class="top-row">
+            <span class="idx">3</span><span class="plate">晋A·D9012</span>
+            <span class="bar2"><i style="width:88%"></i></span><span class="val">159.2</span>
+          </div>
+          <div class="top-row">
+            <span class="idx">4</span><span class="plate">晋J·D5566</span>
+            <span class="bar2"><i style="width:82%"></i></span><span class="val">154.8</span>
+          </div>
+          <div class="top-row">
+            <span class="idx">5</span><span class="plate">晋K·1H001</span>
+            <span class="bar2"><i style="width:76%"></i></span><span class="val">151.3</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 事件流 + 车务 -->
+    <section class="panel">
+      <div class="panel-hd">
+        <span class="bar"></span><h3>实时事件流</h3>
+        <em class="tag live">滚动</em>
+      </div>
+      <div class="panel-bd">
+        <div class="feed">
+          <div class="feed-item new">
+            <span class="ft">10:15</span><span class="fp">晋K·1H003</span>
+            <span class="fm">超速 78 km/h，限速 70</span><span class="fg r">超速</span>
+          </div>
+          <div class="feed-item">
+            <span class="ft">10:08</span><span class="fp">晋A·D9012</span>
+            <span class="fm">停留 52 分钟 · 运城北</span><span class="fg a">停留</span>
+          </div>
+          <div class="feed-item">
+            <span class="ft">09:58</span><span class="fp">晋A·D8821</span>
+            <span class="fm">驶出围栏「吕梁装货区」</span><span class="fg c">围栏</span>
+          </div>
+          <div class="feed-item">
+            <span class="ft">09:41</span><span class="fp">晋J·D5566</span>
+            <span class="fm">定位停更 34 分钟，信号恢复</span><span class="fg c">定位</span>
+          </div>
+          <div class="feed-item">
+            <span class="ft">09:26</span><span class="fp">晋K·1H001</span>
+            <span class="fm">连续驾驶 4 小时 12 分</span><span class="fg a">疲劳</span>
+          </div>
+          <div class="feed-item">
+            <span class="ft">09:12</span><span class="fp">晋A·D6633</span>
+            <span class="fm">营运证 12 天后到期</span><span class="fg r">车务</span>
+          </div>
+        </div>
+
+        <div class="affair-bar">
+          <div class="ab" style="--c:#FB7185"><b>3</b><span>证件临期</span></div>
+          <div class="ab" style="--c:#F59E0B"><b>5</b><span>待保养</span></div>
+          <div class="ab" style="--c:#22D3EE"><b>2</b><span>在修</span></div>
+          <div class="ab" style="--c:#7C8FA9"><b>1</b><span>年检到期</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var stage = document.getElementById('stage')
+    function fit() {
+      var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080)
+      stage.style.transform = 'scale(' + s + ')'
+      stage.style.transformOrigin = 'center center'
+    }
+    fit()
+    window.addEventListener('resize', fit)
+
+    var clock = document.querySelector('.clock b')
+    var dateEl = document.querySelector('.clock span')
+    var wd = ['周日','周一','周二','周三','周四','周五','周六']
+    function tick() {
+      var d = new Date()
+      var p = function (n) { return String(n).padStart(2, '0') }
+      clock.textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds())
+      dateEl.textContent = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + wd[d.getDay()]
+    }
+    tick()
+    setInterval(tick, 1000)
+  })()
+</script>
+</body>
+</html>

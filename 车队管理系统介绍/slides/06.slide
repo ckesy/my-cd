@@ -1,0 +1,50 @@
+<Slide style={{ width: 1280, height: 720, background: '#FFFFFF', padding: '40px 64px 24px 64px', flexDirection: 'column' }}>
+    <Box style={{ height: 78, flexDirection: 'row', alignItems: 'flex-start' }}>
+        <Box style={{ width: 4, height: 30, background: '#C8102E', marginTop: 4 }} />
+        <Box style={{ marginLeft: 14, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#C8102E', fontWeight: 700, letterSpacing: 2 }}>05　管理端 · 在途可视</Text>
+            <Text style={{ fontSize: 34, color: '#111827', fontWeight: 700, lineHeight: 1.2, marginTop: 6 }}>车在哪、走到哪、还要多久</Text>
+        </Box>
+        <Box style={{ flex: 1 }} />
+        <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 34 }}>点开一单，全程都在这一屏</Text>
+    </Box>
+
+    <Box style={{ flex: 1, flexDirection: 'column' }}>
+        <Box style={{ flexDirection: 'row', gap: 30, alignItems: 'flex-start' }}>
+            <Image src="assets/shot_waybill_track.png" style={{ width: 700, height: 481 }} />
+            <Box style={{ flex: 1, flexDirection: 'column', gap: 14, paddingTop: 4 }}>
+                <Text style={{ fontSize: 15, color: '#374151', lineHeight: 1.8 }}>
+                    客户问"到哪了"，不用再让司机回一句"快了"。<br />
+                    这一页把<Text style={{ fontWeight: 700 }}>位置、走过的路、每个节点的时间</Text>摆在一起。
+                </Text>
+                {[
+                    ['实时位置', '地图上直接看到车在哪，走的是哪条路'],
+                    ['两条进度', '计划一条、实际一条，差多少一目了然'],
+                    ['还剩多少', '按已走里程算剩余公里和预计到达时间'],
+                    ['节点时间', '接单、装车、发车、到达，每一步都带时间']
+                ].map((it, i) => (
+                    <Box key={i} style={{ flexDirection: 'row', gap: 12, background: '#F4F5F7', borderRadius: 4, padding: '12px 14px' }}>
+                        <Box style={{ width: 3, background: '#C8102E' }} />
+                        <Box style={{ flexDirection: 'column' }}>
+                            <Text style={{ fontSize: 13.5, color: '#111827', fontWeight: 700 }}>{it[0]}</Text>
+                            <Text style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.6, marginTop: 3 }}>{it[1]}</Text>
+                        </Box>
+                    </Box>
+                ))}
+            </Box>
+        </Box>
+
+        <Box style={{ flexDirection: 'row', alignItems: 'center', gap: 14, borderTop: '2px solid #111827', paddingTop: 12, marginTop: 12 }}>
+            <Text style={{ fontSize: 12, color: '#C8102E', fontWeight: 800, letterSpacing: 2 }}>说 到 就 能 做 到</Text>
+            <Text style={{ fontSize: 13.5, color: '#374151' }}>
+                定位不再更新超过半小时的，系统不给"预计到达"——宁可不猜，也不给客户一个错的时间。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 24, flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+        <Text style={{ fontSize: 12, color: '#9AA3AF' }}>车队一体化运营平台</Text>
+        <Box style={{ flex: 1 }} />
+        <Text style={{ fontSize: 12, color: '#9AA3AF' }}>06 / 14</Text>
+    </Box>
+</Slide>

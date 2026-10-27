@@ -338,3 +338,25 @@ code, pre {
     --state-reject: color-mix(in srgb, #A00D24 88%, var(--brand-primary) 12%);
   }
 }
+
+/* ============================================================
+   数据大屏 · 地图标记与车辆详情卡
+   ⚠️ AMap 的 Marker / InfoWindow 内容渲染在 Vue scoped 之外，
+      样式必须写在全局，否则一片空白无样式。
+   ============================================================ */
+.vp-dot{width:22px;height:22px;border-radius:50%;background:#0B1220;border:2.5px solid var(--c);
+  box-sizing:border-box;position:relative;cursor:pointer;transition:transform .15s}
+.vp-dot::after{content:'';position:absolute;inset:4.5px;border-radius:50%;background:var(--c)}
+.vp-dot:hover{transform:scale(1.16)}
+
+.v-info{min-width:258px;background:linear-gradient(160deg,rgba(12,24,42,.98),rgba(6,12,22,.98));
+  border:1px solid rgba(84,144,214,.38);border-radius:4px;padding:12px 14px;color:#DCE9F9;
+  font-family:'PingFang SC',-apple-system,sans-serif;box-shadow:0 14px 44px rgba(0,0,0,.62)}
+.v-info .vi-hd{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.v-info .vi-plate{font-family:ui-monospace,monospace;font-size:15px;font-weight:700;color:#fff;letter-spacing:1px}
+.v-info .vi-st{font-size:10px;padding:1px 7px;border:1px solid currentColor;margin-left:auto;border-radius:2px}
+.v-info .vi-row{display:flex;gap:8px;font-size:11.5px;padding:3.5px 0;
+  border-bottom:1px dashed rgba(90,150,220,.12)}
+.v-info .vi-k{width:40px;color:#6E88A6;flex:0 0 auto}
+.v-info .vi-v{color:#C6D6E8;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v-info .vi-ft{font-size:9.5px;color:#4E6885;margin-top:7px;letter-spacing:.3px}

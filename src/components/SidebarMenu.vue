@@ -8,6 +8,18 @@
         <span class="menu-label">首页</span>
       </el-menu-item>
 
+      <!-- ⭐ 数据大屏：沉浸式全屏看板（进入后隐藏侧边栏/顶栏） -->
+      <el-sub-menu v-if="isMaster || hasPerm('screen_fleet') || hasPerm('screen_fee')" index="screen-group">
+        <template #title>
+          <el-icon>
+            <Monitor />
+          </el-icon>
+          <span class="menu-label">数据大屏</span>
+        </template>
+        <el-menu-item v-if="isMaster || hasPerm('screen_fleet')" index="/screen/fleet">车辆运行大屏</el-menu-item>
+        <el-menu-item v-if="isMaster || hasPerm('screen_fee')" index="/screen/fee">运单费用大屏</el-menu-item>
+      </el-sub-menu>
+
       <!-- ⭐ 业务流程：主账号必有，也可在「功能配置」里勾给某个角色（非主账号只读调参） -->
       <el-menu-item v-if="isMaster || hasPerm('flow')" index="/flow/canvas">
         <el-icon>
@@ -90,19 +102,25 @@
         <el-menu-item v-if="isMaster && approvalOn" index="/fee/config">费用审批设置</el-menu-item>
       </el-sub-menu>
 
-      <!-- ⭐ 车务管理：主账号必有；子账号要在功能配置里勾「车务管理」才有（勾了才会收到到期提醒） -->
-      <el-sub-menu v-if="isMaster || hasPerm('vehicle_affair')" index="affair-management">
+      <!-- ⭐ 车务管理：主账号必有；子账号要在功能配置里勾对应项才有（勾了才会收到到期提醒）
+           2026-10-25：5 个菜单各对应一条权限（老角色只有 vehicle_affair，
+           子页靠 PERM_ALIAS 认老钥匙；提醒设置是管理员专属，永远不给角色勾） -->
+      <el-sub-menu
+        v-if="isMaster || hasPerm('vehicle_affair') || hasPerm('maintenance_ledger') || hasPerm('affair_ledger') || hasPerm('affair_reminders') || hasPerm('affair_settings')"
+        index="affair-management">
         <template #title>
           <el-icon>
             <Van />
           </el-icon>
           <span class="menu-label">车务管理</span>
         </template>
-        <el-menu-item index="/affair/home">车务总览</el-menu-item>
-        <el-menu-item index="/maintenance">维保台账</el-menu-item>
-        <el-menu-item index="/affair/ledger">证件台账</el-menu-item>
-        <el-menu-item index="/affair/reminders">提醒事项</el-menu-item>
-        <el-menu-item index="/affair/settings">提醒设置</el-menu-item>
+        <!-- ⚠️ 每项都要带 isMaster：主账号的 permissions.client 可能是「老的一串 key」
+             而不含车务，单靠 hasPerm 会让主账号自己看不到菜单 -->
+        <el-menu-item v-if="isMaster || hasPerm('vehicle_affair')" index="/affair/home">车务总览</el-menu-item>
+        <el-menu-item v-if="isMaster || hasPerm('maintenance_ledger')" index="/maintenance">维保台账</el-menu-item>
+        <el-menu-item v-if="isMaster || hasPerm('affair_ledger')" index="/affair/ledger">证件台账</el-menu-item>
+        <el-menu-item v-if="isMaster || hasPerm('affair_reminders')" index="/affair/reminders">提醒事项</el-menu-item>
+        <el-menu-item v-if="isMaster || hasPerm('affair_settings')" index="/affair/settings">提醒设置</el-menu-item>
       </el-sub-menu>
 
       <!-- ⭐ 车队分析报告：一级菜单，夹在「费用管理」和「档案管理」之间 -->
@@ -159,7 +177,7 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import { HomeFilled, Van, Location, DataLine, Tickets, Setting, FolderOpened, Wallet, Share, DataAnalysis } from '@element-plus/icons-vue'
+import { HomeFilled, Van, Location, DataLine, Tickets, Setting, FolderOpened, Wallet, Share, DataAnalysis, Monitor } from '@element-plus/icons-vue'
 import { moduleFlags, approvalOn, ensureApprovalMode, currentUserForModules } from '@/utils/modules'
 import { permHit } from '@/config/permissions'
 

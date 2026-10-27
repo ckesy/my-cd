@@ -1,0 +1,48 @@
+<Slide style={{ width: 1280, height: 720, background: '#FFFFFF', padding: '40px 64px 24px 64px', flexDirection: 'column' }}>
+    <Box style={{ height: 78, flexDirection: 'row', alignItems: 'flex-start' }}>
+        <Box style={{ width: 4, height: 30, background: '#C8102E', marginTop: 4 }} />
+        <Box style={{ marginLeft: 14, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#C8102E', fontWeight: 700, letterSpacing: 2 }}>04　管理端 · 运输管理</Text>
+            <Text style={{ fontSize: 34, color: '#111827', fontWeight: 700, lineHeight: 1.2, marginTop: 6 }}>所有运单，一张表管到底</Text>
+        </Box>
+    </Box>
+
+    <Box style={{ flex: 1, flexDirection: 'row', gap: 34, paddingTop: 6 }}>
+        <Box style={{ width: 372, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 15, color: '#374151', lineHeight: 1.8 }}>
+                调度最怕翻本子、翻群聊。这一页把<Text style={{ fontWeight: 700 }}>今天要发几趟、哪趟卡住了、哪趟钱没结</Text>放在同一屏。
+            </Text>
+            <Box style={{ flexDirection: 'column', gap: 16, marginTop: 24 }}>
+                {[
+                    ['状态一眼分清', '待接单、待装车、已发车、已到达、已完成，用颜色和页签分开，不用记口径'],
+                    ['该我处理的单独一个页签', '待我审批、待付款直接筛出来，不用一条条翻'],
+                    ['费用就写在运单这一行', '不用点进去算，点开能看到明细和凭证'],
+                    ['按需筛、直接导', '按日期、单号、车辆、司机、客户筛；导出就是一张对账表']
+                ].map((it, i) => (
+                    <Box key={i} style={{ flexDirection: 'row', gap: 12 }}>
+                        <Text style={{ fontSize: 11, color: '#C8102E', fontWeight: 800, marginTop: 3, width: 16 }}>{'0' + (i + 1)}</Text>
+                        <Box style={{ flexDirection: 'column', width: 330 }}>
+                            <Text style={{ fontSize: 15, color: '#111827', fontWeight: 700 }}>{it[0]}</Text>
+                            <Text style={{ fontSize: 12.5, color: '#6B7280', lineHeight: 1.7, marginTop: 3 }}>{it[1]}</Text>
+                        </Box>
+                    </Box>
+                ))}
+            </Box>
+            <Box style={{ flex: 1 }} />
+            <Box style={{ background: '#F4F5F7', borderRadius: 4, padding: '14px 16px', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Text style={{ fontSize: 26, color: '#C8102E', fontWeight: 800, lineHeight: 1.0 }}>48</Text>
+                <Text style={{ fontSize: 12.5, color: '#4B5563', lineHeight: 1.6 }}>演示环境里一个月的运单量<br />——全部在这张表里，一张纸都不用打</Text>
+            </Box>
+        </Box>
+
+        <Box style={{ flex: 1, justifyContent: 'flex-start' }}>
+            <Image src="assets/shot_waybill_list.png" style={{ width: 700, height: 481 }} />
+        </Box>
+    </Box>
+
+    <Box style={{ height: 24, flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={{ fontSize: 12, color: '#9AA3AF' }}>车队一体化运营平台</Text>
+        <Box style={{ flex: 1 }} />
+        <Text style={{ fontSize: 12, color: '#9AA3AF' }}>05 / 14</Text>
+    </Box>
+</Slide>

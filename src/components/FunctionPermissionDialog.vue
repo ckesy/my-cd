@@ -125,7 +125,7 @@
                     <el-icon>
                         <InfoFilled />
                     </el-icon>
-                    <span>勾选后该角色登录时可见对应菜单（系统管理、费用审批设置不可配置）</span>
+                    <span>勾选后该角色登录时可见对应菜单（系统管理、费用审批设置、提醒设置不可配置）</span>
                 </div>
                 <div class="pd-footer-btns">
                     <el-button @click="$emit('update:modelValue', false)">取消</el-button>
@@ -247,6 +247,9 @@ const LEGACY_EXPAND = {
   operation: OPERATION_KEYS,
   fee_stats: ['fee_list'],      // 费用明细以前没有独立 key
   waybill: ['waybill_stats'],   // 运单统计以前跟运单管理共用
+  /* ⭐ 2026-10-25：车务管理拆成 5 项，老角色只有 vehicle_affair（车务总览），
+     三个子页要一起点亮，不然显示 1/5 但菜单其实五个都在 */
+  vehicle_affair: ['maintenance_ledger', 'affair_ledger', 'affair_reminders'],
 }
 
 const expandKeys = (list) => {
@@ -259,7 +262,11 @@ const expandKeys = (list) => {
     }
     Object.keys(LEGACY_EXPAND).forEach((legacy) => {
         if (legacy === 'operation' || !out.has(legacy)) return
-        LEGACY_EXPAND[legacy].forEach((k) => out.add(k))
+        const subs = LEGACY_EXPAND[legacy]
+        /* ⭐ 子项一个都没有时才按"老数据"展开：否则用户手动取消某一项后
+           再打开弹窗又被推回来，看着像「改了没生效」 */
+        if (subs.some((k) => out.has(k))) return
+        subs.forEach((k) => out.add(k))
     })
     return [...out]
 }

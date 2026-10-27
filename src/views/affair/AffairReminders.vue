@@ -81,12 +81,7 @@
           <el-date-picker v-model="addForm.next_remind_at" type="datetime" value-format="YYYY-MM-DD HH:mm:ss"
             style="width:100%" />
         </el-form-item>
-        <el-form-item label="接收对象">
-          <el-radio-group v-model="addForm.receiver_scope">
-            <el-radio value="tenant">主账号 + 车务管理员</el-radio>
-            <el-radio value="platform">管理端</el-radio>
-          </el-radio-group>
-        </el-form-item>
+        <!-- ⭐ 接收对象不再让用户选：车务提醒固定给「主账号 + 车务管理员」 -->
         <el-form-item label="内容">
           <el-input v-model="addForm.content" type="textarea" :rows="3" resize="none" />
         </el-form-item>
@@ -105,7 +100,7 @@ import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import '@/assets/affair.css'
 import {
-  loadReminders, createManualReminder, LEVEL_META, loadCerts, nextRemindAt,
+  loadReminders, createManualReminder, LEVEL_META, loadVehiclePlates, nextRemindAt,
 } from '@/utils/vehicleAffair'
 import { CERT_TYPES, CERT_NAME } from '@/config/vehicleColumns'
 import ReminderDrawer from '@/components/affair/ReminderDrawer.vue'
@@ -157,7 +152,9 @@ const open = (r) => {
 /* ---------- 人工添加 ---------- */
 const addOpen = ref(false)
 const adding = ref(false)
-const addForm = ref({ plate: '', title: '', due_date: '', next_remind_at: '', content: '', receiver_scope: 'tenant' })
+/* 接收对象已从表单去掉：车务提醒恒为 tenant（主账号 + 车务管理员），
+   由 createManualReminder 的默认值兜住，这里不再传 receiver_scope */
+const addForm = ref({ plate: '', title: '', due_date: '', next_remind_at: '', content: '' })
 
 const onPickPlate = () => {
   if (addForm.value.plate && !addForm.value.title) {
@@ -176,7 +173,7 @@ const doAdd = async () => {
     })
     ElMessage.success('已添加')
     addOpen.value = false
-    addForm.value = { plate: '', title: '', due_date: '', next_remind_at: '', content: '', receiver_scope: 'tenant' }
+    addForm.value = { plate: '', title: '', due_date: '', next_remind_at: '', content: '' }
     await refresh()
   } catch (e) {
     ElMessage.error('添加失败：' + (e.message || e))
@@ -184,10 +181,10 @@ const doAdd = async () => {
 }
 
 onMounted(async () => {
-  // 车牌下拉（人工添加用）
+  /* 车牌下拉（人工添加用）：证件台账 ∩ 车辆档案 —— 只读证件会漏掉没录证件的车，
+     之前「车辆找不到/无数据」就是这个原因 */
   try {
-    const rows = await loadCerts()
-    plateOptions.value = [...new Set(rows.map(r => r.plate))].sort()
+    plateOptions.value = await loadVehiclePlates()
   } catch { /* ignore */ }
   await refresh()
 })
