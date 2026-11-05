@@ -25,7 +25,41 @@ const CACHE = 'my-cd-static-v1'
 const ASSET_RE = /^\/assets\/[^/]+\.(?:js|css|woff2?|ttf|png|jpe?g|svg|gif|webp)$/
 
 /* 装好立刻接管，避免"新 SW 一直在等待" */
-self.addEventListener('install', () => self.skipWaiting())
+self.addEventListener('install', (event) => {
+  self.skipWaiting()
+  /* 关键：把首屏那几个文件主动存一份。
+     否则第一次访问时资源是"装 SW 之前"下的，不在缓存里，
+     用户要打开第三次才真正快（第二次受控但仍要重新下载一遍）。 */
+  event.waitUntil(precacheShell())
+})
+
+/**
+ * 抓一次首页 HTML，把它引用的入口 JS/CSS 全部存进缓存
+ * ⚠️ 这一步会在后台重复下载约 2.5MB（这些文件首屏刚下过，但因为 no-store
+ *    浏览器没留副本）。用这个代价换"第二次打开就快"。
+ * 任何一步失败都不影响 SW 激活 —— 最差回到"边用边缓存"。
+ */
+async function precacheShell() {
+  try {
+    const cache = await caches.open(CACHE)
+    const res = await fetch('/', { cache: 'no-store' })
+    if (!res || !res.ok) return
+    const html = await res.clone().text()
+    try { await cache.put('/', res) } catch (e) { /* ignore */ }
+
+    const urls = [...new Set(
+      [...html.matchAll(/["'](\/assets\/[^"']+\.(?:js|css))["']/g)].map((m) => m[1])
+    )]
+    await Promise.all(urls.map(async (u) => {
+      try {
+        const r = await fetch(u, { cache: 'no-store' })
+        if (r && r.ok) await cache.put(u, r)
+      } catch (e) { /* 单个失败不影响其他 */ }
+    }))
+  } catch (e) {
+    /* 预热失败就退回运行时缓存，不影响功能 */
+  }
+}
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
