@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>全图监控 · 车辆浮标「剩余里程 / 预计送达」方案对比</title>
+<style>
+:root{
+  --bg:#F2F5FA; --card:#FFFFFF; --line:#E3E9F2; --line2:#EDF1F7;
+  --txt:#0F172A; --sub:#475569; --dim:#94A3B8;
+  --brand:#E11D48; --indigo:#6366F1; --cyan:#22D3EE;
+  --map:#070C18;
+  --num:'SF Mono',ui-monospace,'Menlo',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--txt);
+  font-family:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  font-variant-numeric:tabular-nums;padding:28px 30px 60px;
+}
+.wrap{max-width:1660px;margin:0 auto}
+
+/* ---------- 页头 ---------- */
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:18px}
+.head h1{font-size:21px;font-weight:800;letter-spacing:-.2px}
+.head h1 em{font-style:normal;color:var(--brand)}
+.head p{margin-top:7px;font-size:12.5px;color:var(--sub);line-height:1.75;max-width:920px}
+.head p b{color:#0F172A;font-weight:700}
+.head .stamp{flex:none;text-align:right;font-size:11.5px;color:var(--dim);line-height:1.8}
+.head .stamp b{display:block;font-size:12px;color:var(--sub);font-weight:700}
+
+/* ---------- 卡片 ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.card-h{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--line2)}
+.card-h .bar{width:3px;height:14px;border-radius:2px;background:var(--brand)}
+.card-h h2{font-size:13.5px;font-weight:800}
+.card-h .tip{font-size:11.5px;color:var(--dim);font-weight:500}
+
+/* ---------- 总览表 ---------- */
+table{width:100%;border-collapse:collapse}
+.ov th{
+  text-align:left;font-size:11.5px;font-weight:700;color:#475569;
+  background:#F7F9FC;padding:9px 14px;border-bottom:1px solid var(--line2);white-space:nowrap;
+}
+.ov td{padding:10px 14px;font-size:12.5px;border-bottom:1px solid #F1F5F9;vertical-align:middle}
+.ov tr:last-child td{border-bottom:none}
+.ov .nm{font-weight:800;white-space:nowrap}
+.ov .nm i{display:inline-flex;width:19px;height:19px;border-radius:5px;background:#EEF2FF;color:#4F46E5;
+  align-items:center;justify-content:center;font-size:11px;font-style:normal;margin-right:7px;font-weight:800}
+.ov .ok{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.ov .ok::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.ok.g{color:#0E9F6E}.ok.y{color:#B45309}.ok.r{color:#DC2626}
+.ov .mono{font-family:var(--num);font-size:11.5px;color:#334155}
+
+/* ---------- 方案行 ---------- */
+.opt{margin-top:16px;display:grid;grid-template-columns:1fr 396px;gap:0;overflow:hidden}
+.opt .stage{position:relative;background:var(--map);min-height:326px;overflow:hidden}
+.opt .side{padding:16px 18px;border-left:1px solid var(--line2);display:flex;flex-direction:column}
+
+.stage .lbl{
+  position:absolute;left:14px;top:12px;z-index:6;display:flex;align-items:center;gap:8px;
+  font-size:11px;color:#94A3B8;letter-spacing:.3px;
+}
+.stage .lbl b{color:#E2E8F0;font-weight:700}
+.stage .lbl span{font-family:var(--num);font-size:10.5px;color:#5B6B85}
+
+/* 模拟地图 */
+.map{position:absolute;inset:0}
+.map svg{position:absolute;inset:0;width:100%;height:100%}
+.city{position:absolute;transform:translate(-50%,-50%);font-size:10px;color:#64748B;letter-spacing:.5px;white-space:nowrap;pointer-events:none}
+
+/* ---------- 车辆标记（复刻现有） ---------- */
+.veh{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;z-index:3}
+.veh.dimmed{opacity:.55}
+.arrow{position:relative;width:38px;height:38px;display:flex;align-items:center;justify-content:center}
+.arrow svg{width:38px;height:38px;overflow:visible}
+.plate{
+  font-size:10px;font-weight:800;color:#0F172A;background:rgba(255,255,255,.94);
+  backdrop-filter:blur(8px);padding:2px 7px;border-radius:5px;white-space:nowrap;
+  letter-spacing:.3px;box-shadow:0 2px 8px rgba(0,0,0,.35);margin-top:-3px;
+}
+.task{
+  display:block;margin:1px auto 0;width:fit-content;padding:0 4px;border-radius:3px;
+  font-size:9px;font-weight:800;line-height:13px;white-space:nowrap;color:#fff;background:rgba(79,70,229,.92);
+}
+
+/* ========== 方案 A：加宽车牌条 ========== */
+.eta-a{
+  margin-top:3px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+  font-size:9.5px;font-weight:700;color:#E8EEF8;
+  background:rgba(13,21,36,.86);border:1px solid rgba(255,255,255,.14);
+  padding:2px 7px;border-radius:5px;backdrop-filter:blur(8px);
+  box-shadow:0 2px 10px rgba(0,0,0,.4);
+}
+.eta-a b{font-family:var(--num);font-size:10px;font-weight:800;color:#fff}
+.eta-a i{font-style:normal;color:#8FA1BC;font-size:9px;font-weight:600}
+.eta-a u{text-decoration:none;color:var(--cyan);font-family:var(--num);font-weight:800;font-size:10px}
+
+/* ========== 方案 B：右侧双列小牌 ========== */
+.panel-b{
+  position:absolute;left:calc(100% + 10px);bottom:0;
+  width:140px;border-radius:8px;overflow:hidden;
+  background:rgba(11,18,32,.88);border:1px solid rgba(255,255,255,.13);
+  backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.5);
+  display:flex;
+}
+.panel-b .acc{width:2px;flex:none;background:linear-gradient(180deg,#818CF8,#22D3EE);opacity:.9}
+.panel-b .bd{padding:5px 8px 6px;flex:1;min-width:0}
+.panel-b .r1{display:flex;align-items:baseline;gap:3px}
+.panel-b .r1 .k{font-size:8.5px;color:#7E90AB;font-weight:700}
+.panel-b .r1 .v{font-family:var(--num);font-size:12px;font-weight:800;color:#fff;letter-spacing:-.2px}
+.panel-b .r1 .v small{font-size:8.5px;font-weight:700;color:#8FA1BC;margin-left:1px}
+.panel-b .r1 .t{font-family:var(--num);font-size:10.5px;font-weight:800;color:var(--cyan);margin-left:auto}
+.panel-b .track{margin-top:4px;display:flex;align-items:center;gap:5px}
+.panel-b .track .bar{flex:1;height:1.5px;border-radius:1px;background:rgba(255,255,255,.13);position:relative;overflow:hidden}
+.panel-b .track .bar i{position:absolute;left:0;top:0;height:100%;width:68%;background:linear-gradient(90deg,#6366F1,#22D3EE);border-radius:1px}
+.panel-b .track .pct{font-family:var(--num);font-size:8.5px;font-weight:800;color:#A5B4FC}
+
+/* ========== 方案 C：引线气泡卡 ========== */
+.card-c{
+  position:absolute;left:calc(100% + 30px);bottom:calc(50% + 14px);
+  width:208px;border-radius:10px;overflow:hidden;
+  background:rgba(11,18,32,.9);border:1px solid rgba(255,255,255,.14);
+  backdrop-filter:blur(12px);box-shadow:0 14px 40px rgba(0,0,0,.55),0 0 0 1px rgba(99,102,241,.1);
+}
+.card-c .acc{height:2px;background:linear-gradient(90deg,#6366F1,#22D3EE);opacity:.85}
+.card-c .bd{padding:9px 11px 10px}
+.card-c .top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-c .top .k{font-size:9.5px;color:#8FA1BC;font-weight:600;letter-spacing:.2px}
+.card-c .badge{font-size:8.5px;font-weight:800;color:#052E2B;background:#5EEAD4;padding:1px 5px;border-radius:3px;letter-spacing:.2px}
+.card-c .eta{display:flex;align-items:baseline;gap:5px;margin-top:3px}
+.card-c .eta b{font-family:var(--num);font-size:19px;font-weight:800;color:#fff;letter-spacing:-.6px;line-height:1}
+.card-c .eta s{text-decoration:none;font-size:10px;font-weight:700;color:#8FA1BC}
+.card-c .eta .dd{font-size:9px;font-weight:800;color:#FCD34D;background:rgba(252,211,77,.12);padding:1px 4px;border-radius:3px}
+.card-c .row2{display:flex;align-items:baseline;justify-content:space-between;margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.09)}
+.card-c .row2 .k{font-size:9.5px;color:#8FA1BC;font-weight:600}
+.card-c .row2 .v{font-family:var(--num);font-size:12.5px;font-weight:800;color:#E2E8F0}
+.card-c .row2 .v small{font-size:9px;color:#8FA1BC;font-weight:700;margin-left:1px}
+.card-c .foot{margin-top:6px;display:flex;align-items:center;gap:6px}
+.card-c .foot .bar{flex:1;height:1.5px;background:rgba(255,255,255,.12);border-radius:1px;position:relative;overflow:hidden}
+.card-c .foot .bar i{position:absolute;left:0;top:0;height:100%;width:68%;background:linear-gradient(90deg,#6366F1,#22D3EE)}
+.card-c .foot .pct{font-family:var(--num);font-size:8.5px;font-weight:800;color:#A5B4FC}
+/* 引线 */
+.lead{position:absolute;left:8px;bottom:20px;width:96px;height:96px;pointer-events:none;overflow:visible}
+.lead .dot{fill:#22D3EE}
+.lead .ln{stroke:rgba(160,180,210,.45);stroke-width:1;fill:none}
+
+/* ========== 方案 D：进度环 + 裸字 ========== */
+.ring{position:absolute;left:50%;top:19px;transform:translate(-50%,-50%);width:50px;height:50px;pointer-events:none}
+.ring circle{fill:none;stroke-linecap:round}
+.ring .tr{stroke:rgba(255,255,255,.14);stroke-width:1.4}
+.ring .pg{stroke:#818CF8;stroke-width:1.6;filter:drop-shadow(0 0 3px rgba(129,140,248,.45))}
+.bare{margin-top:2px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.bare .n{font-family:var(--num);font-size:10.5px;font-weight:800;color:#fff;
+  text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 8px rgba(0,0,0,.7);letter-spacing:-.2px}
+.bare .n small{font-size:8px;font-weight:700;color:#9FB0C8;margin-left:1px}
+.bare .sep{width:1px;height:8px;background:rgba(255,255,255,.26)}
+.bare .e{font-family:var(--num);font-size:10.5px;font-weight:800;color:#7DD3FC;
+  text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 8px rgba(0,0,0,.7)}
+.bare .e i{font-style:normal;font-size:8.5px;font-weight:700;color:#9FB0C8;margin-left:1px}
+
+/* ---------- 侧栏说明 ---------- */
+.side-h{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.side-h .idx{width:20px;height:20px;border-radius:6px;background:#EEF2FF;color:#4F46E5;font-size:11px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;flex:none}
+.side-h h3{font-size:13.5px;font-weight:800}
+.side-h .tag{margin-left:auto;font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:.2px}
+.tag.hot{color:#9F1239;background:#FFE4E6}
+.tag.cool{color:#334155;background:#EEF2F7}
+.side .desc{margin-top:8px;font-size:11.5px;line-height:1.8;color:#64748B}
+.side .desc b{color:#0F172A;font-weight:700}
+
+.zoombox{
+  margin-top:12px;position:relative;height:196px;border-radius:9px;overflow:hidden;
+  background:var(--map);
+  background-image:radial-gradient(120% 100% at 43% 50%,rgba(99,102,241,.10),transparent 62%);
+  border:1px solid #16233A;
+}
+.zoombox .zi{position:absolute;top:calc(50% + var(--zy,0px));transform:translate(-50%,-50%) scale(var(--zs,1.9));transform-origin:center;left:var(--zx,50%)}
+.zoombox .zt{position:absolute;left:8px;bottom:7px;font-size:9.5px;color:#7A8AA3;font-family:var(--num);letter-spacing:.2px;
+  background:rgba(7,12,24,.75);padding:1px 5px;border-radius:3px;z-index:4}
+
+.kv{margin-top:12px;display:grid;grid-template-columns:58px 1fr;gap:6px 8px;font-size:11.5px}
+.kv dt{color:var(--dim);font-weight:700}
+.kv dd{color:#334155;line-height:1.6}
+.kv dd b{font-weight:800;color:#0F172A}
+.kv dd .mono{font-family:var(--num);font-size:11px;background:#F4F7FB;padding:0 4px;border-radius:3px}
+
+.pros{margin-top:12px;display:flex;flex-direction:column;gap:5px}
+.pros div{font-size:11.5px;line-height:1.6;display:flex;gap:6px;align-items:flex-start}
+.pros div::before{content:'';width:5px;height:5px;border-radius:50%;flex:none;margin-top:6px}
+.pros .p::before{background:#10B981}
+.pros .c::before{background:#F59E0B}
+.pros .p b{color:#047857;font-weight:800;margin-right:2px}
+.pros .c b{color:#B45309;font-weight:800;margin-right:2px}
+
+/* ---------- 边界表 ---------- */
+.edge td{font-size:12px;padding:9px 14px;border-bottom:1px solid #F1F5F9;vertical-align:top;line-height:1.65}
+.edge tr:last-child td{border-bottom:none}
+.edge td:first-child{width:210px;font-weight:700;color:#0F172A}
+.edge td:nth-child(2){width:190px;font-family:var(--num);font-size:11px;color:#64748B}
+.edge .sw{display:inline-flex;align-items:center;gap:6px}
+.edge .sw i{width:7px;height:7px;border-radius:50%;display:inline-block}
+
+/* ---------- 推荐 ---------- */
+.rec{margin-top:16px;padding:18px 20px}
+.rec-top{display:flex;align-items:center;gap:10px}
+.rec-top .rd{width:22px;height:22px;border-radius:6px;background:var(--brand);color:#fff;font-size:12px;font-weight:800;
+  display:flex;align-items:center;justify-content:center}
+.rec-top h2{font-size:14px;font-weight:800}
+.rec-top .sub{margin-left:auto;font-size:11.5px;color:var(--dim)}
+.rec p{margin-top:9px;font-size:12.5px;line-height:1.85;color:#475569}
+.rec p b{color:#0F172A;font-weight:800}
+.rec .ladder{margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.rec .st{border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#FAFCFF;position:relative}
+.rec .st::after{content:'›';position:absolute;right:-9px;top:50%;transform:translateY(-50%);
+  color:#CBD5E1;font-size:16px;font-weight:700}
+.rec .st:last-child::after{display:none}
+.rec .st .l{font-size:10px;font-weight:800;color:#94A3B8;letter-spacing:.4px}
+.rec .st .t{margin-top:4px;font-size:12.5px;font-weight:800;color:#0F172A}
+.rec .st .d{margin-top:3px;font-size:11px;color:#64748B;line-height:1.6}
+.foot{margin-top:18px;font-size:11px;color:#94A3B8;text-align:center;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div>
+      <h1>全图监控 · 车辆浮标「<em>剩余里程 / 预计送达</em>」方案</h1>
+      <p>
+        目标：在车辆标记旁边就地读出 <b>还剩多少公里</b>、<b>几点到</b>，不用点开气泡。
+        数据来自 <b>waybillProgress</b>：剩余里程 = <b>plan_distance − 已行驶</b>（已行驶自 depart_time 起算），
+        剩余时间 = plan_duration × 剩余比例，ETA = 现在 + 剩余时间。<b>只有带在途任务的车才有这组数</b>。
+      </p>
+    </div>
+    <div class="stamp">
+      <b>4 版形态 · 1 版分级策略</b>
+      2026-10-28 · 仅设计稿，未改代码<br />
+      基准屏 1920×1080 · 地图暗色底
+    </div>
+  </div>
+
+  <!-- ============ 总览表 ============ -->
+  <div class="card">
+    <div class="card-h"><span class="bar"></span><h2>一眼对比</h2><span class="tip">占用尺寸按车标中心起算，含箭头 38×38</span></div>
+    <table class="ov">
+      <thead>
+        <tr>
+          <th style="width:230px">方案</th>
+          <th style="width:250px">形态</th>
+          <th style="width:150px">相对现标新增占用</th>
+          <th style="width:210px">信息量</th>
+          <th style="width:120px">一屏几十台车</th>
+          <th style="width:110px">改造成本</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="nm"><i>A</i>加宽车牌条</td>
+          <td>车标下方追加一条同宽细条</td>
+          <td class="mono">+86 × 16 px</td>
+          <td>剩 · ETA</td>
+          <td><span class="ok g">最稳</span></td>
+          <td><span class="ok g">极低</span></td>
+        </tr>
+        <tr>
+          <td class="nm"><i>B</i>右侧双列小牌</td>
+          <td>车标右侧贴 136×40 玻璃小牌 + 进度细线</td>
+          <td class="mono">+147 × 40 px</td>
+          <td>剩 · ETA · 进度</td>
+          <td><span class="ok y">需避让</span></td>
+          <td><span class="ok g">低</span></td>
+        </tr>
+        <tr>
+          <td class="nm"><i>C</i>引线气泡卡</td>
+          <td>30px 细引线牵出 208×88 卡片</td>
+          <td class="mono">+238 × 102 px</td>
+          <td>剩 · ETA · 进度 · 跨天 · 准时度</td>
+          <td><span class="ok r">会压盖</span></td>
+          <td><span class="ok y">中</span></td>
+        </tr>
+        <tr>
+          <td class="nm"><i>D</i>进度环 + 裸字</td>
+          <td>箭头外圈 1.5px 进度弧，下方无底裸字读数</td>
+          <td class="mono">+50 × 50 px（环）</td>
+          <td>剩 · ETA · 进度</td>
+          <td><span class="ok g">最稳</span></td>
+          <td><span class="ok y">中</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============ 方案容器 ============ -->
+  <div id="opts"></div>
+
+  <!-- ============ 边界处理 ============ -->
+  <div class="card" style="margin-top:18px">
+    <div class="card-h"><span class="bar"></span><h2>四个方案共用：异常态怎么显示</h2><span class="tip">不给假数字，宁可少给</span></div>
+    <table class="edge">
+      <tbody>
+        <tr>
+          <td>该车没有在途任务</td>
+          <td>taskByPlate 无记录</td>
+          <td><span class="sw"><i style="background:#94A3B8"></i></span>不挂任何浮标，保持现在「箭头 + 车牌」原样 —— 全图大多数车属于这一档</td>
+        </tr>
+        <tr>
+          <td>缺规划里程 / 时长</td>
+          <td>progress.ready = false</td>
+          <td><span class="sw"><i style="background:#94A3B8"></i></span>不挂浮标，<b>不要显示 -- km / --:--</b>，否则一屏全是空格子比没有更乱</td>
+        </tr>
+        <tr>
+          <td>定位停更 &gt; 30 min</td>
+          <td>progress.stale = true</td>
+          <td><span class="sw"><i style="background:#F59E0B"></i></span>保留剩余里程（灰），ETA 位置改文案「<b>定位停更</b>」，不给推算时间</td>
+        </tr>
+        <tr>
+          <td>已超规划里程</td>
+          <td>progress.overPlan</td>
+          <td><span class="sw"><i style="background:#DC2626"></i></span>剩余显示 <b>0 km</b>，末尾加小标「已超规划」；不显示负数</td>
+        </tr>
+        <tr>
+          <td>已到达 / 已完成</td>
+          <td>status ∈ 已到达·已完成</td>
+          <td><span class="sw"><i style="background:#0E9F6E"></i></span>换成绿色「<b>已送达</b>」，不再显示倒计时</td>
+        </tr>
+        <tr>
+          <td>ETA 跨天</td>
+          <td>etaMs 落在次日</td>
+          <td><span class="sw"><i style="background:#FBBF24"></i></span>写「<b>明天 04:20</b>」，前缀日色用琥珀，避免误读成今天</td>
+        </tr>
+        <tr>
+          <td>离线车（超阈值）</td>
+          <td>vehicle.status = 离线</td>
+          <td><span class="sw"><i style="background:#64748B"></i></span>整块降饱和 55%，数字仍显示但带「· 停更」标；不参与 hover 高亮放大</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============ 推荐 ============ -->
+  <div class="card rec">
+    <div class="rec-top">
+      <span class="rd">R</span>
+      <h2>我建议的落地方式：A/D 常显 + C 升级</h2>
+      <span class="sub">不新增交互，全部复用现有 hover / 点击</span>
+    </div>
+    <p>
+      全图监控的价值是「一眼看全局」，而 <b>C 这种大卡片一旦常显，两台车靠近就互相咬住</b>，还会盖住你的紫色轨迹线——那是这个页面最重要的东西。
+      所以：<b>常态只用 A 或 D 的紧凑形态</b>（垂直多占 16px、水平几乎不增），<b>鼠标移到车上才升级成 C</b>；
+      点击仍然是现在那个完整气泡（速度 / 海拔 / 机构 / 查看物流概览），三层信息由浅到深，互不抢位。
+    </p>
+    <div class="ladder">
+      <div class="st">
+        <div class="l">层级 0 · 默认</div>
+        <div class="t">A 单行细条</div>
+        <div class="d">剩 586 km · 20:40 达<br />最省位，一屏 60 台也不糊</div>
+      </div>
+      <div class="st">
+        <div class="l">层级 1 · 悬停</div>
+        <div class="t">C 引线卡片</div>
+        <div class="d">放大读数 + 进度 + 准时度<br />同时只允许 1 张</div>
+      </div>
+      <div class="st">
+        <div class="l">层级 2 · 点击</div>
+        <div class="t">现有气泡</div>
+        <div class="d">速度 / 海拔 / 司机 / 机构<br />查看物流概览</div>
+      </div>
+      <div class="st">
+        <div class="l">层级 3 · 进入全屏</div>
+        <div class="t">D 进度环</div>
+        <div class="d">车少、屏大时换成环<br />进度感更强</div>
+      </div>
+    </div>
+    <p style="margin-top:14px;color:#64748B;font-size:12px">
+      ⚠️ 两个必须动的地方：① 现在 marker 的 <span style="font-family:var(--num);background:#F4F7FB;padding:1px 5px;border-radius:3px">offset: (-19, -19)</span>
+      是按 38px 箭头校的，A 往下加一条后锚点要改成 <span style="font-family:var(--num);background:#F4F7FB;padding:1px 5px;border-radius:3px">(-19, -27)</span>，否则整块往上浮；
+      ② B / C 往右展开，得先判「右边有没有地方」（贴到屏幕右缘时翻到左侧），否则会顶出画布。
+    </p>
+  </div>
+
+  <div class="foot">设计稿 · 未改业务代码 · 所有数字为示例值（鲁KG3195 / 贵阳→广州 / 规划 863 km / 已行 277 km）</div>
+</div>
+
+<script>
+/* ---------------- 复刻的箭头图标 ---------------- */
+const ARROW = `
+<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#CBD5E1"/>
+    </linearGradient>
+  </defs>
+  <g filter="drop-shadow(0 2px 3px rgba(0,0,0,.55))">
+    <path d="M19 4 L31.5 32.5 L19 26.5 L6.5 32.5 Z" fill="url(#ag)"/>
+    <path d="M19 10 L25 28 L19 23.5 Z" fill="rgba(99,102,241,.45)"/>
+  </g>
+</svg>`;
+
+/* ---------------- 模拟地图底图 ---------------- */
+let uid = 0;
+const mapSVG = () => {
+  const u = 'g' + (++uid);
+  return `
+<svg viewBox="0 0 1000 326" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="${u}bg" cx="45%" cy="42%" r="78%">
+      <stop offset="0%" stop-color="#0B1526"/><stop offset="100%" stop-color="#060A14"/>
+    </radialGradient>
+    <linearGradient id="${u}tk" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4338CA"/><stop offset="55%" stop-color="#6366F1"/><stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+  </defs>
+  <rect width="1000" height="326" fill="url(#${u}bg)"/>
+
+  <!-- 水系 -->
+  <path d="M0 262 C 120 244, 200 282, 300 268 S 470 226, 560 250 S 760 296, 1000 262"
+        fill="none" stroke="#0E2C49" stroke-width="9" opacity=".85"/>
+  <!-- 省界 -->
+  <path d="M0 118 C 140 96, 250 140, 360 122 S 560 74, 700 104 S 880 150, 1000 128"
+        fill="none" stroke="#B45309" stroke-width="1" stroke-dasharray="7 5" opacity=".38"/>
+  <!-- 主干道 -->
+  <path d="M-10 176 C 130 138, 230 214, 352 186 S 520 112, 646 150 S 830 208, 1010 138"
+        fill="none" stroke="#28394F" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M-10 96 C 150 82, 260 132, 400 122 S 600 168, 760 132 S 900 96, 1010 108"
+        fill="none" stroke="#222F44" stroke-width="2" stroke-linecap="round"/>
+  <path d="M120 -10 C 150 90, 96 220, 148 336" fill="none" stroke="#222F44" stroke-width="2" stroke-linecap="round"/>
+  <path d="M632 -10 C 660 96, 604 208, 656 336" fill="none" stroke="#222F44" stroke-width="2" stroke-linecap="round"/>
+  <!-- 支路 -->
+  <path d="M60 246 C 200 224, 300 300, 470 276 S 700 240, 940 292" fill="none" stroke="#1A2740" stroke-width="1.2"/>
+  <path d="M240 40 C 300 120, 300 220, 340 314" fill="none" stroke="#1A2740" stroke-width="1.2"/>
+  <path d="M470 20 C 500 120, 470 200, 520 318" fill="none" stroke="#1A2740" stroke-width="1.2"/>
+  <path d="M820 14 C 800 120, 840 214, 812 320" fill="none" stroke="#1A2740" stroke-width="1.2"/>
+  <path d="M-10 232 C 130 216, 260 258, 380 236" fill="none" stroke="#1A2740" stroke-width="1.2"/>
+  <path d="M700 60 C 760 130, 700 210, 762 300" fill="none" stroke="#1A2740" stroke-width="1.2"/>
+
+  <!-- 轨迹（光晕 + 主线 + 缓慢流光） -->
+  <path d="M30 214 C 150 176, 250 242, 372 208 S 540 138, 664 176 S 852 232, 992 158"
+        fill="none" stroke="url(#${u}tk)" stroke-width="10" stroke-opacity=".12" stroke-linecap="round"/>
+  <path d="M30 214 C 150 176, 250 242, 372 208 S 540 138, 664 176 S 852 232, 992 158"
+        fill="none" stroke="url(#${u}tk)" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M30 214 C 150 176, 250 242, 372 208 S 540 138, 664 176 S 852 232, 992 158"
+        fill="none" stroke="#E0E7FF" stroke-width="1.6" stroke-linecap="round"
+        stroke-dasharray="44 396" opacity=".9">
+    <animate attributeName="stroke-dashoffset" from="440" to="0" dur="12s" repeatCount="indefinite"/>
+  </path>
+</svg>`;
+};
+
+/* ---------------- 方案渲染 ---------------- */
+const n = (v) => v;
+
+/* A：加宽车牌条 */
+const etaA = () => `
+  <span class="eta-a">
+    剩 <b>586</b><i>km</i>
+    <span style="color:rgba(255,255,255,.2)">·</span>
+    <u>20:40</u><i>达</i>
+  </span>`;
+
+/* B：右侧双列小牌 */
+const panelB = () => `
+  <div class="panel-b">
+    <span class="acc"></span>
+    <div class="bd">
+      <div class="r1">
+        <span class="k">剩</span>
+        <span class="v">586<small>km</small></span>
+        <span class="t">20:40</span>
+        <span class="k">达</span>
+      </div>
+      <div class="track">
+        <span class="bar"><i></i></span>
+        <span class="pct">68%</span>
+      </div>
+    </div>
+  </div>`;
+
+/* C：引线气泡卡 */
+const cardC = () => `
+  <div class="card-c">
+    <div class="acc"></div>
+    <div class="bd">
+      <div class="top">
+        <span class="k">预计送达</span>
+        <span class="badge">按计划</span>
+      </div>
+      <div class="eta"><b>20:40</b><s>今天</s></div>
+      <div class="row2">
+        <span class="k">剩余里程</span>
+        <span class="v">586<small>km</small></span>
+      </div>
+      <div class="foot">
+        <span class="bar"><i></i></span>
+        <span class="pct">已行 68%</span>
+      </div>
+    </div>
+  </div>`;
+
+/* C 的引线（贴在车标容器内，SVG 绝对定位） */
+const leadC = () => `
+  <svg class="lead" viewBox="0 0 96 96">
+    <path class="ln" d="M36 66 L94 25"/>
+    <circle class="dot" cx="36" cy="66" r="2"/>
+  </svg>`;
+
+/* D：进度环 + 裸字 */
+const ringD = () => {
+  const r = 22, c = 2 * Math.PI * r, p = 0.68;
+  return `
+  <svg class="ring" viewBox="0 0 50 50">
+    <circle class="tr" cx="25" cy="25" r="${r}"/>
+    <circle class="pg" cx="25" cy="25" r="${r}"
+      stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}"
+      transform="rotate(-90 25 25)"/>
+  </svg>`;
+};
+const bareD = () => `
+  <span class="bare">
+    <span class="n">586<small>km</small></span>
+    <span class="sep"></span>
+    <span class="e">20:40<i>达</i></span>
+  </span>`;
+
+const OPTIONS = [
+  {
+    id: 'A', title: '加宽车牌条', tag: '强烈推荐', tagCls: 'hot', zoom: { s: 1.9, x: '50%' },
+    desc: '不动布局，只在现有车牌条下面再接一条同宽的细条。字号压到 9.5px，数字用等宽体放大到 10px 保持可读。',
+    kv: [
+      ['尺寸', '约 <b>86 × 16</b> px，水平不外扩'],
+      ['数据', '剩余里程 + ETA（两项都必备）'],
+      ['锚点', '<span class="mono">offset (-19,-27)</span> 需下移 8px'],
+      ['适用', '全图默认态、车多、缩放小时']
+    ],
+    pros: [
+      ['p', '优点', '一屏 60 台车也不糊，垂直只多占 16px'],
+      ['p', '优点', '和你现有车牌条同一套玻璃材质，看起来像原生的'],
+      ['c', '缺点', '进度感弱，只能靠数字感知还剩多少'],
+      ['c', '缺点', '9.5px 已是下限，再小的字看不清']
+    ],
+    render: (v) => v === 'A' ? etaA() : ''
+  },
+  {
+    id: 'B', title: '右侧双列小牌', tag: '信息与占地平衡', tagCls: 'cool', zoom: { s: 1.5, x: '16%' },
+    desc: '车标右侧贴一块 136×40 的玻璃小牌，左侧一道 2px 渐变竖线做状态色，底部 1.5px 进度细线。',
+    kv: [
+      ['尺寸', '约 <b>147 × 40</b> px，向右外扩'],
+      ['数据', '剩余里程 + ETA + 完成进度'],
+      ['锚点', '车标不动，牌用 <span class="mono">left:calc(100%+11px)</span>'],
+      ['适用', '一屏十几台车、缩放中等时']
+    ],
+    pros: [
+      ['p', '优点', '「586 km / 20:40」两个数并排，横向扫一眼就能比大小'],
+      ['p', '优点', '1.5px 进度细线符合我们要的「细实线」质感'],
+      ['c', '缺点', '向右扩 147px，两车横向间距小于此值就压盖'],
+      ['c', '缺点', '必须补「右侧没地方就翻到左边」的翻转判断']
+    ],
+    render: (v) => v === 'B' ? panelB() : ''
+  },
+  {
+    id: 'C', title: '引线气泡卡', tag: '信息最全', tagCls: 'cool', zoom: { s: 1.06, x: '12%', y: '30px' },
+    desc: '从车点拉一根 1px 细引线，斜向上牵出卡片。ETA 当主角（19px 大字），剩余里程、进度、准时度依次递减。',
+    kv: [
+      ['尺寸', '约 <b>238 × 102</b> px（含引线）'],
+      ['数据', '剩 · ETA · 进度 · 今天/明天 · 按计划/晚点'],
+      ['锚点', '保持 <span class="mono">(-19,-19)</span>，卡片绝对定位'],
+      ['适用', '悬停单台 / 全屏只看一台车时']
+    ],
+    pros: [
+      ['p', '优点', '最有「物流大屏」气质，不遮挡箭头本身'],
+      ['p', '优点', '信息层级清楚：ETA 大字 → 剩里程 → 进度'],
+      ['c', '缺点', '常显绝对不行：两台车靠近就互咬，还会压住紫色轨迹'],
+      ['c', '缺点', '要防重叠，且靠近画布边缘需自动换向']
+    ],
+    render: (v) => v === 'C' ? leadC() + cardC() : ''
+  },
+  {
+    id: 'D', title: '进度环 + 裸字', tag: '最贴合现有视觉', tagCls: 'hot', zoom: { s: 1.9, x: '50%' },
+    desc: '箭头外圈套一道 1.5px 进度弧（已完成比例），车标下方不加底盒，只留两组带投影的裸字。整体仍是「箭头 + 一条文字」。',
+    kv: [
+      ['尺寸', '环 <b>50 × 50</b>（套在 38px 箭头上），文字行高 13px'],
+      ['数据', '剩余里程 + ETA + 环形进度'],
+      ['锚点', '<span class="mono">offset (-19,-19)</span> 不变'],
+      ['适用', '全屏单车里看、车少的区域']
+    ],
+    pros: [
+      ['p', '优点', '零新增盒子，地图最干净，轨迹线完全不被遮'],
+      ['p', '优点', '1.5px 细弧 + 低透明轨道，最接近你定的「细实线打底」规范'],
+      ['c', '缺点', '裸字靠 text-shadow 保可读，浅色底图（卫星/白天皮肤）上会吃力'],
+      ['c', '缺点', '离线车画进度环没意义，得单独降级']
+    ],
+    render: (v) => v === 'D' ? ringD() + bareD() : ''
+  }
+];
+
+const stage = (opt) => {
+  const wrap = document.createElement('div');
+  wrap.className = 'card opt';
+  wrap.innerHTML = `
+    <div class="stage">
+      <div class="lbl"><b>方案 ${opt.id}</b><span>1:1 · 地图实景比例</span></div>
+      <div class="map">${mapSVG()}</div>
+      <div class="city" style="left:38%;top:15%">六盘水</div>
+      <div class="city" style="left:63%;top:26%">贵阳</div>
+      <div class="city" style="left:22%;top:74%">兴义</div>
+      <div class="city" style="left:80%;top:78%">桂林</div>
+
+      <!-- 主车：带浮标 -->
+      <div class="veh" style="left:31%;top:56%">
+        <div class="arrow">${ARROW}</div>
+        <span class="plate">鲁KG3195</span>
+        <span class="task">运输中</span>
+        ${opt.render(opt.id)}
+      </div>
+
+      <!-- 旁车：无任务，保持原样 -->
+      <div class="veh dimmed" style="left:66%;top:36%">
+        <div class="arrow">${ARROW}</div>
+        <span class="plate">贵A·8F210</span>
+      </div>
+      <div class="veh dimmed" style="left:83%;top:66%">
+        <div class="arrow">${ARROW}</div>
+        <span class="plate">粤B·3K905</span>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="side-h">
+        <span class="idx">${opt.id}</span>
+        <h3>${opt.title}</h3>
+        <span class="tag ${opt.tagCls}">${opt.tag}</span>
+      </div>
+      <div class="desc">${opt.desc}</div>
+
+      <div class="zoombox" style="--zs:${opt.zoom.s};--zx:${opt.zoom.x};--zy:${opt.zoom.y || '0px'}">
+        <div class="zi">
+          <div class="veh" style="position:relative;left:0;top:0;transform:none">
+            <div class="arrow">${ARROW}</div>
+            <span class="plate">鲁KG3195</span>
+            <span class="task">运输中</span>
+            ${opt.render(opt.id)}
+          </div>
+        </div>
+        <span class="zt">${opt.zoom.s}× 细节放大</span>
+      </div>
+
+      <dl class="kv">
+        ${opt.kv.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}
+      </dl>
+
+      <div class="pros">
+        ${opt.pros.map(([cls, k, v]) => `<div class="${cls}"><span><b>${k}</b>${v}</span></div>`).join('')}
+      </div>
+    </div>`;
+  return wrap;
+};
+
+const host = document.getElementById('opts');
+OPTIONS.forEach(o => host.appendChild(stage(o)));
+</script>
+</body>
+</html>

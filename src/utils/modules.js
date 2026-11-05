@@ -245,6 +245,29 @@ export function isModuleGranted(key) {
 }
 
 /**
+ * 这个模块是否要「当没开通处理」（菜单项隐藏 / 页面闸门拦截）
+ * ============================================================
+ * ⭐⭐ 关键区分：**没配过 ≠ 客户关掉了**
+ *   · 库里没有记录 → foldDeps 按 defaultOn 兜底（只有运单默认开，route/report 默认 flase），
+ *     含义是"这个客户还没用过该功能"，不是"客户主动停用了"
+ *   · 库里明确 enabled=false → 才算真的关掉
+ *
+ * 2026-11-05 修：之前菜单直接判 `moduleFlags.route === true`，老客户从没配过 route
+ *   → 菜单里「路线管理」消失，但直接敲 /route/manage 又能正常进（页面闸门对主账号放行），
+ *   出现"功能在、入口没了"的诡异现象。现在两边统一用这个函数。
+ *
+ * ⚠️ 父模块关闭导致的折叠不在这里管：运单关了整组「运输管理」由 waybillOn 判断。
+ */
+export function moduleHidden(key) {
+  if (!key) return false
+  const intent = moduleFlags.intent || {}
+  const eff = moduleFlags.effective || {}
+  if (eff[key] === true) return false   // 开着 / 未配过但默认开
+  if (intent[key] === false) return true // 库里明确关掉
+  return false                          // 未配置：交给人级权限决定
+}
+
+/**
  * 参数（客户主账号可写）
  * ⚠️ 只允许白名单字段，且必须先确认模块已开通
  */

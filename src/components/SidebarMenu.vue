@@ -178,7 +178,7 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { HomeFilled, Van, Location, DataLine, Tickets, Setting, FolderOpened, Wallet, Share, DataAnalysis, Monitor } from '@element-plus/icons-vue'
-import { moduleFlags, approvalOn, ensureApprovalMode, currentUserForModules } from '@/utils/modules'
+import { moduleFlags, moduleHidden, approvalOn, ensureApprovalMode, currentUserForModules } from '@/utils/modules'
 import { permHit } from '@/config/permissions'
 
 const props = defineProps({
@@ -236,8 +236,13 @@ const payoutOn = computed(() => moduleFlags.payout === true)
 /* ⭐ 模块联动：运单是总闸，路线/报表挂在它下面
    waybill 用 !== false：模块表还没读回来时先按「有」显示，避免菜单闪一下 */
 const waybillOn = computed(() => moduleFlags.waybill !== false)
-const routeOn = computed(() => moduleFlags.route === true)
-const reportOn = computed(() => moduleFlags.report === true)
+/* ⭐⭐ 路线 / 报表：**没配过不算关**（见 utils/modules.moduleHidden）
+   之前写成 moduleFlags.route === true，老客户没配过 route 记录 → 菜单直接消失，
+   但 URL 还能进，入口和页面口径对不上（2026-11-05 用户报「路线管理找不到了」）。
+   主账号再兜一层：Dashboard 对主账号（clientPerms=null）是直接放行的，
+   所以只要页面能进，菜单就必须有入口。 */
+const routeOn = computed(() => isMaster.value || !moduleHidden('route'))
+const reportOn = computed(() => isMaster.value || !moduleHidden('report'))
 </script>
 
 <style scoped>

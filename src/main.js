@@ -6,6 +6,7 @@ import App from './App.vue'
 import router from './router'
 import { supabase, ensureAnonymousLogin } from './utils/supabase'
 import { applyTheme, readLocalTheme, DEFAULT_THEME, loadRemoteTheme } from './utils/theme'
+import { registerServiceWorker } from './utils/swRegister'
 
 // 1. 导入中文语言包和 dayjs
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
@@ -65,3 +66,7 @@ ensureAnonymousLogin()
     else console.log('✅ 数据库连接成功')
   })
   .catch((e) => console.error('❌ 匿名登录失败:', e && (e.message || e)))
+
+/* ⭐ 静态资源本地缓存（必须在 load 之后，不抢首屏带宽）
+   背景：托管平台强制 no-store，详见 utils/swRegister.js 与 public/sw.js */
+registerServiceWorker()

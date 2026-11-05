@@ -261,7 +261,7 @@ import FeePayout from '../views/FeePayout.vue'
 import FeeApprovalSetting from '../views/FeeApprovalSetting.vue'
 import FlowCanvas from '../views/FlowCanvas.vue'
 import { fetchFeeTodo, isPayer } from '@/utils/feeTodo'
-import { moduleFlags, ensureModuleFlags, approvalOn, ensureApprovalMode, currentUserForModules } from '@/utils/modules'
+import { moduleFlags, moduleHidden, ensureModuleFlags, approvalOn, ensureApprovalMode, currentUserForModules } from '@/utils/modules'
 
 const route = useRoute()
 const router = useRouter()
@@ -376,20 +376,22 @@ const isMaster = computed(() => {
 const isFinance = computed(() => String(currentUser?.roleName || '').includes('财务'))
 
 /* ⭐ 模块闸门：菜单藏掉之外的第二道（直接敲 URL / 收藏夹进来）
-   管理员在 modules.js 里被当作全开，所以这里不影响服务商 */
+   管理员在 modules.js 里被当作全开，所以这里不影响服务商
+   ⚠️ 判定必须和菜单同一口径：moduleHidden = 「库里明确关了」；
+      没配过（老客户）不算关，否则会出现「菜单没有、URL 能进」或反过来的不一致。
+      付款登记不在这里管，下面有专门分支（还要叠主账号/财务/权限）。 */
 const MODULE_GATE = {
   '/waybill': 'waybill',
   '/waybill/create': 'waybill',
   '/waybill/detail': 'waybill',
   '/route/manage': 'route',
   '/report': 'report',
-  '/fee/payout': 'payout',
 }
 
 const isPermitted = computed(() => {
   if (clientPerms.value === null) return true
   const gate = MODULE_GATE[route.path]
-  if (gate && moduleFlags[gate] !== true && moduleFlags.waybill !== undefined) return false
+  if (gate && moduleHidden(gate)) return false
   if (route.path === '/dashboard' && !route.params.page) return true
   // 业务流程画布：主账号必有；角色被勾了 flow 也能进（非主账号只读调参）
   if (route.path === '/flow/canvas') {

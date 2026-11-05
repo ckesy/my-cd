@@ -766,14 +766,14 @@ const ensureProgress = async (plate, task, force = false) => {
 /** 后台补进度：只给「已发车 / 已到达」的车算，并发 4（原 2），最多 12 台
  *  —— 这块是"打开全图后慢慢补"，并发太低时车多会明显拖慢首屏可用性 */
 const PREFETCH_CONCURRENCY = 4
-const prefetchProgress = async () => {
+const prefetchProgress = async (force = false) => {
   const targets = Object.entries(taskByPlate.value)
     .filter(([plate, t]) => ['已发车', '已到达'].includes(t.status) && vehicles.value.some(v => v.plate === plate))
     .slice(0, 12)
   for (let i = 0; i < targets.length; i += PREFETCH_CONCURRENCY) {
     // eslint-disable-next-line no-await-in-loop
     await Promise.all(
-      targets.slice(i, i + PREFETCH_CONCURRENCY).map(([p, t]) => ensureProgress(p, t))
+      targets.slice(i, i + PREFETCH_CONCURRENCY).map(([p, t]) => ensureProgress(p, t, force))
     )
   }
 }
@@ -1015,6 +1015,8 @@ const refreshLocations = async (forceRefresh = false) => {
     addMarkers()
     updateMarkersVisibility()
   }
+  // 手动刷新时把进度也重算一遍（浮标卡的 ETA 才跟着动）
+  if (forceRefresh) prefetchProgress(true)
 }
 
 let map = null
@@ -1049,6 +1051,9 @@ const initMap = async () => {
     map.on('mapmove', onFocusMapMove)
     map.on('zoomchange', updateAllSvgLines)
     map.on('zoomchange', onFocusMapMove)
+    // 卡片翻边 / 防重叠：只在停稳后算一次
+    map.on('moveend', scheduleEtaLayout)
+    map.on('zoomend', scheduleEtaLayout)
     addMarkers()
     isMapReady.value = true
     updateMarkersVisibility()
@@ -1497,7 +1502,7 @@ const addMarkers = () => {
   if (locatedVehicles.length === 0) return
   locatedVehicles.forEach((v, idx) => {
     const container = document.createElement('div')
-    container.className = 'custom-marker status-' + v.status
+    container.className = 'custom-marker status-' + v.status + (isDarkTheme.value ? '' : ' light-map')
     container.style.animationDelay = (idx * 0.02) + 's'
     const iconWrap = document.createElement('div')
     iconWrap.className = 'arrow-icon-wrap ' + v.status
@@ -1554,6 +1559,7 @@ const addMarkers = () => {
   })
   map.add(markers)
   if (markers.length) map.setFitView(markers, false, [120, 80, 80, 80])
+  refreshEtaCards()
 }
 
 const resetMarkerStyle = (marker) => {
@@ -1575,6 +1581,7 @@ const fmtEta = (p) => {
 const openPopup = (vehicle, marker) => {
   highlightedPlate.value = vehicle.plate
   highlightMarker(marker)
+  scheduleEtaLayout()   // 气泡弹出来了，就把这台车的浮标卡收起，避免 ETA 两处重复
   let statusClass = 'offline'
   if (vehicle.status === '行驶') statusClass = 'driving'
   else if (vehicle.status === '静止') statusClass = 'parked'
@@ -1701,6 +1708,248 @@ const closePopup = () => {
     if (marker) resetMarkerStyle(marker)
     highlightedPlate.value = null
   }
+  scheduleEtaLayout()
+}
+
+/* ============================================================
+   ⭐⭐ 车辆浮标：剩余里程 / 预计送达（引线气泡卡 · 方案 C）
+   ------------------------------------------------------------
+   只在「已发车 / 已到达」且有规划里程时挂卡片：
+     · 待装车 / 装车完成 还没发车，ETA 无从算起 → 不挂（不给假到货时间）
+     · progress.ready=false（缺 plan_distance / plan_duration）→ 不挂，不显示 --
+     · 定位停更 >30min → 保留剩余里程，大数字位写「定位停更」
+     · 已超规划       → 剩 0 km，大数字位写「即将到达」
+     · 已到达         → 换成实际送达时间 + 「已送达」
+   卡片挂在 marker content 内部，平移/缩放自动跟随；翻边与防重叠在 moveend/zoomend 重算。
+   ============================================================ */
+const ETA_CARD_W = 208
+const ETA_CARD_H = 104   // 实测 208 × 102.3，取整留 2px 余量
+const ETA_EDGE_PAD = 10
+const ETA_GAP_X = 26
+const ETA_GAP_Y = 24
+
+const fmtClock = (ms) => (ms ? dayjs(ms).format('HH:mm') : '--:--')
+
+/** 今天 / 明天 / 昨天 / MM-DD —— ETA 跨天必须让司机一眼看出来 */
+const dayWordOf = (ms) => {
+  if (!ms) return ''
+  const diff = dayjs(ms).startOf('day').diff(dayjs().startOf('day'), 'day')
+  if (diff === 0) return '今天'
+  if (diff === 1) return '明天'
+  if (diff === -1) return '昨天'
+  return dayjs(ms).format('MM-DD')
+}
+
+/** 角标用的短时长：60 分以上只到「时」，精确到分留给大数字 */
+const fmtSpan = (min) => {
+  const m = Math.max(0, Math.round(min))
+  if (m < 60) return m + ' 分'
+  return Math.round(m / 60) + ' 时'
+}
+
+/** 和计划到达时间比，±20 分钟内算「按计划」 */
+const etaBadgeOf = (task, p) => {
+  const planMs = parseTimeToMs(task && task.plan_time)
+  if (!planMs || !p || !p.etaMs) return { text: '按计划', tone: 'ok' }
+  const diffMin = (p.etaMs - planMs) / 60000
+  if (diffMin > 20) return { text: '晚 ' + fmtSpan(diffMin), tone: 'late' }
+  if (diffMin < -20) return { text: '提前 ' + fmtSpan(-diffMin), tone: 'early' }
+  return { text: '按计划', tone: 'ok' }
+}
+
+/** 卡片数据：返回 null 表示这台车不挂卡片 */
+const etaDataOf = (plate) => {
+  const task = taskByPlate.value[plate]
+  const p = progressByPlate.value[plate]
+  if (!task || !p || !p.ready) return null
+  const st = normStatus(task.status)
+  if (st !== '已发车' && st !== '已到达') return null
+
+  const remain = Math.round(p.remainKm || 0)
+  const traveled = Math.round(p.traveledKm || 0)
+  const pct = Math.max(0, Math.min(100, Math.round(p.pct || 0)))
+
+  if (st === '已到达') {
+    const at = parseTimeToMs(task.arrive_time) || parseTimeToMs(task.finish_time) || p.ts
+    return {
+      tone: 't-done', label: '实际送达', big: fmtClock(at), bigCls: '',
+      dayWord: dayWordOf(at), badge: { text: '已送达', tone: 'done' },
+      rowLabel: '已行驶', rowValue: traveled + ' km',
+      pct: 100, footText: '完单',
+    }
+  }
+
+  if (p.stale) {
+    const last = p.current && p.current.reportAt ? fmtClock(p.current.reportAt) : '--:--'
+    return {
+      tone: 't-warn', label: '预计送达', big: '定位停更', bigCls: 'is-text',
+      dayWord: '', badge: { text: '停更', tone: 'warn' },
+      rowLabel: '剩余里程', rowValue: remain + ' km',
+      pct, footText: '最后 ' + last,
+    }
+  }
+
+  if (p.overPlan) {
+    return {
+      tone: 't-warn', label: '预计送达', big: '即将到达', bigCls: 'is-text',
+      dayWord: '', badge: { text: '已超规划', tone: 'warn' },
+      rowLabel: '剩余里程', rowValue: '0 km',
+      pct: 100, footText: '已行 ' + traveled + ' km',
+    }
+  }
+
+  return {
+    tone: 't-run', label: '预计送达', big: fmtClock(p.etaMs), bigCls: '',
+    dayWord: dayWordOf(p.etaMs), badge: etaBadgeOf(task, p),
+    rowLabel: '剩余里程', rowValue: remain + ' km',
+    pct, footText: '已行 ' + traveled + ' km',
+  }
+}
+
+const etaCalloutHtml = (plate) => {
+  const d = etaDataOf(plate)
+  if (!d) return ''
+  return `
+    <svg class="eta-lead" viewBox="0 0 30 72" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0.5 71.5 L30 0.5"></path>
+      <circle cx="1.6" cy="69.8" r="2.2"></circle>
+    </svg>
+    <div class="eta-card ${d.tone}">
+      <div class="eta-acc"></div>
+      <div class="eta-bd">
+        <div class="eta-top">
+          <span class="eta-kicker">${d.label}</span>
+          ${d.badge ? `<span class="eta-badge b-${d.badge.tone}">${d.badge.text}</span>` : ''}
+        </div>
+        <div class="eta-main">
+          <b class="${d.bigCls}">${d.big}</b>
+          ${d.dayWord ? `<s>${d.dayWord}</s>` : ''}
+        </div>
+        <div class="eta-row">
+          <span class="eta-rk">${d.rowLabel}</span>
+          <span class="eta-rv">${d.rowValue}</span>
+        </div>
+        <div class="eta-foot">
+          <span class="eta-bar"><i style="width:${d.pct}%"></i></span>
+          <span class="eta-pct">${d.footText}</span>
+        </div>
+      </div>
+    </div>`
+}
+
+/** 把卡片 DOM 同步到每个 marker 上（数据没变就不动 DOM） */
+const syncEtaCards = () => {
+  markerMap.forEach((marker, plate) => {
+    const c = marker.getContent && marker.getContent()
+    if (!c || !c.querySelectorAll) return
+    const html = etaCalloutHtml(plate)
+    const old = c.querySelector('.eta-callout')
+    if (!html) {
+      if (old) old.remove()
+      return
+    }
+    if (!old) {
+      const el = document.createElement('div')
+      el.className = 'eta-callout'
+      el.dataset.sig = html
+      el.innerHTML = html
+      c.appendChild(el)
+      return
+    }
+    if (old.dataset.sig !== html) {
+      old.dataset.sig = html
+      old.innerHTML = html
+    }
+  })
+}
+
+/**
+ * 翻边 + 防重叠。只在 moveend / zoomend / 数据变化时跑，不跟帧。
+ * 翻边：右/上空间不够就翻到左/下；两侧都不够就保持默认（贴边裁切总比看不到好）
+ * 防重叠：按 行驶 > 静止 > 离线，同类按剩余里程少的优先，后来的卡片让位
+ */
+const layoutEtaCards = () => {
+  if (!map || !AMap) return
+  const size = map.getSize()
+  if (!size || !size.width) return
+  const vmap = new Map(vehicles.value.map(v => [v.plate, v]))
+  const hideAll = focusMode.value || rangingActive.value
+
+  const items = []
+  markerMap.forEach((marker, plate) => {
+    const c = marker.getContent && marker.getContent()
+    const el = c && c.querySelector && c.querySelector('.eta-callout')
+    if (!el) return
+    if (hideAll || plate === highlightedPlate.value) {
+      el.style.display = 'none'
+      return
+    }
+    const pos = marker.getPosition && marker.getPosition()
+    const px = pos && map.lngLatToContainer ? map.lngLatToContainer(pos) : null
+    if (!px) { el.style.display = 'none'; return }
+
+    const rightRoom = px.x + ETA_GAP_X + ETA_CARD_W
+    const leftRoom = px.x - ETA_GAP_X - ETA_CARD_W
+    const topRoom = px.y - ETA_GAP_Y - ETA_CARD_H
+    const bottomRoom = px.y + ETA_GAP_Y + ETA_CARD_H
+    const fitR = rightRoom <= size.width - ETA_EDGE_PAD
+    const fitL = leftRoom >= ETA_EDGE_PAD
+    const fitT = topRoom >= ETA_EDGE_PAD
+    const fitB = bottomRoom <= size.height - ETA_EDGE_PAD
+
+    el.style.display = ''
+    el.style.visibility = ''
+    el.classList.toggle('fx', !fitR && fitL)
+    el.classList.toggle('fy', !fitT && fitB)
+
+    const v = vmap.get(plate)
+    const p = progressByPlate.value[plate]
+    items.push({
+      el, plate,
+      rank: (v && v.status === '行驶' ? 0 : v && v.status === '静止' ? 1 : 2),
+      remain: (p && p.ready ? p.remainKm : 1e9),
+    })
+  })
+
+  items.sort((a, b) => (a.rank - b.rank) || (a.remain - b.remain))
+  const kept = []
+  const pad = 6
+  items.forEach(it => {
+    const card = it.el.querySelector('.eta-card')
+    if (!card) return
+    const r = card.getBoundingClientRect()
+    if (!r.width) return
+    const hit = kept.some(k =>
+      !(r.right + pad < k.left || r.left - pad > k.right || r.bottom + pad < k.top || r.top - pad > k.bottom)
+    )
+    if (hit) { it.el.style.visibility = 'hidden'; return }
+    kept.push(r)
+  })
+}
+
+let etaLayoutRaf = null
+let etaRefreshTimer = null
+const startEtaRefreshTimer = () => {
+  stopEtaRefreshTimer()
+  // 5 分钟补一次进度：ETA 才不会越看越旧（最多 12 台，并发 4）
+  etaRefreshTimer = setInterval(() => { prefetchProgress() }, 5 * 60 * 1000)
+}
+const stopEtaRefreshTimer = () => {
+  if (etaRefreshTimer) { clearInterval(etaRefreshTimer); etaRefreshTimer = null }
+}
+const scheduleEtaLayout = () => {
+  if (etaLayoutRaf) return
+  const run = () => {
+    etaLayoutRaf = null
+    layoutEtaCards()
+  }
+  etaLayoutRaf = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame(run) : setTimeout(run, 16)
+}
+
+/** 进度异步到达 / 运单刷新后：补卡片再排版 */
+const refreshEtaCards = () => {
+  syncEtaCards()
+  scheduleEtaLayout()
 }
 
 const onMapClick = (e) => {
@@ -2308,11 +2557,18 @@ const updateMarkersVisibility = () => {
   if (highlightedPlate.value && !visiblePlates.has(highlightedPlate.value)) {
     closePopup()
   }
+  // 车被筛掉了，卡片要重新让位
+  scheduleEtaLayout()
 }
 
 watch([selectedOrg, selectedStatus, searchKeyword, selectedPlates, statusFilter, taskFilter], () => {
   updateMarkersVisibility()
 }, { deep: true })
+
+/* 浮标卡：进度/运单到货、进出沉浸态、开关测距，都要重排一次 */
+watch(progressByPlate, () => { refreshEtaCards() }, { deep: true })
+watch(taskByPlate, () => { refreshEtaCards() }, { deep: true })
+watch([focusMode, rangingActive], () => { scheduleEtaLayout() })
 
 const handleSearch = () => { }
 
@@ -2377,6 +2633,7 @@ onMounted(async () => {
     updateMarkersVisibility()
   }
   prefetchProgress()
+  startEtaRefreshTimer()
 })
 
 onDeactivated(() => {
@@ -2384,6 +2641,7 @@ onDeactivated(() => {
   //    否则别的页面（尤其独立路由的运单详情）会被锁住滚不动
   document.body.style.overflow = ''
   document.documentElement.style.overflow = ''
+  stopEtaRefreshTimer()
 })
 
 onActivated(async () => {
@@ -2398,6 +2656,7 @@ onActivated(async () => {
     addMarkers()
     updateMarkersVisibility()
   }
+  startEtaRefreshTimer()
   document.body.style.overflow = 'hidden'
   document.documentElement.style.overflow = 'hidden'
 })
@@ -2407,6 +2666,11 @@ onBeforeUnmount(() => {
   document.body.style.overflow = ''
   document.documentElement.style.overflow = ''
   clearFocusState()
+  stopEtaRefreshTimer()
+  if (etaLayoutRaf) {
+    try { cancelAnimationFrame(etaLayoutRaf) } catch (e) { }
+    etaLayoutRaf = null
+  }
   if (rafId) {
     cancelAnimationFrame(rafId)
     rafId = null
@@ -2419,6 +2683,8 @@ onBeforeUnmount(() => {
     try { map.off('mouseout', onRangingMouseOut) } catch (e) { }
     try { map.off('mapmove', updateAllSvgLines) } catch (e) { }
     try { map.off('zoomchange', updateAllSvgLines) } catch (e) { }
+    try { map.off('moveend', scheduleEtaLayout) } catch (e) { }
+    try { map.off('zoomend', scheduleEtaLayout) } catch (e) { }
     try { map.destroy() } catch (e) { }
     map = null
   }
@@ -4219,6 +4485,116 @@ onBeforeUnmount(() => {
 .custom-marker .marker-task.load { color: #78350F; background: rgba(253, 230, 138, .95); }
 .custom-marker .marker-task.done { color: #fff; background: rgba(22, 163, 74, .92); }
 .custom-marker .marker-task.wait { color: #fff; background: rgba(100, 116, 139, .92); }
+
+/* ============================================================
+   ⭐⭐ 车辆浮标：剩余里程 / 预计送达（引线气泡卡 · 方案 C）
+   ------------------------------------------------------------
+   位置：挂在 marker content 内，锚点是箭头中心（left:50% top:19px）
+   配色随底图走（深色底 / 浅色底两套变量），结构完全一致
+   ============================================================ */
+.custom-marker {
+  --eta-bg: rgba(11, 18, 32, 0.90);
+  --eta-bd: rgba(255, 255, 255, 0.14);
+  --eta-fg: #F1F5F9;
+  --eta-k: #94A7C2;
+  --eta-line: rgba(255, 255, 255, 0.13);
+  --eta-lead: rgba(165, 185, 212, 0.50);
+  --eta-warn: #FCD34D;
+}
+.custom-marker.light-map {
+  --eta-bg: rgba(255, 255, 255, 0.96);
+  --eta-bd: rgba(15, 23, 42, 0.10);
+  --eta-fg: #0F172A;
+  --eta-k: #64748B;
+  --eta-line: rgba(15, 23, 42, 0.10);
+  --eta-lead: rgba(71, 85, 105, 0.45);
+  --eta-warn: #B45309;
+}
+
+.custom-marker .eta-callout {
+  position: absolute; left: 50%; top: 19px;
+  width: 0; height: 0; z-index: 4;
+}
+.custom-marker .eta-lead {
+  position: absolute; left: 0; bottom: 0;
+  width: 30px; height: 72px;
+  overflow: visible; pointer-events: none;
+}
+.custom-marker .eta-lead path { fill: none; stroke: var(--eta-lead); stroke-width: 1; }
+.custom-marker .eta-lead circle { fill: #22D3EE; }
+
+.custom-marker .eta-card {
+  position: absolute; left: 26px; bottom: 24px;
+  width: 208px; border-radius: 10px; overflow: hidden;
+  background: var(--eta-bg);
+  border: 1px solid var(--eta-bd);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;            /* 纯读数，不挡地图拖拽和点击 */
+  animation: etaCardIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes etaCardIn {
+  from { opacity: 0; transform: scale(0.94) translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 翻边：右侧没地方翻左边，上方没地方翻下面 */
+.custom-marker .eta-callout.fx .eta-card { left: auto; right: 26px; }
+.custom-marker .eta-callout.fx .eta-lead { left: auto; right: 0; transform: scaleX(-1); }
+.custom-marker .eta-callout.fy .eta-card { bottom: auto; top: 24px; }
+.custom-marker .eta-callout.fy .eta-lead { bottom: auto; top: 0; transform: scaleY(-1); }
+.custom-marker .eta-callout.fx.fy .eta-lead { transform: scale(-1, -1); }
+
+.eta-card .eta-acc { height: 2px; opacity: 0.9; background: linear-gradient(90deg, #6366F1, #22D3EE); }
+.eta-card.t-done .eta-acc { background: linear-gradient(90deg, #059669, #34D399); }
+.eta-card.t-warn .eta-acc { background: linear-gradient(90deg, #D97706, #FBBF24); }
+
+.eta-card .eta-bd { padding: 8px 11px 9px; }
+.eta-card .eta-top { display: flex; align-items: center; gap: 8px; }
+.eta-card .eta-kicker { font-size: 9.5px; font-weight: 700; color: var(--eta-k); letter-spacing: 0.2px; }
+.eta-card .eta-badge {
+  margin-left: auto; font-size: 8.5px; font-weight: 800; letter-spacing: 0.2px;
+  padding: 1px 5px; border-radius: 3px; white-space: nowrap;
+}
+.eta-card .eta-badge.b-ok { color: #052E2B; background: #5EEAD4; }
+.eta-card .eta-badge.b-early { color: #052E2B; background: #A7F3D0; }
+.eta-card .eta-badge.b-done { color: #052E2B; background: #6EE7B7; }
+.eta-card .eta-badge.b-late { color: #431407; background: #FDBA74; }
+.eta-card .eta-badge.b-warn { color: #431407; background: #FCD34D; }
+
+.eta-card .eta-main { display: flex; align-items: baseline; gap: 5px; margin-top: 3px; }
+.eta-card .eta-main b {
+  font-family: var(--num-font, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 19px; font-weight: 800; letter-spacing: -0.6px; line-height: 1.12;
+  color: var(--eta-fg);
+}
+.eta-card .eta-main b.is-text { font-size: 13.5px; letter-spacing: 0; color: var(--eta-warn); }
+.eta-card .eta-main s { text-decoration: none; font-size: 10px; font-weight: 700; color: var(--eta-k); }
+
+.eta-card .eta-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--eta-line);
+}
+.eta-card .eta-rk { font-size: 9.5px; font-weight: 700; color: var(--eta-k); }
+.eta-card .eta-rv {
+  font-family: var(--num-font, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px; font-weight: 800; color: var(--eta-fg);
+}
+
+.eta-card .eta-foot { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.eta-card .eta-bar {
+  flex: 1; height: 1.5px; border-radius: 1px;
+  background: var(--eta-line); position: relative; overflow: hidden;
+}
+.eta-card .eta-bar i {
+  position: absolute; left: 0; top: 0; height: 100%; border-radius: 1px;
+  background: linear-gradient(90deg, #6366F1, #22D3EE);
+}
+.eta-card.t-done .eta-bar i { background: linear-gradient(90deg, #059669, #34D399); }
+.eta-card.t-warn .eta-bar i { background: linear-gradient(90deg, #D97706, #FBBF24); }
+.eta-card .eta-pct { font-size: 8.5px; font-weight: 700; color: var(--eta-k); white-space: nowrap; }
 
 /* ============================================================
    ⭐ 气泡内：任务区（只有有任务的车才有）
