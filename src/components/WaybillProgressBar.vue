@@ -12,11 +12,12 @@
 
     <template v-if="range">
       <!-- 时间刻度 -->
-      <div class="wpb-axis">
+      <div class="wpb-axis" ref="axisEl">
         <span
           v-for="t in ticks"
           :key="t.ms"
           class="wpb-tick"
+          :class="'is-' + t.align"
           :style="{ left: t.pct + '%' }"
         >{{ t.label }}</span>
       </div>
@@ -92,11 +93,25 @@ const isRunning = computed(() => RUNNING_STATUSES.includes(status.value))
    ============================================================ */
 const nowMs = ref(Date.now())
 let ticker = null
+
+/* 时间轴的实际宽度：刻度数量按它反推，宽度不够就减少刻度，避免标签互相压住 */
+const axisEl = ref(null)
+const axisWidth = ref(640)
+let axisRO = null
+
 onMounted(() => {
   ticker = setInterval(() => { nowMs.value = Date.now() }, 30000)
+  if (axisEl.value && typeof ResizeObserver !== 'undefined') {
+    axisRO = new ResizeObserver((entries) => {
+      const w = entries[0] && entries[0].contentRect && entries[0].contentRect.width
+      if (w && w > 0) axisWidth.value = w
+    })
+    axisRO.observe(axisEl.value)
+  }
 })
 onBeforeUnmount(() => {
   if (ticker) clearInterval(ticker)
+  if (axisRO) axisRO.disconnect()
 })
 
 /* ============================================================
@@ -141,23 +156,46 @@ const pct = (ms) => {
   return Math.min(101, Math.max(-1, raw))
 }
 
-/* 跨度大时用「MM-DD HH:mm」，否则「HH:mm」 */
-const longSpan = computed(() => !!range.value && range.value.span > 24 * 3600000)
+/* 一个标签所占的横向空间（含两侧留白），用来反推该放几个刻度 */
+const TICK_SLOT_PX = 78
+
+/* 标签粒度随跨度收缩：跨度越长越粗，避免文字变长后互相压住 */
+const tickLabel = (ms) => {
+  const days = range.value ? range.value.span / 86400000 : 0
+  if (days > 4) return dayjs(ms).format('MM-DD')
+  if (days > 1.5) return dayjs(ms).format('MM-DD HH:00')
+  return dayjs(ms).format('HH:00')
+}
 
 const ticks = computed(() => {
   if (!range.value) return []
   const hours = range.value.span / 3600000
-  const stepH = hours > 48 ? 12 : hours > 24 ? 6 : hours > 12 ? 3 : 2
+  const slots = Math.max(2, Math.floor(axisWidth.value / TICK_SLOT_PX))
+
+  /* 候选步长（小时）：挑第一个「步长 >= 理想步长」的档位 */
+  const STEPS = [1, 2, 3, 6, 12, 24, 48, 72, 120, 168, 240, 336, 720]
+  const ideal = hours / slots
+  const stepH = STEPS.find((s) => s >= ideal) || Math.ceil(ideal / 24) * 24
+
+  /* 步长 >= 1 天对齐到当地 00:00，否则对齐整点——刻度落在整齐的时间上才好看 */
+  let t
+  if (stepH >= 24) {
+    t = dayjs(range.value.lo).startOf('day').add(1, 'day').valueOf()
+  } else {
+    t = Math.ceil(range.value.lo / 3600000) * 3600000
+  }
+
   const out = []
-  let t = Math.ceil(range.value.lo / 3600000) * 3600000
   let guard = 0
-  while (t <= range.value.hi && guard++ < 40) {
+  while (t <= range.value.hi && guard++ < 60) {
     const p = pct(t)
     if (p !== null && p >= 0 && p <= 100) {
       out.push({
         ms: t,
-        label: longSpan.value ? dayjs(t).format('MM-DD HH:00') : dayjs(t).format('HH:00'),
+        label: tickLabel(t),
         pct: p,
+        /* 首尾刻度改成左/右对齐，避免标签溢出容器被裁掉 */
+        align: p < 3 ? 'start' : p > 97 ? 'end' : 'center',
       })
     }
     t += stepH * 3600000
@@ -308,6 +346,7 @@ const metricClass = computed(() => {
   position: relative;
   height: 16px;
   margin-left: 2px;
+  overflow: hidden;
 }
 .wpb-tick {
   position: absolute;
@@ -316,6 +355,12 @@ const metricClass = computed(() => {
   font-size: 11px;
   color: #64748B;
   white-space: nowrap;
+}
+.wpb-tick.is-start {
+  transform: none;
+}
+.wpb-tick.is-end {
+  transform: translateX(-100%);
 }
 
 /* ---- 轨道 ---- */

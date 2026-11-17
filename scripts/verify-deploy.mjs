@@ -26,10 +26,10 @@ const BASE = (
   'https://wuxian-token-d0guymjkpadcd1f22-1447716425.tcloudbaseapp.com'
 ).replace(/\/+$/, '')
 
-/* 绝不允许出现在线上的字符串 */
+/* 绝不允许出现在线上的字符串（只取前缀，够定位又不留完整凭据） */
 const FORBIDDEN = [
   ['c40c7311', '东风 Token'],
-  ['491d5475803e65c06ba6169bdaf3e1f3', '高德 Web 服务 Key'],
+  ['491d5475', '高德 Web 服务 Key'],
   ['dfcvyl.dfcv.com.cn', '东风接口直连域名'],
 ]
 
