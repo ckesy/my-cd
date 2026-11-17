@@ -23,3 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# 云函数相关
+*.zip
+funcs.json
+function_names.txt
+batch-download.sh
+download-failed.log

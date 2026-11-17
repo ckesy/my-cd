@@ -1,0 +1,7 @@
+{
+  "name": "vehicle-affair",
+  "version": "1.0.0",
+  "description": "小程序车务提醒：证件到期待办（count / list / postpone / renew）",
+  "main": "index.js",
+  "dependencies": {}
+}

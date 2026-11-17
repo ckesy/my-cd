@@ -1,0 +1,13 @@
+{
+  "name": "upload-photo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "签发 COS 上传/下载签名地址（小程序凭证图片）",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cos-nodejs-sdk-v5": "^2.14.6"
+  }
+}

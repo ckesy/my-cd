@@ -1,0 +1,8 @@
+{
+  "name": "org-view",
+  "version": "1.0.0",
+  "description": "组织架构（只读）树 + 各机构账号 + 切换日志",
+  "main": "index.js",
+  "engines": { "node": ">=18" },
+  "dependencies": {}
+}

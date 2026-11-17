@@ -1,0 +1,9 @@
+{
+  "name": "maintenance",
+  "version": "1.0.0",
+  "private": true,
+  "description": "维保台账（维修/保养/轮胎）：小程序管理端读写 + 保养回写车务",
+  "main": "index.js",
+  "engines": { "node": ">=18" },
+  "dependencies": {}
+}
