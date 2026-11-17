@@ -64,7 +64,10 @@ Token	<东风 Token：见云函数环境变量 DONGFENG_TOKEN，不再在代码/
 项目 ID：sfwwbcrpouelrjavecfj
 
 四、☁️ 云函数清单
-所有云函数：Node.js 18.15，在 CloudBase 控制台直接建（本地没有 cloudfunctions 目录）。
+所有云函数：Node.js 18.15。代码已随仓库维护在 `cloudfunctions/`，用 `npx tcb fn deploy --cwd ./cloudfunctions/<name> --force --yes` 部署。
+
+> ⭐ **HTTP 路由审计（2026-11-17）**：14 条公网路由中有 5 条属于多余暴露面（`/report-action`、`/inspection`、`/maintenance`、`/org-view`、`/amap-geofence-list`），可安全删除；保留清单与判断方法见 `安全整改清单_2026-11-17.md` §六。
+> ⚠️ Web 端不能用 `wx.cloud.callFunction`（匿名登录报 `EXCEED_AUTHORITY`），小程序端用 callFunction。**只给小程序用的函数不要配 HTTP 路由。**
 
 云函数名	作用	调用方式	环境变量/备注
 amap-geofence	新建围栏	HTTP 网关 /amap-geofence	AMAP_WEB_KEY、AMAP_SID
