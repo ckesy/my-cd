@@ -127,16 +127,19 @@ async function accountExists(account) {
   const client = getDb()
   if (!client) return true // 依赖不可用 → 放行（fail-open）
   try {
-    const { data } = await client.from('admins').select('account,status').eq('account', acc).limit(1)
-    if (Array.isArray(data) && data.length) {
-      const st = String(data[0].status || '').trim()
-      return !st || st === '启用' || st === 'active' || st === '1' || st === 'true'
+    /* ⭐ 用户表是 users —— 登录页（LoginView）查的就是它，
+       不是 admins（只有 phone、没有 account），也不是 customers（客户档案）。
+       status 是 smallint，1 = 启用。前端先用 account 匹配、失败再用 phone。 */
+    const byAccount = await client.from('users').select('status').eq('account', acc).limit(1)
+    if (Array.isArray(byAccount.data) && byAccount.data.length) {
+      return Number(byAccount.data[0].status) === 1
     }
-    const { data: c } = await client.from('customers').select('phone,status').eq('phone', acc).limit(1)
-    if (Array.isArray(c) && c.length) {
-      const st = String(c[0].status || '').trim()
-      return !st || st === '启用' || st === 'active' || st === '1' || st === 'true'
+
+    const byPhone = await client.from('users').select('status').eq('phone', acc).limit(1)
+    if (Array.isArray(byPhone.data) && byPhone.data.length) {
+      return Number(byPhone.data[0].status) === 1
     }
+
     return false
   } catch (e) {
     console.warn('[dongfeng-track] 账号校验查询失败，放行：', e && e.message)
