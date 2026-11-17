@@ -320,10 +320,10 @@ onMounted(async () => {
 <style scoped>
 .tabs { display: flex; gap: 5px; margin-bottom: 11px; flex-wrap: wrap; }
 .tabs span {
-  font-size: 12.5px; font-weight: 700; color: #64748B; padding: 6px 12px;
+  font-size: 12.5px; font-weight: 700; color: var(--ink-3); padding: 6px 12px;
   border-radius: 8px; cursor: pointer; user-select: none;
 }
-.tabs span:hover { background: #F8FAFC; }
+.tabs span:hover { background: var(--surface-page); }
 .tabs span.on { background: #FDF2F4; color: #C8102E; }
 .tabs em { font-style: normal; margin-left: 5px; font-weight: 800; font-family: var(--num-font, Arial, sans-serif); }
 .pager { display: flex; justify-content: flex-end; padding-top: 11px; }

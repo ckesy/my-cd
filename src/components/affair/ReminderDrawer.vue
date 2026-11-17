@@ -7,8 +7,8 @@
           <span class="af-pill" :style="{ background: meta(r.level).bg, color: meta(r.level).color }">
             <i class="d"></i>{{ r.level }}
           </span>
-          <span class="af-pill" style="background:#F1F5F9;color:#64748B">{{ r.source === 'manual' ? '人工添加' : '自动生成' }}</span>
-          <span class="af-pill" style="background:#F1F5F9;color:#64748B">{{ recvText }}</span>
+          <span class="af-pill" style="background:var(--surface-hover);color:#64748B">{{ r.source === 'manual' ? '人工添加' : '自动生成' }}</span>
+          <span class="af-pill" style="background:var(--surface-hover);color:#64748B">{{ recvText }}</span>
           <span class="rd-no">{{ r.reminder_no }}</span>
         </div>
       </div>
@@ -247,10 +247,10 @@ const doAskCreate = async () => {
 .rd-no { margin-left: auto; font-size: 11.5px; color: #B6C0CC; font-family: var(--num-font, Arial, sans-serif); }
 .rd-box { background: #FAFCFF; border: 1px solid #EEF2F7; border-radius: 9px; padding: 11px 13px; }
 .rd-box .row { display: flex; align-items: center; gap: 8px; line-height: 2; }
-.rd-box .row span { width: 74px; color: #94A3B8; font-size: 12px; flex: 0 0 auto; }
-.rd-box .row b { color: #0F172A; }
-.rd-box .row em { font-style: normal; color: #94A3B8; font-size: 12px; }
-.rd-label { font-size: 11.5px; font-weight: 800; color: #94A3B8; letter-spacing: 1px; margin: 14px 0 7px; }
+.rd-box .row span { width: 74px; color: var(--ink-3); font-size: 12px; flex: 0 0 auto; }
+.rd-box .row b { color: var(--ink); }
+.rd-box .row em { font-style: normal; color: var(--ink-3); font-size: 12px; }
+.rd-label { font-size: 11.5px; font-weight: 800; color: var(--ink-3); letter-spacing: 1px; margin: 14px 0 7px; }
 .rd-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
 .rd-actions :deep(.el-button) { width: 100%; height: 34px; margin: 0; font-size: 12.5px; font-weight: 700; }
 .rd-foot { margin-top: 16px; text-align: right; }

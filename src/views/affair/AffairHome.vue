@@ -86,7 +86,7 @@
 
     <!-- ⭐ 自动生成前先问一次（不做静默创建） -->
     <el-dialog v-model="askOpen" :title="`发现 ${askList.length} 项证件需要提醒`" width="460px" append-to-body class="af-dialog">
-      <div style="font-size:13px;color:#475569;line-height:1.75;margin-bottom:11px">
+      <div style="font-size:13px;color:var(--ink-2);line-height:1.75;margin-bottom:11px">
         系统检测到以下证件已进入提醒范围，是否生成提醒事项？
       </div>
       <div class="ask-list">
@@ -103,7 +103,7 @@
           <span class="af-pill" :style="{ color: meta(a.level).color, background: '#fff' }">{{ a.level }}</span>
         </div>
       </div>
-      <div style="font-size:11.5px;color:#94A3B8;margin-top:10px">
+      <div style="font-size:11.5px;color:var(--ink-3);margin-top:10px">
         生成后进入「提醒事项」，逾期每天提醒；点「暂不生成」今天不再问，明天会再问。
       </div>
       <template #footer>
@@ -218,7 +218,7 @@ onMounted(refresh)
 .bar-col { flex: 1; text-align: center; cursor: pointer; }
 .bar-n { width: 100%; border-radius: 4px 4px 0 0; min-height: 6px; transition: all .2s; }
 .bar-col:hover .bar-n { filter: brightness(1.06); }
-.bar-l { font-size: 11.5px; color: #94A3B8; margin-top: 6px; font-weight: 600; }
+.bar-l { font-size: 11.5px; color: var(--ink-3); margin-top: 6px; font-weight: 600; }
 .ask-list { display: flex; flex-direction: column; gap: 7px; max-height: 240px; overflow: auto; }
 .ask-row {
   display: flex; align-items: center; gap: 10px; padding: 9px 11px;
@@ -226,5 +226,5 @@ onMounted(refresh)
 }
 .ask-row > div { flex: 1; }
 .ask-row b { font-size: 12.5px; }
-.ask-sub { display: block; font-size: 11.5px; color: #64748B; margin-top: 2px; }
+.ask-sub { display: block; font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
 </style>

@@ -314,14 +314,14 @@ const rhythm = computed(() => props.payload.rhythm || [])
 }
 .wd {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--ink-3);
   font-weight: 700;
   text-align: center;
   padding-bottom: 2px;
 }
 .cell {
   border-radius: 6px;
-  background: #f8fafc;
+  background: var(--surface-page);
   padding: 4px 5px;
   position: relative;
   overflow: hidden;
@@ -440,11 +440,11 @@ const rhythm = computed(() => props.payload.rhythm || [])
   gap: 2px;
   align-items: center;
 }
-.mx-row.head { position: sticky; top: 0; background: #fff; z-index: 2; }
+.mx-row.head { position: sticky; top: 0; background: var(--surface-card); z-index: 2; }
 .mx-veh {
   font-size: 9.5px;
   font-weight: 700;
-  color: #334155;
+  color: var(--ink-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -458,12 +458,12 @@ const rhythm = computed(() => props.payload.rhythm || [])
   font-size: 9.5px;
   font-weight: 700;
   color: #111827;
-  background: #f8fafc;
+  background: var(--surface-page);
 }
 .mx-row.head .mx-cell {
   background: transparent;
   font-size: 8.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
   font-weight: 700;
   height: 16px;
 }
@@ -472,9 +472,9 @@ const rhythm = computed(() => props.payload.rhythm || [])
   text-align: right;
   font-size: 10px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--ink);
 }
-.mx-total i { font-size: 8px; font-style: normal; color: #94a3b8; }
+.mx-total i { font-size: 8px; font-style: normal; color: var(--ink-3); }
 .mx-group {
   display: flex;
   align-items: center;
@@ -498,7 +498,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
   gap: 10px;
   flex-wrap: wrap;
   font-size: 9px;
-  color: #64748b;
+  color: var(--ink-3);
   font-weight: 600;
   padding-top: 4px;
   flex-shrink: 0;
@@ -525,8 +525,8 @@ const rhythm = computed(() => props.payload.rhythm || [])
   width: 15px;
   height: 15px;
   border-radius: 4px;
-  background: #f1f5f9;
-  color: #94a3b8;
+  background: var(--surface-hover);
+  color: var(--ink-3);
   font-size: 8.5px;
   font-weight: 800;
   display: flex;
@@ -537,7 +537,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
 .rk-name {
   font-size: 10px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -546,7 +546,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
   position: relative;
   height: 8px;
   border-radius: 4px;
-  background: #f8fafc;
+  background: var(--surface-page);
 }
 .rk-bar {
   height: 8px;
@@ -564,10 +564,10 @@ const rhythm = computed(() => props.payload.rhythm || [])
   text-align: right;
   font-size: 10px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
-.rk-val i { font-size: 8px; font-style: normal; color: #94a3b8; margin-left: 1px; }
+.rk-val i { font-size: 8px; font-style: normal; color: var(--ink-3); margin-left: 1px; }
 .rk-delta { font-size: 8.5px; font-weight: 800; text-align: right; }
 .rk-delta.good { color: #0f9d58; }
 .rk-delta.bad { color: var(--brand-primary); }
@@ -597,7 +597,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
 .tl-name {
   font-size: 9.5px;
   font-weight: 700;
-  color: #334155;
+  color: var(--ink-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -605,11 +605,11 @@ const rhythm = computed(() => props.payload.rhythm || [])
 .tl-track {
   position: relative;
   height: 14px;
-  background: #f8fafc;
+  background: var(--surface-page);
   border-radius: 4px;
   overflow: hidden;
 }
-.tl-grid { position: absolute; top: 0; bottom: 0; width: 1px; background: #f1f5f9; }
+.tl-grid { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--surface-hover); }
 .tl-off {
   position: absolute;
   top: 3px;
@@ -640,9 +640,9 @@ const rhythm = computed(() => props.payload.rhythm || [])
   text-align: right;
   font-size: 10px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink);
 }
-.tl-val i { font-size: 8px; font-style: normal; color: #94a3b8; }
+.tl-val i { font-size: 8px; font-style: normal; color: var(--ink-3); }
 
 /* ================= 异常 ================= */
 .issues { height: 100%; overflow: auto; }
@@ -660,7 +660,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
 .is-lv.m { background: #f0a04b; }
 .is-name {
   font-weight: 800;
-  color: #0f172a;
+  color: var(--ink);
   font-size: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -670,7 +670,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
   display: block;
   font-style: normal;
   font-size: 8.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
   font-weight: 600;
 }
 .is-tag {
@@ -685,7 +685,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
 }
 .is-tag.t2 { background: #fff7ed; color: #b45309; }
 .is-desc {
-  color: #64748b;
+  color: var(--ink-3);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -700,8 +700,8 @@ const rhythm = computed(() => props.payload.rhythm || [])
   align-content: start;
 }
 .rh-h { font-size: 7px; color: #c3cddb; text-align: center; font-weight: 600; }
-.rh-wd { font-size: 8px; color: #94a3b8; font-weight: 700; }
-.rh-c { height: 14px; border-radius: 2px; background: #f8fafc; }
+.rh-wd { font-size: 8px; color: var(--ink-3); font-weight: 700; }
+.rh-c { height: 14px; border-radius: 2px; background: var(--surface-page); }
 .compact .rh-c { height: 10px; }
 
 /* ============================================================

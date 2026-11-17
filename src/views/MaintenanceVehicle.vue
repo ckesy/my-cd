@@ -257,7 +257,7 @@ onMounted(load)
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #e6ecf3;
   border-radius: 10px;
   padding: 12px 16px;
@@ -265,7 +265,7 @@ onMounted(load)
 .mv-back {
   border: none;
   background: transparent;
-  color: #64748b;
+  color: var(--ink-3);
   font-size: 13px;
   cursor: pointer;
   padding: 0 4px 0 0;
@@ -275,13 +275,13 @@ onMounted(load)
   font-size: 17px;
   font-weight: 800;
   letter-spacing: 0.5px;
-  color: #0f172a;
+  color: var(--ink);
 }
-.mv-org { font-size: 12px; color: #94a3b8; }
+.mv-org { font-size: 12px; color: var(--ink-3); }
 .mv-sum {
   margin-left: 12px;
   font-size: 12.5px;
-  color: #64748b;
+  color: var(--ink-3);
 }
 .mv-sum b { color: var(--brand-primary); font-size: 13.5px; }
 .mv-actions { margin-left: auto; }
@@ -295,7 +295,7 @@ onMounted(load)
 .mv-main {
   flex: 1;
   min-width: 0;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #e6ecf3;
   border-radius: 10px;
   padding: 10px 12px;
@@ -304,7 +304,7 @@ onMounted(load)
 .mv-state {
   padding: 60px 0;
   text-align: center;
-  color: #94a3b8;
+  color: var(--ink-3);
   font-size: 13px;
 }
 
@@ -314,15 +314,15 @@ onMounted(load)
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background: #f8fafc;
+  background: var(--surface-page);
   border-radius: 8px;
   cursor: pointer;
   user-select: none;
 }
-.mv-gh:hover { background: #f1f5f9; }
-.chev { color: #94a3b8; font-size: 12px; width: 10px; }
-.mv-gt { font-size: 12.5px; font-weight: 700; color: #334155; }
-.mv-gc { margin-left: auto; font-size: 11.5px; color: #94a3b8; font-variant-numeric: tabular-nums; }
+.mv-gh:hover { background: var(--surface-hover); }
+.chev { color: var(--ink-3); font-size: 12px; width: 10px; }
+.mv-gt { font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
+.mv-gc { margin-left: auto; font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 
 .mv-gl { margin-top: 2px; }
 .mv-row {
@@ -334,17 +334,17 @@ onMounted(load)
   font-size: 12.5px;
 }
 .mv-row:last-child { border-bottom: none; }
-.mv-d { flex: 0 0 48px; color: #94a3b8; font-size: 12px; }
+.mv-d { flex: 0 0 48px; color: var(--ink-3); font-size: 12px; }
 .mv-txt {
   flex: 1;
   min-width: 0;
-  color: #0f172a;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.mv-km { flex: 0 0 92px; text-align: right; color: #94a3b8; font-size: 12px; }
-.mv-amt { flex: 0 0 84px; text-align: right; font-weight: 700; color: #0f172a; }
+.mv-km { flex: 0 0 92px; text-align: right; color: var(--ink-3); font-size: 12px; }
+.mv-amt { flex: 0 0 84px; text-align: right; font-weight: 700; color: var(--ink); }
 
 .pill {
   display: inline-flex;
@@ -374,7 +374,7 @@ onMounted(load)
   overflow-y: auto;
 }
 .side-card {
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #eef1f5;
   border-radius: 10px;
   padding: 12px 14px;
@@ -382,21 +382,21 @@ onMounted(load)
 .side-card.is-red { background: #fef2f2; border-color: #fbd5db; }
 .side-card.is-amber { background: #fffbeb; border-color: #fde68a; }
 .side-card.is-green { background: #f0fdf4; border-color: #bbf7d0; }
-.side-card.is-gray { background: #f8fafc; }
-.sc-t { font-size: 11.5px; font-weight: 700; color: #0f172a; }
+.side-card.is-gray { background: var(--surface-page); }
+.sc-t { font-size: 11.5px; font-weight: 700; color: var(--ink); }
 .side-card.is-red .sc-t { color: #c8102e; }
 .side-card.is-amber .sc-t { color: #b45309; }
 .side-card.is-green .sc-t { color: #15803d; }
-.sc-t.plain { color: #94a3b8; font-weight: 600; }
-.sc-src { font-weight: 400; color: #94a3b8; }
+.sc-t.plain { color: var(--ink-3); font-weight: 600; }
+.sc-src { font-weight: 400; color: var(--ink-3); }
 .sc-b {
   font-size: 12px;
-  color: #334155;
+  color: var(--ink-2);
   line-height: 1.75;
   margin-top: 6px;
 }
 .sc-b b { font-weight: 700; }
-.sc-b .dim { color: #94a3b8; }
+.sc-b .dim { color: var(--ink-3); }
 .sc-a {
   margin-top: 8px;
   font-size: 11.5px;

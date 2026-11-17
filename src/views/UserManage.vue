@@ -1366,7 +1366,7 @@ onBeforeUnmount(() => {
   min-height: 0;
   overflow: hidden;
   box-sizing: border-box;
-  background: #F8FAFC;
+  background: var(--surface-page);
   font-size: 13px;
 }
 
@@ -1376,7 +1376,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
@@ -1387,8 +1387,8 @@ onBeforeUnmount(() => {
   gap: 6px;
   padding: 6px 14px;
   border: 1px solid #E2E8F0;
-  background: #fff;
-  color: #64748B;
+  background: var(--surface-card);
+  color: var(--ink-3);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
@@ -1435,7 +1435,7 @@ onBeforeUnmount(() => {
 
 /* ============ 搜索卡片 ============ */
 .search-card {
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   padding: 12px 16px;
@@ -1456,7 +1456,7 @@ onBeforeUnmount(() => {
 
 .search-item label {
   font-size: 12.5px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1469,7 +1469,7 @@ onBeforeUnmount(() => {
 .search-item :deep(.el-input__wrapper),
 .search-item :deep(.el-select__wrapper) {
   border-radius: 6px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   min-height: 30px;
@@ -1483,7 +1483,7 @@ onBeforeUnmount(() => {
 
 .search-item :deep(.el-input__wrapper.is-focus),
 .search-item :deep(.el-select__wrapper.is-focused) {
-  background: #ffffff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.15), 0 0 0 1px var(--brand-primary) inset !important;
   transform: translateY(-1px);
 }
@@ -1513,7 +1513,7 @@ onBeforeUnmount(() => {
 .btn-outline {
   border-radius: 6px !important;
   border-color: #CBD5E1 !important;
-  color: #334155;
+  color: var(--ink-2);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
 }
 
@@ -1640,7 +1640,7 @@ onBeforeUnmount(() => {
 }
 
 .table-card {
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   padding: 12px 16px;
@@ -1666,7 +1666,7 @@ onBeforeUnmount(() => {
 
 .total-hint {
   font-size: 12.5px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 .total-hint b {
@@ -1688,9 +1688,9 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   border: 1px solid #E2E8F0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 6px;
-  color: #64748B;
+  color: var(--ink-3);
   font-size: 14px;
   cursor: pointer;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1729,7 +1729,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-table .el-table__cell) {
-  color: #1E293B;
+  color: var(--ink);
 }
 
 :deep(.custom-table th.el-table__cell) {
@@ -1806,7 +1806,7 @@ onBeforeUnmount(() => {
 }
 
 .text-muted {
-  color: #94A3B8;
+  color: var(--ink-3);
   font-size: 12.5px;
 }
 
@@ -1873,7 +1873,7 @@ onBeforeUnmount(() => {
 }
 
 .action-more {
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 .action-more:hover {
@@ -1897,7 +1897,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .empty-state.small {
@@ -1929,14 +1929,14 @@ onBeforeUnmount(() => {
 
 .total-text {
   font-size: 12.5px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 600;
 }
 
 :deep(.custom-pagination .el-pager li) {
   transition: all 0.2s;
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
   min-width: 26px;
   height: 26px;
   line-height: 26px;
@@ -1955,7 +1955,7 @@ onBeforeUnmount(() => {
 
 /* ============ 组织机构视图 ============ */
 .org-view-card {
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   padding: 16px;
@@ -1980,7 +1980,7 @@ onBeforeUnmount(() => {
   gap: 8px;
   font-size: 15px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .org-view-title .el-icon {
@@ -1990,7 +1990,7 @@ onBeforeUnmount(() => {
 
 .org-view-sub {
   font-size: 12.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 500;
 }
 
@@ -2006,13 +2006,13 @@ onBeforeUnmount(() => {
 
 .org-search-input :deep(.el-input__wrapper) {
   border-radius: 6px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   min-height: 30px;
 }
 
 .org-search-input :deep(.el-input__wrapper.is-focus) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.15), 0 0 0 1px var(--brand-primary) inset !important;
 }
 
@@ -2042,7 +2042,7 @@ onBeforeUnmount(() => {
   width: 22px;
   padding: 0;
   font-size: 11px;
-  color: #94A3B8;
+  color: var(--ink-3);
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -2168,7 +2168,7 @@ onBeforeUnmount(() => {
 .node-label {
   flex: 0 1 auto;
   font-weight: 600;
-  color: #0F172A;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2177,7 +2177,7 @@ onBeforeUnmount(() => {
 .tree-node.type-root .node-label {
   font-size: 15px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 
@@ -2193,19 +2193,19 @@ onBeforeUnmount(() => {
 .node-count {
   flex: 0 0 auto;
   font-size: 11.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   padding: 1px 8px;
   border-radius: 8px;
-  background: #F1F5F9;
+  background: var(--surface-hover);
 }
 
 .node-account {
   flex: 0 0 auto;
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-family: 'Courier New', monospace;
   padding: 1px 6px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border-radius: 4px;
 }
 
@@ -2252,8 +2252,8 @@ onBeforeUnmount(() => {
 }
 
 .node-vehicles.empty {
-  background: #F1F5F9;
-  color: #94A3B8;
+  background: var(--surface-hover);
+  color: var(--ink-3);
   font-weight: 600;
 }
 
@@ -2276,8 +2276,8 @@ onBeforeUnmount(() => {
 }
 
 .node-drivers.empty {
-  background: #F1F5F9;
-  color: #94A3B8;
+  background: var(--surface-hover);
+  color: var(--ink-3);
   font-weight: 600;
 }
 
@@ -2287,7 +2287,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding: 80px 20px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .org-empty .empty-icon {
@@ -2298,7 +2298,7 @@ onBeforeUnmount(() => {
 .org-empty p {
   font-size: 15px;
   font-weight: 600;
-  color: #64748B;
+  color: var(--ink-3);
   margin: 0;
 }
 
@@ -2333,7 +2333,7 @@ onBeforeUnmount(() => {
 
 :deep(.manage-dialog .el-dialog__title) {
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   font-size: 15px;
 }
 
@@ -2343,14 +2343,14 @@ onBeforeUnmount(() => {
 
 .manage-form :deep(.el-form-item__label) {
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
   font-size: 13px;
 }
 
 .manage-form :deep(.el-tree-select .el-select__wrapper),
 .manage-form :deep(.el-select__wrapper) {
   border-radius: 8px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   min-height: 32px;
@@ -2358,13 +2358,13 @@ onBeforeUnmount(() => {
 
 .manage-form :deep(.el-tree-select .el-select__wrapper:hover),
 .manage-form :deep(.el-select__wrapper:hover) {
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.4) inset !important;
 }
 
 .manage-form :deep(.el-tree-select .el-select__wrapper.is-focused),
 .manage-form :deep(.el-select__wrapper.is-focused) {
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 1px var(--brand-primary) inset, 0 0 0 3px rgba(var(--brand-rgb), 0.1) !important;
 }
 
@@ -2380,7 +2380,7 @@ onBeforeUnmount(() => {
 .role-empty p {
   margin: 0 0 10px;
   font-size: 12.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .create-role-btn {
@@ -2412,7 +2412,7 @@ onBeforeUnmount(() => {
   border: 1px solid #FECACA;
   border-radius: 6px;
   font-size: 12.5px;
-  color: #64748B;
+  color: var(--ink-3);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -2427,7 +2427,7 @@ onBeforeUnmount(() => {
 }
 .mp-login-tip {
   font-size: 12.5px;
-  color: #64748B;
+  color: var(--ink-3);
   line-height: 1.5;
 }
 
@@ -2473,7 +2473,7 @@ onBeforeUnmount(() => {
 
 :deep(.permission-dialog .el-dialog__title) {
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   font-size: 15px;
 }
 
@@ -2493,7 +2493,7 @@ onBeforeUnmount(() => {
   padding: 6px 4px 10px;
   font-size: 13px;
   font-weight: 600;
-  color: #64748B;
+  color: var(--ink-3);
   cursor: pointer;
   transition: color 0.28s;
   user-select: none;
@@ -2538,13 +2538,13 @@ onBeforeUnmount(() => {
 
 .perm-search-input :deep(.el-input__wrapper) {
   border-radius: 6px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   min-height: 30px;
 }
 
 .perm-search-input :deep(.el-input__wrapper.is-focus) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.15), 0 0 0 1px var(--brand-primary) inset !important;
 }
 
@@ -2613,12 +2613,12 @@ onBeforeUnmount(() => {
   box-shadow: 0 10px 32px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.15) !important;
   border-radius: 10px !important;
   overflow: hidden;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 
 .density-dropdown-red .el-dropdown-menu {
   padding: 4px !important;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 
 .density-dropdown-red .el-dropdown-menu__item {
@@ -2657,12 +2657,12 @@ onBeforeUnmount(() => {
   box-shadow: 0 10px 32px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.15) !important;
   border-radius: 10px !important;
   overflow: hidden;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 
 .more-dropdown-red .el-dropdown-menu {
   padding: 4px !important;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 
 .more-dropdown-red .el-dropdown-menu__item {
@@ -2706,7 +2706,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 12px 36px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.12) !important;
   border: 2px solid #FFFFFF !important;
   overflow: hidden;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 
 .column-setting-popper .el-popover__title {
@@ -2715,7 +2715,7 @@ onBeforeUnmount(() => {
 
 .column-setting {
   padding: 0;
-  background: #FFFFFF;
+  background: var(--surface-card);
 }
 
 .column-setting-header {
@@ -2724,7 +2724,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   padding: 10px 14px;
   border-bottom: 1px solid #FEE2E2;
-  background: #FFFFFF;
+  background: var(--surface-card);
 }
 
 .col-title {
@@ -2761,7 +2761,7 @@ onBeforeUnmount(() => {
   max-height: 400px;
   overflow-y: auto;
   padding: 6px;
-  background: #FFFFFF;
+  background: var(--surface-card);
 }
 
 .column-setting-body::-webkit-scrollbar {
@@ -2908,7 +2908,7 @@ onBeforeUnmount(() => {
 
 .org-tree-select-popper .el-tree-node__content .el-tree-node__label {
   font-weight: 600;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .org-tree-select-popper .el-tree-node.is-current>.el-tree-node__content .el-tree-node__label {

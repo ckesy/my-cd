@@ -716,7 +716,7 @@ const playWelcome = (target = '/dashboard') => {
 }
 
 .user-btn:hover {
-  background: rgba(255, 255, 255, 0.28);
+  background: var(--surface-hover);
   border-color: #ffffff;
   transform: scale(1.12) rotate(-6deg);
   box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12),
@@ -761,7 +761,7 @@ const playWelcome = (target = '/dashboard') => {
   position: relative;
   width: 420px;
   max-width: calc(100vw - 32px);
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 0;
   padding: 40px 40px 32px;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
@@ -810,14 +810,14 @@ const playWelcome = (target = '/dashboard') => {
   border: none;
   background: transparent;
   border-radius: 6px;
-  color: #94a3b8;
+  color: var(--ink-3);
   cursor: pointer;
   transition: all 0.25s;
 }
 
 .close-btn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: var(--surface-hover);
+  color: var(--ink);
   transform: rotate(90deg);
 }
 
@@ -842,7 +842,7 @@ const playWelcome = (target = '/dashboard') => {
 }
 
 .tab-item.active {
-  color: #0f172a;
+  color: var(--ink);
 }
 
 .tab-item.active::after {
@@ -886,7 +886,7 @@ const playWelcome = (target = '/dashboard') => {
 }
 
 .input-wrap:focus-within {
-  background: #ffffff;
+  background: var(--surface-card);
   border-color: #0f172a;
   box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.08);
   transform: translateY(-1px);
@@ -899,7 +899,7 @@ const playWelcome = (target = '/dashboard') => {
   padding-right: 14px;
   margin-right: 14px;
   border-right: 1px solid #d1d5db;
-  color: #0f172a;
+  color: var(--ink);
   font-size: 16px;
   font-weight: 600;
   user-select: none;
@@ -907,7 +907,7 @@ const playWelcome = (target = '/dashboard') => {
 }
 
 .prefix svg {
-  color: #64748b;
+  color: var(--ink-3);
 }
 
 .field {
@@ -918,7 +918,7 @@ const playWelcome = (target = '/dashboard') => {
   outline: none;
   background: transparent;
   font-size: 16px;
-  color: #0f172a;
+  color: var(--ink);
   font-family: inherit;
 }
 
@@ -935,14 +935,14 @@ const playWelcome = (target = '/dashboard') => {
   height: 32px;
   border: none;
   background: transparent;
-  color: #94a3b8;
+  color: var(--ink-3);
   cursor: pointer;
   border-radius: 6px;
   transition: all 0.2s;
 }
 
 .eye-btn:hover {
-  color: #0f172a;
+  color: var(--ink);
   background: rgba(0, 0, 0, 0.05);
 }
 
@@ -989,9 +989,9 @@ const playWelcome = (target = '/dashboard') => {
 }
 
 .btn-outline {
-  background: #ffffff;
+  background: var(--surface-card);
   border: 2px solid #e2e8f0;
-  color: #0f172a;
+  color: var(--ink);
 }
 
 .btn-outline:hover {
@@ -1031,7 +1031,7 @@ const playWelcome = (target = '/dashboard') => {
 }
 
 .divider .text {
-  color: #94a3b8;
+  color: var(--ink-3);
   font-size: 14px;
   font-weight: 500;
 }
@@ -1043,10 +1043,10 @@ const playWelcome = (target = '/dashboard') => {
   gap: 10px;
   height: 56px;
   width: 100%;
-  background: #ffffff;
+  background: var(--surface-card);
   border: 2px solid #e2e8f0;
   border-radius: 8px;
-  color: #0f172a;
+  color: var(--ink);
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
@@ -1081,7 +1081,7 @@ const playWelcome = (target = '/dashboard') => {
   cursor: pointer;
   user-select: none;
   font-size: 13px;
-  color: #64748b;
+  color: var(--ink-3);
 }
 
 .checkbox {
@@ -1107,7 +1107,7 @@ const playWelcome = (target = '/dashboard') => {
 }
 
 .agreement-text a {
-  color: #0f172a;
+  color: var(--ink);
   text-decoration: none;
   font-weight: 600;
   transition: color 0.2s;
@@ -1315,13 +1315,12 @@ const playWelcome = (target = '/dashboard') => {
   font-weight: 800;
   letter-spacing: 3px;
   line-height: 1.3;
-  background: linear-gradient(100deg,
-      #ffffff 0%,
+  background: linear-gradient(100deg, var(--surface-card) 0%,
       var(--brand-primary-light) 22%,
       var(--brand-primary) 46%,
       #ff8fa3 58%,
       var(--brand-primary-light) 74%,
-      #ffffff 100%);
+      var(--surface-card) 100%);
   background-size: 220% 100%;
   -webkit-background-clip: text;
   background-clip: text;

@@ -337,7 +337,7 @@ const goLogout = () => {
   overflow: hidden;
   background: radial-gradient(ellipse at 50% 30%, #F0F4FA 0%, #F8FAFC 50%, #EFF2F7 100%);
   font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .bg-grid {
@@ -460,7 +460,7 @@ const goLogout = () => {
   font-size: 13px;
   font-weight: 600;
   color: var(--brand-primary);
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--glass-panel);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(var(--brand-rgb), 0.35);
@@ -584,7 +584,7 @@ const goLogout = () => {
 .card-body {
   position: relative;
   overflow: hidden;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border-radius: 32px;
   padding: 44px 36px 36px;
   display: flex;
@@ -680,14 +680,14 @@ const goLogout = () => {
   margin: 0 0 8px;
   font-size: 19px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.8px;
   text-align: center;
 }
 .card-sub {
   margin: 0;
   font-size: 13px;
-  color: #64748B;
+  color: var(--ink-3);
   letter-spacing: 2px;
   font-weight: 500;
 }
@@ -701,34 +701,34 @@ const goLogout = () => {
 .card-select.placeholder {
   display: flex; align-items: center; justify-content: center;
   height: 46px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-size: 13px;
   letter-spacing: 2px;
   border: 1.5px dashed #CBD5E1;
   border-radius: 10px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   margin-bottom: 20px;
 }
 .card-select :deep(.el-select__wrapper) {
   border-radius: 10px !important;
   min-height: 46px;
   box-shadow: 0 0 0 1.5px #E2E8F0 inset !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .tone-green .card-select :deep(.el-select__wrapper:hover) {
   box-shadow: 0 0 0 1.5px rgba(16, 185, 129, 0.5) inset !important;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
   transform: translateY(-1px);
 }
 .tone-green .card-select :deep(.el-select__wrapper.is-focused) {
   box-shadow: 0 0 0 1.5px #10B981 inset, 0 0 0 4px rgba(16, 185, 129, 0.12) !important;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
-.select-empty { padding: 16px 0; text-align: center; color: #94A3B8; font-size: 13px; }
+.select-empty { padding: 16px 0; text-align: center; color: var(--ink-3); font-size: 13px; }
 
 .option-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.option-name { font-weight: 600; color: #0F172A; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.option-name { font-weight: 600; color: var(--ink); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .option-recent-tag {
   display: inline-flex;
   align-items: center;
@@ -743,7 +743,7 @@ const goLogout = () => {
   margin-left: 6px;
   box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
 }
-.option-phone { font-size: 11px; color: #94A3B8; font-family: 'Courier New', monospace; flex-shrink: 0; }
+.option-phone { font-size: 11px; color: var(--ink-3); font-family: 'Courier New', monospace; flex-shrink: 0; }
 
 .enter-btn {
   margin-top: 24px;
@@ -869,7 +869,7 @@ const goLogout = () => {
 }
 .portal-select-popper .el-select-dropdown__item {
   font-size: 13px;
-  color: #334155;
+  color: var(--ink-2);
   border-radius: 8px;
   margin: 2px 0;
   padding: 8px 12px;
@@ -891,7 +891,7 @@ const goLogout = () => {
 .portal-select-popper .el-select-group__title {
   font-size: 11.5px !important;
   font-weight: 800 !important;
-  color: #94A3B8 !important;
+  color: var(--ink-3) !important;
   letter-spacing: 1px !important;
   padding: 8px 12px 4px !important;
   line-height: 1 !important;

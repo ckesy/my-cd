@@ -3,8 +3,9 @@ import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { supabase } from '@/utils/supabase'
 import {
-  THEMES, DEFAULT_THEME, applyTheme,
+  THEMES, DEFAULT_THEME, SCHEMES, DEFAULT_SCHEME, applyTheme,
   readLocalTheme, writeLocalTheme, saveRemoteTheme,
+  parseTheme, serializeTheme, findTheme, findScheme,
 } from '@/utils/theme'
 
 const props = defineProps({
@@ -31,8 +32,12 @@ const refreshUser = () => {
 watch(visible, (val) => {
   if (val) {
     refreshUser()
-    /* ⭐ 主题按账号取：同一台电脑换账号登录，各看各的皮肤 */
-    themeKey.value = readLocalTheme(currentUser.value?.account) || DEFAULT_THEME
+    /* ⭐ 主题按账号取：同一台电脑换账号登录，各看各的皮肤。
+       值是 "版式:配色" 复合串，老数据只有颜色，parseTheme 会按原样版式兜底 */
+    const saved = readLocalTheme(currentUser.value?.account) || DEFAULT_THEME
+    const parsed = parseTheme(saved)
+    schemeKey.value = parsed.scheme
+    themeKey.value = parsed.color
     resetForms()
     resolveCompanyName()
   }
@@ -42,27 +47,38 @@ watch(visible, (val) => {
 const activeTab = ref('profile')
 
 // ---------- 外观 / 换肤 ----------
+/* ⭐ 2026-11-17：主题拆成两个独立维度
+   scheme（骨架：直角/圆角、深壳/浅壳）× color（气质：品牌色）
+   两者一起存成 "f:crimson"，任一变动都重新 apply + 落库。 */
+const schemeKey = ref(DEFAULT_SCHEME)
 const themeKey = ref(DEFAULT_THEME)
 
-const themeGroups = computed(() => {
-  const order = ['沉稳', '明快']
-  const hints = { 沉稳: '低饱和 · 长时间看不累', 明快: '有色彩 · 活泼但不荧光' }
-  return order.map((name) => ({
-    name,
-    hint: hints[name] || '',
-    list: THEMES.filter((t) => t.group === name),
-  })).filter((g) => g.list.length)
-})
+/* 版式缩略图的取色：只用于这一屏的小预览，不进 CSS 变量 */
+const SCHEME_PREVIEW = {
+  f: { sider: '#F8FAFC', page: '#F8FAFC', head: '#FFFFFF', tabs: '#FFFFFF', card: '#FFFFFF', line: '#E2E8F0' },
+  b: { sider: '#1B2230', page: '#E9EEF5', head: '#1B2230', tabs: '#232B3B', card: '#FFFFFF', line: '#DCE4EF' },
+  d: { sider: '#FAF8F1', page: '#E9EDE0', head: '#FAF8F1', tabs: '#F5F3EA', card: '#FFFFFF', line: '#DCDFCE' },
+  e: { sider: '#F3F8EF', page: '#DFE8D8', head: '#F4F8EF', tabs: '#EFF4E8', card: '#FFFFFF', line: '#D6E0D1' },
+  a: { sider: '#E1D9C9', page: '#E9E3D6', head: '#FAF6EE', tabs: '#F2ECE0', card: '#FFFDF9', line: '#D8CFBD' },
+  c: { sider: '#0A0F17', page: '#0D131F', head: '#121A26', tabs: '#111925', card: '#19222F', line: '#2C3849' },
+}
 
-/** 点一下立即生效（不用等保存），同时写账号 */
-async function pickTheme(key) {
-  themeKey.value = key
-  applyTheme(key)
-  writeLocalTheme(key, currentUser.value?.account)
-  const ok = await saveRemoteTheme(supabase, currentUser.value, key)
+const schemeList = computed(() => SCHEMES.map((s) => ({ ...s, p: SCHEME_PREVIEW[s.key] || SCHEME_PREVIEW.f })))
+const schemeName = computed(() => findScheme(schemeKey.value).name)
+const colorName = computed(() => findTheme(themeKey.value).name)
+
+/** 应用 + 落库（版式和配色共用一个入口，避免两处各写一遍） */
+async function commitTheme() {
+  const val = serializeTheme(schemeKey.value, themeKey.value)
+  applyTheme(val)
+  writeLocalTheme(val, currentUser.value?.account)
+  const ok = await saveRemoteTheme(supabase, currentUser.value, val)
   if (ok) ElMessage.success('已保存到当前账号')
   else ElMessage.warning('已应用到当前设备（账号同步未生效，需先执行 users.theme 迁移）')
 }
+
+const pickScheme = (key) => { schemeKey.value = key; commitTheme() }
+const pickColor = (key) => { themeKey.value = key; commitTheme() }
 
 // ---------- 基本信息 ----------
 /* ⭐ 2026-10-22：主账号可以自定义「昵称」；管理员/财务的名字只能在主账号的「用户管理」里改。
@@ -503,30 +519,48 @@ const savePassword = async () => {
     <!-- ==================== 外观 / 换肤 ==================== -->
     <div v-show="activeTab === 'appearance'" class="tab-body">
       <p class="theme-hint">
-        选一套配色，会保存到你的账号 —— 换电脑、换浏览器打开都是这套。
+        版式决定骨架，配色决定气质。两者都会保存到你的账号 —— 换电脑、换浏览器打开都是这套。
       </p>
 
-      <div v-for="grp in themeGroups" :key="grp.name" class="theme-group">
-        <div class="theme-group-t">{{ grp.name }}<span>{{ grp.hint }}</span></div>
-        <div class="theme-grid">
+      <div class="ap-sec">
+        <div class="ap-lab">版式</div>
+        <div class="scheme-grid">
           <button
-            v-for="t in grp.list" :key="t.key"
-            class="theme-card" :class="{ on: themeKey === t.key }"
-            @click="pickTheme(t.key)"
+            v-for="sc in schemeList" :key="sc.key"
+            class="sc-card" :class="{ on: schemeKey === sc.key }"
+            @click="pickScheme(sc.key)"
           >
-            <div class="tc-preview" :style="{ background: `linear-gradient(135deg, ${t.hover}, ${t.dark})` }">
-              <span class="tc-name">{{ t.name }}</span>
-              <span v-if="themeKey === t.key" class="tc-check">✓</span>
-            </div>
-            <div class="tc-ramp">
-              <i :style="{ background: t.light }"></i>
-              <i :style="{ background: t.main }"></i>
-              <i :style="{ background: t.hover }"></i>
-              <i :style="{ background: t.dark }"></i>
-            </div>
-            <div class="tc-desc">{{ t.desc }}</div>
+            <span class="sc-prev" :style="{ background: sc.p.page }">
+              <i class="sc-sider" :style="{ background: sc.p.sider, borderRight: `1px solid ${sc.p.line}` }"></i>
+              <i class="sc-main">
+                <i class="sc-head" :style="{ background: sc.p.head, borderBottom: `1px solid ${sc.p.line}` }"></i>
+                <i class="sc-tabs" :style="{ background: sc.p.tabs }"></i>
+                <i class="sc-body">
+                  <i class="sc-cardb" :style="{ background: sc.p.card, border: `1px solid ${sc.p.line}` }"></i>
+                </i>
+              </i>
+            </span>
+            <span class="sc-meta">
+              <span class="sc-name">{{ sc.name }}</span>
+              <span class="sc-tag">{{ sc.tag }}</span>
+            </span>
           </button>
         </div>
+      </div>
+
+      <div class="ap-sec">
+        <div class="ap-lab">主题色</div>
+        <div class="color-row">
+          <button
+            v-for="t in THEMES" :key="t.key"
+            class="color-dot" :class="{ on: themeKey === t.key }"
+            :style="{ background: t.main }" :title="t.name"
+            @click="pickColor(t.key)"
+          >
+            <span v-if="themeKey === t.key" class="dot-ck">✓</span>
+          </button>
+        </div>
+        <div class="color-cur">当前：<b>{{ schemeName }} · {{ colorName }}</b></div>
       </div>
     </div>
   </el-dialog>
@@ -535,81 +569,91 @@ const savePassword = async () => {
 <style scoped>
 /* ============ 外观 / 换肤 ============ */
 .theme-hint {
-  margin: 0 0 16px;
+  margin: 0 0 18px;
   font-size: 12.5px;
-  color: #64748B;
+  color: var(--ink-3);
   line-height: 1.75;
 }
-.theme-group { margin-bottom: 20px; }
-.theme-group:last-child { margin-bottom: 0; }
-.theme-group-t {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
+
+.ap-sec { margin-bottom: 22px; }
+.ap-sec:last-child { margin-bottom: 0; }
+.ap-lab {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+  letter-spacing: .6px;
   margin-bottom: 10px;
-  font-size: 12.5px;
-  font-weight: 800;
-  color: #0F172A;
 }
-.theme-group-t span {
-  font-size: 11px;
-  font-weight: 400;
-  color: #94A3B8;
-}
-.theme-grid {
+
+/* ---------- 版式缩略卡 ---------- */
+.scheme-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
-.theme-card {
+.sc-card {
   padding: 0;
-  border: 1.5px solid #E6ECF3;
+  border: 1.5px solid var(--line);
   border-radius: 10px;
-  background: #fff;
-  overflow: hidden;
+  background: var(--surface-card);
   cursor: pointer;
   text-align: left;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   transition: border-color .18s, box-shadow .18s, transform .18s;
+  font-family: inherit;
 }
-.theme-card:hover {
-  border-color: #CBD5E1;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px -4px rgba(15, 23, 42, .16);
-}
-.theme-card.on {
+.sc-card:hover { border-color: var(--ink-3); transform: translateY(-1px); }
+.sc-card.on {
   border-color: var(--brand-primary);
   box-shadow: 0 0 0 3px var(--brand-primary-light);
 }
-.tc-preview {
-  height: 46px;
+.sc-prev { height: 54px; display: flex; }
+.sc-sider { width: 14px; flex: 0 0 auto; }
+.sc-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.sc-head { height: 9px; flex: 0 0 auto; }
+.sc-tabs { height: 6px; flex: 0 0 auto; }
+.sc-body { flex: 1; padding: 4px; }
+.sc-cardb { display: block; height: 100%; border-radius: 3px; }
+.sc-meta {
   display: flex;
   align-items: center;
-  padding: 0 10px;
+  gap: 6px;
+  padding: 7px 9px;
+  border-top: 1px solid var(--line-soft);
 }
-.tc-name {
-  font-size: 12px;
-  font-weight: 800;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .18);
-}
-.tc-check {
-  margin-left: auto;
-  width: 17px; height: 17px;
+.sc-name { font-size: 12px; font-weight: 600; color: var(--ink); }
+.sc-tag { font-size: 10px; color: var(--ink-3); white-space: nowrap; }
+
+/* ---------- 主题色点 ---------- */
+.color-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.color-dot {
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, .95);
-  color: #0F172A;
-  font-size: 11px;
-  font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  border: 2px solid transparent;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, .12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .15s, box-shadow .15s;
 }
-.tc-ramp { display: flex; gap: 3px; padding: 7px 8px 4px; }
-.tc-ramp i { flex: 1; height: 13px; border-radius: 3px; display: block; }
-.tc-desc {
-  padding: 0 9px 8px;
-  font-size: 9.5px;
-  color: #94A3B8;
-  line-height: 1.5;
+.color-dot:hover { transform: scale(1.1); }
+.color-dot.on {
+  border-color: var(--surface-card);
+  box-shadow: 0 0 0 2px var(--brand-primary);
 }
+.dot-ck {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .32);
+}
+.color-cur { margin-top: 12px; font-size: 12px; color: var(--ink-3); }
+.color-cur b { color: var(--ink); font-weight: 600; }
 
 /* ============ 顶部用户条 ============ */
 .user-header {
@@ -617,7 +661,7 @@ const savePassword = async () => {
   align-items: center;
   gap: 16px;
   padding: 18px 20px;
-  background: linear-gradient(120deg, var(--brand-primary-light) 0%, #FFFFFF 100%);
+  background: linear-gradient(120deg, var(--brand-primary-light) 0%, var(--surface-card) 100%);
   border-radius: 12px;
   border: 1px solid #E2E8F0;
   margin-bottom: 18px;
@@ -650,7 +694,7 @@ const savePassword = async () => {
 .user-name {
   font-size: 17px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.5px;
   margin-bottom: 6px;
 }
@@ -663,7 +707,7 @@ const savePassword = async () => {
 
 .user-phone {
   font-size: 13px;
-  color: #64748B;
+  color: var(--ink-3);
   font-family: 'Courier New', monospace;
 }
 
@@ -680,7 +724,7 @@ const savePassword = async () => {
   padding: 8px 4px 12px 4px;
   font-size: 14px;
   font-weight: 700;
-  color: #94A3B8;
+  color: var(--ink-3);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -688,7 +732,7 @@ const savePassword = async () => {
   transition: color 0.28s;
 }
 .tab:hover {
-  color: #475569;
+  color: var(--ink-2);
 }
 .tab.active {
   color: var(--brand-primary);
@@ -729,7 +773,7 @@ const savePassword = async () => {
   display: block;
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
   margin-bottom: 8px;
 }
 
@@ -738,7 +782,7 @@ const savePassword = async () => {
 .field-hint.warn { color: #B45309; }
 .field-hint {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   margin-top: 6px;
   padding-left: 2px;
 }
@@ -761,8 +805,8 @@ const savePassword = async () => {
   padding: 8px 20px;
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
-  background: #FFFFFF;
+  color: var(--ink-2);
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   border-radius: 6px;
   cursor: pointer;
@@ -790,12 +834,12 @@ const savePassword = async () => {
 }
 .action-btn.ghost {
   background: transparent;
-  color: #94A3B8;
+  color: var(--ink-3);
   border-color: #E2E8F0;
 }
 .action-btn.ghost:hover:not(:disabled) {
-  background: #F8FAFC;
-  color: #475569;
+  background: var(--surface-page);
+  color: var(--ink-2);
   border-color: #CBD5E1;
 }
 .action-btn:disabled {
@@ -815,7 +859,7 @@ const savePassword = async () => {
   border-bottom: 1px solid #F1F5F9;
 }
 .personal-settings-dialog .el-dialog__title {
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 700;
   letter-spacing: 0.5px;
 }
@@ -827,41 +871,41 @@ const savePassword = async () => {
 }
 
 .personal-settings-dialog .light-form .el-form-item__label {
-  color: #475569;
+  color: var(--ink-2);
   font-weight: 600;
 }
 .personal-settings-dialog .light-form .el-input__wrapper {
   border-radius: 8px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all 0.25s;
 }
 .personal-settings-dialog .light-form .el-input__wrapper:hover {
   box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.4) inset !important;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 .personal-settings-dialog .light-form .el-input__wrapper.is-focus {
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 1px var(--brand-primary) inset, 0 0 0 3px rgba(var(--brand-rgb), 0.1) !important;
 }
 .personal-settings-dialog .light-form .el-input__wrapper.is-disabled {
-  background: #F1F5F9 !important;
+  background: var(--surface-hover) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
 }
 .personal-settings-dialog .light-form .el-input__inner.is-disabled {
-  color: #94A3B8 !important;
+  color: var(--ink-3) !important;
   -webkit-text-fill-color: #94A3B8 !important;
 }
 
 /* ⭐ 只读字段（公司名称 / 手机号 / 姓名）文字别太淡，要能一眼读清 */
 .personal-settings-dialog .field .el-input.is-disabled .el-input__inner {
-  color: #334155 !important;
+  color: var(--ink-2) !important;
   -webkit-text-fill-color: #334155 !important;
   font-weight: 600;
 }
 
 .personal-settings-dialog .field .el-input.is-disabled .el-input__wrapper {
-  background: #F1F5F9 !important;
+  background: var(--surface-hover) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
 }
 </style>

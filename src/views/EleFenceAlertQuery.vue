@@ -1008,7 +1008,7 @@ onMounted(async () => {
 <style scoped>
 .alert-query-page {
   padding: 6px 16px 16px;
-  background-color: #f8fafc;
+  background-color: var(--surface-page);
   height: calc(100vh - 101px);
   max-height: calc(100vh - 101px);
   box-sizing: border-box;
@@ -1017,7 +1017,7 @@ onMounted(async () => {
   flex-direction: column;
   gap: 12px;
   font-size: 14px;
-  color: #1E293B;
+  color: var(--ink);
 }
 
 /* ========== 提醒类型切换 ========== */
@@ -1026,7 +1026,7 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   flex-shrink: 0;
@@ -1039,7 +1039,7 @@ onMounted(async () => {
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: #64748B;
+  color: var(--ink-3);
   font-size: 13.5px;
   font-weight: 600;
   font-family: inherit;
@@ -1062,14 +1062,14 @@ onMounted(async () => {
   align-items: center;
   gap: 5px;
   font-size: 12.5px;
-  color: #64748B;
+  color: var(--ink-3);
   font-weight: 500;
 }
 .type-tabs-tip .el-icon { color: var(--brand-primary); font-size: 13px; }
 
 /* ========== 搜索卡片 ========== */
 .search-card {
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   padding: 16px;
@@ -1109,7 +1109,7 @@ onMounted(async () => {
 :deep(.btn-primary:hover) { background-color: #a00d24; border-color: #a00d24; }
 :deep(.btn-outline) {
   border-color: #CBD5E1;
-  color: #334155;
+  color: var(--ink-2);
 }
 :deep(.btn-outline:hover) {
   border-color: var(--brand-primary);
@@ -1146,7 +1146,7 @@ onMounted(async () => {
   gap: 10px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: #F1F5F9;
+  background: var(--surface-hover);
   border: 2px solid transparent;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1155,11 +1155,11 @@ onMounted(async () => {
 .stat-item:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-  background: #ffffff;
+  background: var(--surface-card);
 }
 .stat-item.active {
   border-color: #FCA5A5;
-  background: #ffffff;
+  background: var(--surface-card);
   box-shadow: 0 6px 20px rgba(211, 47, 47, 0.15);
 }
 .stat-item.active:nth-child(3) {
@@ -1199,15 +1199,15 @@ onMounted(async () => {
 
 .stat-info { display: flex; flex-direction: column; }
 .stat-value {
-  font-size: 24px; font-weight: 800; color: #0F172A;
+  font-size: 24px; font-weight: 800; color: var(--ink);
   line-height: 1.1;
   font-family: 'Courier New', monospace;
   letter-spacing: -0.5px;
   display: flex; align-items: baseline; gap: 2px;
 }
-.stat-value .unit { font-size: 12px; color: #94A3B8; font-weight: 600; margin-left: 2px; }
+.stat-value .unit { font-size: 12px; color: var(--ink-3); font-weight: 600; margin-left: 2px; }
 .stat-label {
-  font-size: 12px; color: #475569; margin-top: 2px;
+  font-size: 12px; color: var(--ink-2); margin-top: 2px;
   font-weight: 600; letter-spacing: 0.3px;
 }
 
@@ -1230,7 +1230,7 @@ onMounted(async () => {
 
 /* ========== 表格卡片 ========== */
 .table-card {
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   padding: 16px;
@@ -1242,25 +1242,25 @@ onMounted(async () => {
 .custom-table { border-radius: 8px; overflow: hidden; }
 
 :deep(.custom-table .el-table__cell) {
-  color: #1E293B;
+  color: var(--ink);
   font-weight: 500;
   font-size: 13px;
 }
 :deep(.custom-table th.el-table__cell) {
-  color: #0F172A !important;
+  color: var(--ink) !important;
   font-weight: 700 !important;
   font-size: 13px;
   border-bottom: 2px solid #E2E8F0;
 }
 :deep(.el-table__row) { transition: background-color 0.3s ease; }
 :deep(.el-table__row:hover) { background-color: var(--brand-primary-light) !important; }
-:deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) { background: #FAFBFC; }
+:deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) { background: var(--surface-sunken); }
 
 /* 车牌 */
 .plate-wrap {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 3px 10px 3px 8px;
-  background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px;
+  background: var(--surface-card); border: 1px solid #E2E8F0; border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -1282,13 +1282,13 @@ onMounted(async () => {
 }
 .plate-text {
   font-family: 'Courier New', monospace;
-  font-size: 13px; font-weight: 700; color: #0F172A;
+  font-size: 13px; font-weight: 700; color: var(--ink);
   letter-spacing: 0.8px; line-height: 1;
 }
 
 .vin-text {
   font-family: 'Courier New', monospace;
-  font-size: 12px; color: #334155; font-weight: 600;
+  font-size: 12px; color: var(--ink-2); font-weight: 600;
 }
 
 /* 类型标签 */
@@ -1304,7 +1304,7 @@ onMounted(async () => {
 .type-tag .el-icon { font-size: 13px; }
 
 .time-text {
-  font-size: 12px; color: #334155;
+  font-size: 12px; color: var(--ink-2);
   font-family: 'Courier New', monospace; font-weight: 600;
 }
 
@@ -1322,7 +1322,7 @@ onMounted(async () => {
   background: #DBEAFE; color: #1E40AF; border-color: #93C5FD;
 }
 
-.duration-text { font-size: 13px; color: #334155; font-weight: 600; }
+.duration-text { font-size: 13px; color: var(--ink-2); font-weight: 600; }
 
 .status-tag {
   display: inline-block; padding: 3px 12px;
@@ -1349,14 +1349,14 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #334155;
+  color: var(--ink-2);
   font-size: 12.5px;
   font-weight: 500;
   line-height: 1.4;
 }
 .addr-icon { color: var(--brand-primary); font-size: 13px; flex-shrink: 0; }
 .addr-icon.stay { color: #2563EB; }
-.text-muted { color: #94A3B8; font-size: 12.5px; }
+.text-muted { color: var(--ink-3); font-size: 12.5px; }
 
 .action-btn.handle { color: var(--brand-primary); font-weight: 700; padding: 0 4px; }
 .action-btn.handle:hover { color: #7F1D1D; text-decoration: underline; }
@@ -1367,23 +1367,23 @@ onMounted(async () => {
   padding: 40px 0; display: flex; flex-direction: column; align-items: center; gap: 6px;
 }
 .empty-icon {
-  font-size: 48px; color: #94A3B8;
+  font-size: 48px; color: var(--ink-3);
   animation: float 3s ease-in-out infinite;
 }
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
 }
-.empty-state p { margin: 0; font-size: 15px; color: #334155; font-weight: 700; }
-.empty-sub { font-size: 13px; color: #64748B; }
+.empty-state p { margin: 0; font-size: 15px; color: var(--ink-2); font-weight: 700; }
+.empty-sub { font-size: 13px; color: var(--ink-3); }
 
 .pagination-wrapper {
   display: flex; align-items: center; justify-content: space-between;
   padding-top: 16px; border-top: 1px solid #E2E8F0; margin-top: 16px;
 }
-.total-text { font-size: 13px; color: #334155; font-weight: 700; }
+.total-text { font-size: 13px; color: var(--ink-2); font-weight: 700; }
 :deep(.custom-pagination .el-pager li) {
-  transition: all 0.2s; font-weight: 600; color: #334155;
+  transition: all 0.2s; font-weight: 600; color: var(--ink-2);
 }
 :deep(.custom-pagination .el-pager li:hover) { color: var(--brand-primary); transform: scale(1.1); }
 :deep(.custom-pagination .el-pager li.is-active) {
@@ -1402,7 +1402,7 @@ onMounted(async () => {
   display: flex; align-items: center; justify-content: center;
 }
 .os-loading-card {
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 20px;
   padding: 36px 44px 30px;
   min-width: 420px;
@@ -1483,7 +1483,7 @@ onMounted(async () => {
 }
 .os-stage {
   display: flex; align-items: center; gap: 6px;
-  font-size: 12.5px; color: #94A3B8;
+  font-size: 12.5px; color: var(--ink-3);
   font-weight: 600;
   transition: all 0.3s;
 }
@@ -1495,7 +1495,7 @@ onMounted(async () => {
   width: 18px; height: 18px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  background: #F1F5F9;
+  background: var(--surface-hover);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .os-stage.active .os-stage-dot {
@@ -1511,7 +1511,7 @@ onMounted(async () => {
 .os-stage-dot .el-icon { font-size: 11px; color: #fff; }
 .os-stage-pulse {
   width: 8px; height: 8px; border-radius: 50%;
-  background: #ffffff;
+  background: var(--surface-card);
   animation: osPulse 1s ease-in-out infinite;
 }
 @keyframes osPulse {
@@ -1562,14 +1562,14 @@ onMounted(async () => {
 }
 .os-progress-text.stay { color: #2563EB; }
 .os-progress-num { font-size: 20px; letter-spacing: -0.5px; }
-.os-progress-percent { font-size: 12px; color: #94A3B8; }
+.os-progress-percent { font-size: 12px; color: var(--ink-3); }
 
 .os-loading-tip {
   display: flex; align-items: center; gap: 5px;
-  font-size: 12.5px; color: #64748B;
+  font-size: 12.5px; color: var(--ink-3);
   font-weight: 500;
   padding: 6px 14px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border-radius: 999px;
   animation: osTipPulse 1.8s ease-in-out infinite;
 }

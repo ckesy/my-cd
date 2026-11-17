@@ -393,7 +393,7 @@ const drillTo = (trip) => {
    ============================================================ */
 .rtg-hist {
   padding: 12px 16px 14px 16px;
-  background: #ffffff;
+  background: var(--surface-card);
   border: 1px solid #e2e8f0;
   border-radius: 12px;
 }
@@ -413,12 +413,12 @@ const drillTo = (trip) => {
 .rtg-h-title {
   font-size: 13px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink);
   white-space: nowrap;
 }
 .rtg-h-sum {
   font-size: 11.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
 }
 
 /* 近 12 趟耗时柱 */
@@ -431,7 +431,7 @@ const drillTo = (trip) => {
 }
 .rtg-spark-label {
   font-size: 10.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
 }
 .rtg-spark-bars {
   display: flex;
@@ -460,9 +460,9 @@ const drillTo = (trip) => {
   gap: 8px;
   padding: 7px 10px;
   border-radius: 6px;
-  background: #f8fafc;
+  background: var(--surface-page);
   font-size: 11.5px;
-  color: #475569;
+  color: var(--ink-2);
   cursor: pointer;
   transition: background 0.2s, transform 0.2s;
 }
@@ -472,7 +472,7 @@ const drillTo = (trip) => {
 }
 .rtg-trip-seq {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--ink);
 }
 .rtg-trip-range { font-family: 'Courier New', monospace; }
 .rtg-trip-gap { text-align: right; font-weight: 600; }
@@ -497,7 +497,7 @@ const drillTo = (trip) => {
    ============================================================ */
 .rtg-main {
   padding: 12px 16px 14px 16px;
-  background: #ffffff;
+  background: var(--surface-card);
   border: 1px solid #e2e8f0;
   border-radius: 12px;
 }
@@ -510,19 +510,19 @@ const drillTo = (trip) => {
 .rtg-m-title {
   font-size: 13px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink);
 }
 .rtg-m-hint {
   margin-left: auto;
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--ink-3);
 }
 .rtg-back {
   margin-left: auto;
   padding: 3px 10px;
   font-size: 11.5px;
   color: var(--brand-primary);
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #f7c1c1;
   border-radius: 6px;
   cursor: pointer;
@@ -541,7 +541,7 @@ const drillTo = (trip) => {
   top: 0;
   transform: translateX(-50%);
   font-size: 10.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
   white-space: nowrap;
 }
 
@@ -566,12 +566,12 @@ const drillTo = (trip) => {
 .rtg-plate {
   font-size: 11.5px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--ink);
   white-space: nowrap;
 }
 .rtg-row-sub {
   font-size: 10.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
   white-space: nowrap;
 }
 .rtg-cells {
@@ -608,7 +608,7 @@ const drillTo = (trip) => {
 .rtg-cell.is-ready { background: #fde7c4; }
 .rtg-cell.is-pending { background: #dbeafe; }
 .rtg-cell.is-cancelled { background: #e2e8f0; }
-.rtg-cell.is-planned { background: #f1f5f9; }
+.rtg-cell.is-planned { background: var(--surface-hover); }
 /* 过去的日子没跑：斜纹缺口，和「未开始」区分开 */
 .rtg-cell.is-missed {
   background: repeating-linear-gradient(
@@ -629,7 +629,7 @@ const drillTo = (trip) => {
   margin-top: 12px;
   padding-left: 118px;
   font-size: 11px;
-  color: #475569;
+  color: var(--ink-2);
 }
 .rtg-legend span {
   display: inline-flex;
@@ -647,7 +647,7 @@ const drillTo = (trip) => {
 .rtg-legend .c-transit { background: #ef9f27; }
 .rtg-legend .c-loading { background: var(--brand-primary); }
 .rtg-legend .c-ready { background: #fde7c4; }
-.rtg-legend .c-planned { background: #f1f5f9; }
+.rtg-legend .c-planned { background: var(--surface-hover); }
 .rtg-legend .c-missed {
   background: repeating-linear-gradient(45deg, #fcebeb 0 4px, #f7c1c1 4px 6px);
 }
@@ -663,7 +663,7 @@ const drillTo = (trip) => {
 .rtg-day :deep(.wpb) {
   padding: 8px 10px 6px 10px;
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--surface-page);
   transition: background 0.2s;
 }
 .rtg-day :deep(.wpb:hover) { background: var(--brand-primary-light); }
@@ -672,6 +672,6 @@ const drillTo = (trip) => {
   padding: 26px 0;
   text-align: center;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--ink-3);
 }
 </style>

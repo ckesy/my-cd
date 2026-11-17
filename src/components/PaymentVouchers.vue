@@ -115,7 +115,7 @@ watch(
   padding: 24px 0;
   text-align: center;
   font-size: 12.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
 }
 
 .pv-grid {
@@ -132,7 +132,7 @@ watch(
   overflow: hidden;
   border: 1px solid #eef2f7;
   cursor: zoom-in;
-  background: #f8fafc;
+  background: var(--surface-page);
 }
 
 .pv-thumb-err {
@@ -146,8 +146,8 @@ watch(
   font-size: 11px;
   line-height: 1.3;
   text-align: center;
-  color: #94a3b8;
-  background: #f8fafc;
+  color: var(--ink-3);
+  background: var(--surface-page);
   cursor: pointer;
 }
 
@@ -163,7 +163,7 @@ watch(
   gap: 8px;
   padding: 7px 10px;
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--surface-page);
   border: 1px solid #eef2f7;
 }
 
@@ -172,7 +172,7 @@ watch(
   height: 22px;
   border-radius: 5px;
   background: #e2e8f0;
-  color: #475569;
+  color: var(--ink-2);
   font-size: 10px;
   display: flex;
   align-items: center;
@@ -184,7 +184,7 @@ watch(
   flex: 1;
   min-width: 0;
   font-size: 12px;
-  color: #334155;
+  color: var(--ink-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -203,7 +203,7 @@ watch(
 .pv-tip {
   margin-top: 12px;
   font-size: 11.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
   line-height: 1.7;
 }
 </style>

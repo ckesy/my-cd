@@ -523,7 +523,7 @@ function onClosed() {
 <style scoped>
 .ask-body {
   font-size: 13px;
-  color: #334155;
+  color: var(--ink-2);
   line-height: 1.7;
 }
 .mt-ask-dialog .el-dialog__header {
@@ -582,7 +582,7 @@ function onClosed() {
 .sec-lb {
   font-size: 11px;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--ink-3);
   letter-spacing: 0.5px;
   margin: 6px 0 2px;
 }
@@ -602,7 +602,7 @@ function onClosed() {
 }
 .fld :deep(.el-form-item__label) {
   font-size: 12px;
-  color: #64748b;
+  color: var(--ink-3);
   padding-bottom: 2px;
   white-space: nowrap;
 }
@@ -628,8 +628,8 @@ function onClosed() {
 }
 .pos-chip {
   font-size: 12px;
-  color: #475569;
-  background: #f8fafc;
+  color: var(--ink-2);
+  background: var(--surface-page);
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   padding: 4px 10px;
@@ -691,7 +691,7 @@ function onClosed() {
   align-items: center;
   justify-content: center;
   border: 1px dashed #e2b7be;
-  background: #fff;
+  background: var(--surface-card);
   color: #c8102e;
   font-size: 20px;
   cursor: pointer;
@@ -715,8 +715,8 @@ function onClosed() {
   padding: 0 15px;
   border-radius: 7px;
   border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #475569;
+  background: var(--surface-card);
+  color: var(--ink-2);
   font-size: 12.5px;
   cursor: pointer;
 }

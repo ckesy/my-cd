@@ -277,7 +277,7 @@ onMounted(loadData)
   align-items: center;
   gap: 18px;
   padding: 22px 26px;
-  background: linear-gradient(120deg, #FFFFFF 0%, var(--brand-primary-light) 60%, #FFFFFF 100%);
+  background: linear-gradient(120deg, var(--surface-card) 0%, var(--brand-primary-light) 60%, var(--surface-card) 100%);
   border: 1px solid #E2E8F0;
   border-radius: 12px;
   overflow: hidden;
@@ -315,13 +315,13 @@ onMounted(loadData)
   margin: 0 0 4px;
   font-size: 18px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 1px;
 }
 .welcome-text p {
   margin: 0;
   font-size: 13px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 .enter-btn {
@@ -373,7 +373,7 @@ onMounted(loadData)
   gap: 16px;
   padding: 22px;
   border-radius: 12px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
   overflow: hidden;
@@ -400,7 +400,7 @@ onMounted(loadData)
 }
 .stat-card.tone-red    { color: var(--brand-primary); }
 .stat-card.tone-green  { color: #059669; }
-.stat-card.tone-slate  { color: #475569; }
+.stat-card.tone-slate  { color: var(--ink-2); }
 .stat-card.tone-orange { color: #EA580C; }
 
 .stat-shine {
@@ -437,14 +437,14 @@ onMounted(loadData)
 .stat-value {
   font-size: 28px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   font-family: 'Courier New', monospace;
   line-height: 1.1;
   letter-spacing: -0.5px;
 }
 .stat-label {
   font-size: 12.5px;
-  color: #64748B;
+  color: var(--ink-3);
   margin-top: 4px;
   letter-spacing: 0.5px;
 }
@@ -497,7 +497,7 @@ onMounted(loadData)
 }
 .bar-label {
   font-size: 13px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -506,7 +506,7 @@ onMounted(loadData)
 .bar-track {
   position: relative;
   height: 26px;
-  background: #F1F5F9;
+  background: var(--surface-hover);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -563,7 +563,7 @@ onMounted(loadData)
 .recent-item {
   padding: 12px 14px;
   border-radius: 10px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border: 1px solid #E2E8F0;
   opacity: 0;
   animation: recentIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -574,7 +574,7 @@ onMounted(loadData)
   to   { opacity: 1; transform: translateY(0); }
 }
 .recent-item:hover {
-  background: #FFFFFF;
+  background: var(--surface-card);
   border-color: rgba(var(--brand-rgb), 0.35);
   transform: translateX(4px);
   box-shadow: 0 4px 16px rgba(var(--brand-rgb), 0.1);
@@ -588,13 +588,13 @@ onMounted(loadData)
 .recent-plate {
   font-size: 14px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.8px;
 }
 .recent-nick {
   font-size: 11px;
-  color: #64748B;
-  background: #F1F5F9;
+  color: var(--ink-3);
+  background: var(--surface-hover);
   padding: 1px 6px;
   border-radius: 4px;
 }
@@ -603,14 +603,14 @@ onMounted(loadData)
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
   margin-bottom: 4px;
 }
-.meta-item { color: #475569; }
+.meta-item { color: var(--ink-2); }
 .meta-dot { color: #CBD5E1; }
 .recent-vin {
   font-size: 11px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-family: 'Courier New', monospace;
 }
 
@@ -620,7 +620,7 @@ onMounted(loadData)
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-size: 13px;
   padding: 40px 0;
 }

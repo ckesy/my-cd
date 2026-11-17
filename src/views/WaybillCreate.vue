@@ -2558,7 +2558,7 @@ defineExpose({ isDirty })
   overflow-y: auto !important;
   padding: 16px 20px;
   box-sizing: border-box;
-  background: #f8fafc;
+  background: var(--surface-page);
 }
 
 /* 页面头部 */
@@ -2568,7 +2568,7 @@ defineExpose({ isDirty })
   align-items: center;
   margin-bottom: 14px;
   padding: 14px 20px;
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   position: sticky;
@@ -2577,7 +2577,7 @@ defineExpose({ isDirty })
 }
 .page-header h2 {
   margin: 0;
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 800;
   font-size: 18px;
   display: flex;
@@ -2598,10 +2598,10 @@ defineExpose({ isDirty })
 .section-title {
   font-size: 15px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   margin: 16px 0 12px 0;
   padding: 10px 14px;
-  background: linear-gradient(90deg, var(--brand-primary-light) 0%, #ffffff 100%);
+  background: linear-gradient(90deg, var(--brand-primary-light) 0%, var(--surface-card) 100%);
   border-radius: 8px;
   border-left: 4px solid var(--brand-primary);
   line-height: 1.2;
@@ -2614,14 +2614,14 @@ defineExpose({ isDirty })
 .checkin-row {
   margin-bottom: 16px;
   padding: 12px 16px;
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 .checkin-row .el-form-item { margin-bottom: 0; }
 .hint-text {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   margin-left: 12px;
   font-weight: 500;
 }
@@ -2713,7 +2713,7 @@ defineExpose({ isDirty })
   gap: 6px;
   height: 24px;
   padding: 0 14px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1.5px dashed #93C5FD;
   border-radius: 20px;
   color: #2563EB;
@@ -2745,7 +2745,7 @@ defineExpose({ isDirty })
   gap: 6px;
   height: 24px;
   padding: 0 14px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1.5px dashed #FCA5A5;
   border-radius: 20px;
   color: var(--brand-primary);
@@ -2779,7 +2779,7 @@ defineExpose({ isDirty })
   height: 24px;
   border-radius: 20px;
   overflow: hidden;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1.5px solid #FECACA;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -2818,7 +2818,7 @@ defineExpose({ isDirty })
   width: 24px;
   border: none;
   border-left: 1px solid #FECACA;
-  background: #FFFFFF;
+  background: var(--surface-card);
   color: #F87171;
   cursor: pointer;
   transition: all 0.2s;
@@ -2843,7 +2843,7 @@ defineExpose({ isDirty })
   height: 24px;
   border-radius: 20px;
   overflow: hidden;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1.5px solid var(--route-color, var(--brand-primary));
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -2865,7 +2865,7 @@ defineExpose({ isDirty })
   font-family: inherit;
   font-size: 12px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   line-height: 1;
   min-width: 0;
 }
@@ -2890,7 +2890,7 @@ defineExpose({ isDirty })
   white-space: nowrap;
   max-width: 130px;
 }
-.route-badge-main .badge-dot { color: #94A3B8; flex-shrink: 0; }
+.route-badge-main .badge-dot { color: var(--ink-3); flex-shrink: 0; }
 .route-badge-main .badge-plan {
   color: var(--route-color, var(--brand-primary));
   font-family: 'Courier New', monospace;
@@ -2898,7 +2898,7 @@ defineExpose({ isDirty })
 }
 .route-badge-main .badge-edit {
   font-size: 11px;
-  color: #94A3B8;
+  color: var(--ink-3);
   flex-shrink: 0;
 }
 .route-badge-clear {
@@ -2909,7 +2909,7 @@ defineExpose({ isDirty })
   background: color-mix(in srgb, var(--route-color, var(--brand-primary)) 8%, #fff);
   border: none;
   border-left: 1px solid color-mix(in srgb, var(--route-color, var(--brand-primary)) 25%, transparent);
-  color: #94A3B8;
+  color: var(--ink-3);
   cursor: pointer;
   font-size: 11px;
   transition: all 0.2s;
@@ -2997,19 +2997,19 @@ defineExpose({ isDirty })
 }
 .plan-info-item .info-lbl {
   font-size: 11px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 700;
   letter-spacing: 0.3px;
 }
 .plan-info-item .info-val {
   font-size: 14px;
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 800;
   font-family: 'Courier New', monospace;
 }
 .plan-info-item .info-val small {
   font-size: 10px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 600;
   margin-left: 1px;
 }
@@ -3024,8 +3024,8 @@ defineExpose({ isDirty })
   border-radius: 999px;
   font-size: 11px;
   font-weight: 800;
-  color: #64748B;
-  background: #FFFFFF;
+  color: var(--ink-3);
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   letter-spacing: 0.3px;
   flex-shrink: 0;
@@ -3072,7 +3072,7 @@ defineExpose({ isDirty })
 .field-label {
   white-space: nowrap;
   font-size: 13px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 600;
 }
 .required-star {
@@ -3097,12 +3097,12 @@ defineExpose({ isDirty })
   margin: 0 0 10px 0;
   align-items: center;
   padding: 12px 16px;
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 .info-item { display: flex; align-items: center; gap: 6px; font-size: 14px; }
-.info-label { color: #475569; white-space: nowrap; font-weight: 600; }
+.info-label { color: var(--ink-2); white-space: nowrap; font-weight: 600; }
 .info-value {
   font-weight: 800;
   color: var(--brand-primary);
@@ -3182,15 +3182,15 @@ defineExpose({ isDirty })
 .option-plate {
   font-family: 'Courier New', monospace;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   margin-right: 8px;
 }
-.option-org { font-size: 12px; color: #94A3B8; font-weight: 500; }
+.option-org { font-size: 12px; color: var(--ink-3); font-weight: 500; }
 .picker-empty-tip {
   padding: 20px 12px;
   text-align: center;
   font-size: 12.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 /* 底部按钮 */
@@ -3200,7 +3200,7 @@ defineExpose({ isDirty })
   gap: 12px;
   margin-top: 20px;
   padding: 14px 20px;
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
   flex-wrap: wrap;
@@ -3292,7 +3292,7 @@ defineExpose({ isDirty })
   align-items: center;
   gap: 5px;
   font-size: 12.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 500;
   transition: color 0.28s;
   white-space: nowrap;
@@ -3321,13 +3321,13 @@ defineExpose({ isDirty })
 }
 .fence-cta-pickup .fence-cta-action {
   color: var(--brand-primary);
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1px solid #FCA5A5;
   box-shadow: 0 2px 6px rgba(var(--brand-rgb), 0.06);
 }
 .fence-cta-delivery .fence-cta-action {
   color: #2563EB;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1px solid #93C5FD;
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.06);
 }
@@ -3359,7 +3359,7 @@ defineExpose({ isDirty })
 .fence-cta-delivery .plus-bubble { background: #DBEAFE; color: #2563EB; }
 .fence-cta-pickup:hover .plus-bubble,
 .fence-cta-delivery:hover .plus-bubble {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--surface-hover);
   color: #fff;
   transform: rotate(90deg);
 }
@@ -3395,11 +3395,11 @@ defineExpose({ isDirty })
   padding: 18px 24px;
   margin: 0;
   border-bottom: 1px solid #F1F5F9;
-  background: linear-gradient(180deg, #FFFFFF, #FAFBFC);
+  background: linear-gradient(180deg, var(--surface-card), #FAFBFC);
 }
 .route-select-dialog .el-dialog__body {
   padding: 0;
-  background: #F8FAFC;
+  background: var(--surface-page);
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -3408,7 +3408,7 @@ defineExpose({ isDirty })
 }
 .route-select-dialog .el-dialog__footer {
   padding: 14px 24px;
-  background: #fff;
+  background: var(--surface-card);
   border-top: 1px solid #F1F5F9;
   flex-shrink: 0;
 }
@@ -3445,12 +3445,12 @@ defineExpose({ isDirty })
 .rsd-title {
   font-size: 16px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 .rsd-sub {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 500;
   margin-top: 2px;
 }
@@ -3461,7 +3461,7 @@ defineExpose({ isDirty })
 }
 .rsd-search :deep(.el-input__wrapper) {
   border-radius: 10px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   min-height: 36px;
 }
@@ -3470,7 +3470,7 @@ defineExpose({ isDirty })
   box-shadow: 0 0 0 1px #FCA5A5 inset !important;
 }
 .rsd-search :deep(.el-input__wrapper.is-focus) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 1px var(--brand-primary) inset, 0 0 0 3px rgba(var(--brand-rgb), 0.12) !important;
 }
 
@@ -3492,7 +3492,7 @@ defineExpose({ isDirty })
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-size: 13px;
   padding: 60px 20px;
 }
@@ -3506,8 +3506,8 @@ defineExpose({ isDirty })
 }
 @keyframes rdrawerSpin { to { transform: rotate(360deg); } }
 .route-empty .el-icon { font-size: 48px; color: #CBD5E1; }
-.route-empty p { margin: 0; font-size: 14px; color: #334155; font-weight: 700; }
-.route-empty span { font-size: 12.5px; color: #94A3B8; }
+.route-empty p { margin: 0; font-size: 14px; color: var(--ink-2); font-weight: 700; }
+.route-empty span { font-size: 12.5px; color: var(--ink-3); }
 
 /* 列表 */
 .route-list {
@@ -3525,7 +3525,7 @@ defineExpose({ isDirty })
 
 /* 路线卡片 */
 .route-item {
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1.5px solid #E2E8F0;
   border-radius: 12px;
   overflow: hidden;
@@ -3548,7 +3548,7 @@ defineExpose({ isDirty })
   cursor: pointer;
   transition: background 0.2s;
 }
-.route-item-header:hover { background: #F8FAFC; }
+.route-item-header:hover { background: var(--surface-page); }
 .route-item.expanded .route-item-header {
   background: linear-gradient(135deg, #EFF6FF, #F8FAFC);
 }
@@ -3578,7 +3578,7 @@ defineExpose({ isDirty })
 .route-name {
   font-size: 14px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3590,7 +3590,7 @@ defineExpose({ isDirty })
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 .path-point {
   overflow: hidden;
@@ -3601,7 +3601,7 @@ defineExpose({ isDirty })
 }
 .path-point.pickup { color: #2563EB; }
 .path-point.delivery { color: #059669; }
-.path-arrow { font-size: 11px; color: #94A3B8; flex-shrink: 0; }
+.path-arrow { font-size: 11px; color: var(--ink-3); flex-shrink: 0; }
 
 .route-meta {
   display: flex;
@@ -3626,7 +3626,7 @@ defineExpose({ isDirty })
 
 .expand-icon {
   font-size: 14px;
-  color: #94A3B8;
+  color: var(--ink-3);
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .expand-icon.expanded {
@@ -3640,7 +3640,7 @@ defineExpose({ isDirty })
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 10px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border-top: 1px dashed #E2E8F0;
 }
 
@@ -3663,7 +3663,7 @@ defineExpose({ isDirty })
   align-items: stretch;
   gap: 10px;
   padding: 12px 14px;
-  background: #FAFBFC;
+  background: var(--surface-sunken);
   border: 1.5px solid #E2E8F0;
   border-radius: 10px;
   cursor: pointer;
@@ -3684,14 +3684,14 @@ defineExpose({ isDirty })
 }
 .plan-card:hover {
   border-color: var(--plan-color, #FCA5A5);
-  background: #FFFFFF;
+  background: var(--surface-card);
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
 }
 .plan-card:hover::before { opacity: 1; }
 .plan-card.selected {
   border-color: var(--plan-color, #2563EB);
-  background: #FFFFFF;
+  background: var(--surface-card);
   box-shadow: 0 8px 22px color-mix(in srgb, var(--plan-color, #2563EB) 25%, transparent),
               0 0 0 3px color-mix(in srgb, var(--plan-color, #2563EB) 15%, transparent);
 }
@@ -3716,7 +3716,7 @@ defineExpose({ isDirty })
   align-items: center;
   justify-content: center;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
-  background: #FFF;
+  background: var(--surface-card);
 }
 .radio-inner {
   width: 8px;
@@ -3743,7 +3743,7 @@ defineExpose({ isDirty })
 .plan-card-name {
   font-size: 13.5px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 .plan-color-chip {
@@ -3769,19 +3769,19 @@ defineExpose({ isDirty })
   flex-direction: column;
   gap: 2px;
   padding: 6px 8px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1px solid #F1F5F9;
   border-radius: 6px;
 }
 .plan-meta-cell .meta-lbl {
   font-size: 10px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 700;
   letter-spacing: 0.3px;
 }
 .plan-meta-cell .meta-val {
   font-size: 12.5px;
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 800;
   font-family: 'Courier New', monospace;
   display: flex;
@@ -3791,7 +3791,7 @@ defineExpose({ isDirty })
 }
 .plan-meta-cell .meta-val small {
   font-size: 9.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 600;
 }
 
@@ -3809,10 +3809,10 @@ defineExpose({ isDirty })
   gap: 4px;
   padding: 2px 8px 2px 3px;
   border-radius: 999px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border: 1px solid #E2E8F0;
   font-size: 11px;
-  color: #475569;
+  color: var(--ink-2);
   font-weight: 600;
   max-width: 160px;
   overflow: hidden;
@@ -3838,8 +3838,8 @@ defineExpose({ isDirty })
   padding: 16px;
   text-align: center;
   font-size: 12.5px;
-  color: #94A3B8;
-  background: #FAFBFC;
+  color: var(--ink-3);
+  background: var(--surface-sunken);
   border-radius: 8px;
   border: 1px dashed #E2E8F0;
   grid-column: 1 / -1;
@@ -3858,11 +3858,11 @@ defineExpose({ isDirty })
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #475569;
+  color: var(--ink-2);
   flex: 1;
   min-width: 0;
 }
-.rsd-selected.empty { color: #94A3B8; }
+.rsd-selected.empty { color: var(--ink-3); }
 .rsd-selected .selected-chip {
   width: 10px;
   height: 10px;
@@ -3876,7 +3876,7 @@ defineExpose({ isDirty })
   white-space: nowrap;
 }
 .rsd-selected .selected-text b {
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 800;
 }
 .rsd-btns {
@@ -3910,7 +3910,7 @@ defineExpose({ isDirty })
 .recurring-tip {
   margin-left: 12px;
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 .shift-plan-btn {
   flex-shrink: 0;
@@ -3943,7 +3943,7 @@ defineExpose({ isDirty })
 
 .archive-opt {
   font-size: 13px;
-  color: #1E293B;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3951,7 +3951,7 @@ defineExpose({ isDirty })
 
 .archive-opt-sub {
   font-size: 11.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   flex: 0 0 auto;
 }
 
@@ -3963,7 +3963,7 @@ defineExpose({ isDirty })
 .contact-empty-tip {
   padding: 14px 12px;
   font-size: 12.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   text-align: center;
 }
 /* ===== 从客户档案填充弹窗 ===== */
@@ -4018,14 +4018,14 @@ defineExpose({ isDirty })
   margin-bottom: 12px;
   font-size: 13.5px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .customer-fill-dialog .cf-side-sub {
   margin-left: auto;
   font-size: 11.5px;
   font-weight: 400;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .customer-fill-dialog .cf-dot {
@@ -4057,7 +4057,7 @@ defineExpose({ isDirty })
 .customer-fill-dialog .cf-form .el-form-item__label,
 .cargo-fill-dialog .cf-form .el-form-item__label {
   font-size: 12.5px;
-  color: #475569;
+  color: var(--ink-2);
   font-weight: 600;
 }
 
@@ -4070,7 +4070,7 @@ defineExpose({ isDirty })
 }
 
 .customer-fill-dialog .cf-phone-lbl {
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .customer-fill-dialog .cf-phone-val {
@@ -4091,7 +4091,7 @@ defineExpose({ isDirty })
   gap: 8px 14px;
   padding: 12px 14px;
   border-radius: 10px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border: 1px solid #EEF2F7;
 }
 
@@ -4108,12 +4108,12 @@ defineExpose({ isDirty })
 
 .cargo-fill-dialog .cfp-lbl {
   font-size: 11.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .cargo-fill-dialog .cfp-val {
   font-size: 13px;
-  color: #1E293B;
+  color: var(--ink);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4121,14 +4121,14 @@ defineExpose({ isDirty })
 }
 
 .cargo-fill-dialog .cfp-val.strong {
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .cargo-fill-dialog .cfp-val.strong small {
   font-weight: 400;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .cargo-fill-dialog .cfp-val.price {

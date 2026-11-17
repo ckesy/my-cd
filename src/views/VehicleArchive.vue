@@ -772,7 +772,7 @@ onBeforeUnmount(() => {
 
           <div class="table-wrap">
             <el-table ref="tableRef" :data="tableData" v-loading="loading" element-loading-text="加载中…"
-              element-loading-background="rgba(255,255,255,0.88)" border stripe :size="tableSize" height="100%"
+              element-loading-background="var(--glass-panel)" border stripe :size="tableSize" height="100%"
               class="custom-table" @selection-change="handleSelectionChange">
               <el-table-column v-if="batchDeleteMode" type="selection" width="46" align="center" />
 
@@ -1119,12 +1119,12 @@ onBeforeUnmount(() => {
   max-height: calc(100vh - 101px);
   box-sizing: border-box;
   overflow: hidden;
-  background: #F8FAFC;
+  background: var(--surface-page);
   font-size: 13px;
 }
 
 .search-card {
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   padding: 12px 16px;
@@ -1141,7 +1141,7 @@ onBeforeUnmount(() => {
 .search-row :deep(.el-input__wrapper),
 .search-row :deep(.el-select__wrapper) {
   border-radius: 6px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all 0.25s;
   min-height: 32px;
@@ -1155,7 +1155,7 @@ onBeforeUnmount(() => {
 
 .search-row :deep(.el-input__wrapper.is-focus),
 .search-row :deep(.el-select__wrapper.is-focused) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.15), 0 0 0 1px var(--brand-primary) inset !important;
 }
 
@@ -1177,8 +1177,8 @@ onBeforeUnmount(() => {
 .btn-outline {
   border-radius: 6px !important;
   border-color: #CBD5E1 !important;
-  color: #334155;
-  background: #fff !important;
+  color: var(--ink-2);
+  background: var(--surface-card) !important;
   transition: all 0.25s;
 }
 
@@ -1224,7 +1224,7 @@ onBeforeUnmount(() => {
 .table-card {
   flex: 1;
   min-height: 0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   padding: 12px 16px;
@@ -1245,7 +1245,7 @@ onBeforeUnmount(() => {
 
 .total-hint {
   font-size: 13px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 .total-hint b {
@@ -1269,9 +1269,9 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   border: 1px solid #E2E8F0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 6px;
-  color: #64748B;
+  color: var(--ink-3);
   font-size: 15px;
   cursor: pointer;
   transition: all 0.25s;
@@ -1311,8 +1311,8 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-table th.el-table__cell) {
-  background: #F8FAFC !important;
-  color: #0F172A;
+  background: var(--surface-page) !important;
+  color: var(--ink);
   font-weight: 700;
   font-size: 12.5px;
   border-bottom: 1px solid #E2E8F0;
@@ -1320,7 +1320,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-table td.el-table__cell) {
-  color: #1E293B;
+  color: var(--ink);
   font-size: 12.5px;
   font-weight: 500;
   border-bottom: 1px solid #F1F5F9;
@@ -1345,25 +1345,25 @@ onBeforeUnmount(() => {
 .plate-text {
   font-size: 12.5px;
   font-weight: 500;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.2px;
   white-space: nowrap;
 }
 
 .mono-text {
   font-family: 'Courier New', Courier, monospace;
-  color: #475569;
+  color: var(--ink-2);
   font-size: 12px;
   font-weight: 500;
 }
 
 .text-content {
-  color: #334155;
+  color: var(--ink-2);
   font-size: 12.5px;
 }
 
 .time-text {
-  color: #475569;
+  color: var(--ink-2);
   font-family: 'Courier New', Courier, monospace;
   font-size: 12px;
   font-weight: 500;
@@ -1442,7 +1442,7 @@ onBeforeUnmount(() => {
 .empty-state p {
   font-size: 14px;
   margin: 0;
-  color: #64748B;
+  color: var(--ink-3);
   font-weight: 600;
 }
 
@@ -1462,14 +1462,14 @@ onBeforeUnmount(() => {
 
 .total-text {
   font-size: 13px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 600;
 }
 
 :deep(.custom-pagination .el-pager li) {
   transition: all 0.2s;
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
   min-width: 26px;
   height: 26px;
   line-height: 26px;
@@ -1551,7 +1551,7 @@ onBeforeUnmount(() => {
 
 :deep(.va-dialog .el-dialog__title) {
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   font-size: 15px;
 }
 
@@ -1561,7 +1561,7 @@ onBeforeUnmount(() => {
 
 :deep(.va-dialog .el-dialog__footer) {
   padding: 14px 22px;
-  background: #FAFBFC;
+  background: var(--surface-sunken);
   border-top: 1px solid #F1F5F9;
 }
 
@@ -1598,7 +1598,7 @@ onBeforeUnmount(() => {
 .step-title {
   font-size: 13px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .step-body {
@@ -1616,7 +1616,7 @@ onBeforeUnmount(() => {
 
 .step-tip {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .import-upload :deep(.el-upload) {
@@ -1626,7 +1626,7 @@ onBeforeUnmount(() => {
 .import-upload :deep(.el-upload-dragger) {
   border-radius: 8px;
   border: 1.5px dashed #CBD5E1;
-  background: #F8FAFC;
+  background: var(--surface-page);
   padding: 18px 0;
   transition: all 0.25s;
 }
@@ -1645,7 +1645,7 @@ onBeforeUnmount(() => {
 
 .upload-icon {
   font-size: 32px;
-  color: #94A3B8;
+  color: var(--ink-3);
   transition: color 0.25s;
 }
 
@@ -1655,12 +1655,12 @@ onBeforeUnmount(() => {
 
 .upload-text {
   font-size: 13px;
-  color: #475569;
+  color: var(--ink-2);
 }
 
 .upload-filename {
   font-size: 12px;
-  color: #475569;
+  color: var(--ink-2);
   font-family: 'Courier New', monospace;
 }
 
@@ -1697,7 +1697,7 @@ onBeforeUnmount(() => {
 .detail-title {
   font-size: 16px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 
@@ -1718,7 +1718,7 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px;
-  background: #F1F5F9;
+  background: var(--surface-hover);
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid #F1F5F9;
@@ -1729,26 +1729,26 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: #fff;
+  background: var(--surface-card);
   transition: background 0.2s;
 }
 
 .detail-item:hover {
-  background: #FAFBFC;
+  background: var(--surface-sunken);
 }
 
 .detail-item .label {
   flex-shrink: 0;
   width: 90px;
   font-size: 13px;
-  color: #64748B;
+  color: var(--ink-3);
   font-weight: 600;
 }
 
 .detail-item .value {
   flex: 1;
   font-size: 13.5px;
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 500;
   word-break: break-all;
 }
@@ -1782,7 +1782,7 @@ onBeforeUnmount(() => {
   margin-bottom: 14px;
   font-size: 13.5px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 
@@ -1804,33 +1804,33 @@ onBeforeUnmount(() => {
 
 .edit-form :deep(.el-form-item__label) {
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
   font-size: 13px;
 }
 
 .edit-form :deep(.el-input__wrapper),
 .edit-form :deep(.el-select__wrapper) {
   border-radius: 8px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all 0.25s;
 }
 
 .edit-form :deep(.el-input__wrapper:hover),
 .edit-form :deep(.el-select__wrapper:hover) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.4) inset !important;
 }
 
 .edit-form :deep(.el-input__wrapper.is-focus),
 .edit-form :deep(.el-select__wrapper.is-focused) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 1px var(--brand-primary) inset, 0 0 0 3px rgba(var(--brand-rgb), 0.1) !important;
 }
 
 .clear-icon {
   cursor: pointer;
-  color: #94A3B8;
+  color: var(--ink-3);
   transition: color 0.2s;
 }
 
@@ -1855,7 +1855,7 @@ onBeforeUnmount(() => {
   padding: 4px;
   border: 1px solid #F1F5F9;
   border-radius: 8px;
-  background: #FAFBFC;
+  background: var(--surface-sunken);
 }
 
 .driver-checkbox-group {
@@ -1875,7 +1875,7 @@ onBeforeUnmount(() => {
 
 .driver-checkbox-group :deep(.el-checkbox__label) {
   font-size: 13px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 500;
 }
 
@@ -1896,7 +1896,7 @@ onBeforeUnmount(() => {
 
 .driver-empty {
   text-align: center;
-  color: #94A3B8;
+  color: var(--ink-3);
   padding: 30px 0;
   font-size: 13px;
 }
@@ -1921,14 +1921,14 @@ onBeforeUnmount(() => {
 }
 
 .action-btn-footer.ghost {
-  background: #F1F5F9;
-  color: #475569;
+  background: var(--surface-hover);
+  color: var(--ink-2);
   border: 1px solid #E2E8F0;
 }
 
 .action-btn-footer.ghost:hover {
   background: #E2E8F0;
-  color: #1E293B;
+  color: var(--ink);
   transform: translateY(-2px);
 }
 
@@ -1949,7 +1949,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.el-loading-mask) {
-  background: rgba(255, 255, 255, 0.88) !important;
+  background: var(--glass-panel) !important;
   backdrop-filter: blur(3px);
   transition: opacity 0.3s;
 }
@@ -2000,7 +2000,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.el-loading-text) {
-  color: #64748B;
+  color: var(--ink-3);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 1.5px;
@@ -2044,7 +2044,7 @@ body {
   box-shadow: 0 10px 32px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.12) !important;
   border-radius: 10px !important;
   overflow: hidden;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 
 .column-setting-popper.el-popover.el-popper {
@@ -2053,7 +2053,7 @@ body {
 
 .density-dropdown-red .el-dropdown-menu {
   padding: 4px !important;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 
 .density-dropdown-red .el-dropdown-menu__item {
@@ -2092,7 +2092,7 @@ body {
 
 .column-setting {
   padding: 0;
-  background: #FFFFFF;
+  background: var(--surface-card);
 }
 
 .column-setting-header {
@@ -2251,10 +2251,10 @@ body {
    ============================================================ */
 .edit-tabs { display: flex; gap: 6px; margin: 0 0 14px; border-bottom: 1px solid #EEF2F7; padding-bottom: 10px; }
 .edit-tabs span {
-  position: relative; font-size: 13px; font-weight: 700; color: #64748B;
+  position: relative; font-size: 13px; font-weight: 700; color: var(--ink-3);
   padding: 6px 13px; border-radius: 8px; cursor: pointer; user-select: none;
 }
-.edit-tabs span:hover { background: #F8FAFC; }
+.edit-tabs span:hover { background: var(--surface-page); }
 .edit-tabs span.on { background: #FDF2F4; color: #C8102E; }
 .edit-tabs span .dot {
   display: inline-flex; align-items: center; justify-content: center;
@@ -2262,7 +2262,7 @@ body {
   font-size: 10px; font-weight: 800; margin-left: 5px; padding: 0 4px; vertical-align: 1px;
 }
 .cert-pane { padding-bottom: 4px; }
-.cert-loading { font-size: 12px; color: #94A3B8; padding: 6px 0 12px; }
+.cert-loading { font-size: 12px; color: var(--ink-3); padding: 6px 0 12px; }
 .cert-block {
   border: 1px solid #EEF2F7; border-radius: 10px;
   padding: 11px 13px 4px; margin-bottom: 10px; background: #FCFDFE;
@@ -2271,18 +2271,18 @@ body {
 .cert-tag { font-size: 11.5px; font-weight: 800; padding: 2px 8px; border-radius: 5px; }
 .cert-state { font-size: 12px; font-weight: 700; }
 .cert-switch { margin-left: auto; display: flex; align-items: center; gap: 6px; }
-.cert-switch em { font-style: normal; font-size: 11.5px; color: #94A3B8; font-weight: 600; }
+.cert-switch em { font-style: normal; font-size: 11.5px; color: var(--ink-3); font-weight: 600; }
 .cert-days { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 2px 0 9px; }
-.cert-days-lb { font-size: 12px; color: #94A3B8; font-weight: 600; margin-right: 3px; }
+.cert-days-lb { font-size: 12px; color: var(--ink-3); font-weight: 600; margin-right: 3px; }
 .cert-chip {
   height: 24px; padding: 0 10px; border-radius: 12px; border: 1px solid #E2E8F0;
-  background: #fff; font-size: 11.5px; font-weight: 700; color: #64748B;
+  background: var(--surface-card); font-size: 11.5px; font-weight: 700; color: var(--ink-3);
   display: inline-flex; align-items: center; cursor: pointer;
 }
 .cert-chip.on { background: #C8102E; border-color: #C8102E; color: #fff; }
-.cert-tip { font-size: 11.5px; color: #94A3B8; line-height: 1.7; padding: 2px 0 6px; }
+.cert-tip { font-size: 11.5px; color: var(--ink-3); line-height: 1.7; padding: 2px 0 6px; }
 .cert-pane :deep(.el-form-item) { margin-bottom: 12px; }
-.cert-pane :deep(.el-form-item__label) { font-size: 12.5px; color: #64748B; }
+.cert-pane :deep(.el-form-item__label) { font-size: 12.5px; color: var(--ink-3); }
 
 /* ============================================================
    ⭐ 编辑弹窗内容变多（基本信息 + 6 组证件）

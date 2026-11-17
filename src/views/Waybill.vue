@@ -1332,7 +1332,7 @@ onBeforeUnmount(() => {
   --num-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue',
     'PingFang SC', 'HarmonyOS Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', Arial, sans-serif;
   padding: 6px 16px 16px;
-  background-color: #F8FAFC;
+  background-color: var(--surface-page);
   height: calc(100vh - 101px);
   max-height: calc(100vh - 101px);
   box-sizing: border-box;
@@ -1341,12 +1341,12 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 12px;
   font-size: 13px;
-  color: #1E293B;
+  color: var(--ink);
 }
 
 /* ========== 筛选卡片 ========== */
 .filter-card {
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   padding: 14px 16px;
@@ -1370,13 +1370,13 @@ onBeforeUnmount(() => {
   padding: 5px 12px;
   border: 1px solid transparent;
   border-radius: 18px;
-  background: #F1F5F9;
+  background: var(--surface-hover);
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-family: inherit;
   font-size: 12.5px;
   font-weight: 600;
-  color: #64748B;
+  color: var(--ink-3);
   line-height: 1;
   white-space: nowrap;
 }
@@ -1411,7 +1411,7 @@ onBeforeUnmount(() => {
   font-size: 11px;
   font-weight: 700;
   font-family: 'Courier New', monospace;
-  color: #64748B;
+  color: var(--ink-3);
   transition: all 0.25s;
   line-height: 1;
 }
@@ -1420,7 +1420,7 @@ onBeforeUnmount(() => {
   color: var(--brand-primary);
 }
 .stat-pill.active .stat-count {
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, .24);
   color: #fff;
 }
 
@@ -1501,10 +1501,10 @@ onBeforeUnmount(() => {
 }
 .mine-n.zero {
   background: rgba(100, 116, 139, 0.14);
-  color: #64748B;
+  color: var(--ink-3);
 }
 .mine-chip.on .mine-n {
-  background: rgba(255, 255, 255, 0.26);
+  background: #D97706;
   color: #fff;
 }
 
@@ -1520,7 +1520,7 @@ onBeforeUnmount(() => {
 .search-row :deep(.el-input__wrapper),
 .search-row :deep(.el-select__wrapper) {
   border-radius: 8px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all 0.25s;
   min-height: 32px;
@@ -1532,7 +1532,7 @@ onBeforeUnmount(() => {
 }
 .search-row :deep(.el-input__wrapper.is-focus),
 .search-row :deep(.el-select__wrapper.is-focused) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.15), 0 0 0 1px var(--brand-primary) inset !important;
 }
 .search-btns {
@@ -1559,8 +1559,8 @@ onBeforeUnmount(() => {
 :deep(.btn-primary:hover) { background-color: #a00d24; border-color: #a00d24; }
 :deep(.btn-outline) {
   border-color: #CBD5E1;
-  color: #334155;
-  background: #fff;
+  color: var(--ink-2);
+  background: var(--surface-card);
 }
 :deep(.btn-outline:hover) {
   border-color: var(--brand-primary);
@@ -1595,7 +1595,7 @@ onBeforeUnmount(() => {
 .table-card {
   flex: 1;
   min-height: 0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   padding: 12px 16px;
@@ -1631,12 +1631,12 @@ onBeforeUnmount(() => {
 .toolbar-title {
   font-size: 15px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 .toolbar-total {
   font-size: 12.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 500;
   padding-left: 8px;
   border-left: 1px solid #E2E8F0;
@@ -1657,9 +1657,9 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   border: 1px solid #E2E8F0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 8px;
-  color: #64748B;
+  color: var(--ink-3);
   font-size: 15px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1696,15 +1696,15 @@ onBeforeUnmount(() => {
   -moz-osx-font-smoothing: grayscale;
 }
 :deep(.custom-table th.el-table__cell) {
-  background: #F8FAFC !important;
-  color: #0F172A;
+  background: var(--surface-page) !important;
+  color: var(--ink);
   font-weight: 700;
   font-size: 12.5px;
   border-bottom: 1px solid #E2E8F0;
   padding: 9px 0;
 }
 :deep(.custom-table td.el-table__cell) {
-  color: #1E293B;
+  color: var(--ink);
   font-size: 12.5px;
   font-weight: 500;
   border-bottom: 1px solid #F1F5F9;
@@ -1717,7 +1717,7 @@ onBeforeUnmount(() => {
   background: var(--brand-primary-light) !important;
 }
 :deep(.custom-table .el-table__body tr.el-table__row--striped td.el-table__cell) {
-  background: #FAFBFC;
+  background: var(--surface-sunken);
 }
 
 /* 运单编号 cell：整列居中（编号 + 任务名称一起居中） */
@@ -1754,7 +1754,7 @@ onBeforeUnmount(() => {
   font-size: 11.5px;
   font-weight: 500;
   letter-spacing: 0.2px;
-  color: #94A3B8;
+  color: var(--ink-3);
   line-height: 1.3;
   margin-top: 1px;
 }
@@ -1766,13 +1766,13 @@ onBeforeUnmount(() => {
 .rec-trip-hint {
   margin-left: 6px;
   font-size: 11px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 /* 任务名称 = 主信息（用户 2026-10-19：名称比编号重要，主副对调） */
 .task-title {
   font-size: 13.5px;
   font-weight: 600;
-  color: #0F172A;
+  color: var(--ink);
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
@@ -1829,7 +1829,7 @@ onBeforeUnmount(() => {
   font-feature-settings: 'tnum' 1;
   font-size: 12.5px;
   letter-spacing: 0.2px;
-  color: #475569;
+  color: var(--ink-2);
 }
 .freight-text {
   color: var(--brand-primary);
@@ -1849,7 +1849,7 @@ onBeforeUnmount(() => {
   font-size: 11.5px;
 }
 .text-content {
-  color: #334155;
+  color: var(--ink-2);
   font-size: 12.5px;
 }
 .text-muted {
@@ -1860,7 +1860,7 @@ onBeforeUnmount(() => {
 /* 展开行 */
 .expand-content {
   padding: 8px 0;
-  background: #F8FAFC;
+  background: var(--surface-page);
 }
 /* ⭐ 一单多司机/多车（分车承运）：展开明细**自带表头**，和外层表格的列解耦
    ⚠️ 别再用「固定像素的假列」去对齐外层表头：外层是 min-width 自适应列宽，凑不齐。 */
@@ -1869,7 +1869,7 @@ onBeforeUnmount(() => {
   border: 1px solid #e8edf3;
   border-radius: 8px;
   overflow: hidden;
-  background: #ffffff;
+  background: var(--surface-card);
 }
 .leg-table-head {
   display: flex;
@@ -1885,7 +1885,7 @@ onBeforeUnmount(() => {
 }
 .leg-table-sub {
   font-size: 11.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
 }
 .leg-row {
   display: grid;
@@ -1894,26 +1894,26 @@ onBeforeUnmount(() => {
   gap: 8px;
   padding: 6px 12px;
   font-size: 12px;
-  color: #475569;
+  color: var(--ink-2);
   border-top: 1px solid #f1f5f9;
 }
 .leg-row-head {
-  background: #f8fafc;
-  color: #94a3b8;
+  background: var(--surface-page);
+  color: var(--ink-3);
 }
 .leg-name {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .leg-qty {
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink);
 }
 .leg-time {
-  color: #64748b;
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
 .leg-status {
@@ -1939,7 +1939,7 @@ onBeforeUnmount(() => {
   padding: 6px 0;
   border-bottom: 1px dashed #E2E8F0;
   min-height: 32px;
-  background: #F8FAFC;
+  background: var(--surface-page);
 }
 .sub-row:last-child { border-bottom: none; }
 .sub-cell {
@@ -1956,7 +1956,7 @@ onBeforeUnmount(() => {
 }
 .expand-empty {
   padding: 12px 16px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-size: 12.5px;
   text-align: center;
 }
@@ -1976,7 +1976,7 @@ onBeforeUnmount(() => {
    ⭐ 常驻任务高亮：左侧红色色条 + 淡红底 + 徽标，与普通运单强区分
    ============================================================ */
 :deep(.el-table__row.is-recurring) {
-  background: #FFFBF3;
+  background: var(--row-recurring-bg, #FFFBF3);
 }
 :deep(.el-table__row.is-recurring td:first-child) {
   position: relative;
@@ -1992,7 +1992,7 @@ onBeforeUnmount(() => {
   
 }
 :deep(.el-table__row.is-recurring:hover > td.el-table__cell) {
-  background: #FFF6E5 !important;
+  background: var(--row-recurring-hover, #FFF6E5) !important;
 }
 .recurring-badge {
   display: inline-block;
@@ -2073,12 +2073,12 @@ onBeforeUnmount(() => {
 .empty-state p {
   font-size: 14px;
   margin: 0;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 700;
 }
 .empty-tip {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 /* ========== 分页 ========== */
@@ -2092,13 +2092,13 @@ onBeforeUnmount(() => {
 }
 .total-text {
   font-size: 13px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 600;
 }
 :deep(.custom-pagination .el-pager li) {
   transition: all 0.2s;
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
   min-width: 26px;
   height: 26px;
   line-height: 26px;
@@ -2178,11 +2178,11 @@ html, body {
   box-shadow: 0 10px 32px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.12) !important;
   border-radius: 10px !important;
   overflow: hidden;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 .density-dropdown-red .el-dropdown-menu {
   padding: 4px !important;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 .density-dropdown-red .el-dropdown-menu__item {
   font-size: 13px !important;
@@ -2216,11 +2216,11 @@ html, body {
   box-shadow: 0 10px 32px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.12) !important;
   border-radius: 10px !important;
   overflow: hidden;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
   padding: 0 !important;
 }
 .column-setting-popper .el-popover__title { display: none; }
-.column-setting { padding: 0; background: #FFFFFF; }
+.column-setting { padding: 0; background: var(--surface-card); }
 .column-setting-header {
   display: flex;
   align-items: center;
@@ -2338,7 +2338,7 @@ html, body {
 .fee-total {
   font-size: 12.5px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: -.2px;
 }
 

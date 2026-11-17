@@ -120,7 +120,7 @@
           <!-- 表格 -->
           <div class="table-wrap">
             <el-table :data="tableData" border stripe :size="tableSize" v-loading="loading" element-loading-text="加载中…"
-              element-loading-background="rgba(255,255,255,0.88)" height="100%" class="custom-table">
+              element-loading-background="var(--glass-panel)" height="100%" class="custom-table">
               <template v-for="col in visibleColumns" :key="col.prop">
                 <!-- 角色名称 -->
                 <el-table-column v-if="col.prop === 'name'" prop="name" :label="col.label" :min-width="col.minWidth"
@@ -780,7 +780,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .role-page {
   padding: 6px 16px 16px;
-  background-color: #F8FAFC;
+  background-color: var(--surface-page);
   height: calc(100vh - 101px);
   max-height: calc(100vh - 101px);
   box-sizing: border-box;
@@ -789,11 +789,11 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 12px;
   font-size: 13px;
-  color: #1E293B;
+  color: var(--ink);
 }
 
 .search-card {
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   padding: 14px 16px;
@@ -816,7 +816,7 @@ onBeforeUnmount(() => {
 .field-label {
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
   white-space: nowrap;
 }
 
@@ -849,8 +849,8 @@ onBeforeUnmount(() => {
 
 :deep(.btn-outline) {
   border-color: #CBD5E1;
-  color: #334155;
-  background: #fff;
+  color: var(--ink-2);
+  background: var(--surface-card);
 }
 
 :deep(.btn-outline:hover) {
@@ -861,7 +861,7 @@ onBeforeUnmount(() => {
 
 .search-row :deep(.el-input__wrapper) {
   border-radius: 8px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   min-height: 32px;
 }
@@ -872,7 +872,7 @@ onBeforeUnmount(() => {
 }
 
 .search-row :deep(.el-input__wrapper.is-focus) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.15), 0 0 0 1px var(--brand-primary) inset !important;
 }
 
@@ -911,7 +911,7 @@ onBeforeUnmount(() => {
 .table-card {
   flex: 1;
   min-height: 0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   padding: 12px 16px;
@@ -957,13 +957,13 @@ onBeforeUnmount(() => {
 .toolbar-title {
   font-size: 15px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 
 .toolbar-total {
   font-size: 12.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 500;
   padding-left: 8px;
   border-left: 1px solid #E2E8F0;
@@ -976,9 +976,9 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   border: 1px solid #E2E8F0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 8px;
-  color: #64748B;
+  color: var(--ink-3);
   font-size: 15px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1024,8 +1024,8 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-table th.el-table__cell) {
-  background: #F8FAFC !important;
-  color: #0F172A;
+  background: var(--surface-page) !important;
+  color: var(--ink);
   font-weight: 700;
   font-size: 12.5px;
   border-bottom: 1px solid #E2E8F0;
@@ -1033,7 +1033,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-table td.el-table__cell) {
-  color: #1E293B;
+  color: var(--ink);
   font-size: 12.5px;
   font-weight: 500;
   border-bottom: 1px solid #F1F5F9;
@@ -1044,7 +1044,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-table .el-table__body tr.el-table__row--striped td.el-table__cell) {
-  background: #FAFBFC;
+  background: var(--surface-sunken);
 }
 
 .name-wrap {
@@ -1052,7 +1052,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding: 3px 10px 3px 8px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -1078,7 +1078,7 @@ onBeforeUnmount(() => {
 .name-text {
   font-size: 13px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 
@@ -1174,11 +1174,11 @@ onBeforeUnmount(() => {
 .time-text {
   font-family: 'Courier New', monospace;
   font-size: 12px;
-  color: #475569;
+  color: var(--ink-2);
 }
 
 .text-content {
-  color: #334155;
+  color: var(--ink-2);
   font-size: 12.5px;
 }
 
@@ -1203,7 +1203,7 @@ onBeforeUnmount(() => {
   height: 26px;
   border-radius: 13px;
   border: 1px solid;
-  background: #fff;
+  background: var(--surface-card);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -1252,9 +1252,9 @@ onBeforeUnmount(() => {
 }
 
 .op-delete {
-  color: #64748B;
+  color: var(--ink-3);
   border-color: #E2E8F0;
-  background: #fff;
+  background: var(--surface-card);
 }
 
 .op-delete:hover {
@@ -1294,13 +1294,13 @@ onBeforeUnmount(() => {
 .empty-state p {
   font-size: 14px;
   margin: 0;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 700;
 }
 
 .empty-tip {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .pagination-wrapper {
@@ -1314,14 +1314,14 @@ onBeforeUnmount(() => {
 
 .total-text {
   font-size: 13px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 600;
 }
 
 :deep(.custom-pagination .el-pager li) {
   transition: all 0.2s;
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
   min-width: 26px;
   height: 26px;
   line-height: 26px;
@@ -1382,7 +1382,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 500;
 }
 
@@ -1408,8 +1408,8 @@ onBeforeUnmount(() => {
   border-radius: 6px;
   font-size: 12px;
   flex-shrink: 0;
-  background: #F1F5F9;
-  color: #64748B;
+  background: var(--surface-hover);
+  color: var(--ink-3);
 }
 
 .org-icon.root {
@@ -1421,7 +1421,7 @@ onBeforeUnmount(() => {
 .org-name {
   flex: 1;
   font-size: 14px;
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1487,15 +1487,15 @@ onBeforeUnmount(() => {
   display: flex; align-items: center; gap: 8px;
   flex-wrap: wrap; line-height: 1.6;
 }
-.preset-label { font-size: 11.5px; color: #94A3B8; }
+.preset-label { font-size: 11.5px; color: var(--ink-3); }
 .preset-chip {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 12px; color: #475569;
-  background: #F8FAFC; border: 1px solid #E6ECF3;
+  font-size: 12px; color: var(--ink-2);
+  background: var(--surface-page); border: 1px solid #E6ECF3;
   border-radius: 7px; padding: 4px 11px;
   cursor: pointer; transition: .15s; user-select: none;
 }
-.preset-chip:hover { border-color: #CBD5E1; color: #0F172A; background: #fff; }
+.preset-chip:hover { border-color: #CBD5E1; color: var(--ink); background: var(--surface-card); }
 .preset-chip.on {
   background: #FFF7F8; border-color: var(--brand-primary); color: #A00D24; font-weight: 700;
 }
@@ -1513,7 +1513,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 10px 32px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.12) !important;
   border-radius: 10px !important;
   overflow: hidden;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 
 .density-dropdown-red .el-dropdown-menu {
@@ -1550,7 +1550,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 10px 32px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.12) !important;
   border-radius: 10px !important;
   overflow: hidden;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
   padding: 0 !important;
 }
 
@@ -1694,13 +1694,13 @@ onBeforeUnmount(() => {
 
 .delete-confirm-box .el-message-box__title {
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   font-size: 16px;
 }
 
 .delete-confirm-box .el-message-box__content {
   font-size: 14px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 500;
 }
 
@@ -1716,30 +1716,30 @@ onBeforeUnmount(() => {
   padding: 18px 24px;
   margin: 0;
   border-bottom: 1px solid #F1F5F9;
-  background: linear-gradient(180deg, #FFFFFF, #FAFBFC);
+  background: linear-gradient(180deg, var(--surface-card), #FAFBFC);
 }
 
 .role-form-dialog .el-dialog__title {
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   font-size: 16px;
   letter-spacing: 0.3px;
 }
 
 .role-form-dialog .el-dialog__body {
   padding: 22px 26px;
-  background: #fff;
+  background: var(--surface-card);
 }
 
 .role-form-dialog .el-dialog__footer {
   padding: 14px 24px;
-  background: #FAFBFC;
+  background: var(--surface-sunken);
   border-top: 1px solid #F1F5F9;
 }
 
 .role-form-dialog .el-form-item__label {
   font-weight: 700;
-  color: #334155;
+  color: var(--ink-2);
   font-size: 13px;
 }
 
@@ -1747,7 +1747,7 @@ onBeforeUnmount(() => {
 .role-form-dialog .el-textarea__inner,
 .role-form-dialog .el-select__wrapper {
   border-radius: 10px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all 0.25s;
 }
@@ -1755,14 +1755,14 @@ onBeforeUnmount(() => {
 .role-form-dialog .el-input__wrapper:hover,
 .role-form-dialog .el-textarea__inner:hover,
 .role-form-dialog .el-select__wrapper:hover {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.35) inset !important;
 }
 
 .role-form-dialog .el-input__wrapper.is-focus,
 .role-form-dialog .el-textarea__inner:focus,
 .role-form-dialog .el-select__wrapper.is-focused {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 1px var(--brand-primary) inset, 0 0 0 3px rgba(var(--brand-rgb), 0.12) !important;
 }
 /* ============================================================
@@ -1777,7 +1777,7 @@ onBeforeUnmount(() => {
   line-height: 40px;
   padding: 0 14px;
   font-size: 14px;
-  color: #1E293B;
+  color: var(--ink);
   font-weight: 500;
   border-radius: 8px;
   transition: all 0.2s;

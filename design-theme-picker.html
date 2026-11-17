@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>修改主题色 · 入口方案 P1-P4</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #3A4049;
+    font-family: system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    overflow: hidden;
+  }
+
+  /* ---------- 顶部切换条 ---------- */
+  .bar {
+    width: 100%; height: 52px; flex: 0 0 52px;
+    display: flex; align-items: center; gap: 18px;
+    padding: 0 22px; background: #24292F;
+    color: #E6EDF5;
+  }
+  .bar-title { font-size: 13px; font-weight: 600; letter-spacing: .4px; }
+  .bar-title span { color: #7E8DA4; font-weight: 400; margin-left: 8px; font-size: 12px; }
+  .bar-tabs { display: flex; gap: 6px; margin-left: auto; }
+  .bar-tabs button {
+    height: 30px; padding: 0 14px; border-radius: 8px; cursor: pointer;
+    background: transparent; border: 1px solid #3B434D; color: #A9B7C9;
+    font-size: 12.5px; font-family: inherit;
+  }
+  .bar-tabs button:hover { border-color: #5A6470; color: #fff; }
+  .bar-tabs button.on { background: #0F766E; border-color: #0F766E; color: #fff; font-weight: 600; }
+
+  .stage-wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .stage {
+    width: 1440px; height: 880px; position: relative;
+    transform-origin: center center; flex: 0 0 auto;
+    background: #E9EEF5; overflow: hidden; border-radius: 4px;
+  }
+
+  /* ---------- 背景界面（虚化，只为交代语境） ---------- */
+  .bg { position: absolute; inset: 0; display: flex; }
+  .bg-sider { width: 210px; background: #1B2230; padding: 14px 10px; }
+  .bg-logo { height: 26px; display: flex; align-items: center; gap: 9px; padding: 0 6px; margin-bottom: 16px; }
+  .bg-logo i { width: 22px; height: 22px; border-radius: 6px; background: #0F766E; }
+  .bg-logo b { font-size: 12.5px; color: #fff; font-weight: 600; }
+  .bg-nav { height: 34px; border-radius: 7px; margin-bottom: 4px; display: flex; align-items: center; gap: 9px; padding: 0 9px; }
+  .bg-nav i { width: 14px; height: 14px; border-radius: 4px; background: #46536A; }
+  .bg-nav b { height: 7px; border-radius: 3px; background: #46536A; width: 58px; }
+  .bg-nav.on { background: #2B3649; }
+  .bg-nav.on i, .bg-nav.on b { background: #8FA0BA; }
+
+  .bg-main { flex: 1; display: flex; flex-direction: column; }
+  .bg-top { height: 48px; background: #1B2230; display: flex; align-items: center; padding: 0 20px; gap: 10px; }
+  .bg-top .t { font-size: 13px; color: #fff; font-weight: 600; }
+  .bg-top .sp { margin-left: auto; display: flex; gap: 8px; }
+  .bg-top .sp i { width: 54px; height: 26px; border-radius: 7px; background: rgba(255,255,255,.1); }
+  .bg-body { flex: 1; padding: 16px 20px; }
+  .bg-card { background: #fff; border-radius: 10px; height: 100%; border: 1px solid #DCE4EF; padding: 16px; }
+  .bg-row { height: 34px; border-bottom: 1px solid #EEF2F8; display: flex; align-items: center; gap: 16px; }
+  .bg-row i { height: 8px; border-radius: 4px; background: #E4EAF2; }
+  .bg-mask { position: absolute; inset: 0; background: rgba(12, 20, 34, .38); backdrop-filter: blur(3px); }
+
+  /* ---------- 方案容器 ---------- */
+  .view { position: absolute; inset: 0; display: none; }
+  .view.on { display: block; }
+
+  /* 注释条：底部通栏，不压任何面板 */
+  .note {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 60;
+    height: 68px; background: rgba(16, 23, 34, .94);
+    color: #C2D0E1; padding: 12px 24px; font-size: 12px; line-height: 1.65;
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .note b {
+    color: #fff; font-weight: 600; font-size: 13px; white-space: nowrap;
+    padding-right: 14px; border-right: 1px solid rgba(255,255,255,.14); line-height: 1.5;
+  }
+  .note em { color: #7FD4B4; font-style: normal; }
+
+  /* ---------- 通用面板 ---------- */
+  .panel {
+    background: #FFFFFF; border-radius: 14px;
+    box-shadow: 0 26px 70px rgba(8, 18, 36, .34), 0 2px 6px rgba(8, 18, 36, .12);
+    overflow: hidden;
+  }
+  .p-hd {
+    height: 52px; display: flex; align-items: center; padding: 0 20px;
+    border-bottom: 1px solid #EDF1F7; font-size: 14px; font-weight: 600; color: #0F172A;
+  }
+  .p-hd .x { margin-left: auto; color: #9AA7B8; cursor: pointer; font-size: 15px; }
+  .p-hd .sub { font-size: 11.5px; color: #8695A8; font-weight: 400; margin-left: 10px; }
+  .p-ft {
+    height: 56px; display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+    padding: 0 20px; border-top: 1px solid #EDF1F7; background: #FAFBFD;
+  }
+  .btn {
+    height: 32px; padding: 0 16px; border-radius: 8px; font-size: 12.5px; font-family: inherit;
+    border: 1px solid #DCE4EF; background: #fff; color: #475569; cursor: pointer;
+  }
+  .btn:hover { border-color: #0F766E; color: #0F766E; }
+  .btn.pri { background: #0F766E; border-color: #0F766E; color: #fff; font-weight: 600; }
+  .btn.ghost { border-color: transparent; background: transparent; color: #8695A8; }
+
+  /* 色点 */
+  .dot {
+    width: 26px; height: 26px; border-radius: 50%; cursor: pointer; position: relative;
+    border: 2px solid transparent; box-shadow: 0 0 0 1px rgba(15, 23, 42, .1);
+  }
+  .dot.on { border-color: #fff; box-shadow: 0 0 0 1.5px #0F766E, 0 2px 6px rgba(15,23,42,.2); }
+
+  /* ============================================================
+     P1 · 顶栏色点浮层
+     ============================================================ */
+  .p1-entry {
+    position: absolute; top: 10px; right: 148px; z-index: 12;
+    height: 28px; padding: 0 10px 0 7px; border-radius: 14px;
+    display: flex; align-items: center; gap: 7px; cursor: pointer;
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
+  }
+  .p1-entry .sw { width: 15px; height: 15px; border-radius: 50%; background: #0F766E; box-shadow: 0 0 0 1.5px rgba(255,255,255,.35); }
+  .p1-entry span { font-size: 12px; color: #C6D1E0; }
+
+  .p1-pop {
+    position: absolute; top: 52px; right: 122px; width: 296px; z-index: 40;
+    background: #fff; border-radius: 14px; padding: 16px;
+    box-shadow: 0 24px 60px rgba(8, 18, 36, .3), 0 2px 6px rgba(8,18,36,.1);
+  }
+  .p1-pop::before {
+    content: ''; position: absolute; top: -6px; right: 46px; width: 12px; height: 12px;
+    background: #fff; transform: rotate(45deg); border-radius: 2px;
+  }
+  .p1-pop h4 { margin: 0 0 12px; font-size: 12px; font-weight: 600; color: #475569; letter-spacing: .3px; }
+  .p1-dots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; justify-items: center; }
+  .p1-pop .sep { height: 1px; background: #EDF1F7; margin: 14px 0 10px; }
+  .p1-foot { display: flex; align-items: center; font-size: 12px; }
+  .p1-foot a { color: #0F766E; text-decoration: none; }
+  .p1-foot .r { margin-left: auto; color: #8695A8; }
+
+  /* ============================================================
+     P2 · 左选右预览
+     ============================================================ */
+  .p2-panel { position: absolute; left: 50%; top: 92px; transform: translateX(-50%); width: 780px; height: 560px; display: flex; flex-direction: column; }
+  .p2-body { flex: 1; min-height: 0; display: flex; }
+  .p2-left { width: 340px; border-right: 1px solid #EDF1F7; padding: 16px; overflow: hidden; }
+  .p2-group { font-size: 11px; font-weight: 700; color: #8695A8; letter-spacing: .8px; margin: 4px 0 8px; }
+  .p2-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+  .p2-item {
+    height: 40px; border-radius: 8px; border: 1px solid #E6ECF4; background: #fff;
+    display: flex; align-items: center; gap: 8px; padding: 0 10px; cursor: pointer;
+  }
+  .p2-item:hover { border-color: #C6D3E2; }
+  .p2-item.on { border-color: #0F766E; background: #F2FAF8; }
+  .p2-item i { width: 16px; height: 16px; border-radius: 50%; flex: 0 0 auto; }
+  .p2-item b { font-size: 12.5px; font-weight: 500; color: #26313F; }
+  .p2-item .ck { margin-left: auto; color: #0F766E; font-size: 12px; }
+
+  .p2-right { flex: 1; padding: 16px; background: #F7F9FC; display: flex; flex-direction: column; }
+  .p2-right .lab { font-size: 11px; font-weight: 700; color: #8695A8; letter-spacing: .8px; margin-bottom: 10px; }
+  .prev-frame { flex: 1; border-radius: 10px; overflow: hidden; border: 1px solid #DCE4EF; box-shadow: 0 6px 20px rgba(16,32,60,.08); display: flex; }
+  .prev-sider { width: 62px; background: #1B2230; padding: 8px 6px; }
+  .prev-sider .logo { width: 18px; height: 18px; border-radius: 5px; background: #0F766E; margin: 0 auto 12px; }
+  .prev-sider .it { height: 14px; border-radius: 4px; background: rgba(255,255,255,.14); margin-bottom: 5px; }
+  .prev-sider .it.on { background: rgba(255,255,255,.3); }
+  .prev-main { flex: 1; background: #E9EEF5; display: flex; flex-direction: column; }
+  .prev-top { height: 26px; background: #1B2230; display: flex; align-items: center; padding: 0 8px; gap: 5px; }
+  .prev-top i { height: 6px; width: 40px; border-radius: 3px; background: rgba(255,255,255,.22); }
+  .prev-top .b { margin-left: auto; width: 28px; height: 12px; border-radius: 3px; background: #0F766E; }
+  .prev-body { flex: 1; padding: 8px; }
+  .prev-card { background: #fff; border-radius: 6px; height: 100%; border: 1px solid #DCE4EF; padding: 7px; }
+  .prev-row { height: 16px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid #F0F4F9; }
+  .prev-row i { height: 5px; border-radius: 2px; background: #E1E8F1; }
+  .prev-row .tag { height: 9px; width: 26px; border-radius: 3px; }
+  .p2-cur { margin-top: 12px; font-size: 12px; color: #64748B; display: flex; align-items: center; gap: 8px; }
+  .p2-cur b { color: #0F172A; font-weight: 600; }
+
+  /* ============================================================
+     P3 · 色卡即缩略界面
+     ============================================================ */
+  .p3-panel { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); width: 820px; height: 648px; display: flex; flex-direction: column; }
+  .p3-body { flex: 1; min-height: 0; padding: 18px 20px; overflow: hidden; }
+  .p3-group { font-size: 11px; font-weight: 700; color: #8695A8; letter-spacing: .8px; margin: 2px 0 10px; }
+  .p3-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 14px; }
+  .p3-card {
+    border: 1px solid #E3EAF3; border-radius: 10px; padding: 6px; background: #fff; cursor: pointer;
+    transition: transform .14s, box-shadow .14s;
+  }
+  .p3-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16,32,60,.12); }
+  .p3-card.on { border: 1.5px solid #0F766E; padding: 5.5px; box-shadow: 0 8px 20px rgba(15,118,110,.18); }
+  .p3-mini { height: 70px; border-radius: 6px; overflow: hidden; display: flex; border: 1px solid rgba(15,23,42,.06); }
+  .p3-mini .ms { width: 16px; }
+  .p3-mini .mm { flex: 1; display: flex; flex-direction: column; }
+  .p3-mini .mt { height: 11px; }
+  .p3-mini .mb { flex: 1; padding: 4px; }
+  .p3-mini .mc { background: #fff; border-radius: 3px; height: 100%; padding: 3px; display: flex; flex-direction: column; gap: 2px; }
+  .p3-mini .mr { height: 4px; border-radius: 2px; background: #EDF1F7; }
+  .p3-mini .mbtn { height: 7px; width: 26px; border-radius: 3px; margin-top: auto; }
+  .p3-name { display: flex; align-items: center; font-size: 11.5px; color: #26313F; margin-top: 5px; padding: 0 2px; }
+  .p3-name .ck { margin-left: auto; color: #0F766E; font-size: 11px; }
+
+  /* ============================================================
+     P4 · 版式 + 主题一体
+     ============================================================ */
+  .p4-panel { position: absolute; left: 50%; top: 48px; transform: translateX(-50%); width: 980px; height: 740px; display: flex; flex-direction: column; }
+  .p4-body { flex: 1; min-height: 0; display: flex; }
+  .p4-left { width: 470px; padding: 18px 20px; border-right: 1px solid #EDF1F7; overflow: hidden; }
+  .p4-lab { font-size: 11px; font-weight: 700; color: #8695A8; letter-spacing: .8px; margin: 0 0 10px; }
+  .p4-schemes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+  .sch { border: 1px solid #E3EAF3; border-radius: 8px; padding: 5px; cursor: pointer; background: #fff; }
+  .sch:hover { border-color: #C3D0DF; }
+  .sch.on { border: 1.5px solid #0F766E; padding: 4.5px; }
+  .sch-prev { height: 48px; border-radius: 4px; overflow: hidden; display: flex; border: 1px solid rgba(15,23,42,.06); }
+  .sch-prev .s1 { width: 13px; }
+  .sch-prev .s2 { flex: 1; display: flex; flex-direction: column; }
+  .sch-prev .s3 { height: 9px; }
+  .sch-prev .s4 { height: 6px; }
+  .sch-prev .s5 { flex: 1; padding: 3px; }
+  .sch-prev .s6 { height: 100%; border-radius: 2px; }
+  .sch-name { font-size: 11.5px; color: #26313F; margin-top: 5px; text-align: center; white-space: nowrap; }
+  .sch-name .now {
+    font-style: normal; font-size: 9px; color: #0F766E; background: #E9F6F3;
+    border-radius: 3px; padding: 1px 3px; margin-left: 3px; vertical-align: 1px;
+  }
+  .sch:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(16, 32, 60, .1); }
+  .sch { transition: transform .14s, box-shadow .14s, border-color .14s; }
+  .dot { transition: transform .14s; }
+  .dot:hover { transform: scale(1.14); }
+
+  .p4-dots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; justify-items: center; margin-bottom: 8px; }
+  .p4-cur { font-size: 12px; color: #64748B; }
+  .p4-cur b { color: #0F172A; font-weight: 600; }
+
+  .p4-right { flex: 1; padding: 18px; background: #F7F9FC; display: flex; flex-direction: column; }
+  .p4-big { flex: 1; border-radius: 12px; overflow: hidden; border: 1px solid #DCE4EF; box-shadow: 0 10px 30px rgba(16,32,60,.1); display: flex; background: #E9EEF5; }
+  .big-sider { width: 86px; background: #1B2230; padding: 10px 8px; }
+  .big-sider .lg { width: 22px; height: 22px; border-radius: 6px; background: #0F766E; margin-bottom: 14px; }
+  .big-sider .li { height: 17px; border-radius: 5px; background: rgba(255,255,255,.13); margin-bottom: 6px; }
+  .big-sider .li.on { background: rgba(255,255,255,.28); }
+  .big-main { flex: 1; display: flex; flex-direction: column; }
+  .big-top { height: 32px; background: #1B2230; display: flex; align-items: center; padding: 0 10px; gap: 6px; }
+  .big-top i { height: 7px; width: 52px; border-radius: 3px; background: rgba(255,255,255,.22); }
+  .big-top .bb { margin-left: auto; width: 38px; height: 15px; border-radius: 4px; background: #0F766E; }
+  .big-body { flex: 1; padding: 10px; }
+  .big-card { background: #fff; border-radius: 8px; height: 100%; border: 1px solid #DCE4EF; padding: 9px; }
+  .big-row { height: 22px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F0F4F9; }
+  .big-row i { height: 6px; border-radius: 3px; background: #E1E8F1; }
+  .big-row .tg { height: 11px; width: 34px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="bar-title">修改主题色 · 入口方案<span>点右上切换</span></div>
+  <div class="bar-tabs">
+    <button data-v="p1" class="on">P1 顶栏色点</button>
+    <button data-v="p2">P2 左选右预览</button>
+    <button data-v="p3">P3 色卡即界面</button>
+    <button data-v="p4">P4 版式+配色一体</button>
+  </div>
+</div>
+
+<div class="stage-wrap">
+  <div class="stage" id="stage">
+
+    <!-- 背景界面 -->
+    <div class="bg">
+      <div class="bg-sider">
+        <div class="bg-logo"><i></i><b>车队管理平台</b></div>
+        <div class="bg-nav on"><i></i><b></b></div>
+        <div class="bg-nav"><i></i><b style="width:46px"></b></div>
+        <div class="bg-nav"><i></i><b style="width:64px"></b></div>
+        <div class="bg-nav"><i></i><b style="width:52px"></b></div>
+        <div style="height:14px"></div>
+        <div class="bg-nav"><i></i><b style="width:50px"></b></div>
+        <div class="bg-nav"><i></i><b style="width:58px"></b></div>
+      </div>
+      <div class="bg-main">
+        <div class="bg-top">
+          <div class="t">运单管理</div>
+          <div class="sp"><i></i><i></i><i></i></div>
+        </div>
+        <div class="bg-body">
+          <div class="bg-card">
+            <div class="bg-row"><i style="width:120px"></i><i style="width:90px"></i><i style="width:70px"></i></div>
+            <div class="bg-row"><i style="width:110px"></i><i style="width:120px"></i><i style="width:60px"></i></div>
+            <div class="bg-row"><i style="width:130px"></i><i style="width:80px"></i><i style="width:88px"></i></div>
+            <div class="bg-row"><i style="width:100px"></i><i style="width:110px"></i><i style="width:66px"></i></div>
+            <div class="bg-row"><i style="width:124px"></i><i style="width:96px"></i><i style="width:74px"></i></div>
+            <div class="bg-row"><i style="width:108px"></i><i style="width:118px"></i><i style="width:58px"></i></div>
+            <div class="bg-row"><i style="width:116px"></i><i style="width:86px"></i><i style="width:80px"></i></div>
+            <div class="bg-row"><i style="width:126px"></i><i style="width:104px"></i><i style="width:62px"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bg-mask"></div>
+
+    <!-- ========================= P1 ========================= -->
+    <section class="view on" id="p1">
+      <div class="p1-entry">
+        <div class="sw"></div>
+        <span>深青</span>
+      </div>
+      <div class="p1-pop">
+        <h4>主题色</h4>
+        <div class="p1-dots">
+          <div class="dot" style="background:#1F2937"></div>
+          <div class="dot" style="background:#1E3A8A"></div>
+          <div class="dot" style="background:#14532D"></div>
+          <div class="dot" style="background:#4338CA"></div>
+          <div class="dot on" style="background:#0F766E"></div>
+          <div class="dot" style="background:#1C1917"></div>
+          <div class="dot" style="background:#0284C7"></div>
+          <div class="dot" style="background:#0891B2"></div>
+          <div class="dot" style="background:#0D9488"></div>
+          <div class="dot" style="background:#059669"></div>
+          <div class="dot" style="background:#C8102E"></div>
+          <div class="dot" style="background:#7C3AED"></div>
+        </div>
+        <div class="sep"></div>
+        <div class="p1-foot">
+          <a href="#">更多配色…</a>
+          <span class="r">恢复默认</span>
+        </div>
+      </div>
+      <div class="note">
+        <b>P1 · 顶栏色点浮层</b>
+        入口常驻顶栏（当前色小圆点 + 名称），点开就是 12 个色点，<em>点一下立即生效、立即能看到界面变化</em>，不离开当前页面。<br />
+        「更多配色」再进完整的设置面板。适合日常微调。
+      </div>
+    </section>
+
+    <!-- ========================= P2 ========================= -->
+    <section class="view" id="p2">
+      <div class="panel p2-panel">
+        <div class="p-hd">外观设置 · 主题色<span class="sub">选中的配色会保存到你的账号</span><span class="x">✕</span></div>
+        <div class="p2-body">
+          <div class="p2-left">
+            <div class="p2-group">沉稳</div>
+            <div class="p2-list">
+              <div class="p2-item"><i style="background:#1F2937"></i><b>石墨</b></div>
+              <div class="p2-item"><i style="background:#1E3A8A"></i><b>藏青</b></div>
+              <div class="p2-item"><i style="background:#14532D"></i><b>墨绿</b></div>
+              <div class="p2-item"><i style="background:#4338CA"></i><b>靛紫</b></div>
+              <div class="p2-item on"><i style="background:#0F766E"></i><b>深青</b><span class="ck">✓</span></div>
+              <div class="p2-item"><i style="background:#1C1917"></i><b>炭黑</b></div>
+            </div>
+            <div class="p2-group">明快</div>
+            <div class="p2-list">
+              <div class="p2-item"><i style="background:#0284C7"></i><b>天蓝</b></div>
+              <div class="p2-item"><i style="background:#0891B2"></i><b>湖蓝</b></div>
+              <div class="p2-item"><i style="background:#0D9488"></i><b>青绿</b></div>
+              <div class="p2-item"><i style="background:#059669"></i><b>薄荷绿</b></div>
+              <div class="p2-item"><i style="background:#C8102E"></i><b>品牌红</b></div>
+              <div class="p2-item"><i style="background:#7C3AED"></i><b>紫罗兰</b></div>
+            </div>
+          </div>
+          <div class="p2-right">
+            <div class="lab">效果预览</div>
+            <div class="prev-frame">
+              <div class="prev-sider">
+                <div class="logo"></div>
+                <div class="it on"></div>
+                <div class="it"></div>
+                <div class="it"></div>
+                <div class="it"></div>
+              </div>
+              <div class="prev-main">
+                <div class="prev-top">
+                  <i></i>
+                  <div class="b"></div>
+                </div>
+                <div class="prev-body">
+                  <div class="prev-card">
+                    <div class="prev-row"><i style="width:46px"></i><i style="width:30px"></i><span class="tag" style="background:#EEF7F5"></span></div>
+                    <div class="prev-row"><i style="width:38px"></i><i style="width:42px"></i><span class="tag" style="background:#F0FDF4"></span></div>
+                    <div class="prev-row"><i style="width:50px"></i><i style="width:26px"></i><span class="tag" style="background:#EFF6FF"></span></div>
+                    <div class="prev-row"><i style="width:42px"></i><i style="width:36px"></i><span class="tag" style="background:#EEF7F5"></span></div>
+                    <div class="prev-row" style="border:0"><i style="width:34px"></i><i style="width:44px"></i><span class="tag" style="background:#F0FDF4"></span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="p2-cur">当前：<b>深青</b><span style="color:#94A3B8">· 沉稳</span></div>
+          </div>
+        </div>
+        <div class="p-ft"><button class="btn">取消</button><button class="btn pri">应用</button></div>
+      </div>
+      <div class="note">
+        <b>P2 · 左选右预览</b>
+        左边只留「色块 + 名称」，删掉那些「最正统的商务蓝」之类的描述；<em>右边实时渲染一个迷你界面</em>，选之前就能知道侧栏、按钮、状态标签会变成什么样。
+      </div>
+    </section>
+
+    <!-- ========================= P3 ========================= -->
+    <section class="view" id="p3">
+      <div class="panel p3-panel">
+        <div class="p-hd">外观 · 选一套配色<span class="sub">悬停可预览，点击应用</span><span class="x">✕</span></div>
+        <div class="p3-body">
+          <div class="p3-group">沉稳</div>
+          <div class="p3-grid">
+            <div class="p3-card">
+              <div class="p3-mini"><div class="ms" style="background:#1F2937"></div><div class="mm" style="background:#F4F6F9"><div class="mt" style="background:#1F2937"></div><div class="mb"><div class="mc"><div class="mr"></div><div class="mr" style="width:76%"></div><div class="mr" style="width:88%"></div><div class="mbtn" style="background:#1F2937"></div></div></div></div></div>
+              <div class="p3-name">石墨</div>
+            </div>
+            <div class="p3-card">
+              <div class="p3-mini"><div class="ms" style="background:#1E3A8A"></div><div class="mm" style="background:#F2F6FC"><div class="mt" style="background:#1E3A8A"></div><div class="mb"><div class="mc"><div class="mr"></div><div class="mr" style="width:76%"></div><div class="mr" style="width:88%"></div><div class="mbtn" style="background:#1E3A8A"></div></div></div></div></div>
+              <div class="p3-name">藏青</div>
+            </div>
+            <div class="p3-card">
+              <div class="p3-mini"><div class="ms" style="background:#14532D"></div><div class="mm" style="background:#F3F8F3"><div class="mt" style="background:#14532D"></div><div class="mb"><div class="mc"><div class="mr"></div><div class="mr" style="width:76%"></div><div class="mr" style="width:88%"></div><div class="mbtn" style="background:#14532D"></div></div></div></div></div>
+              <div class="p3-name">墨绿</div>
+            </div>
+            <div class="p3-card">
+              <div class="p3-mini"><div class="ms" style="background:#4338CA"></div><div class="mm" style="background:#F4F5FD"><div class="mt" style="background:#4338CA"></div><div class="mb"><div class="mc"><div class="mr"></div><div class="mr" style="width:76%"></div><div class="mr" style="width:88%"></div><div class="mbtn" style="background:#4338CA"></div></div></div></div></div>
+              <div class="p3-name">靛紫</div>
+            </div>
+            <div class="p3-card on">
+              <div class="p3-mini"><div class="ms" style="background:#0F766E"></div><div class="mm" style="background:#F1F9F8"><div class="mt" style="background:#0F766E"></div><div class="mb"><div class="mc"><div class="mr"></div><div class="mr" style="width:76%"></div><div class="mr" style="width:88%"></div><div class="mbtn" style="background:#0F766E"></div></div></div></div></div>
+              <div class="p3-name">深青<span class="ck">✓</span></div>
+            </div>
+            <div class="p3-card">
+              <div class="p3-mini"><div class="ms" style="background:#1C1917"></div><div class="mm" style="background:#F7F6F5"><div class="mt" style="background:#1C1917"></div><div class="mb"><div class="mc"><div class="mr"></div><div class="mr" style="width:76%"></div><div class="mr" style="width:88%"></div><div class="mbtn" style="background:#1C1917"></div></div></div></div></div>
+              <div class="p3-name">炭黑</div>
+            </div>
+          </div>
+          <div class="p3-group">明快</div>
+          <div class="p3-grid">
+            <div class="p3-card">
+              <div class="p3-mini"><div class="ms" style="background:#0284C7"></div><div class="mm" style="background:#F2F9FE"><div class="mt" style="background:#0284C7"></div><div class="mb"><div class="mc"><div class="mr"></div><div class="mr" style="width:76%"></div><div class="mr" style="width:88%"></div><div class="mbtn" style="background:#0284C7"></div></div></div></div></div>
+              <div class="p3-name">天蓝</div>
+            </div>
+            <div class="p3-card">
+              <div class="p3-mini"><div class="ms" style="background:#0891B2"></div><div class="mm" style="background:#F1FAFC"><div class="mt" style="background:#0891B2"></div><div class="mb"><div class="mc"><div class="mr"></div><div class="mr" style="width:76%"></div><div class="mr" style="width:88%"></div><div class="mbtn" style="background:#0891B2"></div></div></div></div></div>
+              <div class="p3-name">湖蓝</div>
+            </div>
+            <div class="p3-card">
+              <div class="p3-mini"><div class="ms" style="background:#0D9488"></div><div class="mm" style="background:#F1FAF9"><div class="mt" style="background:#0D9488"></div><div class="mb"><div class="mc"><div class="mr"></div><div class="mr" style="width:76%"></div><div class="mr" style="width:88%"></div><div class="mbtn" style="background:#0D9488"></div></div></div></div></div>
+              <div class="p3-name">青绿</div>
+            </div>
+            <div class="p3-card">
+              <div class="p3-mini"><div class="ms" style="background:#059669"></div><div class="mm" style="background:#F2FBF7"><div class="mt" style="background:#059669"></div><div class="mb"><div class="mc"><div class="mr"></div><div class="mr" style="width:76%"></div><div class="mr" style="width:88%"></div><div class="mbtn" style="background:#059669"></div></div></div></div></div>
+              <div class="p3-name">薄荷绿</div>
+            </div>
+            <div class="p3-card">
+              <div class="p3-mini"><div class="ms" style="background:#C8102E"></div><div class="mm" style="background:#FEF3F5"><div class="mt" style="background:#C8102E"></div><div class="mb"><div class="mc"><div class="mr"></div><div class="mr" style="width:76%"></div><div class="mr" style="width:88%"></div><div class="mbtn" style="background:#C8102E"></div></div></div></div></div>
+              <div class="p3-name">品牌红</div>
+            </div>
+            <div class="p3-card">
+              <div class="p3-mini"><div class="ms" style="background:#7C3AED"></div><div class="mm" style="background:#F7F4FE"><div class="mt" style="background:#7C3AED"></div><div class="mb"><div class="mc"><div class="mr"></div><div class="mr" style="width:76%"></div><div class="mr" style="width:88%"></div><div class="mbtn" style="background:#7C3AED"></div></div></div></div></div>
+              <div class="p3-name">紫罗兰</div>
+            </div>
+          </div>
+        </div>
+        <div class="p-ft"><button class="btn ghost">恢复默认</button><span style="margin-left:auto"></span><button class="btn">取消</button><button class="btn pri">应用</button></div>
+      </div>
+      <div class="note">
+        <b>P3 · 色卡即缩略界面</b>
+        每张卡不再是纯色块，而是<em>用这套配色渲染出来的迷你界面</em>（侧栏 / 顶栏 / 卡片 / 主按钮）。
+        12 个方案哪个好看，一眼就能比出来，不用逐个点开试。
+      </div>
+    </section>
+
+    <!-- ========================= P4 ========================= -->
+    <section class="view" id="p4">
+      <div class="panel p4-panel">
+        <div class="p-hd">外观<span class="sub">版式决定骨架，配色决定气质</span><span class="x">✕</span></div>
+        <div class="p4-body">
+          <div class="p4-left">
+            <div class="p4-lab">版式</div>
+            <div class="p4-schemes">
+              <div class="sch"><div class="sch-prev"><div class="s1" style="background:#E1D9C9"></div><div class="s2" style="background:#E9E3D6"><div class="s3" style="background:#FAF6EE"></div><div class="s4" style="background:#F2ECE0"></div><div class="s5"><div class="s6" style="background:#FFFDF9"></div></div></div></div><div class="sch-name">暖灰纸感</div></div>
+              <div class="sch on"><div class="sch-prev"><div class="s1" style="background:#1B2230"></div><div class="s2" style="background:#E9EEF5"><div class="s3" style="background:#1B2230"></div><div class="s4" style="background:#232B3B"></div><div class="s5"><div class="s6" style="background:#fff"></div></div></div></div><div class="sch-name">深框浅台</div></div>
+              <div class="sch"><div class="sch-prev"><div class="s1" style="background:#0A0F17"></div><div class="s2" style="background:#0D131F"><div class="s3" style="background:#121A26"></div><div class="s4" style="background:#111925"></div><div class="s5"><div class="s6" style="background:#19222F"></div></div></div></div><div class="sch-name">全深色</div></div>
+              <div class="sch"><div class="sch-prev"><div class="s1" style="background:#FAF8F1"></div><div class="s2" style="background:#E9EDE0"><div class="s3" style="background:#FAF8F1"></div><div class="s4" style="background:#F5F3EA"></div><div class="s5"><div class="s6" style="background:#fff"></div></div></div></div><div class="sch-name">晨雾</div></div>
+              <div class="sch"><div class="sch-prev"><div class="s1" style="background:#F3F8EF"></div><div class="s2" style="background:#DFE8D8"><div class="s3" style="background:#F4F8EF"></div><div class="s4" style="background:#EFF4E8"></div><div class="s5"><div class="s6" style="background:#fff"></div></div></div></div><div class="sch-name">林间</div></div>
+              <div class="sch"><div class="sch-prev"><div class="s1" style="background:#F8FAFC;border-right:1px solid #E2E8F0"></div><div class="s2" style="background:#F8FAFC"><div class="s3" style="background:#fff;border-bottom:1px solid #E8EEF5"></div><div class="s4" style="background:#fff"></div><div class="s5"><div class="s6" style="background:#fff;border:1px solid #E2E8F0"></div></div></div></div><div class="sch-name">云白<i class="now">当前</i></div></div>
+            </div>
+
+            <div class="p4-lab">主题色</div>
+            <div class="p4-dots">
+              <div class="dot" style="background:#1F2937"></div>
+              <div class="dot" style="background:#1E3A8A"></div>
+              <div class="dot" style="background:#14532D"></div>
+              <div class="dot" style="background:#4338CA"></div>
+              <div class="dot on" style="background:#0F766E"></div>
+              <div class="dot" style="background:#1C1917"></div>
+              <div class="dot" style="background:#0284C7"></div>
+              <div class="dot" style="background:#0891B2"></div>
+              <div class="dot" style="background:#0D9488"></div>
+              <div class="dot" style="background:#059669"></div>
+              <div class="dot" style="background:#C8102E"></div>
+              <div class="dot" style="background:#7C3AED"></div>
+            </div>
+            <div class="p4-cur">当前：<b>深框浅台 · 深青</b></div>
+            <div style="margin-top:16px;padding-top:14px;border-top:1px solid #EDF1F7;font-size:11.5px;color:#8695A8;line-height:1.8;">
+              版式决定骨架：直角 + 描边是工程感，大圆角 + 无边框是自然感。<br />
+              主题色只影响按钮、选中态与强调数字，不改底色明暗。
+            </div>
+          </div>
+
+          <div class="p4-right">
+            <div class="p4-lab">实时预览</div>
+            <div class="p4-big">
+              <div class="big-sider">
+                <div class="lg"></div>
+                <div class="li"></div>
+                <div class="li on"></div>
+                <div class="li"></div>
+                <div class="li"></div>
+                <div class="li"></div>
+              </div>
+              <div class="big-main">
+                <div class="big-top"><i></i><div class="bb"></div></div>
+                <div class="big-body">
+                  <div class="big-card">
+                    <div class="big-row"><i style="width:64px"></i><i style="width:40px"></i><span class="tg" style="background:#EEF7F5"></span></div>
+                    <div class="big-row"><i style="width:56px"></i><i style="width:52px"></i><span class="tg" style="background:#F0FDF4"></span></div>
+                    <div class="big-row"><i style="width:70px"></i><i style="width:36px"></i><span class="tg" style="background:#EFF6FF"></span></div>
+                    <div class="big-row"><i style="width:58px"></i><i style="width:46px"></i><span class="tg" style="background:#F0FDF4"></span></div>
+                    <div class="big-row"><i style="width:66px"></i><i style="width:42px"></i><span class="tg" style="background:#FEF2F4"></span></div>
+                    <div class="big-row" style="border:0"><i style="width:60px"></i><i style="width:48px"></i><span class="tg" style="background:#F8FAFC"></span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="p-ft"><button class="btn ghost">全部恢复默认</button><span style="margin-left:auto"></span><button class="btn">取消</button><button class="btn pri">应用</button></div>
+      </div>
+      <div class="note">
+        <b>P4 · 版式 + 配色一体</b>
+        版式和配色本来就是同一个决定的两半，合成一个面板：<em>上面选骨架（6 套），下面选气质（12 色），右边实时出图</em>。
+        原来「个人设置 → 外观」里的那一屏可以直接被这一版取代。
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  function fit() {
+    const s = Math.min(window.innerWidth / 1460, (window.innerHeight - 52) / 900)
+    document.getElementById('stage').style.transform = `scale(${Math.min(s, 1)})`
+  }
+  window.addEventListener('resize', fit)
+  fit()
+
+  document.querySelectorAll('.bar-tabs button').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.bar-tabs button').forEach(b => b.classList.toggle('on', b === btn))
+      document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === btn.dataset.v))
+    }
+  })
+
+  const hv = (location.hash || '').replace('#', '')
+  if (['p1', 'p2', 'p3', 'p4'].includes(hv)) {
+    document.querySelectorAll('.bar-tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === hv))
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === hv))
+  }
+</script>
+</body>
+</html>

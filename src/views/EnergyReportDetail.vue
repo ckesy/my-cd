@@ -581,7 +581,7 @@ watch(taskNo, load)
 .pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
 .pill {
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 6px 13px;

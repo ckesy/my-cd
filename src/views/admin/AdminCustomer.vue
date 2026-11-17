@@ -1436,7 +1436,7 @@ watch(viewMode, async (val) => {
           <el-table-column label="开通平台" min-width="110">
             <template #default="{ row }">
               <span v-if="row.platforms?.includes('client')" class="platform-tag client">客户端</span>
-              <span v-else style="color:#94A3B8;">--</span>
+              <span v-else style="color:var(--ink-3);">--</span>
             </template>
           </el-table-column>
           <el-table-column prop="vehicleCount" label="车辆数" width="80" align="center" />
@@ -1865,7 +1865,7 @@ watch(viewMode, async (val) => {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
@@ -1876,8 +1876,8 @@ watch(viewMode, async (val) => {
   gap: 6px;
   padding: 6px 14px;
   border: 1px solid #E2E8F0;
-  background: #fff;
-  color: #64748B;
+  background: var(--surface-card);
+  color: var(--ink-3);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
@@ -1954,8 +1954,8 @@ watch(viewMode, async (val) => {
 }
 
 .status-tag.off {
-  color: #64748B;
-  background: #F1F5F9;
+  color: var(--ink-3);
+  background: var(--surface-hover);
 }
 
 .status-tag.mini {
@@ -1966,7 +1966,7 @@ watch(viewMode, async (val) => {
 .row-btn.warning {
   color: #B45309;
   border-color: rgba(217, 119, 6, 0.4);
-  background: #FFFFFF;
+  background: var(--surface-card);
 }
 
 .row-btn.warning:hover:not(:disabled) {
@@ -1979,7 +1979,7 @@ watch(viewMode, async (val) => {
 .row-btn.success {
   color: #059669;
   border-color: rgba(5, 150, 105, 0.4);
-  background: #FFFFFF;
+  background: var(--surface-card);
 }
 
 .row-btn.success:hover:not(:disabled) {
@@ -1993,7 +1993,7 @@ watch(viewMode, async (val) => {
    组织机构视图
    ============================================================ */
 .org-view-card {
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   padding: 16px;
@@ -2018,7 +2018,7 @@ watch(viewMode, async (val) => {
   gap: 8px;
   font-size: 15px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .org-view-title .el-icon {
@@ -2028,7 +2028,7 @@ watch(viewMode, async (val) => {
 
 .org-view-sub {
   font-size: 12.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 500;
 }
 
@@ -2044,13 +2044,13 @@ watch(viewMode, async (val) => {
 
 .org-search-input :deep(.el-input__wrapper) {
   border-radius: 6px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   min-height: 30px;
 }
 
 .org-search-input :deep(.el-input__wrapper.is-focus) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.15), 0 0 0 1px var(--brand-primary) inset !important;
 }
 
@@ -2067,9 +2067,9 @@ watch(viewMode, async (val) => {
   align-items: center;
   justify-content: center;
   border: 1px solid #E2E8F0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 6px;
-  color: #64748B;
+  color: var(--ink-3);
   font-size: 14px;
   cursor: pointer;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -2172,13 +2172,13 @@ watch(viewMode, async (val) => {
 
 .node-label {
   font-weight: 600;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .tree-node.type-root .node-label {
   font-size: 15px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 
@@ -2200,19 +2200,19 @@ watch(viewMode, async (val) => {
 
 .node-count {
   font-size: 11.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   padding: 1px 8px;
   border-radius: 8px;
-  background: #F1F5F9;
+  background: var(--surface-hover);
   margin-left: 4px;
 }
 
 .node-account {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-family: 'Courier New', monospace;
   padding: 1px 6px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border-radius: 4px;
 }
 
@@ -2260,8 +2260,8 @@ watch(viewMode, async (val) => {
 
 /* ⭐ 0 辆时淡灰 + 无图标 */
 .node-vehicles.empty {
-  background: #F1F5F9;
-  color: #94A3B8;
+  background: var(--surface-hover);
+  color: var(--ink-3);
   font-weight: 600;
 }
 
@@ -2275,7 +2275,7 @@ watch(viewMode, async (val) => {
   align-items: center;
   gap: 8px;
   padding: 80px 20px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .org-empty .empty-icon {
@@ -2286,7 +2286,7 @@ watch(viewMode, async (val) => {
 .org-empty p {
   font-size: 15px;
   font-weight: 600;
-  color: #64748B;
+  color: var(--ink-3);
   margin: 0;
 }
 
@@ -2344,7 +2344,7 @@ watch(viewMode, async (val) => {
   max-width: calc(100vw - 40px);
   padding: 36px 36px 26px;
   border-radius: 18px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   box-shadow:
     0 30px 80px rgba(15, 23, 42, 0.22),
     0 0 0 1px rgba(226, 232, 240, 0.6) inset;
@@ -2475,7 +2475,7 @@ watch(viewMode, async (val) => {
   margin: 0 0 10px;
   font-size: 18px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.5px;
   animation: confirm-fade-up 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   animation-delay: 0.14s;
@@ -2485,13 +2485,13 @@ watch(viewMode, async (val) => {
   margin: 0 0 26px;
   font-size: 13.5px;
   line-height: 1.7;
-  color: #64748B;
+  color: var(--ink-3);
   animation: confirm-fade-up 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   animation-delay: 0.22s;
 }
 
 .confirm-desc :deep(b) {
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 700;
 }
 
@@ -2530,14 +2530,14 @@ watch(viewMode, async (val) => {
 }
 
 .confirm-btn.cancel {
-  background: #F1F5F9;
-  color: #475569;
+  background: var(--surface-hover);
+  color: var(--ink-2);
   border: 1px solid #E2E8F0;
 }
 
 .confirm-btn.cancel:hover {
   background: #E2E8F0;
-  color: #1E293B;
+  color: var(--ink);
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
 }
@@ -2663,7 +2663,7 @@ watch(viewMode, async (val) => {
 .section-title {
   font-size: 13px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 1px;
 }
 
@@ -2686,7 +2686,7 @@ watch(viewMode, async (val) => {
 .customer-form :deep(.el-form-item__label) {
   font-size: 12.5px;
   font-weight: 600;
-  color: #475569;
+  color: var(--ink-2);
   padding-bottom: 6px;
   line-height: 1.4;
 }
@@ -2694,7 +2694,7 @@ watch(viewMode, async (val) => {
 .customer-form :deep(.el-input__wrapper),
 .customer-form :deep(.el-select__wrapper) {
   border-radius: 8px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -2702,13 +2702,13 @@ watch(viewMode, async (val) => {
 .customer-form :deep(.el-input__wrapper:hover),
 .customer-form :deep(.el-select__wrapper:hover) {
   box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.4) inset !important;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
   transform: translateY(-1px);
 }
 
 .customer-form :deep(.el-input__wrapper.is-focus),
 .customer-form :deep(.el-select__wrapper.is-focused) {
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 1px var(--brand-primary) inset, 0 0 0 3px rgba(var(--brand-rgb), 0.1) !important;
   transform: translateY(-1px);
 }
@@ -2722,7 +2722,7 @@ watch(viewMode, async (val) => {
 .platform-item {
   padding: 18px 20px;
   border-radius: 12px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border: 1.5px solid #E2E8F0;
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
@@ -2741,7 +2741,7 @@ watch(viewMode, async (val) => {
 }
 
 .platform-item.active {
-  background: #FFFFFF;
+  background: var(--surface-card);
   border-color: rgba(var(--brand-rgb), 0.4);
   box-shadow: 0 6px 20px rgba(var(--brand-rgb), 0.1);
 }
@@ -2764,7 +2764,7 @@ watch(viewMode, async (val) => {
 .platform-check :deep(.el-checkbox__label) {
   font-size: 14px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   padding-left: 8px;
   line-height: 18px;
 }
@@ -2806,7 +2806,7 @@ watch(viewMode, async (val) => {
 .platform-name {
   font-size: 14px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.5px;
 }
 
@@ -2821,8 +2821,8 @@ watch(viewMode, async (val) => {
 }
 
 .platform-hint.off {
-  color: #94A3B8;
-  background: #F1F5F9;
+  color: var(--ink-3);
+  background: var(--surface-hover);
   animation: none;
 }
 
@@ -2867,7 +2867,7 @@ watch(viewMode, async (val) => {
 .config-text {
   font-size: 12.5px;
   font-weight: 700;
-  color: #475569;
+  color: var(--ink-2);
 }
 
 .select-all-btn {
@@ -2877,7 +2877,7 @@ watch(viewMode, async (val) => {
   font-size: 12px;
   font-weight: 600;
   color: var(--brand-primary);
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1px solid rgba(var(--brand-rgb), 0.35);
   border-radius: 999px;
   cursor: pointer;
@@ -2903,7 +2903,7 @@ watch(viewMode, async (val) => {
   margin: 0 !important;
   padding: 8px 12px;
   border-radius: 8px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border: 1px solid #E2E8F0;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   height: auto !important;
@@ -2925,7 +2925,7 @@ watch(viewMode, async (val) => {
 
 .perm-item :deep(.el-checkbox__label) {
   font-size: 12.5px;
-  color: #475569;
+  color: var(--ink-2);
   padding-left: 8px;
   font-weight: 500;
   line-height: 16px;
@@ -2980,7 +2980,7 @@ watch(viewMode, async (val) => {
   border: 1px solid rgba(37, 99, 235, 0.18);
   border-radius: 8px;
   font-size: 13px;
-  color: #475569;
+  color: var(--ink-2);
   margin-bottom: 16px;
 }
 
@@ -3036,7 +3036,7 @@ watch(viewMode, async (val) => {
 .step-title {
   font-size: 13px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .step-body {
@@ -3054,7 +3054,7 @@ watch(viewMode, async (val) => {
 
 .step-tip {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .import-upload :deep(.el-upload) {
@@ -3064,7 +3064,7 @@ watch(viewMode, async (val) => {
 .import-upload :deep(.el-upload-dragger) {
   border-radius: 8px;
   border: 1.5px dashed #CBD5E1;
-  background: #F8FAFC;
+  background: var(--surface-page);
   padding: 20px 0;
   transition: all 0.28s;
 }
@@ -3083,7 +3083,7 @@ watch(viewMode, async (val) => {
 
 .upload-icon {
   font-size: 32px;
-  color: #94A3B8;
+  color: var(--ink-3);
   transition: color 0.3s;
 }
 
@@ -3093,12 +3093,12 @@ watch(viewMode, async (val) => {
 
 .upload-text {
   font-size: 13px;
-  color: #475569;
+  color: var(--ink-2);
 }
 
 .upload-filename {
   font-size: 12px;
-  color: #475569;
+  color: var(--ink-2);
   padding-left: 32px;
   font-family: 'Courier New', monospace;
 }
@@ -3137,7 +3137,7 @@ watch(viewMode, async (val) => {
   border: 1px solid rgba(var(--brand-rgb), 0.18);
   border-radius: 8px;
   font-size: 13px;
-  color: #475569;
+  color: var(--ink-2);
   margin-bottom: 18px;
 }
 

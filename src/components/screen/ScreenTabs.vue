@@ -35,5 +35,5 @@ function go(key) {
 .screen-tabs button.on{background:linear-gradient(135deg,#FF3355,#B00D22);color:#fff;
   box-shadow:0 0 14px rgba(255,45,75,.4)}
 .screen-tabs .dot{width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.7}
-.screen-tabs button.on .dot{opacity:1;background:#fff}
+.screen-tabs button.on .dot{opacity:1;background:var(--surface-card)}
 </style>

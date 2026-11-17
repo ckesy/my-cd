@@ -249,7 +249,7 @@ const reportOn = computed(() => isMaster.value || !moduleHidden('report'))
 .sidebar-wrap {
   position: relative;
   height: 100%;
-  background: #FFFFFF;
+  background: var(--surface-sider);
   overflow: hidden;
 }
 
@@ -261,23 +261,23 @@ const reportOn = computed(() => isMaster.value || !moduleHidden('report'))
   height: 34px;
   display: flex;
   align-items: center;
-  border-radius: 8px;
-  color: #94A3B8;
+  border-radius: var(--r-nav);
+  color: var(--ink-3);
   cursor: pointer;
   transition: all .22s cubic-bezier(.34, 1.2, .64, 1);
   z-index: 3;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0), #fff 40%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), var(--surface-sider) 40%);
 }
 
 .nav-pin:hover {
-  color: #475569;
-  background: #F8FAFC;
+  color: var(--ink-on-sider-active);
+  background: var(--surface-hover);
   transform: translateY(-1px);
 }
 
 .nav-pin.on {
-  color: var(--brand-primary);
-  background: var(--brand-primary-light);
+  color: var(--nav-active-fg);
+  background: var(--nav-active-bg);
 }
 
 .nav-pin .pin-ic {
@@ -300,7 +300,7 @@ const reportOn = computed(() => isMaster.value || !moduleHidden('report'))
 .sidebar-menu {
   height: calc(100% - 46px);
   border-right: none !important;
-  background-color: #FFFFFF;
+  background-color: var(--surface-sider);
   padding: 10px 0 0;
   box-sizing: border-box;
   overflow-y: auto;
@@ -326,8 +326,8 @@ const reportOn = computed(() => isMaster.value || !moduleHidden('report'))
 .sidebar-menu :deep(.el-sub-menu__title) {
   height: 44px;
   line-height: 44px;
-  color: #64748B;
-  border-radius: 8px;
+  color: var(--ink-on-sider);
+  border-radius: var(--r-nav);
   margin: 4px 8px;
   position: relative;
   overflow: hidden;
@@ -385,7 +385,7 @@ const reportOn = computed(() => isMaster.value || !moduleHidden('report'))
   font-size: 0;
   line-height: 12px;
   border-radius: 50%;
-  box-shadow: 0 0 0 2px #fff;
+  box-shadow: 0 0 0 2px var(--surface-sider);
 }
 
 /* 收起态角标要贴在本行右上角 */
@@ -424,7 +424,7 @@ const reportOn = computed(() => isMaster.value || !moduleHidden('report'))
   left: 50%;
   width: 120%;
   height: 120%;
-  background: radial-gradient(circle, rgba(211, 47, 47, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(var(--brand-rgb), 0.08) 0%, transparent 70%);
   transform: translate(-50%, -50%) scale(0.5);
   opacity: 0;
   transition: transform 0.4s ease-out, opacity 0.3s;
@@ -445,10 +445,18 @@ const reportOn = computed(() => isMaster.value || !moduleHidden('report'))
   transform: translateX(4px);
 }
 
+/* ⭐ b/c 侧栏是深色：品牌色 hover 字在深底上会糊，换成浅色 */
+html[data-scheme="b"] .sidebar-menu :deep(.el-menu-item:hover),
+html[data-scheme="b"] .sidebar-menu :deep(.el-sub-menu__title:hover),
+html[data-scheme="c"] .sidebar-menu :deep(.el-menu-item:hover),
+html[data-scheme="c"] .sidebar-menu :deep(.el-sub-menu__title:hover) {
+  color: var(--ink-on-sider-active) !important;
+}
+
 .sidebar-menu :deep(.el-menu-item.is-active),
 .sidebar-menu :deep(.el-sub-menu .el-menu-item.is-active) {
-  background-color: var(--brand-primary-light) !important;
-  color: var(--brand-primary) !important;
+  background-color: var(--nav-active-bg) !important;
+  color: var(--nav-active-fg) !important;
   font-weight: 600;
 }
 
@@ -459,10 +467,10 @@ const reportOn = computed(() => isMaster.value || !moduleHidden('report'))
   left: 0;
   top: 50%;
   height: 20px;
-  width: 3px;
+  width: var(--sider-bar-w);
   background: var(--brand-primary);
   border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 8px rgba(211, 47, 47, 0.6);
+  box-shadow: 0 0 8px rgba(var(--brand-rgb), 0.6);
   transform: translateY(-50%) scaleY(0);
   animation: elasticBar 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
@@ -473,15 +481,22 @@ const reportOn = computed(() => isMaster.value || !moduleHidden('report'))
   }
 }
 
+/* ⭐ 深色主题：选中竖条用青蓝，比纯白/品牌红更"科技感" */
+html[data-scheme="c"] .sidebar-menu :deep(.el-menu-item.is-active)::after,
+html[data-scheme="c"] .sidebar-menu :deep(.el-sub-menu .el-menu-item.is-active)::after {
+  background: #38BDF8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, .55);
+}
+
 .sidebar-menu :deep(.el-sub-menu:has(.el-menu-item.is-active) .el-sub-menu__title) {
-  color: var(--brand-primary) !important;
-  background-color: var(--brand-primary-light) !important;
+  color: var(--nav-active-fg) !important;
+  background-color: var(--nav-active-bg) !important;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(211, 47, 47, 0.05);
+  box-shadow: 0 2px 8px rgba(var(--brand-rgb), 0.05);
 }
 
 .sidebar-menu :deep(.el-sub-menu:has(.el-menu-item.is-active) .el-sub-menu__icon-arrow) {
-  color: var(--brand-primary);
+  color: var(--nav-active-fg);
 }
 
 .sidebar-menu :deep(.el-menu--inline) {

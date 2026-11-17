@@ -1348,7 +1348,7 @@ onBeforeUnmount(() => {
 .chip i.cy{background:#33D6FF}.chip i.rd{background:#FF3355}
 .hd-c{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}
 .hd-c h1{font-size:32px;font-weight:800;letter-spacing:11px;text-indent:11px;margin:0;
-  background:linear-gradient(180deg,#fff 25%,#9EC4E8 100%);-webkit-background-clip:text;
+  background:linear-gradient(180deg, var(--surface-card) 25%,#9EC4E8 100%);-webkit-background-clip:text;
   background-clip:text;color:transparent}
 .hd-c p{margin:5px 0 0;font-size:11.5px;letter-spacing:3.2px;color:#5A7695}
 .hd-r{margin-left:auto;display:flex;gap:9px;align-items:center}

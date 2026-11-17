@@ -12,6 +12,13 @@
  */
 
 export const THEMES = [
+  /* ============ 默认 ============ */
+  {
+    key: 'crimson', name: '品牌红', group: '常用',
+    main: '#C8102E', hover: '#A00D24', light: '#FEF2F2', dark: '#7F1D1D',
+    desc: '系统默认红',
+  },
+
   /* ============ 沉稳组 ============ */
   {
     key: 'graphite', name: '石墨', group: '沉稳',
@@ -77,10 +84,52 @@ export const THEMES = [
   },
 ]
 
-export const DEFAULT_THEME = 'teal'
+export const DEFAULT_THEME = 'crimson'
 const STORAGE_KEY = 'app_theme' // 老版本：全局一份（只作迁移兜底）
 
 export const findTheme = (key) => THEMES.find((t) => t.key === key) || THEMES.find((t) => t.key === DEFAULT_THEME)
+
+/* ============================================================
+   版式（data-scheme）：决定骨架，跟颜色是两个独立维度
+   ------------------------------------------------------------
+   f 云白 = 线上现状，作为「随时退回原样」的兜底；
+   其余五套见 style.css 末尾的 [data-scheme] 变量组。
+   ============================================================ */
+export const SCHEMES = [
+  { key: 'f', name: '云白', tag: '当前原样', desc: '白顶栏 + 白卡，改版前的样子' },
+  { key: 'b', name: '深框浅台', tag: '推荐', desc: '深色外壳收边，视线锁在内容' },
+  { key: 'd', name: '晨雾', tag: '自然系', desc: '绿灰天光 + 大圆角 + 胶囊控件' },
+  { key: 'e', name: '林间', tag: '自然系', desc: '绿得更沉一档' },
+  { key: 'a', name: '暖灰纸感', tag: '纸感', desc: '米色底，最不刺眼' },
+  { key: 'c', name: '全深色', tag: '夜间', desc: '整体转为暗色' },
+]
+
+export const DEFAULT_SCHEME = 'f'
+export const findScheme = (key) => SCHEMES.find((s) => s.key === key) || SCHEMES.find((s) => s.key === DEFAULT_SCHEME)
+
+/**
+ * 解析主题值。两种格式都认：
+ *   "b:teal"  → { scheme:'b', color:'teal' }
+ *   "teal"    → { scheme:'f', color:'teal' }   ← 老数据：只存了颜色，版式按原样
+ * 空值 / 无法识别 → { scheme:'f', color:'crimson' }
+ */
+export function parseTheme(v) {
+  const raw = String(v || '').trim()
+  if (!raw) return { scheme: DEFAULT_SCHEME, color: DEFAULT_THEME }
+  if (raw.includes(':')) {
+    const [sk, ck] = raw.split(':')
+    return {
+      scheme: findScheme(sk).key,
+      color: findTheme(ck) ? ck : DEFAULT_THEME,
+    }
+  }
+  /* 老值：只有颜色，没有版式 → 版式保持"原样"，只还原用户当时选的色 */
+  if (THEMES.some((t) => t.key === raw)) return { scheme: DEFAULT_SCHEME, color: raw }
+  return { scheme: DEFAULT_SCHEME, color: DEFAULT_THEME }
+}
+
+/** 拼回存储用的字符串 */
+export const serializeTheme = (scheme, color) => `${scheme}:${color}`
 
 /* ⭐ 2026-10-24：主题改成**跟账号走**。
    以前存的是 app_theme 一个全局 key，同一个浏览器里换个账号登录还是上一个人的皮肤，
@@ -126,16 +175,45 @@ const hexToRgb = (hex) => {
   return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`
 }
 
-export function applyTheme(key) {
-  const t = findTheme(key)
+/** 与白色混色：p 为混入比例（0~1） */
+const mixWhite = (hex, p) => {
+  const h = String(hex || '').replace('#', '')
+  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16)
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+  const m = (v) => Math.round(v + (255 - v) * p).toString(16).padStart(2, '0')
+  return `#${m(r)}${m(g)}${m(b)}`
+}
+
+/**
+ * 把主题写到 <html data-scheme> + <html data-theme>，并注入品牌色变量。
+ * ⚠️ 品牌色走 CSS 变量，不要再往组件里写死色值。
+ *
+ * 参数既可以是复合值 "b:teal"，也可以是老值 "teal"。
+ * 返回 { scheme, color }（老代码若拿它当主题对象用，请改读 findTheme(color)）。
+ */
+export function applyTheme(value) {
+  const { scheme, color } = parseTheme(value)
+  const t = findTheme(color)
+
+  /* ⭐ 深色版式下品牌色必须提亮，否则藏青/墨绿这类深色糊进背景里 */
+  const main = scheme === 'c' ? mixWhite(t.main, 0.26) : t.main
+
   const el = document.documentElement
+  /* ⭐ 换肤时先关掉所有过渡，否则会看到"半深半浅"的中间帧（用户会当成闪屏） */
+  el.classList.add('theme-switching')
+  el.setAttribute('data-scheme', scheme)
   el.setAttribute('data-theme', t.key)
-  el.style.setProperty('--brand-primary', t.main)
-  el.style.setProperty('--brand-rgb', hexToRgb(t.main))
-  el.style.setProperty('--brand-primary-hover', t.hover)
-  el.style.setProperty('--brand-primary-light', t.light)
+  el.style.setProperty('--brand-primary', main)
+  el.style.setProperty('--brand-rgb', hexToRgb(main))
+  el.style.setProperty('--brand-primary-hover', scheme === 'c' ? mixWhite(t.hover, 0.2) : t.hover)
+  /* 深色下「品牌浅底」必须变深，否则所有用它当背景的地方（标签、选中行、
+     日期框）都会是一块浅粉 */
+  el.style.setProperty('--brand-primary-light',
+    scheme === 'c' ? `rgba(${hexToRgb(main)}, .16)` : t.light)
   el.style.setProperty('--brand-primary-dark', t.dark)
-  return t
+  /* 两帧之后再放开过渡，确保新配色已经落绘 */
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove('theme-switching')))
+  return { scheme, color: t.key }
 }
 
 /** 本地缓存（保证刷新不闪、也不用等接口） */

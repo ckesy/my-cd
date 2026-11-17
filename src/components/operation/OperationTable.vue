@@ -172,7 +172,7 @@
           <!-- 表格 -->
           <div class="table-wrap">
             <el-table :data="tableData" v-loading="loading" :element-loading-text="loadingText"
-              element-loading-background="rgba(255,255,255,0.88)" border stripe :size="tableSize" height="100%"
+              element-loading-background="var(--glass-panel)" border stripe :size="tableSize" height="100%"
               class="custom-table" empty-text="暂无数据，请调整筛选条件后查询">
               <el-table-column v-for="col in visibleColumns" :key="col.prop" :prop="col.prop" :label="col.label"
                 :width="col.width || undefined" :min-width="col.minWidth || undefined" :fixed="col.fixed || false"
@@ -841,7 +841,7 @@ onBeforeUnmount(() => {
   --num-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue',
     'PingFang SC', 'HarmonyOS Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', Arial, sans-serif;
   padding: 6px 16px 16px;
-  background-color: #F8FAFC;
+  background-color: var(--surface-page);
   height: calc(100vh - 147px);
   max-height: calc(100vh - 147px);
   box-sizing: border-box;
@@ -851,12 +851,12 @@ onBeforeUnmount(() => {
   gap: 12px;
   font-family: var(--num-font);
   font-size: 13px;
-  color: #1E293B;
+  color: var(--ink);
 }
 
 /* ========== 筛选卡片 ========== */
 .filter-card {
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   padding: 14px 16px;
@@ -876,7 +876,7 @@ onBeforeUnmount(() => {
 .search-row :deep(.el-input__wrapper),
 .search-row :deep(.el-select__wrapper) {
   border-radius: 8px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all 0.25s;
   min-height: 32px;
@@ -890,7 +890,7 @@ onBeforeUnmount(() => {
 
 .search-row :deep(.el-input__wrapper.is-focus),
 .search-row :deep(.el-select__wrapper.is-focused) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.15), 0 0 0 1px var(--brand-primary) inset !important;
 }
 
@@ -924,8 +924,8 @@ onBeforeUnmount(() => {
 
 :deep(.btn-outline) {
   border-color: #CBD5E1;
-  color: #334155;
-  background: #fff;
+  color: var(--ink-2);
+  background: var(--surface-card);
 }
 
 :deep(.btn-outline:hover) {
@@ -970,7 +970,7 @@ onBeforeUnmount(() => {
 .table-card {
   flex: 1;
   min-height: 0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   padding: 12px 16px;
@@ -1009,13 +1009,13 @@ onBeforeUnmount(() => {
 .toolbar-title {
   font-size: 15px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 
 .toolbar-total {
   font-size: 12.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 500;
   padding-left: 8px;
   border-left: 1px solid #E2E8F0;
@@ -1062,7 +1062,7 @@ onBeforeUnmount(() => {
 .hint-btn {
   margin-left: auto;
   border: 1px solid #FCD34D;
-  background: #fff;
+  background: var(--surface-card);
   color: #B45309;
   font-family: inherit;
   font-size: 12px;
@@ -1088,9 +1088,9 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   border: 1px solid #E2E8F0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 8px;
-  color: #64748B;
+  color: var(--ink-3);
   font-size: 15px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1177,8 +1177,8 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-table th.el-table__cell) {
-  background: #F8FAFC !important;
-  color: #0F172A;
+  background: var(--surface-page) !important;
+  color: var(--ink);
   font-weight: 700;
   font-size: 12.5px;
   letter-spacing: 0.2px;
@@ -1210,7 +1210,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-table .el-table__body tr.el-table__row--striped td.el-table__cell) {
-  background: #FAFBFC;
+  background: var(--surface-sunken);
 }
 
 :deep(.custom-table .cell) {
@@ -1304,16 +1304,16 @@ onBeforeUnmount(() => {
 }
 
 .status-tag.offline {
-  background: #F1F5F9;
-  color: #64748B;
+  background: var(--surface-hover);
+  color: var(--ink-3);
   border-color: #E2E8F0;
 }
 
 /* 列设置：锁定列 */
 .locked-tip {
   font-size: 11px;
-  color: #94A3B8;
-  background: #F1F5F9;
+  color: var(--ink-3);
+  background: var(--surface-hover);
   border-radius: 4px;
   padding: 1px 6px;
 }
@@ -1356,7 +1356,7 @@ onBeforeUnmount(() => {
 
 /* loading 文案 */
 :deep(.el-loading-text) {
-  color: #64748B;
+  color: var(--ink-3);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 1px;
@@ -1371,7 +1371,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 10px 32px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.12) !important;
   border-radius: 10px !important;
   overflow: hidden;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 
 .column-setting-popper.el-popover.el-popper {
@@ -1380,7 +1380,7 @@ onBeforeUnmount(() => {
 
 .density-dropdown-red .el-dropdown-menu {
   padding: 4px !important;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 
 .density-dropdown-red .el-dropdown-menu__item {
@@ -1418,7 +1418,7 @@ onBeforeUnmount(() => {
 
 .column-setting {
   padding: 0;
-  background: #FFFFFF;
+  background: var(--surface-card);
 }
 
 .column-setting-header {
@@ -1544,9 +1544,9 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   border: 1px solid #E2E8F0;
-  background: #FFF;
+  background: var(--surface-card);
   border-radius: 4px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-size: 12px;
   cursor: pointer;
   padding: 0;

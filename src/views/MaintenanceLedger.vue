@@ -76,7 +76,7 @@
 
         <div class="mt-table">
           <el-table :data="pagedRows" v-loading="loading" element-loading-text="加载中…"
-            element-loading-background="rgba(255,255,255,0.88)" :size="tableSize" stripe height="100%"
+            element-loading-background="var(--glass-panel)" :size="tableSize" stripe height="100%"
             row-key="id" @row-click="openEdit">
             <el-table-column v-for="col in visibleColumns" :key="col.prop" :prop="col.prop" :label="col.label"
               :width="col.width" :min-width="col.width ? undefined : col.minWidth || 110"
@@ -386,7 +386,7 @@ onMounted(reload)
 }
 .kpi {
   flex: 1;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #e6ecf3;
   border-radius: 10px;
   padding: 12px 16px;
@@ -394,7 +394,7 @@ onMounted(reload)
 .kpi-v {
   font-size: 22px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--ink);
   line-height: 1.15;
   letter-spacing: -0.4px;
   font-variant-numeric: tabular-nums;
@@ -402,12 +402,12 @@ onMounted(reload)
 .kpi-u {
   font-size: 12px;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--ink-3);
   margin-left: 3px;
 }
 .kpi-l {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--ink-3);
   margin-top: 3px;
 }
 .kpi.is-green .kpi-v { color: #15803d; }
@@ -423,8 +423,8 @@ onMounted(reload)
 .mt-tab {
   font: inherit;
   font-size: 13px;
-  color: #475569;
-  background: #fff;
+  color: var(--ink-2);
+  background: var(--surface-card);
   border: 1px solid #e6ecf3;
   border-radius: 8px;
   padding: 6px 13px;
@@ -434,7 +434,7 @@ onMounted(reload)
   gap: 6px;
   transition: 0.15s;
 }
-.mt-tab:hover { border-color: #cbd5e1; color: #0f172a; }
+.mt-tab:hover { border-color: #cbd5e1; color: var(--ink); }
 .mt-tab.on {
   background: var(--brand-primary);
   border-color: var(--brand-primary);
@@ -448,7 +448,7 @@ onMounted(reload)
   border-radius: 4px;
   background: rgba(15, 23, 42, 0.06);
 }
-.mt-tab.on .mt-tab-n { background: rgba(255, 255, 255, 0.22); }
+.mt-tab.on .mt-tab-n { background: rgba(255, 255, 255, .24); }
 
 /* 筛选 */
 .mt-filter {
@@ -456,7 +456,7 @@ onMounted(reload)
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #e6ecf3;
   border-radius: 10px;
   padding: 12px 14px;
@@ -489,7 +489,7 @@ onMounted(reload)
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #e6ecf3;
   border-radius: 10px;
   overflow: hidden;
@@ -518,7 +518,7 @@ onMounted(reload)
   margin: 0;
   font-size: 14px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--ink);
 }
 .tl-hint { font-size: 11px; color: #b4becb; }
 .mt-toolbar :deep(.table-tools) { margin-left: auto; }
@@ -530,7 +530,7 @@ onMounted(reload)
 }
 .mt-card :deep(.el-table th.el-table__cell) {
   font-size: 12px;
-  color: #475569;
+  color: var(--ink-2);
   font-weight: 700;
 }
 .mt-card :deep(.el-table td.el-table__cell) { padding: 12px 0; }
@@ -546,11 +546,11 @@ onMounted(reload)
 
 /* 单元格 */
 .num { font-variant-numeric: tabular-nums; }
-.cell-date { font-size: 12.5px; color: #64748b; display: inline-flex; align-items: center; gap: 5px; }
-.cell-plate { font-size: 13px; font-weight: 700; color: #0f172a; letter-spacing: 0.3px; }
-.cell-main { font-size: 12.5px; color: #0f172a; }
-.cell-dim { font-size: 12.5px; color: #64748b; }
-.cell-amt { font-size: 13px; font-weight: 700; color: #0f172a; }
+.cell-date { font-size: 12.5px; color: var(--ink-3); display: inline-flex; align-items: center; gap: 5px; }
+.cell-plate { font-size: 13px; font-weight: 700; color: var(--ink); letter-spacing: 0.3px; }
+.cell-main { font-size: 12.5px; color: var(--ink); }
+.cell-dim { font-size: 12.5px; color: var(--ink-3); }
+.cell-amt { font-size: 13px; font-weight: 700; color: var(--ink); }
 .cell-ops { display: flex; gap: 4px; }
 .del-btn { color: #b45309 !important; }
 .tag-doing {
@@ -568,8 +568,8 @@ onMounted(reload)
   font-weight: 700;
   border-radius: 5px;
   padding: 2px 8px;
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--surface-hover);
+  color: var(--ink-2);
 }
 .pill.ok { background: #dcfce7; color: #15803d; }
 .pill.info { background: #dbeafe; color: #1d4ed8; }
@@ -584,7 +584,7 @@ onMounted(reload)
   padding: 40px 0;
 }
 .mt-empty-ic { font-size: 30px; color: #e2e8f0; }
-.mt-empty p { margin: 0; font-size: 13px; color: #64748b; font-weight: 600; }
+.mt-empty p { margin: 0; font-size: 13px; color: var(--ink-3); font-weight: 600; }
 .mt-empty span { font-size: 12px; color: #b4becb; }
 
 .fs-exit-btn {

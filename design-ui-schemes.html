@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-scheme="b">
+<head>
+<meta charset="UTF-8" />
+<title>车队管理平台 · UI 版式设计稿 A/B/C</title>
+<style>
+  /* ============================================================
+     设计稿说明
+     ------------------------------------------------------------
+     三套版式，共用同一套语义变量，切换只换 <html data-scheme>：
+       A 暖灰纸感   white-light 感最低，米灰底
+       B 深框浅台   深石墨外壳 + 浅灰工作区（推荐）
+       C 全深色     夜间版
+
+     变量分层（落地时正是这套）：
+       --surface-page      页面底
+       --surface-card      卡片
+       --surface-header    顶栏
+       --surface-tabs      标签栏
+       --surface-sider     侧栏
+       --surface-sider-active  侧栏选中
+       --surface-thead     表头
+       --surface-sunken    下沉底（筛选区/只读块）
+       --surface-hover     悬停
+       --line / --line-soft    边框
+       --ink / --ink-2 / --ink-3   文字三级
+       --ink-on-sider / --ink-on-sider-active
+       --brand / --brand-soft / --brand-rgb  品牌色（可再换）
+     ============================================================ */
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+
+  /* 状态色：语义固定，深色下单独提亮（浅色版直接复用） */
+  :root {
+    --brand: #C8102E;
+    --brand-rgb: 200, 16, 46;
+    --state-run: #1D4ED8;
+    --state-wait: #B45309;
+    --state-done: #15803D;
+    --state-pause: #64748B;
+
+    /* 形状：默认是"工程感"的直角，自然系（D/E/F）会整体换掉 */
+    --r-card: 10px;
+    --r-ctl: 8px;
+    --r-nav: 8px;
+    --r-tab: 6px;
+    --sider-bar-w: 2.5px;
+    --card-border: 1px solid var(--line);
+    --sider-line: 1px;
+    --stage-wash: none;
+    --tab-shadow: none;
+  }
+  html[data-scheme="c"] {
+    --state-run: #7CB2FF;
+    --state-wait: #E8AE5F;
+    --state-done: #63CC95;
+    --state-pause: #94A5BC;
+  }
+  body {
+    background: #4A505B;
+    font-family: system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .stage-wrap {
+    width: 1920px; height: 1080px;
+    transform-origin: center center;
+    flex: 0 0 auto;
+  }
+
+  /* ================= A 暖灰纸感 ================= */
+  html[data-scheme="a"] {
+    --surface-page: #E9E3D6;
+    --surface-card: #FFFDF9;
+    --surface-header: #FAF6EE;
+    --surface-tabs: #F2ECE0;
+    --surface-sider: #E1D9C9;
+    --surface-sider-active: #FFFDF9;
+    --surface-thead: #EBE4D5;
+    --surface-sunken: #F6F1E5;
+    --surface-hover: #F4EEE1;
+    --line: #D8CFBD;
+    --line-soft: #E7DFCF;
+    --ink: #1C1917;
+    --ink-2: #57534E;
+    --ink-3: #857D6E;
+    --ink-on-sider: #57503F;
+    --ink-on-sider-active: #1C1917;
+    --sider-active-bar: #8C8578;
+    --topbar-line: #DDD4C2;
+    --shadow-card: 0 1px 2px rgba(60, 45, 25, .06);
+  }
+
+  /* ================= B 深框浅台 ================= */
+  html[data-scheme="b"] {
+    --surface-page: #E9EEF5;
+    --surface-card: #FFFFFF;
+    --surface-header: #1B2230;
+    --surface-tabs: #232B3B;
+    --surface-sider: #1B2230;
+    --surface-sider-active: #2B3649;
+    --surface-thead: #F1F5FA;
+    --surface-sunken: #EFF3F9;
+    --surface-hover: #F5F8FC;
+    --line: #DCE4EF;
+    --line-soft: #E9EFF7;
+    --ink: #0F172A;
+    --ink-2: #475569;
+    --ink-3: #8695A8;
+    --ink-on-sider: #8E9CB0;
+    --ink-on-sider-active: #FFFFFF;
+    --sider-active-bar: #FFFFFF;
+    --topbar-line: #2C3547;
+    --shadow-card: 0 1px 3px rgba(16, 32, 56, .06);
+  }
+
+  /* ================= C 全深色 ================= */
+  html[data-scheme="c"] {
+    --surface-page: #0D131F;
+    --surface-card: #19222F;
+    --surface-header: #121A26;
+    --surface-tabs: #111925;
+    --surface-sider: #0A0F17;
+    --surface-sider-active: #1F2A3B;
+    --surface-thead: #1F2937;
+    --surface-sunken: #141C29;
+    --surface-hover: #1E2836;
+    --line: #2C3849;
+    --line-soft: #232E3C;
+    --ink: #EDF3FB;
+    --ink-2: #B7C5D7;
+    --ink-3: #7B8CA3;
+    --ink-on-sider: #7C8CA3;
+    --ink-on-sider-active: #FFFFFF;
+    --sider-active-bar: #FFFFFF;
+    --topbar-line: #1F2937;
+    --shadow-card: none;
+  }
+
+  /* ================= D 晨雾（自然系 · 最贴参考图）================= */
+  html[data-scheme="d"] {
+    --surface-page: #E9EDE0;
+    --surface-card: #FFFFFF;
+    --surface-header: #FAF8F1;
+    --surface-tabs: #F5F3EA;
+    --surface-sider: #FAF8F1;
+    --surface-sider-active: #E4EEDF;
+    --surface-thead: #F3F4E9;
+    --surface-sunken: #F5F4EA;
+    --surface-hover: #EFF2E4;
+    --line: #DCDFCE;
+    --line-soft: #E9EBDD;
+    --ink: #2C352E;
+    --ink-2: #4F5A51;
+    --ink-3: #8A9186;
+    --ink-on-sider: #5A655B;
+    --ink-on-sider-active: #2C352E;
+    --sider-active-bar: transparent;
+    --topbar-line: transparent;
+    --shadow-card: 0 8px 28px rgba(74, 92, 71, .07), 0 1px 2px rgba(74, 92, 71, .04);
+    --stage-wash: linear-gradient(172deg, #D6E7D1 0%, #E4EADA 45%, #F2F1E4 100%);
+    --r-card: 18px; --r-ctl: 998px; --r-nav: 10px; --r-tab: 998px;
+    --sider-bar-w: 0px; --card-border: 0;
+    --tab-shadow: 0 2px 8px rgba(74, 92, 71, .1);
+    --sider-line: 0;
+  }
+
+  /* ================= E 林间（自然系 · 绿得更沉）================= */
+  html[data-scheme="e"] {
+    --surface-page: #DFE8D8;
+    --surface-card: #FFFFFF;
+    --surface-header: #F4F8EF;
+    --surface-tabs: #EFF4E8;
+    --surface-sider: #F3F8EF;
+    --surface-sider-active: #D5E5CB;
+    --surface-thead: #F1F5EC;
+    --surface-sunken: #F3F7EF;
+    --surface-hover: #EDF3E9;
+    --line: #D6E0D1;
+    --line-soft: #E3EADC;
+    --ink: #253029;
+    --ink-2: #4A564D;
+    --ink-3: #7F8A80;
+    --ink-on-sider: #4E5B50;
+    --ink-on-sider-active: #1F2C24;
+    --sider-active-bar: transparent;
+    --topbar-line: transparent;
+    --shadow-card: 0 10px 30px rgba(52, 74, 56, .08), 0 1px 2px rgba(52, 74, 56, .05);
+    --stage-wash: linear-gradient(172deg, #C9DEC0 0%, #D8E5CD 45%, #ECEFDE 100%);
+    --r-card: 16px; --r-ctl: 998px; --r-nav: 10px; --r-tab: 998px;
+    --sider-bar-w: 0px; --card-border: 0;
+    --tab-shadow: 0 2px 8px rgba(52, 74, 56, .1);
+    --sider-line: 0;
+  }
+
+  /* ================= F 云白（= 当前线上系统原样，不要动）=================
+     取的是 style.css / Dashboard.vue 里现在真正在用的那套值：
+     白顶栏 + 白卡 + #F8FAFC 页面底 + #F7F9FC 表头 + 8px 圆角 + 侧栏竖条。
+     它的作用是「改版之后随时能退回原样」，不是设计新风格。
+     ==================================================================== */
+  html[data-scheme="f"] {
+    --surface-page: #F8FAFC;
+    --surface-card: #FFFFFF;
+    --surface-header: #FFFFFF;
+    --surface-tabs: #FFFFFF;
+    --surface-sider: #F8FAFC;
+    --surface-sider-active: #F1F5F9;
+    --surface-thead: #F7F9FC;
+    --surface-sunken: #F1F5F9;
+    --surface-hover: #F1F5F9;
+    --line: #E2E8F0;
+    --line-soft: #EEF2F7;
+    --ink: #0F172A;
+    --ink-2: #334155;
+    --ink-3: #64748B;
+    --ink-on-sider: #475569;
+    --ink-on-sider-active: #0F172A;
+    --sider-active-bar: var(--brand);
+    --topbar-line: #E8EEF5;
+    --shadow-card: 0 2px 8px rgba(0, 0, 0, .04);
+    --stage-wash: none;
+    --r-card: 10px; --r-ctl: 8px; --r-nav: 8px; --r-tab: 6px;
+    --sider-bar-w: 2.5px; --card-border: 1px solid var(--line);
+    --tab-shadow: none;
+    --sider-line: 1;
+  }
+
+  /* 自然系（仅 D / E）：顶栏、标签栏、内容区全透明，露出 .stage 的天光渐变。
+     F 已经不是自然系了 —— 它是原样，必须保留白顶栏与实底。 */
+  html[data-scheme="d"] .content,
+  html[data-scheme="e"] .content { background: transparent; }
+  html[data-scheme="d"] .topbar,
+  html[data-scheme="e"] .topbar,
+  html[data-scheme="d"] .tabs,
+  html[data-scheme="e"] .tabs { background-color: transparent; }
+  html[data-scheme="d"] .topbar::after,
+  html[data-scheme="e"] .topbar::after { display: none; }
+  html[data-scheme="d"] .sider {
+    background-color: rgba(251, 250, 244, .66);
+    -webkit-backdrop-filter: blur(18px) saturate(115%);
+    backdrop-filter: blur(18px) saturate(115%);
+  }
+  html[data-scheme="e"] .sider {
+    background-color: rgba(247, 251, 244, .60);
+    -webkit-backdrop-filter: blur(18px) saturate(115%);
+    backdrop-filter: blur(18px) saturate(115%);
+  }
+  html[data-scheme="d"] .tab.on,
+  html[data-scheme="e"] .tab.on { border-color: transparent; box-shadow: var(--tab-shadow); }
+  /* F 的侧栏与内容区同是 #F8FAFC，必须给一条细边，否则两块糊在一起 */
+  html[data-scheme="f"] .sider { border-right: 1px solid var(--line); }
+
+  /* ================= 舞台 ================= */
+  .stage {
+    width: 1920px; height: 1080px;
+    display: flex;
+    background-color: var(--surface-page);
+    background-image: var(--stage-wash);
+    color: var(--ink);
+    overflow: hidden;
+    transition: background .18s linear;
+  }
+
+  /* ---------- 侧栏 ---------- */
+  .sider {
+    width: 220px; flex: 0 0 220px;
+    background: var(--surface-sider);
+    display: flex; flex-direction: column;
+    transition: width .22s cubic-bezier(.4,0,.2,1), background .18s linear;
+    overflow: hidden;
+  }
+  .sider.collapsed { width: 64px; flex-basis: 64px; }
+  .brand-row {
+    height: 48px; display: flex; align-items: center; gap: 10px;
+    padding: 0 16px; flex: 0 0 auto;
+  }
+  .brand-mark {
+    width: 26px; height: 26px; border-radius: 7px; flex: 0 0 auto;
+    background: var(--brand);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .brand-mark svg { width: 15px; height: 15px; }
+  .brand-name {
+    font-size: 13.5px; font-weight: 600; letter-spacing: .5px;
+    color: var(--ink-on-sider-active); white-space: nowrap;
+  }
+  .sider.collapsed .brand-name { display: none; }
+
+  .nav { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 8px 12px; }
+  .nav::-webkit-scrollbar { width: 0; }
+  .nav-group {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 1.2px;
+    color: var(--ink-on-sider); opacity: .62;
+    padding: 14px 10px 6px; white-space: nowrap;
+  }
+  .sider.collapsed .nav-group { height: 10px; padding: 0; overflow: hidden; opacity: 0; }
+  .nav-item {
+    height: 38px; border-radius: var(--r-nav); display: flex; align-items: center; gap: 11px;
+    padding: 0 10px; margin-bottom: 2px; cursor: pointer;
+    color: var(--ink-on-sider);
+    font-size: 13px; white-space: nowrap;
+    position: relative;
+    transition: background .14s linear, color .14s linear;
+  }
+  .nav-item svg { width: 17px; height: 17px; flex: 0 0 auto; }
+  .nav-item:hover { background: var(--surface-hover); color: var(--ink-on-sider-active); }
+  html[data-scheme="b"] .nav-item:hover,
+  html[data-scheme="c"] .nav-item:hover { background: rgba(255,255,255,.06); }
+  .nav-item.on {
+    background: var(--surface-sider-active);
+    color: var(--ink-on-sider-active);
+    font-weight: 600;
+  }
+  .nav-item.on::before {
+    content: ''; position: absolute; left: -8px; top: 9px; bottom: 9px;
+    width: var(--sider-bar-w); border-radius: 2px; background: var(--brand);
+  }
+  .nav-badge {
+    margin-left: auto; font-size: 10.5px; font-weight: 700;
+    min-width: 17px; height: 17px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--brand); color: #fff; padding: 0 5px;
+  }
+  .sider.collapsed .nav-badge { display: none; }
+  .sider.collapsed .nav-item { justify-content: center; padding: 0; }
+  .sider.collapsed .nav-item.on::before { left: 0; }
+  .sider-foot {
+    border-top: 1px solid var(--line-soft); padding: 10px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  html[data-scheme="b"] .sider-foot, html[data-scheme="c"] .sider-foot { border-color: rgba(255,255,255,.07); }
+  .pin-btn {
+    width: 32px; height: 32px; border-radius: 7px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-on-sider); background: transparent; border: 0;
+  }
+  .pin-btn:hover { background: rgba(0,0,0,.05); color: var(--ink-on-sider-active); }
+  html[data-scheme="b"] .pin-btn:hover, html[data-scheme="c"] .pin-btn:hover { background: rgba(255,255,255,.07); }
+  .sider.collapsed .sider-foot { justify-content: center; }
+
+  /* ---------- 主区 ---------- */
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+  .topbar {
+    position: relative;
+    height: 48px; flex: 0 0 48px;
+    background: var(--surface-header);
+    border-bottom: 1px solid var(--topbar-line);
+    display: flex; align-items: center; padding: 0 18px 0 20px;
+    transition: background .18s linear;
+  }
+  /* 顶栏底边的一缕品牌色：静态、极淡，从左渐显到右渐隐，不做动画 */
+  .topbar::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(var(--brand-rgb), .55) 26%,
+      rgba(var(--brand-rgb), .35) 62%,
+      transparent 100%);
+    pointer-events: none;
+  }
+  .topbar-title {
+    font-size: 14px; font-weight: 600; letter-spacing: .4px;
+    color: var(--ink);
+  }
+  html[data-scheme="b"] .topbar-title,
+  html[data-scheme="c"] .topbar-title { color: #FFFFFF; letter-spacing: .6px; }
+  .topbar-sub {
+    font-size: 11.5px; margin-left: 10px; padding-left: 10px;
+    border-left: 1px solid var(--line);
+    color: var(--ink-3);
+  }
+  html[data-scheme="b"] .topbar-sub,
+  html[data-scheme="c"] .topbar-sub { color: #7E8DA4; border-color: #2E3849; }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+  .tbtn {
+    height: 30px; border-radius: var(--r-ctl); padding: 0 13px;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12.5px; cursor: pointer;
+    border: 1px solid var(--line);
+    background: var(--surface-card);
+    color: var(--ink-2);
+    transition: border-color .14s, color .14s, background .14s;
+    font-family: inherit;
+  }
+  .tbtn:hover { border-color: var(--brand); color: var(--brand); }
+  .tbtn svg { width: 14px; height: 14px; }
+  html[data-scheme="b"] .tbtn,
+  html[data-scheme="c"] .tbtn {
+    background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.14); color: #C3CEDD;
+  }
+  html[data-scheme="b"] .tbtn:hover,
+  html[data-scheme="c"] .tbtn:hover { background: rgba(255,255,255,.11); border-color: rgba(255,255,255,.3); color: #fff; }
+  .tbtn.solid {
+    background: var(--brand); border-color: var(--brand); color: #fff;
+  }
+  .tbtn.solid:hover { background: var(--brand); color: #fff; opacity: .9; }
+  .tbtn.danger {
+    color: var(--brand); border-color: rgba(var(--brand-rgb), .38); background: transparent;
+  }
+  .tbtn.danger:hover { background: rgba(var(--brand-rgb), .1); border-color: var(--brand); color: var(--brand); }
+  html[data-scheme="b"] .tbtn.danger,
+  html[data-scheme="c"] .tbtn.danger {
+    background: rgba(255,255,255,.05);
+    border-color: rgba(var(--brand-rgb), .5);
+    color: var(--brand);
+  }
+  html[data-scheme="b"] .tbtn.danger:hover,
+  html[data-scheme="c"] .tbtn.danger:hover { background: rgba(var(--brand-rgb), .16); color: var(--brand); }
+
+  /* 深色下输入框要比卡片低一档，才有"凹进去"的样子 */
+  html[data-scheme="c"] .inp { background: #121A27; border-color: #33415A; }
+  html[data-scheme="c"] .inp.readonly { background: #1E2836; border-color: #2C3849; }
+  .icon-btn {
+    width: 30px; height: 30px; border-radius: var(--r-ctl); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line); background: var(--surface-card); color: var(--ink-2);
+  }
+  .icon-btn svg { width: 15px; height: 15px; }
+  .icon-btn:hover { border-color: var(--brand); color: var(--brand); }
+  html[data-scheme="b"] .icon-btn,
+  html[data-scheme="c"] .icon-btn { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.14); color: #C3CEDD; }
+  html[data-scheme="b"] .icon-btn:hover,
+  html[data-scheme="c"] .icon-btn:hover { background: rgba(255,255,255,.11); color: #fff; }
+
+  .tabs {
+    height: 36px; flex: 0 0 36px;
+    background: var(--surface-tabs);
+    border-bottom: 1px solid var(--topbar-line);
+    display: flex; align-items: center; gap: 6px; padding: 0 16px;
+    transition: background .18s linear;
+  }
+  .tab {
+    height: 24px; border-radius: var(--r-tab); padding: 0 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; cursor: pointer; border: 1px solid transparent;
+    color: var(--ink-3); background: transparent;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.on {
+    background: var(--surface-card); color: var(--ink);
+    border-color: var(--line); font-weight: 600;
+  }
+  html[data-scheme="b"] .tab.on,
+  html[data-scheme="c"] .tab.on { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.14); color: #fff; }
+  html[data-scheme="b"] .tab:hover,
+  html[data-scheme="c"] .tab:hover { color: #fff; }
+  .tab .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--brand); }
+
+  /* ---------- 内容区 ---------- */
+  .content {
+    flex: 1; min-height: 0; display: flex; flex-direction: column;
+    padding: 14px 20px 16px;
+    background: var(--surface-page);
+    transition: background .18s linear;
+  }
+
+  .filter-row { display: flex; align-items: center; gap: 10px; }
+  .inp {
+    height: 32px; border-radius: var(--r-ctl); border: 1px solid var(--line);
+    background: var(--surface-card); color: var(--ink);
+    font-size: 12.5px; font-family: inherit;
+    padding: 0 11px; display: inline-flex; align-items: center; gap: 7px;
+    min-width: 0;
+  }
+  .inp svg { width: 13px; height: 13px; color: var(--ink-3); flex: 0 0 auto; }
+  .inp.ph { color: var(--ink-3); }
+  .inp.w-sm { width: 148px; }
+  .inp.w-md { width: 172px; }
+  .inp.w-lg { width: 214px; }
+  .btn {
+    height: 32px; border-radius: var(--r-ctl); padding: 0 16px; font-size: 12.5px;
+    font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line); background: var(--surface-card); color: var(--ink-2);
+  }
+  .btn svg { width: 13px; height: 13px; }
+  .btn:hover { border-color: var(--brand); color: var(--brand); }
+  .btn.primary {
+    background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600;
+  }
+  .btn.primary:hover { background: var(--brand); color: #fff; opacity: .9; }
+  .more-link {
+    font-size: 12.5px; color: var(--ink-3); cursor: pointer; margin-left: 2px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .more-link:hover { color: var(--brand); }
+
+  .toolbar {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 14px; margin-bottom: 10px;
+  }
+  .toolbar-title {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 14px; font-weight: 600; color: var(--ink);
+  }
+  .toolbar-title::before {
+    content: ''; width: 3px; height: 14px; border-radius: 2px; background: var(--brand);
+  }
+  .toolbar-count { font-size: 12px; color: var(--ink-3); font-weight: 400; margin-left: 2px; }
+  .toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .tools { display: flex; align-items: center; gap: 2px; padding-left: 8px; margin-left: 4px; border-left: 1px solid var(--line); }
+  .tool {
+    width: 28px; height: 28px; border-radius: 7px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-3); background: transparent; border: 0;
+  }
+  .tool svg { width: 15px; height: 15px; }
+  .tool:hover { background: var(--surface-hover); color: var(--ink); }
+
+  /* ---------- 表格卡 ---------- */
+  .card {
+    flex: 1; min-height: 0; display: flex; flex-direction: column;
+    background: var(--surface-card);
+    border: var(--card-border);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    transition: background .18s linear, border-color .18s linear;
+  }
+  .tbl-head, .tr {
+    display: grid;
+    grid-template-columns: 168px 1fr 1fr 122px 96px 92px 108px 128px 96px;
+    align-items: center;
+  }
+  .tbl-head {
+    height: 40px; flex: 0 0 40px;
+    background: var(--surface-thead);
+    border-bottom: 1px solid var(--line);
+    font-size: 12px; font-weight: 700; color: var(--ink-2);
+    letter-spacing: .2px;
+  }
+  .tbl-head > div, .tr > div { padding: 0 14px; min-width: 0; }
+  .tbl-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .tr {
+    flex: 1; min-height: 46px;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 13px; color: var(--ink);
+    cursor: pointer;
+    transition: background .12s linear;
+  }
+  .tr:hover { background: var(--surface-hover); }
+  .tr:last-child { border-bottom: 0; }
+  .tr .no {
+    font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+    font-size: 12.5px; font-weight: 600; letter-spacing: .2px;
+    color: var(--ink);
+  }
+  .sub { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .money { font-weight: 700; font-size: 13.5px; }
+  .route { display: flex; align-items: center; gap: 7px; }
+  .route .arrow { color: var(--ink-3); font-size: 11px; }
+  .st { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+  .st i { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; }
+  .st.run { color: var(--state-run); } .st.run i { background: var(--state-run); }
+  .st.wait { color: var(--state-wait); } .st.wait i { background: var(--state-wait); }
+  .st.done { color: var(--state-done); } .st.done i { background: var(--state-done); }
+  .st.pause { color: var(--state-pause); } .st.pause i { background: var(--state-pause); }
+  .row-ops { display: flex; gap: 10px; font-size: 12.5px; }
+  .row-ops span { color: var(--brand); cursor: pointer; }
+  .row-ops span.ghost { color: var(--ink-3); }
+  .row-ops span.ghost:hover { color: var(--brand); }
+
+  .pager {
+    flex: 0 0 48px; height: 48px; border-top: 1px solid var(--line);
+    display: flex; align-items: center; padding: 0 16px; gap: 6px;
+    font-size: 12.5px; color: var(--ink-3);
+  }
+  .pg { min-width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;
+        padding: 0 7px; cursor: pointer; color: var(--ink-2); font-size: 12.5px; }
+  .pg:hover { background: var(--surface-hover); }
+  .pg.on { background: var(--brand); color: #fff; font-weight: 600; }
+  .pager .spacer { margin-left: auto; }
+
+  /* ---------- 皮肤面板 ---------- */
+  .skin-pop {
+    position: absolute; top: 56px; right: 18px; width: 328px;
+    background: var(--surface-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 14px 40px rgba(10, 20, 38, .18);
+    padding: 14px; z-index: 60;
+    display: none;
+  }
+  .skin-pop.open { display: block; }
+  .pop-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .8px;
+    color: var(--ink-3); margin-bottom: 8px;
+  }
+  .schemes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .scheme {
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px; cursor: pointer;
+    background: var(--surface-card);
+  }
+  .scheme:hover { border-color: var(--ink-3); }
+  .scheme.on { border: 1.5px solid var(--brand); padding: 5.5px; }
+  .scheme-prev {
+    height: 46px; border-radius: 5px; overflow: hidden; display: flex;
+    border: 1px solid rgba(0,0,0,.06);
+  }
+  .scheme-prev .p-sider { width: 13px; }
+  .scheme-prev .p-body { flex: 1; display: flex; flex-direction: column; }
+  .scheme-prev .p-head { height: 9px; }
+  .scheme-prev .p-tabs { height: 6px; }
+  .scheme-prev .p-page { flex: 1; padding: 3px; }
+  .scheme-prev .p-card { height: 100%; border-radius: 2px; }
+  .scheme-name { font-size: 11.5px; font-weight: 600; margin-top: 6px; color: var(--ink); }
+  .scheme-tag { font-size: 10.5px; color: var(--ink-3); margin-top: 1px; }
+  .swatches { display: flex; gap: 8px; margin-top: 4px; }
+  .sw {
+    width: 24px; height: 24px; border-radius: 7px; cursor: pointer;
+    border: 1.5px solid transparent; position: relative;
+  }
+  .sw.on { border-color: var(--ink); }
+  .pop-hint {
+    margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft);
+    font-size: 10.5px; color: var(--ink-3); line-height: 1.6;
+  }
+  .pop-hint b { color: var(--ink-2); font-weight: 600; }
+
+  /* ---------- 弹窗 ---------- */
+  .mask {
+    position: absolute; inset: 0; background: rgba(9, 15, 26, .45);
+    display: none; align-items: center; justify-content: center; z-index: 80;
+  }
+  .mask.open { display: flex; -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px); }
+  .dlg {
+    width: 560px; background: var(--surface-card); border-radius: calc(var(--r-card) + 2px);
+    border: 1px solid var(--line);
+    box-shadow: 0 24px 64px rgba(6, 12, 24, .3);
+    overflow: hidden;
+  }
+  .dlg-hd {
+    height: 50px; display: flex; align-items: center; padding: 0 18px;
+    border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--ink);
+  }
+  .dlg-hd .x { margin-left: auto; cursor: pointer; color: var(--ink-3); font-size: 16px; line-height: 1; }
+  .dlg-bd { padding: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.full { grid-column: span 2; }
+  .field label { font-size: 11.5px; color: var(--ink-3); font-weight: 600; }
+  .field .inp { width: 100%; }
+  .field .inp.readonly { background: var(--surface-sunken); color: var(--ink-2); }
+  .dlg-ft {
+    height: 54px; display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+    padding: 0 18px; border-top: 1px solid var(--line); background: var(--surface-sunken);
+  }
+
+  .hint-bar {
+    position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%);
+    font-size: 11px; color: #C9D2DF; letter-spacing: .3px;
+    background: rgba(15, 22, 34, .78); border-radius: 6px; padding: 5px 12px;
+    z-index: 90;
+    white-space: nowrap;
+  }
+  .hint-bar b { color: #fff; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="stage-wrap" id="stageWrap">
+  <div class="stage">
+
+    <!-- ============ 侧栏 ============ -->
+    <aside class="sider" id="sider">
+      <div class="brand-row">
+        <div class="brand-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12h4l2-6 4 12 2-6h6"/>
+          </svg>
+        </div>
+        <div class="brand-name">车队管理平台</div>
+      </div>
+
+      <nav class="nav">
+        <div class="nav-group">运营</div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          <span>工作台</span>
+        </div>
+        <div class="nav-item on">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+          <span>运单管理</span>
+          <span class="nav-badge">12</span>
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span>业务流程</span>
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+          <span>全图监控</span>
+        </div>
+
+        <div class="nav-group">经营</div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 10h18M8 15h3"/></svg>
+          <span>费用管理</span>
+          <span class="nav-badge">3</span>
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+          <span>运营报表</span>
+        </div>
+
+        <div class="nav-group">资产</div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 16V8a1 1 0 0 1 1-1h9l4 4h3a1 1 0 0 1 1 1v4"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg>
+          <span>车辆档案</span>
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20v-6h16v6M6 14V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v7"/></svg>
+          <span>车务管理</span>
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a1.7 1.7 0 0 0-1.6-1H1a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 3 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 9 3V3a2 2 0 1 1 4 0v.1A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 9h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1z"/></svg>
+          <span>系统管理</span>
+        </div>
+      </nav>
+
+      <div class="sider-foot">
+        <div class="nav-item" style="margin:0;padding-left:8px;" title="个人设置">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+          <span>个人设置</span>
+        </div>
+        <button class="pin-btn" id="pinBtn" title="收起 / 展开侧栏">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="width:16px;height:16px"><path d="M9 4h6M12 4v7l3 3v2H9v-2l3-3V4M6 20h12"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ============ 主区 ============ -->
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-title">运单管理</div>
+        <div class="topbar-sub">山西卡友新能源运输有限公司</div>
+        <div class="topbar-right">
+          <button class="icon-btn" title="消息">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10.5 21a2 2 0 0 0 3 0"/></svg>
+          </button>
+          <button class="tbtn" id="skinBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="9.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="9.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+            皮肤
+          </button>
+          <button class="tbtn">设置</button>
+          <button class="tbtn danger">退出登录</button>
+        </div>
+      </header>
+
+      <div class="tabs">
+        <div class="tab on"><span class="dot"></span>运单列表</div>
+        <div class="tab">运单详情</div>
+        <div class="tab">常驻任务</div>
+        <div class="tab">运单统计</div>
+      </div>
+
+      <div class="content">
+        <!-- 筛选 -->
+        <div class="filter-row">
+          <div class="inp w-lg ph">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            搜索运单号 / 客户 / 车牌
+          </div>
+          <div class="inp w-sm ph">全部状态
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+          <div class="inp w-md ph">全部车辆
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+          <div class="inp w-md ph">创建时间</div>
+          <button class="btn primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            查询
+          </button>
+          <button class="btn">重置</button>
+          <div class="more-link">更多筛选
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+        </div>
+
+        <!-- 工具行 -->
+        <div class="toolbar">
+          <div class="toolbar-title">运单列表 <span class="toolbar-count">共 128 条</span></div>
+          <div class="toolbar-right">
+            <button class="btn primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              新建运单
+            </button>
+            <div class="tools">
+              <button class="tool" title="刷新"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/></svg></button>
+              <button class="tool" title="密度"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+              <button class="tool" title="列设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
+              <button class="tool" title="全屏"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 表格 -->
+        <div class="card">
+          <div class="tbl-head">
+            <div>运单号</div>
+            <div>客户 / 货物</div>
+            <div>线路</div>
+            <div>车辆</div>
+            <div>司机</div>
+            <div>里程</div>
+            <div>运费</div>
+            <div>状态</div>
+            <div>操作</div>
+          </div>
+          <div class="tbl-body">
+            <div class="tr">
+              <div class="no">YD202611170001</div>
+              <div>山西卡友新能源<div class="sub">精煤 · 34 吨</div></div>
+              <div class="route">孝义市装货区 <span class="arrow">→</span> 唐山港卸货区</div>
+              <div class="num">晋K03115</div>
+              <div>张伟</div>
+              <div class="num">486 km</div>
+              <div class="money num">¥4,280</div>
+              <div><span class="st run"><i></i>执行中</span></div>
+              <div class="row-ops"><span>详情</span><span class="ghost" onclick="openDlg()">编辑</span></div>
+            </div>
+            <div class="tr">
+              <div class="no">YD202611170002</div>
+              <div>山西卡友新能源<div class="sub">焦炭 · 31 吨</div></div>
+              <div class="route">介休市装货区 <span class="arrow">→</span> 天津港卸货区</div>
+              <div class="num">晋K01979D</div>
+              <div>李国强</div>
+              <div class="num">612 km</div>
+              <div class="money num">¥5,360</div>
+              <div><span class="st run"><i></i>已发车</span></div>
+              <div class="row-ops"><span>详情</span><span class="ghost" onclick="openDlg()">编辑</span></div>
+            </div>
+            <div class="tr">
+              <div class="no">YD202611170003</div>
+              <div>孝义市恒通物流<div class="sub">铝矾土 · 28 吨</div></div>
+              <div class="route">孝义市装货区 <span class="arrow">→</span> 青岛港卸货区</div>
+              <div class="num">晋K03313D</div>
+              <div>王建国</div>
+              <div class="num">824 km</div>
+              <div class="money num">¥7,140</div>
+              <div><span class="st wait"><i></i>待装车</span></div>
+              <div class="row-ops"><span>详情</span><span class="ghost" onclick="openDlg()">编辑</span></div>
+            </div>
+            <div class="tr">
+              <div class="no">YD202611170004</div>
+              <div>山西卡友新能源<div class="sub">精煤 · 33 吨</div></div>
+              <div class="route">孝义市装货区 <span class="arrow">→</span> 唐山港卸货区</div>
+              <div class="num">晋K07100D</div>
+              <div>赵建军</div>
+              <div class="num">486 km</div>
+              <div class="money num">¥4,280</div>
+              <div><span class="st done"><i></i>已完成</span></div>
+              <div class="row-ops"><span>详情</span><span class="ghost" onclick="openDlg()">编辑</span></div>
+            </div>
+            <div class="tr">
+              <div class="no">YD202611170005</div>
+              <div>汾阳市远达运输<div class="sub">钢材 · 36 吨</div></div>
+              <div class="route">汾阳市装货区 <span class="arrow">→</span> 邯郸卸货区</div>
+              <div class="num">晋KB02347D</div>
+              <div>刘志强</div>
+              <div class="num">396 km</div>
+              <div class="money num">¥3,860</div>
+              <div><span class="st pause"><i></i>待重新指派</span></div>
+              <div class="row-ops"><span>详情</span><span class="ghost" onclick="openDlg()">编辑</span></div>
+            </div>
+            <div class="tr">
+              <div class="no">YD202611170006</div>
+              <div>山西卡友新能源<div class="sub">精煤 · 32 吨</div></div>
+              <div class="route">孝义市装货区 <span class="arrow">→</span> 日照港卸货区</div>
+              <div class="num">晋KB05262D</div>
+              <div>陈立新</div>
+              <div class="num">712 km</div>
+              <div class="money num">¥6,120</div>
+              <div><span class="st run"><i></i>已到达</span></div>
+              <div class="row-ops"><span>详情</span><span class="ghost" onclick="openDlg()">编辑</span></div>
+            </div>
+            <div class="tr">
+              <div class="no">YD202611170007</div>
+              <div>孝义市恒通物流<div class="sub">镁砂 · 30 吨</div></div>
+              <div class="route">孝义市装货区 <span class="arrow">→</span> 连云港卸货区</div>
+              <div class="num">晋KB05851D</div>
+              <div>杨春生</div>
+              <div class="num">936 km</div>
+              <div class="money num">¥8,010</div>
+              <div><span class="st wait"><i></i>待接单</span></div>
+              <div class="row-ops"><span>详情</span><span class="ghost" onclick="openDlg()">编辑</span></div>
+            </div>
+            <div class="tr">
+              <div class="no">YD202611160018</div>
+              <div>山西卡友新能源<div class="sub">精煤 · 34 吨</div></div>
+              <div class="route">孝义市装货区 <span class="arrow">→</span> 唐山港卸货区</div>
+              <div class="num">晋KB06200D</div>
+              <div>张伟</div>
+              <div class="num">486 km</div>
+              <div class="money num">¥4,280</div>
+              <div><span class="st done"><i></i>已完成</span></div>
+              <div class="row-ops"><span>详情</span><span class="ghost" onclick="openDlg()">编辑</span></div>
+            </div>
+            <div class="tr">
+              <div class="no">YD202611160017</div>
+              <div>汾阳市远达运输<div class="sub">煤炭 · 33 吨</div></div>
+              <div class="route">汾阳市装货区 <span class="arrow">→</span> 石家庄卸货区</div>
+              <div class="num">晋KC21470</div>
+              <div>高建平</div>
+              <div class="num">328 km</div>
+              <div class="money num">¥3,240</div>
+              <div><span class="st done"><i></i>已完成</span></div>
+              <div class="row-ops"><span>详情</span><span class="ghost" onclick="openDlg()">编辑</span></div>
+            </div>
+            <div class="tr">
+              <div class="no">YD202611160016</div>
+              <div>山西卡友新能源<div class="sub">精煤 · 31 吨</div></div>
+              <div class="route">孝义市装货区 <span class="arrow">→</span> 天津港卸货区</div>
+              <div class="num">晋K03115</div>
+              <div>张伟</div>
+              <div class="num">612 km</div>
+              <div class="money num">¥5,360</div>
+              <div><span class="st pause"><i></i>已取消</span></div>
+              <div class="row-ops"><span>详情</span><span class="ghost" onclick="openDlg()">编辑</span></div>
+            </div>
+            <div class="tr">
+              <div class="no">YD202611160015</div>
+              <div>孝义市恒通物流<div class="sub">铝矾土 · 29 吨</div></div>
+              <div class="route">孝义市装货区 <span class="arrow">→</span> 青岛港卸货区</div>
+              <div class="num">晋K03313D</div>
+              <div>王建国</div>
+              <div class="num">824 km</div>
+              <div class="money num">¥7,140</div>
+              <div><span class="st done"><i></i>已完成</span></div>
+              <div class="row-ops"><span>详情</span><span class="ghost" onclick="openDlg()">编辑</span></div>
+            </div>
+            <div class="tr">
+              <div class="no">YD202611160014</div>
+              <div>山西卡友新能源<div class="sub">精煤 · 34 吨</div></div>
+              <div class="route">介休市装货区 <span class="arrow">→</span> 天津港卸货区</div>
+              <div class="num">晋K01979D</div>
+              <div>李国强</div>
+              <div class="num">612 km</div>
+              <div class="money num">¥5,360</div>
+              <div><span class="st run"><i></i>执行中</span></div>
+              <div class="row-ops"><span>详情</span><span class="ghost" onclick="openDlg()">编辑</span></div>
+            </div>
+            <div class="tr">
+              <div class="no">YD202611160013</div>
+              <div>汾阳市远达运输<div class="sub">钢材 · 35 吨</div></div>
+              <div class="route">汾阳市装货区 <span class="arrow">→</span> 邯郸卸货区</div>
+              <div class="num">晋KB02347D</div>
+              <div>刘志强</div>
+              <div class="num">396 km</div>
+              <div class="money num">¥3,860</div>
+              <div><span class="st wait"><i></i>待装车</span></div>
+              <div class="row-ops"><span>详情</span><span class="ghost" onclick="openDlg()">编辑</span></div>
+            </div>
+            <div class="tr">
+              <div class="no">YD202611160012</div>
+              <div>山西卡友新能源<div class="sub">精煤 · 32 吨</div></div>
+              <div class="route">孝义市装货区 <span class="arrow">→</span> 日照港卸货区</div>
+              <div class="num">晋KB05262D</div>
+              <div>陈立新</div>
+              <div class="num">712 km</div>
+              <div class="money num">¥6,120</div>
+              <div><span class="st done"><i></i>已完成</span></div>
+              <div class="row-ops"><span>详情</span><span class="ghost" onclick="openDlg()">编辑</span></div>
+            </div>
+          </div>
+          <div class="pager">
+            <span>共 128 条 · 每页 20 条</span>
+            <span class="spacer"></span>
+            <span class="pg">‹</span>
+            <span class="pg on">1</span>
+            <span class="pg">2</span>
+            <span class="pg">3</span>
+            <span class="pg">4</span>
+            <span class="pg">…</span>
+            <span class="pg">7</span>
+            <span class="pg">›</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 皮肤面板 ============ -->
+    <div class="skin-pop" id="skinPop">
+      <div class="pop-label">版式 · 1-3 工程系 / 4-6 自然系</div>
+      <div class="schemes">
+        <div class="scheme" data-scheme-key="a">
+          <div class="scheme-prev">
+            <div class="p-sider" style="background:#E7E1D4"></div>
+            <div class="p-body" style="background:#F1EDE5">
+              <div class="p-head" style="background:#FBF8F1;border-bottom:1px solid #DED6C6"></div>
+              <div class="p-tabs" style="background:#F5F1E8"></div>
+              <div class="p-page"><div class="p-card" style="background:#FFFDF9;border:1px solid #DED6C6"></div></div>
+            </div>
+          </div>
+          <div class="scheme-name">暖灰纸感</div>
+          <div class="scheme-tag">白光最少</div>
+        </div>
+        <div class="scheme on" data-scheme-key="b">
+          <div class="scheme-prev">
+            <div class="p-sider" style="background:#1B2230"></div>
+            <div class="p-body" style="background:#E9EEF5">
+              <div class="p-head" style="background:#1B2230"></div>
+              <div class="p-tabs" style="background:#232B3B"></div>
+              <div class="p-page"><div class="p-card" style="background:#fff;border:1px solid #DCE4EF"></div></div>
+            </div>
+          </div>
+          <div class="scheme-name">深框浅台</div>
+          <div class="scheme-tag">推荐</div>
+        </div>
+        <div class="scheme" data-scheme-key="c">
+          <div class="scheme-prev">
+            <div class="p-sider" style="background:#0B1018"></div>
+            <div class="p-body" style="background:#0E1420">
+              <div class="p-head" style="background:#121A26"></div>
+              <div class="p-tabs" style="background:#111925"></div>
+              <div class="p-page"><div class="p-card" style="background:#161E2C;border:1px solid #26313F"></div></div>
+            </div>
+          </div>
+          <div class="scheme-name">全深色</div>
+          <div class="scheme-tag">夜间</div>
+        </div>
+        <div class="scheme" data-scheme-key="d">
+          <div class="scheme-prev">
+            <div class="p-sider" style="background:#F7F5EE"></div>
+            <div class="p-body" style="background:#EFF0E5">
+              <div class="p-head" style="background:#FBF9F2"></div>
+              <div class="p-tabs" style="background:#F7F4EC"></div>
+              <div class="p-page"><div class="p-card" style="background:#fff;border-radius:4px"></div></div>
+            </div>
+          </div>
+          <div class="scheme-name">晨雾</div>
+          <div class="scheme-tag">参考图直译</div>
+        </div>
+        <div class="scheme" data-scheme-key="e">
+          <div class="scheme-prev">
+            <div class="p-sider" style="background:#E4EDE1"></div>
+            <div class="p-body" style="background:#E3EDDF">
+              <div class="p-head" style="background:#F6F8F1"></div>
+              <div class="p-tabs" style="background:#F1F5EC"></div>
+              <div class="p-page"><div class="p-card" style="background:#fff;border-radius:4px"></div></div>
+            </div>
+          </div>
+          <div class="scheme-name">林间</div>
+          <div class="scheme-tag">绿得更沉</div>
+        </div>
+        <div class="scheme" data-scheme-key="f">
+          <div class="scheme-prev">
+            <div class="p-sider" style="background:#F1F1EC"></div>
+            <div class="p-body" style="background:#F4F4EF">
+              <div class="p-head" style="background:#FAFAF7"></div>
+              <div class="p-tabs" style="background:#F7F7F3"></div>
+              <div class="p-page"><div class="p-card" style="background:#fff;border-radius:5px"></div></div>
+            </div>
+          </div>
+          <div class="scheme-name">云白</div>
+          <div class="scheme-tag">当前原样</div>
+        </div>
+      </div>
+
+      <div class="pop-label" style="margin-top:14px">主题色</div>
+      <div class="swatches" id="swatches"></div>
+
+      <div class="pop-hint">
+        版式与主题色分开存，都跟随账号。<br />
+        快捷键 <b>1~6</b> 切换版式（1-3 工程系 / 4-6 自然系），<b>Q~Y</b> 切换主题色。
+      </div>
+    </div>
+
+    <!-- ============ 弹窗 ============ -->
+    <div class="mask" id="mask" onclick="if(event.target===this)closeDlg()">
+      <div class="dlg">
+        <div class="dlg-hd">编辑运单 · YD202611170001 <span class="x" onclick="closeDlg()">✕</span></div>
+        <div class="dlg-bd">
+          <div class="field">
+            <label>运单号</label>
+            <div class="inp readonly num">YD202611170001</div>
+          </div>
+          <div class="field">
+            <label>客户</label>
+            <div class="inp">山西卡友新能源运输有限公司</div>
+          </div>
+          <div class="field">
+            <label>装货地（电子围栏）</label>
+            <div class="inp">孝义市装货区</div>
+          </div>
+          <div class="field">
+            <label>卸货地（电子围栏）</label>
+            <div class="inp">唐山港卸货区</div>
+          </div>
+          <div class="field">
+            <label>指派车辆</label>
+            <div class="inp num">晋K03115</div>
+          </div>
+          <div class="field">
+            <label>指派司机</label>
+            <div class="inp">张伟</div>
+          </div>
+          <div class="field full">
+            <label>备注</label>
+            <div class="inp" style="height:64px;align-items:flex-start;padding-top:9px;">夜间行车，注意限速路段。</div>
+          </div>
+        </div>
+        <div class="dlg-ft">
+          <button class="btn" onclick="closeDlg()">取消</button>
+          <button class="btn primary" onclick="closeDlg()">保存</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const BRANDS = [
+    { key: 'red',    name: '品牌红', hex: '#C8102E' },
+    { key: 'navy',   name: '藏青',   hex: '#1E3A8A' },
+    { key: 'indigo', name: '靛紫',   hex: '#4338CA' },
+    { key: 'teal',   name: '深青',   hex: '#0F766E' },
+    { key: 'forest', name: '墨绿',   hex: '#14532D' },
+    { key: 'rust',   name: '赭红',   hex: '#9A3412' }
+  ]
+  const NAMES = { a: '暖灰纸感', b: '深框浅台', c: '全深色', d: '晨雾', e: '林间', f: '云白' }
+  const root = document.documentElement
+  let scheme = 'b'
+  let brand = 'red'
+
+  function hex2rgb(h) {
+    const s = h.replace('#', '')
+    return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)]
+  }
+  function rgb2hex(r, g, b) {
+    return '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')
+  }
+  // 与白/黑混色：p 为混入比例
+  function mix(hex, target, p) {
+    const a = hex2rgb(hex), b = hex2rgb(target)
+    return rgb2hex(a[0] + (b[0] - a[0]) * p, a[1] + (b[1] - a[1]) * p, a[2] + (b[2] - a[2]) * p)
+  }
+
+  function applyBrand() {
+    const raw = BRANDS.find(b => b.key === brand).hex
+    let main = raw
+    // 深色底上品牌色要提亮，否则藏青/墨绿糊在背景里
+    if (scheme === 'c') main = mix(raw, '#FFFFFF', 0.26)
+    // 暖灰纸 / 自然系底子上颜色偏沉，微提一点
+    if (['a', 'd', 'e', 'f'].includes(scheme)) main = mix(raw, '#FFFFFF', 0.07)
+    const [r, g, b] = hex2rgb(main)
+    root.style.setProperty('--brand', main)
+    root.style.setProperty('--brand-rgb', `${r}, ${g}, ${b}`)
+    root.style.setProperty('--brand-soft', `rgba(${r}, ${g}, ${b}, ${scheme === 'c' ? 0.18 : 0.09})`)
+  }
+
+  function setScheme(k) {
+    scheme = k
+    root.dataset.scheme = k
+    document.querySelectorAll('.scheme').forEach(el => {
+      el.classList.toggle('on', el.dataset.schemeKey === k)
+    })
+    applyBrand()
+  }
+
+  function setBrand(k) {
+    brand = k
+    document.querySelectorAll('.sw').forEach(el => el.classList.toggle('on', el.dataset.brandKey === k))
+    applyBrand()
+  }
+
+  // 色点
+  const swBox = document.getElementById('swatches')
+  BRANDS.forEach((b, i) => {
+    const d = document.createElement('div')
+    d.className = 'sw' + (b.key === brand ? ' on' : '')
+    d.dataset.brandKey = b.key
+    d.style.background = b.hex
+    d.title = b.name
+    d.onclick = () => setBrand(b.key)
+    swBox.appendChild(d)
+  })
+
+  // 版式卡
+  document.querySelectorAll('.scheme').forEach(el => {
+    el.onclick = () => setScheme(el.dataset.schemeKey)
+  })
+
+  // 皮肤面板
+  const pop = document.getElementById('skinPop')
+  document.getElementById('skinBtn').onclick = (e) => {
+    e.stopPropagation()
+    pop.classList.toggle('open')
+  }
+  document.addEventListener('click', (e) => {
+    if (!pop.contains(e.target) && e.target.id !== 'skinBtn') pop.classList.remove('open')
+  })
+
+  // 侧栏收起
+  document.getElementById('pinBtn').onclick = () => {
+    document.getElementById('sider').classList.toggle('collapsed')
+  }
+
+  // 弹窗
+  function openDlg() { document.getElementById('mask').classList.add('open') }
+  function closeDlg() { document.getElementById('mask').classList.remove('open') }
+
+  // 快捷键
+  document.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase()
+    const si = ['1', '2', '3', '4', '5', '6'].indexOf(k)
+    if (si > -1) setScheme(['a', 'b', 'c', 'd', 'e', 'f'][si])
+    const idx = ['q', 'w', 'e', 'r', 't', 'y'].indexOf(k)
+    if (idx > -1) setBrand(BRANDS[idx].key)
+  })
+
+  // 自适应缩放
+  function fit() {
+    const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080)
+    document.getElementById('stageWrap').style.transform = `scale(${s})`
+  }
+  window.addEventListener('resize', fit)
+  fit()
+  const parts = (location.hash || '').replace('#', '').split('-')
+  if (['a', 'b', 'c', 'd', 'e', 'f'].includes(parts[0])) { setScheme(parts[0]) } else { applyBrand() }
+  if (parts.includes('dlg')) openDlg()
+  if (parts.includes('pop')) document.getElementById('skinPop').classList.add('open')
+</script>
+</body>
+</html>

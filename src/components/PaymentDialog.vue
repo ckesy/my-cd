@@ -427,14 +427,14 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
 
 .pd-k {
   font-size: 11.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
   margin-right: 6px;
 }
 
 .pd-n {
   font-family: var(--num-font, monospace);
   font-size: 16px;
-  color: #0f172a;
+  color: var(--ink);
 }
 
 .pd-amt {
@@ -465,12 +465,12 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
 .pd-no {
   font-family: var(--num-font, monospace);
   font-weight: 600;
-  color: #0f172a;
+  color: var(--ink);
 }
 
 .pd-driver {
   flex: 1;
-  color: #94a3b8;
+  color: var(--ink-3);
   font-size: 11.5px;
 }
 
@@ -485,13 +485,13 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: #475569;
+  color: var(--ink-2);
   margin-bottom: 6px;
 }
 
 .pd-hint {
   font-weight: 400;
-  color: #94a3b8;
+  color: var(--ink-3);
   font-size: 11px;
   margin-left: 4px;
 }
@@ -506,9 +506,9 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
   padding: 5px 12px;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
-  background: #fff;
+  background: var(--surface-card);
   font-size: 12px;
-  color: #475569;
+  color: var(--ink-2);
   cursor: pointer;
   font-family: inherit;
   transition: all 0.2s;
@@ -556,12 +556,12 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
 .pd-up-t {
   font-size: 12.5px;
   font-weight: 600;
-  color: #475569;
+  color: var(--ink-2);
 }
 
 .pd-up-s {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--ink-3);
 }
 
 .pd-files {
@@ -577,7 +577,7 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
   gap: 8px;
   padding: 6px 8px;
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--surface-page);
   border: 1px solid #eef2f7;
 }
 
@@ -586,7 +586,7 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
   height: 22px;
   border-radius: 5px;
   background: #e2e8f0;
-  color: #475569;
+  color: var(--ink-2);
   font-size: 10px;
   display: flex;
   align-items: center;
@@ -600,7 +600,7 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
   flex: 1;
   min-width: 0;
   font-size: 12px;
-  color: #334155;
+  color: var(--ink-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -608,7 +608,7 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
 
 .pd-file-s {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--ink-3);
   flex: 0 0 auto;
 }
 
@@ -618,7 +618,7 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
   line-height: 16px;
   text-align: center;
   border-radius: 50%;
-  color: #94a3b8;
+  color: var(--ink-3);
   cursor: pointer;
   flex: 0 0 auto;
 }
@@ -639,30 +639,30 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
 .pd-old {
   padding: 10px 12px;
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--surface-page);
   border: 1px solid #eef2f7;
   margin-bottom: 12px;
 }
 
 .pd-old-k {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--ink-3);
   margin-bottom: 4px;
 }
 
 .pd-old-v {
   font-size: 12.5px;
-  color: #334155;
+  color: var(--ink-2);
   line-height: 1.6;
 }
 
 .pd-tip {
   font-size: 11.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
   line-height: 1.7;
   padding: 8px 10px;
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--surface-page);
 }
 
 .pd-tip.warn {

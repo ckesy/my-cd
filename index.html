@@ -3,6 +3,37 @@
 
 <head>
   <meta charset="UTF-8" />
+  <!-- ============================================================
+       ⭐⭐ 首屏防闪：必须在任何 CSS / JS bundle 之前执行
+       ------------------------------------------------------------
+       深色主题下，浏览器会先用 :root 的默认值（浅色）渲染一帧，
+       等 main.js 跑完才 setAttribute('data-scheme')，于是"加载闪白"。
+       这里把版式与底色提前定死，等于抢在第一次绘制之前。
+       ⚠️ 这里的色值必须和 style.css 里六套 [data-scheme] 的
+          --surface-page 保持一致，改那边记得同步这一行。
+       ============================================================ -->
+  <script>
+    (function () {
+      try {
+        var saved = ''
+        var u = null
+        try { u = JSON.parse(localStorage.getItem('currentUser') || 'null') } catch (e) { u = null }
+        if (u && u.account) saved = localStorage.getItem('app_theme:' + u.account) || ''
+        if (!saved) saved = localStorage.getItem('app_theme') || ''
+        var scheme = saved.indexOf(':') > -1 ? saved.split(':')[0] : 'f'
+        if ('abcdef'.indexOf(scheme) < 0) scheme = 'f'
+        var bg = {
+          a: '#E9E3D6', b: '#E9EEF5', c: '#0D131F',
+          d: '#E9EDE0', e: '#DFE8D8', f: '#F8FAFC'
+        }[scheme]
+        var el = document.documentElement
+        el.setAttribute('data-scheme', scheme)
+        el.style.backgroundColor = bg
+        /* 让浏览器原生控件（滚动条、input）也跟着变暗 */
+        el.style.colorScheme = scheme === 'c' ? 'dark' : 'light'
+      } catch (e) { /* 隐私模式读不到 localStorage，用默认浅色 */ }
+    })()
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- 站点图标：东风圆环（源图 public/DFLOGO1.png，重新生成用 scripts/make_favicon.py） -->
   <link rel="icon" href="/favicon.ico?v=2" sizes="any" />
@@ -24,6 +55,7 @@
 <body>
   <div id="app"></div>
   <script type="module" src="/src/main.js"></script>
+
 </body>
 
 </html>

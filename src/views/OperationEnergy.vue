@@ -479,7 +479,7 @@ onMounted(fetchList)
   gap: 12px;
   background: #F5F7FA;
   font-size: 13px;
-  color: #1E293B;
+  color: var(--ink);
   overflow: hidden;
 }
 
@@ -507,14 +507,14 @@ onMounted(fetchList)
   margin: 0;
   font-size: 15px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: .2px;
   white-space: nowrap;
 }
 
 .head-count {
   font-size: 12.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -570,7 +570,7 @@ onMounted(fetchList)
 
 .sub-label {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   letter-spacing: .5px;
 }
 
@@ -581,7 +581,7 @@ onMounted(fetchList)
   min-height: 32px;
   border-radius: 8px;
   box-shadow: 0 0 0 1px #E4EAF1 inset;
-  background: #fff;
+  background: var(--surface-card);
 }
 
 .filter-row :deep(.el-input__wrapper:hover),
@@ -595,7 +595,7 @@ onMounted(fetchList)
 .filter-row :deep(.el-select__placeholder),
 .filter-sub :deep(.el-input__inner) {
   font-size: 12.5px;
-  color: #475569;
+  color: var(--ink-2);
 }
 
 .filter-btns {
@@ -624,8 +624,8 @@ onMounted(fetchList)
   border-radius: 8px;
   padding: 0 12px;
   border-color: #E4EAF1;
-  color: #475569;
-  background: #fff;
+  color: var(--ink-2);
+  background: var(--surface-card);
   font-weight: 500;
 }
 
@@ -639,7 +639,7 @@ onMounted(fetchList)
 .btn-outline.is-disabled:hover {
   color: #C0CCD8;
   border-color: #EDF1F6;
-  background: #FAFBFC;
+  background: var(--surface-sunken);
 }
 
 /* ========== 提示条 ========== */
@@ -689,7 +689,7 @@ onMounted(fetchList)
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 10px;
   border: 1px solid #EDF1F6;
   box-shadow: 0 1px 3px rgba(15, 41, 66, .04);
@@ -715,8 +715,8 @@ onMounted(fetchList)
 
 /* 表头：与综合报表一致，浅灰底 + 深色粗体 */
 :deep(.custom-table th.el-table__cell) {
-  background: #F7F9FC !important;
-  color: #0F172A;
+  background: var(--surface-thead) !important;
+  color: var(--ink);
   font-weight: 700;
   font-size: 12.5px;
   border-bottom: 1px solid #E8EEF5;
@@ -724,7 +724,7 @@ onMounted(fetchList)
 }
 
 :deep(.custom-table td.el-table__cell) {
-  color: #1E293B;
+  color: var(--ink);
   font-size: 12.5px;
   font-weight: 500;
   border-bottom: 1px solid #F2F6FA;
@@ -736,7 +736,7 @@ onMounted(fetchList)
 :deep(.custom-table.el-table--small td.el-table__cell) { padding: 6px 0; }
 
 :deep(.custom-table .el-table__row:hover td) {
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
 }
 
 :deep(.custom-table .el-table__inner-wrapper::before) { display: none; }
@@ -754,10 +754,10 @@ onMounted(fetchList)
   font-family: var(--num-font);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
-  color: #475569;
+  color: var(--ink-2);
 }
 
-.text-content { color: #334155; }
+.text-content { color: var(--ink-2); }
 
 /* 日期用等宽数字，避免 0/1 宽度不同导致个别行被截 */
 .date-text { font-variant-numeric: tabular-nums; }
@@ -812,12 +812,12 @@ onMounted(fetchList)
   align-items: center;
   gap: 6px;
   padding: 48px 0;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .empty-icon { font-size: 30px; color: #CBD5E1; }
-.empty-state p { margin: 0; font-size: 13px; color: #64748B; }
-.empty-tip { font-size: 12px; color: #94A3B8; }
+.empty-state p { margin: 0; font-size: 13px; color: var(--ink-3); }
+.empty-tip { font-size: 12px; color: var(--ink-3); }
 
 /* ========== 分页 ========== */
 .pager {
@@ -850,7 +850,7 @@ onMounted(fetchList)
 
 .create-form :deep(.el-form-item__label) {
   font-size: 12.5px;
-  color: #475569;
+  color: var(--ink-2);
 }
 
 .task-no-box {
@@ -863,13 +863,13 @@ onMounted(fetchList)
   padding: 0 10px;
   border: 1px solid #E2E8F0;
   border-radius: 6px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   box-sizing: border-box;
 }
 
 .task-no-box .mono-text {
   font-size: 13px;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: .4px;
 }
 
@@ -882,7 +882,7 @@ onMounted(fetchList)
   border: none;
   border-radius: 5px;
   background: transparent;
-  color: #94A3B8;
+  color: var(--ink-3);
   cursor: pointer;
   transition: all .16s;
 }
@@ -896,10 +896,10 @@ onMounted(fetchList)
   margin-top: 4px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border: 1px dashed #E2E8F0;
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .dialog-footer {
@@ -933,7 +933,7 @@ onMounted(fetchList)
   min-width: 96px;
   background: #EEF2F7;
   border-color: #DDE3EC;
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 </style>
@@ -955,7 +955,7 @@ onMounted(fetchList)
 .er-dialog .el-dialog__title {
   font-size: 14.5px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .er-dialog .el-dialog__body { padding: 22px 22px 8px; }

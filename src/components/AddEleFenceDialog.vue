@@ -84,7 +84,7 @@
             <el-select v-model="form.org" placeholder="请选择所属车队" style="width: 100%;" filterable>
               <el-option v-for="o in orgOptions" :key="o.id" :label="o.name" :value="o.name" />
               <template #empty>
-                <div style="padding: 16px; text-align: center; color: #94A3B8; font-size: 12.5px;">
+                <div style="padding: 16px; text-align: center; color: var(--ink-3); font-size: 12.5px;">
                   暂无机构，请先去"组织管理"创建
                 </div>
               </template>
@@ -1521,7 +1521,7 @@ const submitForm = (isContinue) => {
 .map-panel {
   flex: 1.6;
   position: relative;
-  background-color: #F8FAFC;
+  background-color: var(--surface-page);
   border-right: 1px solid #F1F5F9;
   overflow: hidden;
 }
@@ -1574,7 +1574,7 @@ const submitForm = (isContinue) => {
   position: absolute;
   top: 12px;
   left: 12px;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--glass-panel);
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 12px;
@@ -1606,14 +1606,14 @@ const submitForm = (isContinue) => {
   right: 12px;
   width: 36px;
   height: 36px;
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  color: #64748B;
+  color: var(--ink-3);
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: 100;
 }
@@ -1661,7 +1661,7 @@ const submitForm = (isContinue) => {
   flex: 1;
   padding: 16px;
   overflow-y: auto;
-  background-color: #FFFFFF;
+  background-color: var(--surface-card);
 }
 
 .form-panel::-webkit-scrollbar {
@@ -1698,7 +1698,7 @@ const submitForm = (isContinue) => {
   padding: 6px 14px 6px 8px;
   border: 1px solid #E2E8F0;
   border-radius: 8px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   cursor: pointer;
   transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
   user-select: none;
@@ -1727,7 +1727,7 @@ const submitForm = (isContinue) => {
 .ft-tt {
   font-size: 12px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   white-space: nowrap;
   letter-spacing: 0.2px;
 }
@@ -1767,19 +1767,19 @@ const submitForm = (isContinue) => {
 
 .ft-card.pickup.on {
   border-color: #2563EB;
-  background: linear-gradient(180deg, #F7FAFF, #FFFFFF);
+  background: linear-gradient(180deg, #F7FAFF, var(--surface-card));
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.13);
 }
 
 .ft-card.delivery.on {
   border-color: #0E9F6E;
-  background: linear-gradient(180deg, #F5FEF9, #FFFFFF);
+  background: linear-gradient(180deg, #F5FEF9, var(--surface-card));
   box-shadow: 0 4px 14px rgba(14, 159, 110, 0.13);
 }
 
 .ft-card.alert.on {
   border-color: #D97706;
-  background: linear-gradient(180deg, #FFFCF7, #FFFFFF);
+  background: linear-gradient(180deg, #FFFCF7, var(--surface-card));
   box-shadow: 0 4px 14px rgba(217, 119, 6, 0.13);
 }
 
@@ -1799,7 +1799,7 @@ const submitForm = (isContinue) => {
   margin-top: 6px;
   font-size: 11.5px;
   line-height: 1.5;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 /* 未选类型（校验失败）时给卡片描边，避免只靠 label 下方的红字 */
@@ -1855,13 +1855,13 @@ const submitForm = (isContinue) => {
 :deep(.el-form-item__label) {
   padding-bottom: 4px;
   font-size: 13px;
-  color: #475569;
+  color: var(--ink-2);
   font-weight: 500;
 }
 
 .edit-hint {
   font-size: 11px;
-  color: #94A3B8;
+  color: var(--ink-3);
   margin-top: 4px;
 }
 
@@ -1880,7 +1880,7 @@ const submitForm = (isContinue) => {
 
 .search-icon {
   cursor: pointer;
-  color: #94A3B8;
+  color: var(--ink-3);
   transition: all 0.25s;
 }
 
@@ -1903,7 +1903,7 @@ const submitForm = (isContinue) => {
 }
 
 .name-status-icon.is-loading {
-  color: #94A3B8;
+  color: var(--ink-3);
   animation: rotating 1.2s linear infinite;
 }
 
@@ -1938,7 +1938,7 @@ const submitForm = (isContinue) => {
   width: 18px;
   height: 18px;
   border: 3px solid var(--brand-primary);
-  background: #FFFFFF;
+  background: var(--surface-card);
   box-shadow: 0 2px 8px rgba(211, 47, 47, 0.35);
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -1950,7 +1950,7 @@ const submitForm = (isContinue) => {
 
 .radius-slider :deep(.el-slider__marks-text) {
   font-size: 10px;
-  color: #94A3B8;
+  color: var(--ink-3);
   margin-top: 8px;
 }
 
@@ -1963,12 +1963,12 @@ const submitForm = (isContinue) => {
 
 .radius-unit {
   font-size: 13px;
-  color: #475569;
+  color: var(--ink-2);
 }
 
 .radius-hint {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   margin-left: auto;
 }
 
@@ -2011,7 +2011,7 @@ const submitForm = (isContinue) => {
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 24px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border-top: 1px solid #F1F5F9;
   position: relative;
 }
@@ -2038,7 +2038,7 @@ const submitForm = (isContinue) => {
 
 .btn-cancel {
   border-color: #E2E8F0;
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 .btn-cancel:hover {
@@ -2105,7 +2105,7 @@ const submitForm = (isContinue) => {
 .submit-loading-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--glass-panel);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -2174,7 +2174,7 @@ const submitForm = (isContinue) => {
 
 .submit-text {
   font-size: 14px;
-  color: #475569;
+  color: var(--ink-2);
   font-weight: 500;
   animation: textPulse 1.6s ease-in-out infinite;
 }
@@ -2278,7 +2278,7 @@ const submitForm = (isContinue) => {
 .success-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--glass-panel);
   backdrop-filter: blur(6px);
   display: flex;
   flex-direction: column;
@@ -2481,7 +2481,7 @@ const submitForm = (isContinue) => {
 .fence-dialog .el-dialog__title {
   font-size: 16px;
   font-weight: 600;
-  color: #1E293B;
+  color: var(--ink);
 }
 
 .fence-dialog .el-dialog__body {

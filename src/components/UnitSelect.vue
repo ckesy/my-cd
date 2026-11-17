@@ -81,7 +81,7 @@ const onChange = (val) => {
 :deep(.unit-opt-sym) {
   float: right;
   font-size: 11.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   margin-left: 12px;
 }
 </style>
@@ -90,7 +90,7 @@ const onChange = (val) => {
 <style>
 .unit-select-popper .el-select-group__title {
   font-size: 11.5px !important;
-  color: #94A3B8 !important;
+  color: var(--ink-3) !important;
   font-weight: 600;
   padding: 6px 12px 2px !important;
   line-height: 18px;
@@ -104,13 +104,13 @@ const onChange = (val) => {
 .unit-select-popper .unit-opt {
   float: left;
   font-size: 13px;
-  color: #1E293B;
+  color: var(--ink);
 }
 
 .unit-select-popper .unit-opt-sym {
   float: right;
   font-size: 11.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .unit-select-popper .el-select-dropdown__item.is-selected .unit-opt {

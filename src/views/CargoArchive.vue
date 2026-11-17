@@ -52,7 +52,7 @@
 
           <div class="table-wrap">
             <el-table :data="filteredCargos" v-loading="loadingCargos" element-loading-text="加载中…"
-              element-loading-background="rgba(255,255,255,0.88)" border stripe height="100%" :size="cargoSize"
+              element-loading-background="var(--glass-panel)" border stripe height="100%" :size="cargoSize"
               class="custom-table" :row-class-name="cargoRowClass" row-key="id" @row-click="selectCargo">
               <el-table-column v-for="col in cargoVisibleColumns" :key="col.prop" :prop="col.prop" :label="col.label"
                 :width="col.width ? Math.round(col.width * cargoDensity) : undefined"
@@ -167,7 +167,7 @@
 
             <div class="table-wrap">
               <el-table :data="filteredRules" v-loading="loadingRules" element-loading-text="加载中…"
-                element-loading-background="rgba(255,255,255,0.88)" border stripe height="100%" :size="ruleSize"
+                element-loading-background="var(--glass-panel)" border stripe height="100%" :size="ruleSize"
                 class="custom-table">
                 <el-table-column v-for="col in ruleVisibleColumns" :key="col.prop" :prop="col.prop" :label="col.label"
                   :width="col.width ? Math.round(col.width * ruleDensity) : undefined"
@@ -757,7 +757,7 @@ defineExpose({ fetchCargos })
   padding: 12px;
   box-sizing: border-box;
   overflow: hidden;
-  background: #F8FAFC;
+  background: var(--surface-page);
   font-size: 13px;
 }
 
@@ -768,7 +768,7 @@ defineExpose({ fetchCargos })
   min-height: 0;
   min-width: 0;
   padding: 12px 14px;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   overflow: hidden;
@@ -796,7 +796,7 @@ defineExpose({ fetchCargos })
   gap: 7px;
   font-size: 14px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -814,7 +814,7 @@ defineExpose({ fetchCargos })
 .title-sub {
   font-size: 12.5px;
   font-weight: 400;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .panel-search {
@@ -832,7 +832,7 @@ defineExpose({ fetchCargos })
 
 .search-label {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   margin-right: 2px;
   white-space: nowrap;
 }
@@ -840,7 +840,7 @@ defineExpose({ fetchCargos })
 .panel-search :deep(.el-input__wrapper),
 .panel-search :deep(.el-select__wrapper) {
   border-radius: 6px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all .25s;
   min-height: 30px;
@@ -854,7 +854,7 @@ defineExpose({ fetchCargos })
 
 .panel-search :deep(.el-input__wrapper.is-focus),
 .panel-search :deep(.el-select__wrapper.is-focused) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.15), 0 0 0 1px var(--brand-primary) inset !important;
 }
 
@@ -887,8 +887,8 @@ defineExpose({ fetchCargos })
 .btn-outline {
   border-radius: 6px !important;
   border-color: #CBD5E1 !important;
-  color: #334155;
-  background: #fff !important;
+  color: var(--ink-2);
+  background: var(--surface-card) !important;
   transition: all .25s;
 }
 
@@ -906,8 +906,8 @@ defineExpose({ fetchCargos })
 
 .status-tab {
   border: 1px solid transparent;
-  background: #F8FAFC;
-  color: #64748B;
+  background: var(--surface-page);
+  color: var(--ink-3);
   border-radius: 6px;
   padding: 4px 12px;
   font-size: 12.5px;
@@ -943,7 +943,7 @@ defineExpose({ fetchCargos })
   inset: 0;
   z-index: 9999;
   padding: 18px 20px;
-  background: #fff;
+  background: var(--surface-card);
   box-shadow: 0 20px 60px rgba(var(--brand-rgb), 0.12);
   animation: fs-fade-in .25s ease;
 }
@@ -975,8 +975,8 @@ defineExpose({ fetchCargos })
 }
 
 :deep(.custom-table th.el-table__cell) {
-  background: #F8FAFC !important;
-  color: #0F172A;
+  background: var(--surface-page) !important;
+  color: var(--ink);
   font-weight: 700;
   font-size: 12.5px;
   border-bottom: 1px solid #E2E8F0;
@@ -984,7 +984,7 @@ defineExpose({ fetchCargos })
 }
 
 :deep(.custom-table td.el-table__cell) {
-  color: #1E293B;
+  color: var(--ink);
   font-size: 12.5px;
   font-weight: 500;
   border-bottom: 1px solid #F1F5F9;
@@ -1016,29 +1016,29 @@ defineExpose({ fetchCargos })
 
 .cargo-name,
 .rule-name {
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 600;
 }
 
 .text-content {
-  color: #334155;
+  color: var(--ink-2);
 }
 
 .time-text {
-  color: #475569;
+  color: var(--ink-2);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
 .price-text {
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: .2px;
 }
 
 .price-text.muted {
-  color: #64748B;
+  color: var(--ink-3);
   font-weight: 600;
 }
 
@@ -1047,7 +1047,7 @@ defineExpose({ fetchCargos })
   font-style: normal;
   font-size: 11px;
   font-weight: 400;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .unit-cell {
@@ -1059,7 +1059,7 @@ defineExpose({ fetchCargos })
 .unit-sym {
   font-style: normal;
   font-size: 11px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .status-tag {
@@ -1078,8 +1078,8 @@ defineExpose({ fetchCargos })
 }
 
 .status-tag.off {
-  color: #94A3B8;
-  background: #F1F5F9;
+  color: var(--ink-3);
+  background: var(--surface-hover);
 }
 
 .action-cell {
@@ -1133,7 +1133,7 @@ defineExpose({ fetchCargos })
 }
 
 .action-danger {
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .action-danger:hover {
@@ -1161,7 +1161,7 @@ defineExpose({ fetchCargos })
 .empty-state p {
   margin: 0;
   font-size: 13px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .empty-tip {
@@ -1190,7 +1190,7 @@ defineExpose({ fetchCargos })
 .pick-empty p {
   margin: 0;
   font-size: 13.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .fs-exit-btn {
@@ -1272,19 +1272,19 @@ defineExpose({ fetchCargos })
 .form-hint {
   margin-left: 10px;
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .form-hint-line {
   margin-top: 2px;
   font-size: 11.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   line-height: 1.5;
 }
 
 .ca-form :deep(.el-form-item__label) {
   font-size: 13px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 600;
 }
 
@@ -1302,8 +1302,8 @@ defineExpose({ fetchCargos })
 
 .btn-ghost {
   border: 1px solid #E2E8F0;
-  background: #fff;
-  color: #64748B;
+  background: var(--surface-card);
+  color: var(--ink-3);
   margin-right: 8px;
 }
 
@@ -1359,7 +1359,7 @@ defineExpose({ fetchCargos })
 .ca-dialog .el-dialog__title {
   font-size: 15px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .ca-dialog .el-dialog__body {

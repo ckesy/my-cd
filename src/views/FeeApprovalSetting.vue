@@ -749,7 +749,7 @@ onMounted(async () => {
 /* ===== 页头 ===== */
 .fc-head {
   position: relative;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid var(--border-base);
   border-radius: 14px;
   padding: 16px 18px;
@@ -846,7 +846,7 @@ onMounted(async () => {
 }
 
 .fc-alert code {
-  background: #F8FAFC;
+  background: var(--surface-page);
   border-radius: 4px;
   padding: 1px 5px;
   font-size: 11.5px;
@@ -868,7 +868,7 @@ onMounted(async () => {
 }
 
 .fc-card {
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid var(--border-base);
   border-radius: 12px;
   padding: 14px 16px;
@@ -901,7 +901,7 @@ onMounted(async () => {
   padding: 12px 14px;
   border: 1px solid var(--border-base);
   border-radius: 10px;
-  background: #FAFBFC;
+  background: var(--surface-sunken);
 }
 
 .fc-module-main {
@@ -944,7 +944,7 @@ onMounted(async () => {
 .fc-mode {
   text-align: left;
   border: 1px solid var(--border-base);
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 10px;
   padding: 10px 11px;
   cursor: pointer;
@@ -1047,7 +1047,7 @@ onMounted(async () => {
 
 .fc-chip {
   border: 1px solid var(--border-base);
-  background: #F8FAFC;
+  background: var(--surface-page);
   color: var(--text-tertiary);
   border-radius: 6px;
   font-size: 11.5px;
@@ -1161,7 +1161,7 @@ onMounted(async () => {
 }
 
 .fc-side-card {
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid var(--border-base);
   border-radius: 12px;
   padding: 13px 14px;
@@ -1174,7 +1174,7 @@ onMounted(async () => {
 }
 
 .fc-preview {
-  background: #F8FAFC;
+  background: var(--surface-page);
   border: 1px solid var(--border-light);
   border-radius: 9px;
   padding: 9px 10px;
@@ -1203,7 +1203,7 @@ onMounted(async () => {
   border: 1px solid var(--border-base);
   border-radius: 6px;
   padding: 3px 7px;
-  background: #fff;
+  background: var(--surface-card);
   white-space: nowrap;
 }
 
@@ -1267,7 +1267,7 @@ onMounted(async () => {
   display: flex; align-items: center; gap: 12px;
   margin-bottom: 16px; flex-wrap: wrap;
 }
-.pv-l { font-size: 12px; color: #64748B; }
+.pv-l { font-size: 12px; color: var(--ink-3); }
 .pv-hint { font-size: 11px; color: #A9B4C2; }
 
 .pv-flow {
@@ -1278,16 +1278,16 @@ onMounted(async () => {
   position: relative;
   padding: 8px 12px;
   border-radius: 9px;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #E4EBF3;
   min-width: 92px;
   text-align: center;
 }
-.pv-node .pv-t { display: block; font-size: 12px; font-weight: 700; color: #0F172A; }
-.pv-node .pv-n { display: block; font-style: normal; font-size: 9.5px; color: #94A3B8; margin-top: 2px; }
+.pv-node .pv-t { display: block; font-size: 12px; font-weight: 700; color: var(--ink); }
+.pv-node .pv-n { display: block; font-style: normal; font-size: 9.5px; color: var(--ink-3); margin-top: 2px; }
 .pv-node.k-step { border-color: #CBD5E1; }
-.pv-node.k-skip { background: #F8FAFC; }
-.pv-node.k-skip .pv-t { color: #94A3B8; }
+.pv-node.k-skip { background: var(--surface-page); }
+.pv-node.k-skip .pv-t { color: var(--ink-3); }
 .pv-node.k-muted { background: #FBFCFE; border-style: dashed; }
 .pv-node.k-muted .pv-t { color: #A9B4C2; font-weight: 600; }
 .pv-node.k-end { border-color: #BBF7D0; background: #F0FDF4; }
@@ -1298,10 +1298,10 @@ onMounted(async () => {
 
 .pv-foot {
   display: flex; align-items: center; gap: 12px;
-  font-size: 12px; color: #64748B;
+  font-size: 12px; color: var(--ink-3);
   padding-top: 12px; border-top: 1px dashed #F1F4F8;
 }
-.pv-foot b { color: #0F172A; }
+.pv-foot b { color: var(--ink); }
 .pv-fin { font-size: 11px; color: #1D4ED8; background: #EFF6FF; padding: 2px 8px; border-radius: 5px; }
 .pv-nofin { font-size: 11px; color: #92400E; background: #FEF3C7; padding: 2px 8px; border-radius: 5px; }
 

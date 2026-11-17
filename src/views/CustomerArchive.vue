@@ -52,7 +52,7 @@
 
           <div class="table-wrap">
             <el-table ref="customerTableRef" :data="filteredCustomers" v-loading="loadingCustomers"
-              element-loading-text="加载中…" element-loading-background="rgba(255,255,255,0.88)" border stripe
+              element-loading-text="加载中…" element-loading-background="var(--glass-panel)" border stripe
               height="100%" :size="customerSize" class="custom-table" :row-class-name="customerRowClass"
               row-key="id" @row-click="selectCustomer">
               <el-table-column v-for="col in customerVisibleColumns" :key="col.prop" :prop="col.prop"
@@ -196,7 +196,7 @@
 
             <div class="table-wrap">
               <el-table :data="filteredContacts" v-loading="loadingContacts" element-loading-text="加载中…"
-                element-loading-background="rgba(255,255,255,0.88)" border stripe height="100%" :size="contactSize"
+                element-loading-background="var(--glass-panel)" border stripe height="100%" :size="contactSize"
                 class="custom-table">
                 <el-table-column v-for="col in contactVisibleColumns" :key="col.prop" :prop="col.prop"
                   :label="col.label"
@@ -1076,7 +1076,7 @@ defineExpose({ fetchCustomers })
   padding: 12px;
   box-sizing: border-box;
   overflow: hidden;
-  background: #F8FAFC;
+  background: var(--surface-page);
   font-size: 13px;
 }
 
@@ -1087,7 +1087,7 @@ defineExpose({ fetchCustomers })
   min-height: 0;
   min-width: 0;
   padding: 12px 14px;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   overflow: hidden;
@@ -1117,7 +1117,7 @@ defineExpose({ fetchCustomers })
   gap: 7px;
   font-size: 14px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -1135,7 +1135,7 @@ defineExpose({ fetchCustomers })
 .title-sub {
   font-size: 12.5px;
   font-weight: 400;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 /* ---------- 搜索 ---------- */
@@ -1162,7 +1162,7 @@ defineExpose({ fetchCustomers })
 
 .field-name {
   font-size: 12.5px;
-  color: #475569;
+  color: var(--ink-2);
   white-space: nowrap;
 }
 
@@ -1178,7 +1178,7 @@ defineExpose({ fetchCustomers })
 
 .search-label {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   margin-right: 2px;
   white-space: nowrap;
 }
@@ -1186,7 +1186,7 @@ defineExpose({ fetchCustomers })
 .panel-search :deep(.el-input__wrapper),
 .panel-search :deep(.el-select__wrapper) {
   border-radius: 6px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all .25s;
   min-height: 30px;
@@ -1200,7 +1200,7 @@ defineExpose({ fetchCustomers })
 
 .panel-search :deep(.el-input__wrapper.is-focus),
 .panel-search :deep(.el-select__wrapper.is-focused) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.15), 0 0 0 1px var(--brand-primary) inset !important;
 }
 
@@ -1233,8 +1233,8 @@ defineExpose({ fetchCustomers })
 .btn-outline {
   border-radius: 6px !important;
   border-color: #CBD5E1 !important;
-  color: #334155;
-  background: #fff !important;
+  color: var(--ink-2);
+  background: var(--surface-card) !important;
   transition: all .25s;
 }
 
@@ -1253,8 +1253,8 @@ defineExpose({ fetchCustomers })
 
 .status-tab {
   border: 1px solid transparent;
-  background: #F8FAFC;
-  color: #64748B;
+  background: var(--surface-page);
+  color: var(--ink-3);
   border-radius: 6px;
   padding: 4px 12px;
   font-size: 12.5px;
@@ -1290,7 +1290,7 @@ defineExpose({ fetchCustomers })
   inset: 0;
   z-index: 9999;
   padding: 18px 20px;
-  background: #fff;
+  background: var(--surface-card);
   box-shadow: 0 20px 60px rgba(var(--brand-rgb), 0.12);
   animation: fs-fade-in .25s ease;
 }
@@ -1322,8 +1322,8 @@ defineExpose({ fetchCustomers })
 }
 
 :deep(.custom-table th.el-table__cell) {
-  background: #F8FAFC !important;
-  color: #0F172A;
+  background: var(--surface-page) !important;
+  color: var(--ink);
   font-weight: 700;
   font-size: 12.5px;
   border-bottom: 1px solid #E2E8F0;
@@ -1331,7 +1331,7 @@ defineExpose({ fetchCustomers })
 }
 
 :deep(.custom-table td.el-table__cell) {
-  color: #1E293B;
+  color: var(--ink);
   font-size: 12.5px;
   font-weight: 500;
   border-bottom: 1px solid #F1F5F9;
@@ -1362,17 +1362,17 @@ defineExpose({ fetchCustomers })
 }
 
 .customer-name {
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 600;
 }
 
 .contact-name {
-  color: #1E293B;
+  color: var(--ink);
   font-weight: 600;
 }
 
 .text-content {
-  color: #334155;
+  color: var(--ink-2);
 }
 
 .text-muted {
@@ -1381,7 +1381,7 @@ defineExpose({ fetchCustomers })
 
 .mono-text {
   font-variant-numeric: tabular-nums;
-  color: #475569;
+  color: var(--ink-2);
   letter-spacing: .2px;
 }
 
@@ -1402,8 +1402,8 @@ defineExpose({ fetchCustomers })
 }
 
 .status-tag.off {
-  color: #94A3B8;
-  background: #F1F5F9;
+  color: var(--ink-3);
+  background: var(--surface-hover);
 }
 
 /* 类型 / 角色 */
@@ -1414,8 +1414,8 @@ defineExpose({ fetchCustomers })
   padding: 0 7px;
   border-radius: 4px;
   font-size: 11.5px;
-  color: #475569;
-  background: #F1F5F9;
+  color: var(--ink-2);
+  background: var(--surface-hover);
 }
 
 .role-cell {
@@ -1528,7 +1528,7 @@ defineExpose({ fetchCustomers })
 }
 
 .action-danger {
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .action-danger:hover {
@@ -1557,7 +1557,7 @@ defineExpose({ fetchCustomers })
 .empty-state p {
   margin: 0;
   font-size: 13px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .empty-tip {
@@ -1587,7 +1587,7 @@ defineExpose({ fetchCustomers })
 .pick-empty p {
   margin: 0;
   font-size: 13.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 /* 全屏退出按钮 */
@@ -1677,12 +1677,12 @@ defineExpose({ fetchCustomers })
 .form-hint {
   margin-left: 10px;
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .ca-form :deep(.el-form-item__label) {
   font-size: 13px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 600;
 }
 
@@ -1696,7 +1696,7 @@ defineExpose({ fetchCustomers })
   gap: 8px;
   padding: 7px 10px;
   border-radius: 6px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border: 1px solid #E2E8F0;
   margin-bottom: 8px;
 }
@@ -1710,7 +1710,7 @@ defineExpose({ fetchCustomers })
   flex: 1;
   min-width: 0;
   font-size: 12.5px;
-  color: #334155;
+  color: var(--ink-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1718,7 +1718,7 @@ defineExpose({ fetchCustomers })
 
 .file-size {
   font-size: 11.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .contract-actions {
@@ -1740,8 +1740,8 @@ defineExpose({ fetchCustomers })
   padding: 0 12px;
   border-radius: 6px;
   border: 1px dashed #CBD5E1;
-  background: #fff;
-  color: #475569;
+  background: var(--surface-card);
+  color: var(--ink-2);
   font-size: 12.5px;
   cursor: pointer;
   transition: all .22s;
@@ -1756,7 +1756,7 @@ defineExpose({ fetchCustomers })
 
 .contract-tip {
   font-size: 11.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 /* 角色选择 */
@@ -1772,7 +1772,7 @@ defineExpose({ fetchCustomers })
 }
 
 .role-help {
-  color: #94A3B8;
+  color: var(--ink-3);
   font-size: 14px;
   cursor: help;
   transition: color .2s;
@@ -1785,7 +1785,7 @@ defineExpose({ fetchCustomers })
 .role-hint {
   margin-top: 2px;
   font-size: 11.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   line-height: 1.5;
 }
 
@@ -1814,8 +1814,8 @@ defineExpose({ fetchCustomers })
 
 .btn-ghost {
   border: 1px solid #E2E8F0;
-  background: #fff;
-  color: #64748B;
+  background: var(--surface-card);
+  color: var(--ink-3);
   margin-right: 8px;
 }
 
@@ -1875,7 +1875,7 @@ defineExpose({ fetchCustomers })
 .ca-dialog .el-dialog__title {
   font-size: 15px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .ca-dialog .el-dialog__body {

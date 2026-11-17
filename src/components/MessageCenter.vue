@@ -149,7 +149,7 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
 .mc-wrap { position: relative; }
 .mc-bell {
   position: relative; width: 32px; height: 32px; border-radius: 8px;
-  border: 1px solid #E2E8F0; background: #fff; color: #64748B;
+  border: 1px solid #E2E8F0; background: var(--surface-card); color: var(--ink-3);
   display: flex; align-items: center; justify-content: center; cursor: pointer;
   transition: all .16s;
 }
@@ -164,7 +164,7 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
 .mc-mask { position: fixed; inset: 0; z-index: 900; }
 .mc-panel {
   position: absolute; top: 40px; right: 0; width: 400px; z-index: 901;
-  background: #fff; border-radius: 12px; border: 1px solid #E2E8F0;
+  background: var(--surface-card); border-radius: 12px; border: 1px solid #E2E8F0;
   box-shadow: 0 16px 44px rgba(15, 23, 42, .16);
   display: flex; flex-direction: column; max-height: 560px; overflow: hidden;
 }
@@ -173,19 +173,19 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
   border-bottom: 1px solid #EEF2F7;
 }
 .mc-head b { font-size: 13.5px; }
-.mc-all { margin-left: auto; font-size: 12px; color: #64748B; cursor: pointer; }
+.mc-all { margin-left: auto; font-size: 12px; color: var(--ink-3); cursor: pointer; }
 .mc-all:hover { color: #C8102E; }
-.mc-x { font-size: 13px; color: #94A3B8; cursor: pointer; }
+.mc-x { font-size: 13px; color: var(--ink-3); cursor: pointer; }
 .mc-tabs { display: flex; gap: 4px; padding: 9px 12px; border-bottom: 1px solid #EEF2F7; }
 .mc-tabs span {
-  font-size: 12px; font-weight: 700; color: #64748B; padding: 5px 10px;
+  font-size: 12px; font-weight: 700; color: var(--ink-3); padding: 5px 10px;
   border-radius: 7px; cursor: pointer;
 }
 .mc-tabs span.on { background: #FDF2F4; color: #C8102E; }
 .mc-tabs em { font-style: normal; margin-left: 4px; font-weight: 800; }
 .mc-body { flex: 1; min-height: 0; overflow: auto; }
 .mc-group {
-  padding: 7px 14px; font-size: 11px; font-weight: 800; color: #94A3B8;
+  padding: 7px 14px; font-size: 11px; font-weight: 800; color: var(--ink-3);
   letter-spacing: 1px; background: #FAFCFF;
 }
 .mc-item {
@@ -201,11 +201,11 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
 .mc-item .m { flex: 1; min-width: 0; }
 .mc-item .m b { font-size: 12.5px; display: block; line-height: 1.5; }
 .mc-item .m p {
-  margin: 2px 0 0; font-size: 11.5px; color: #94A3B8;
+  margin: 2px 0 0; font-size: 11.5px; color: var(--ink-3);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .mc-item .tm { font-size: 11px; color: #B6C0CC; flex: 0 0 auto; font-family: var(--num-font, Arial, sans-serif); }
 .mc-foot { padding: 9px 14px; border-top: 1px solid #EEF2F7; text-align: center; }
-.mc-more { font-size: 12px; color: #64748B; cursor: pointer; }
+.mc-more { font-size: 12px; color: var(--ink-3); cursor: pointer; }
 .mc-more:hover { color: #C8102E; }
 </style>

@@ -531,7 +531,7 @@ onMounted(async () => {
   --num-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue',
     'PingFang SC', 'HarmonyOS Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', Arial, sans-serif;
   padding: 6px 16px 16px;
-  background-color: #F8FAFC;
+  background-color: var(--surface-page);
   height: calc(100vh - 101px);
   max-height: calc(100vh - 101px);
   box-sizing: border-box;
@@ -547,7 +547,7 @@ onMounted(async () => {
   margin: 40px auto;
   width: 460px;
   max-width: 92%;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 14px;
   padding: 40px 32px;
   text-align: center;
@@ -565,12 +565,12 @@ onMounted(async () => {
   justify-content: center;
   font-size: 24px;
 }
-.off-card h3 { margin: 0 0 8px; font-size: 17px; color: #0F172A; }
-.off-card p { margin: 0 0 18px; font-size: 13px; color: #64748B; line-height: 1.8; }
+.off-card h3 { margin: 0 0 8px; font-size: 17px; color: var(--ink); }
+.off-card p { margin: 0 0 18px; font-size: 13px; color: var(--ink-3); line-height: 1.8; }
 
 /* ===== 筛选卡片 ===== */
 .filter-card {
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 12px;
   padding: 14px 16px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
@@ -589,13 +589,13 @@ onMounted(async () => {
   padding: 5px 12px;
   border: 1px solid transparent;
   border-radius: 18px;
-  background: #F1F5F9;
+  background: var(--surface-hover);
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-family: inherit;
   font-size: 12.5px;
   font-weight: 600;
-  color: #475569;
+  color: var(--ink-2);
 }
 
 .stat-pill:hover {
@@ -622,12 +622,12 @@ onMounted(async () => {
   background: rgba(100, 116, 139, 0.12);
   font-size: 11px;
   font-weight: 700;
-  color: #64748B;
+  color: var(--ink-3);
   line-height: 1;
 }
 
 .stat-pill.active .stat-count {
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, .24);
   color: #fff;
 }
 
@@ -637,14 +637,14 @@ onMounted(async () => {
   gap: 16px;
   align-items: center;
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .sum-item b {
   font-family: var(--num-font);
   font-size: 14px;
   margin-left: 4px;
-  color: #0F172A;
+  color: var(--ink);
 }
 .sum-item b.is-warn { color: #D97706; }
 .sum-item b.is-ok { color: #15803D; }
@@ -672,7 +672,7 @@ onMounted(async () => {
 .table-card {
   flex: 1;
   min-height: 0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   padding: 12px 16px;
@@ -703,11 +703,11 @@ onMounted(async () => {
   box-shadow: 0 0 8px rgba(var(--brand-rgb), 0.35);
 }
 
-.toolbar-title { font-size: 15px; font-weight: 800; color: #0F172A; letter-spacing: 0.3px; }
+.toolbar-title { font-size: 15px; font-weight: 800; color: var(--ink); letter-spacing: 0.3px; }
 
 .toolbar-total {
   font-size: 12.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 500;
   padding-left: 8px;
   border-left: 1px solid #E2E8F0;
@@ -722,9 +722,9 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   border: 1px solid #E2E8F0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 8px;
-  color: #64748B;
+  color: var(--ink-3);
   font-size: 15px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -782,12 +782,12 @@ onMounted(async () => {
   border-top: 1px solid #F1F5F9;
 }
 
-.num-text { font-family: var(--num-font); font-weight: 600; color: #0F172A; font-size: 12.5px; }
+.num-text { font-family: var(--num-font); font-weight: 600; color: var(--ink); font-size: 12.5px; }
 .num-text.link { color: var(--brand-primary); cursor: pointer; }
 .num-text.link:hover { text-decoration: underline; }
 
-.sub-text { font-size: 11px; color: #94A3B8; margin-top: 2px; font-family: var(--num-font); }
-.time-text { font-family: var(--num-font); font-size: 12px; color: #475569; }
+.sub-text { font-size: 11px; color: var(--ink-3); margin-top: 2px; font-family: var(--num-font); }
+.time-text { font-family: var(--num-font); font-size: 12px; color: var(--ink-2); }
 .amount { font-family: var(--num-font); font-size: 13.5px; color: var(--brand-primary); }
 
 .type-chip {
@@ -796,8 +796,8 @@ onMounted(async () => {
   border-radius: 6px;
   font-size: 11.5px;
   font-weight: 600;
-  background: #F1F5F9;
-  color: #475569;
+  background: var(--surface-hover);
+  color: var(--ink-2);
 }
 .type-chip.t-expense { background: var(--brand-primary-light); color: var(--brand-primary); }
 .type-chip.t-subsidy { background: #EFF6FF; color: #1D4ED8; }
@@ -808,13 +808,13 @@ onMounted(async () => {
 .voucher-link:hover { text-decoration: underline; }
 .voucher-none { color: #CBD5E1; }
 
-.empty-box { padding: 26px 0 14px; text-align: center; color: #94A3B8; }
+.empty-box { padding: 26px 0 14px; text-align: center; color: var(--ink-3); }
 .empty-ic { font-size: 28px; color: #CBD5E1; margin-bottom: 6px; }
-.empty-box p { margin: 0 0 4px; font-size: 13.5px; color: #64748B; font-weight: 600; }
+.empty-box p { margin: 0 0 4px; font-size: 13.5px; color: var(--ink-3); font-weight: 600; }
 .empty-box span { font-size: 12px; }
 
 /* ===== 列设置 ===== */
-.column-setting { padding: 0; background: #FFFFFF; }
+.column-setting { padding: 0; background: var(--surface-card); }
 .column-setting-header {
   display: flex;
   align-items: center;
@@ -829,7 +829,7 @@ onMounted(async () => {
   gap: 5px;
   font-size: 13px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
 }
 .col-reset { font-size: 12px; color: var(--brand-primary); cursor: pointer; font-weight: 600; }
 .column-item { display: flex; align-items: center; padding: 3px 2px; }

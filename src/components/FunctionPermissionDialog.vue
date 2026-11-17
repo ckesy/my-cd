@@ -365,13 +365,13 @@ const handleConfirm = () => {
 
 :deep(.perm-dialog .el-dialog__body) {
     padding: 0;
-    background: #F8FAFC;
+    background: var(--surface-page);
 }
 
 :deep(.perm-dialog .el-dialog__footer) {
     padding: 14px 24px;
     border-top: 1px solid #F1F5F9;
-    background: #fff;
+    background: var(--surface-card);
 }
 
 :deep(.perm-dialog .el-dialog__headerbtn) {
@@ -388,7 +388,7 @@ const handleConfirm = () => {
     justify-content: space-between;
     gap: 16px;
     padding: 18px 24px;
-    background: linear-gradient(180deg, #FFFFFF, #FAFBFC);
+    background: linear-gradient(180deg, var(--surface-card), #FAFBFC);
 }
 
 .pd-header-left {
@@ -413,13 +413,13 @@ const handleConfirm = () => {
 .pd-title {
     font-size: 16px;
     font-weight: 800;
-    color: #0F172A;
+    color: var(--ink);
     letter-spacing: 0.3px;
 }
 
 .pd-sub {
     font-size: 12px;
-    color: #94A3B8;
+    color: var(--ink-3);
     font-weight: 500;
     margin-top: 2px;
 }
@@ -433,7 +433,7 @@ const handleConfirm = () => {
 
 .pd-counter {
     font-size: 13px;
-    color: #64748B;
+    color: var(--ink-3);
     font-weight: 600;
 }
 
@@ -449,8 +449,8 @@ const handleConfirm = () => {
     padding: 6px 14px;
     border-radius: 20px;
     border: 1.5px solid #CBD5E1;
-    background: #fff;
-    color: #475569;
+    background: var(--surface-card);
+    color: var(--ink-2);
     font-size: 12.5px;
     font-weight: 700;
     cursor: pointer;
@@ -484,7 +484,7 @@ const handleConfirm = () => {
 
 /* 左侧模块导航 */
 .pd-sidebar {
-    background: #FFFFFF;
+    background: var(--surface-card);
     border-right: 1px solid #F1F5F9;
     overflow-y: auto;
 }
@@ -518,7 +518,7 @@ const handleConfirm = () => {
     font-family: inherit;
     font-size: 13px;
     font-weight: 600;
-    color: #475569;
+    color: var(--ink-2);
     transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
     text-align: left;
     width: 100%;
@@ -569,8 +569,8 @@ const handleConfirm = () => {
 }
 
 .pd-mod-item.disabled:hover {
-    background: #F8FAFC;
-    color: #475569;
+    background: var(--surface-page);
+    color: var(--ink-2);
     transform: none;
 }
 
@@ -591,15 +591,15 @@ const handleConfirm = () => {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #F1F5F9;
-    color: #64748B;
+    background: var(--surface-hover);
+    color: var(--ink-3);
     font-size: 13px;
     flex-shrink: 0;
     transition: all 0.28s;
 }
 
 .pd-mod-item.active .pd-mod-icon {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, .24);
     color: #fff;
 }
 
@@ -630,13 +630,13 @@ const handleConfirm = () => {
 }
 
 .pd-mod-item.active .pd-mod-count {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, .24);
     color: #fff;
 }
 
 .pd-mod-count.empty {
-    color: #94A3B8;
-    background: #F1F5F9;
+    color: var(--ink-3);
+    background: var(--surface-hover);
 }
 
 .pd-mod-item.active .pd-mod-count.empty {
@@ -651,14 +651,14 @@ const handleConfirm = () => {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #F1F5F9;
-    color: #94A3B8;
+    background: var(--surface-hover);
+    color: var(--ink-3);
     font-size: 11px;
     flex-shrink: 0;
 }
 
 .pd-mod-item.active .pd-mod-lock {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, .24);
     color: #fff;
 }
 
@@ -677,7 +677,7 @@ const handleConfirm = () => {
 }
 
 .pd-mod-item.active .pd-mod-done {
-    background: #fff;
+    background: var(--surface-card);
     color: var(--brand-primary);
 }
 
@@ -755,7 +755,7 @@ const handleConfirm = () => {
     gap: 10px;
     font-size: 14px;
     font-weight: 800;
-    color: #0F172A;
+    color: var(--ink);
 }
 
 .pd-panel-icon {
@@ -796,8 +796,8 @@ const handleConfirm = () => {
 }
 
 .pd-panel-badge.lock {
-    background: #F1F5F9;
-    color: #64748B;
+    background: var(--surface-hover);
+    color: var(--ink-3);
     border-color: #E2E8F0;
 }
 
@@ -841,7 +841,7 @@ const handleConfirm = () => {
     padding: 12px 16px;
     border-radius: 10px;
     border: 1.5px solid #E2E8F0;
-    background: #FFFFFF;
+    background: var(--surface-card);
     cursor: pointer;
     font-family: inherit;
     text-align: left;
@@ -887,7 +887,7 @@ const handleConfirm = () => {
 
 .pd-func-item.on {
     border-color: var(--brand-primary);
-    background: linear-gradient(135deg, var(--brand-primary-light), #FFFFFF);
+    background: linear-gradient(135deg, var(--brand-primary-light), var(--surface-card));
     box-shadow: 0 6px 18px rgba(var(--brand-rgb), 0.12);
 }
 
@@ -900,7 +900,7 @@ const handleConfirm = () => {
 .pd-func-item.disabled {
     cursor: not-allowed;
     opacity: 0.55;
-    background: #F8FAFC;
+    background: var(--surface-page);
     border-style: dashed;
 }
 
@@ -919,7 +919,7 @@ const handleConfirm = () => {
     height: 22px;
     border-radius: 50%;
     border: 2px solid #CBD5E1;
-    background: #FFFFFF;
+    background: var(--surface-card);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -936,7 +936,7 @@ const handleConfirm = () => {
 
 .pd-func-item.disabled .pd-func-check {
     border-color: #CBD5E1;
-    background: #F1F5F9;
+    background: var(--surface-hover);
 }
 
 .pd-check-svg {
@@ -956,7 +956,7 @@ const handleConfirm = () => {
     min-width: 0;
     font-size: 13.5px;
     font-weight: 700;
-    color: #0F172A;
+    color: var(--ink);
     letter-spacing: 0.2px;
 }
 
@@ -967,8 +967,8 @@ const handleConfirm = () => {
 .pd-func-key {
     font-family: 'Courier New', monospace;
     font-size: 11px;
-    color: #94A3B8;
-    background: #F8FAFC;
+    color: var(--ink-3);
+    background: var(--surface-page);
     border: 1px solid #E2E8F0;
     padding: 2px 8px;
     border-radius: 6px;
@@ -986,7 +986,7 @@ const handleConfirm = () => {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #94A3B8;
+    color: var(--ink-3);
     font-size: 13px;
     flex-shrink: 0;
 }
@@ -1009,9 +1009,9 @@ const handleConfirm = () => {
 .pd-func-empty {
     padding: 40px 20px;
     text-align: center;
-    color: #94A3B8;
+    color: var(--ink-3);
     font-size: 13px;
-    background: #FAFBFC;
+    background: var(--surface-sunken);
     border: 1px dashed #E2E8F0;
     border-radius: 10px;
 }
@@ -1030,7 +1030,7 @@ const handleConfirm = () => {
     align-items: center;
     gap: 5px;
     font-size: 12.5px;
-    color: #64748B;
+    color: var(--ink-3);
     font-weight: 500;
 }
 

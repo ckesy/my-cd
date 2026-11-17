@@ -45,7 +45,7 @@
           clearable filterable>
           <el-option v-for="o in orgOptions" :key="o" :label="o" :value="o" />
           <template #empty>
-            <div style="padding: 14px; text-align: center; color: #94A3B8; font-size: 12.5px;">
+            <div style="padding: 14px; text-align: center; color: var(--ink-3); font-size: 12.5px;">
               暂无机构
             </div>
           </template>
@@ -570,7 +570,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .ele-fence-page {
   padding: 6px 16px 16px;
-  background-color: #f8fafc;
+  background-color: var(--surface-page);
   height: calc(100vh - 101px);
   max-height: calc(100vh - 101px);
   box-sizing: border-box;
@@ -579,12 +579,12 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 12px;
   font-size: 14px;
-  color: #1E293B;
+  color: var(--ink);
 }
 
 .search-card,
 .table-card {
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   padding: 16px;
@@ -635,7 +635,7 @@ onBeforeUnmount(() => {
   position: relative;
   display: inline-flex;
   gap: 4px;
-  background: #F1F5F9;
+  background: var(--surface-hover);
   padding: 3px;
   border-radius: 9px;
 }
@@ -644,7 +644,7 @@ onBeforeUnmount(() => {
 .tab-indicator {
   position: absolute;
   border-radius: 7px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
   pointer-events: none;
   z-index: 0;
@@ -664,7 +664,7 @@ onBeforeUnmount(() => {
   border-radius: 7px;
   font-size: 12.5px;
   font-weight: 700;
-  color: #64748B;
+  color: var(--ink-3);
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -676,7 +676,7 @@ onBeforeUnmount(() => {
 }
 
 .type-tab:hover {
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .type-tab:active {
@@ -706,12 +706,12 @@ onBeforeUnmount(() => {
   border-radius: 20px;
   text-align: center;
   background: #E2E8F0;
-  color: #64748B;
+  color: var(--ink-3);
   transition: background 0.22s ease, color 0.22s ease;
 }
 
 .type-tab.on {
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .type-tab.on .t-count {
@@ -798,7 +798,7 @@ onBeforeUnmount(() => {
 
 :deep(.btn-outline) {
   border-color: #CBD5E1;
-  color: #334155;
+  color: var(--ink-2);
 }
 
 :deep(.btn-outline:hover) {
@@ -829,16 +829,16 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-table .el-table__cell) {
-  color: #1E293B;
+  color: var(--ink);
   font-weight: 500;
   font-size: 13px;
 }
 
 :deep(.custom-table th.el-table__cell) {
-  color: #0F172A !important;
+  color: var(--ink) !important;
   font-weight: 700 !important;
   font-size: 13px;
-  background: #F1F5F9 !important;
+  background: var(--surface-hover) !important;
   border-bottom: 2px solid #E2E8F0;
 }
 
@@ -853,7 +853,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
-  background: #FAFBFC;
+  background: var(--surface-sunken);
 }
 
 /* ⭐ 名称列左对齐，且与表格左边框留出间隔 */
@@ -870,7 +870,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding: 3px 10px 3px 8px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -957,7 +957,7 @@ onBeforeUnmount(() => {
 .name-text {
   font-size: 13px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
   line-height: 1;
   overflow: hidden;
@@ -1001,13 +1001,13 @@ onBeforeUnmount(() => {
 .param-text {
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
 }
 
 .time-text {
   font-family: 'Courier New', monospace;
   font-size: 12px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 600;
 }
 
@@ -1027,7 +1027,7 @@ onBeforeUnmount(() => {
 }
 
 .action-btn.delete {
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 .action-btn.delete:hover {
@@ -1045,7 +1045,7 @@ onBeforeUnmount(() => {
 
 .empty-icon {
   font-size: 48px;
-  color: #94A3B8;
+  color: var(--ink-3);
   animation: float 3s ease-in-out infinite;
 }
 
@@ -1064,13 +1064,13 @@ onBeforeUnmount(() => {
 .empty-state p {
   margin: 0;
   font-size: 15px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 700;
 }
 
 .empty-sub {
   font-size: 13px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 .pagination-wrapper {
@@ -1085,14 +1085,14 @@ onBeforeUnmount(() => {
 
 .total-text {
   font-size: 13px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 700;
 }
 
 :deep(.custom-pagination .el-pager li) {
   transition: all 0.2s;
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
 }
 
 :deep(.custom-pagination .el-pager li:hover) {
@@ -1123,7 +1123,7 @@ onBeforeUnmount(() => {
 }
 
 .delete-loading-content {
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 16px;
   padding: 32px 40px;
   box-shadow: 0 20px 60px rgba(211, 47, 47, 0.15), 0 0 0 1px rgba(211, 47, 47, 0.08);
@@ -1198,7 +1198,7 @@ onBeforeUnmount(() => {
 
 .delete-text {
   font-size: 15px;
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 600;
 }
 
@@ -1246,7 +1246,7 @@ onBeforeUnmount(() => {
 
 .delete-tip {
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
   font-weight: 500;
   animation: textPulse 1.6s ease-in-out infinite;
 }
@@ -1309,14 +1309,14 @@ onBeforeUnmount(() => {
 
 .delete-confirm-box .el-message-box__title {
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   font-size: 16px;
 }
 
 .delete-confirm-box .el-message-box__content {
   padding: 8px 20px 16px;
   font-size: 14px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 500;
 }
 </style>

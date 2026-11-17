@@ -438,7 +438,7 @@ watch(() => props.modelValue, async (val) => {
 <style scoped>
 /* 头部 */
 .osd-header { display: flex; align-items: center; gap: 12px; }
-.osd-header-title { font-size: 16px; font-weight: 700; color: #0F172A; letter-spacing: 0.3px; }
+.osd-header-title { font-size: 16px; font-weight: 700; color: var(--ink); letter-spacing: 0.3px; }
 .osd-header-plate {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 4px 14px 4px 10px;
@@ -451,7 +451,7 @@ watch(() => props.modelValue, async (val) => {
 }
 .osd-plate-bar {
   width: 3px; height: 14px; border-radius: 2px;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--glass-panel);
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
 }
 
@@ -467,7 +467,7 @@ watch(() => props.modelValue, async (val) => {
 .osd-stat {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px;
-  background: linear-gradient(135deg, #fff 0%, var(--brand-primary-light) 100%);
+  background: linear-gradient(135deg, var(--surface-card) 0%, var(--brand-primary-light) 100%);
   border: 1px solid #FEE2E2;
   border-radius: 10px;
   opacity: 0;
@@ -498,13 +498,13 @@ watch(() => props.modelValue, async (val) => {
 
 .osd-stat-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .osd-stat-value {
-  font-size: 19px; font-weight: 800; color: #0F172A;
+  font-size: 19px; font-weight: 800; color: var(--ink);
   font-family: 'Courier New', monospace; line-height: 1.1;
   letter-spacing: -0.5px;
   display: flex; align-items: baseline; gap: 3px;
 }
-.osd-stat-value small { font-size: 10.5px; font-weight: 600; color: #94A3B8; letter-spacing: 0; }
-.osd-stat-label { font-size: 11.5px; color: #64748B; font-weight: 600; letter-spacing: 0.3px; }
+.osd-stat-value small { font-size: 10.5px; font-weight: 600; color: var(--ink-3); letter-spacing: 0; }
+.osd-stat-label { font-size: 11.5px; color: var(--ink-3); font-weight: 600; letter-spacing: 0.3px; }
 
 /* ⭐ 报警位置栏 */
 .osd-address-bar {
@@ -531,7 +531,7 @@ watch(() => props.modelValue, async (val) => {
 
 /* Section */
 .osd-section {
-  background: #FAFBFC;
+  background: var(--surface-sunken);
   border: 1px solid #F1F5F9;
   border-radius: 10px;
   padding: 10px 14px;
@@ -539,7 +539,7 @@ watch(() => props.modelValue, async (val) => {
 .osd-section-title {
   display: flex; align-items: center; gap: 8px;
   font-size: 13px; font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   margin-bottom: 8px;
   letter-spacing: 0.3px;
 }
@@ -549,7 +549,7 @@ watch(() => props.modelValue, async (val) => {
   background: linear-gradient(180deg, var(--brand-primary), var(--brand-primary-deep));
   box-shadow: 0 0 6px rgba(var(--brand-rgb), 0.5);
 }
-.osd-count { margin-left: auto; font-size: 11.5px; color: #94A3B8; font-weight: 500; }
+.osd-count { margin-left: auto; font-size: 11.5px; color: var(--ink-3); font-weight: 500; }
 
 /* 图表 */
 .osd-chart-wrap { width: 100%; position: relative; }
@@ -592,7 +592,7 @@ watch(() => props.modelValue, async (val) => {
   max-height: 140px;
   overflow-y: auto;
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #F1F5F9;
 }
 .osd-points-list::-webkit-scrollbar { width: 6px; }
@@ -620,13 +620,13 @@ watch(() => props.modelValue, async (val) => {
   width: 20px; height: 20px;
   display: flex; align-items: center; justify-content: center;
   border-radius: 50%;
-  background: #F1F5F9;
-  color: #64748B;
+  background: var(--surface-hover);
+  color: var(--ink-3);
   font-size: 10.5px; font-weight: 800;
   font-family: 'Courier New', monospace;
 }
 .osd-point-time {
-  color: #334155;
+  color: var(--ink-2);
   font-family: 'Courier New', monospace;
   font-weight: 600;
 }
@@ -656,7 +656,7 @@ watch(() => props.modelValue, async (val) => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #64748B;
+  color: var(--ink-3);
   font-size: 11.5px;
   font-family: 'Courier New', monospace;
   text-align: right;
@@ -682,7 +682,7 @@ watch(() => props.modelValue, async (val) => {
 }
 @keyframes locSpin { to { transform: rotate(360deg); } }
 .osd-point-loc .loc-loading-text {
-  color: #94A3B8;
+  color: var(--ink-3);
   font-size: 11px;
 }
 
@@ -699,11 +699,11 @@ watch(() => props.modelValue, async (val) => {
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .osd-btn.ghost {
-  background: #F1F5F9; color: #475569;
+  background: var(--surface-hover); color: var(--ink-2);
   border: 1px solid #E2E8F0;
 }
 .osd-btn.ghost:hover {
-  background: #E2E8F0; color: #1E293B;
+  background: #E2E8F0; color: var(--ink);
   transform: translateY(-2px);
 }
 
@@ -753,7 +753,7 @@ watch(() => props.modelValue, async (val) => {
   font-family: 'Courier New', monospace;
   letter-spacing: -0.5px;
   line-height: 1.1;
-  background: linear-gradient(120deg, #ffffff 0%, var(--brand-primary-light) 50%, #ffffff 100%);
+  background: linear-gradient(120deg, var(--surface-card) 0%, var(--brand-primary-light) 50%, var(--surface-card) 100%);
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -797,7 +797,7 @@ watch(() => props.modelValue, async (val) => {
 }
 .overspeed-detail-dialog .el-dialog__footer {
   padding: 12px 20px;
-  background: #FAFBFC;
+  background: var(--surface-sunken);
   border-top: 1px solid #F1F5F9;
 }
 </style>

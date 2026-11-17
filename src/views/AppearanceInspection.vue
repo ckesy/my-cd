@@ -98,7 +98,7 @@
           :data="pagedRows"
           v-loading="loading"
           element-loading-text="加载中…"
-          element-loading-background="rgba(255,255,255,0.86)"
+          element-loading-background="var(--glass-panel)"
           :size="tableSize"
           stripe
           height="100%"
@@ -728,7 +728,7 @@ watch(isFullscreen, (v) => {
 }
 .kpi {
   flex: 1;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #e6ecf3;
   border-radius: 10px;
   padding: 12px 16px;
@@ -736,7 +736,7 @@ watch(isFullscreen, (v) => {
 .kpi-v {
   font-size: 22px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--ink);
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.4px;
@@ -744,12 +744,12 @@ watch(isFullscreen, (v) => {
 .kpi-of {
   font-size: 13px;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--ink-3);
   margin-left: 2px;
 }
 .kpi-l {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--ink-3);
   margin-top: 3px;
 }
 .kpi.is-red .kpi-v {
@@ -768,7 +768,7 @@ watch(isFullscreen, (v) => {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #e6ecf3;
   border-radius: 10px;
   padding: 12px 14px;
@@ -792,7 +792,7 @@ watch(isFullscreen, (v) => {
   margin: 0;
   font-size: 14px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--ink);
 }
 .tl-hint {
   font-size: 11px;
@@ -833,7 +833,7 @@ watch(isFullscreen, (v) => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #e6ecf3;
   border-radius: 10px;
   overflow: hidden;
@@ -849,7 +849,7 @@ watch(isFullscreen, (v) => {
   z-index: 2000;
   border-radius: 0;
   border: none;
-  background: #fff;
+  background: var(--surface-card);
 }
 .ip-pager {
   flex: 0 0 auto;
@@ -857,7 +857,7 @@ watch(isFullscreen, (v) => {
   justify-content: flex-end;
   padding: 10px 14px;
   border-top: 1px solid #f1f5f9;
-  background: #fff;
+  background: var(--surface-card);
 }
 
 /* 全屏退出按钮：四件套里的图标也会变成 Close，这个是更明显的兜底 */
@@ -896,7 +896,7 @@ watch(isFullscreen, (v) => {
 
 .ip-card :deep(.el-table th.el-table__cell) {
   font-size: 12px;
-  color: #475569;
+  color: var(--ink-2);
   font-weight: 700;
 }
 .ip-card :deep(.el-table td.el-table__cell) {
@@ -911,7 +911,7 @@ watch(isFullscreen, (v) => {
 
 .cell-time {
   font-size: 12.5px;
-  color: #64748b;
+  color: var(--ink-3);
 }
 .cell-plate {
   display: flex;
@@ -921,7 +921,7 @@ watch(isFullscreen, (v) => {
 .plate-t {
   font-size: 13px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 .plate-tag {
@@ -934,12 +934,12 @@ watch(isFullscreen, (v) => {
 }
 .cell-main {
   font-size: 13px;
-  color: #0f172a;
+  color: var(--ink);
   font-weight: 600;
 }
 .cell-dim {
   font-size: 12.5px;
-  color: #64748b;
+  color: var(--ink-3);
 }
 .num {
   font-variant-numeric: tabular-nums;
@@ -967,8 +967,8 @@ watch(isFullscreen, (v) => {
   color: #b45309;
 }
 .pill.done {
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--surface-hover);
+  color: var(--ink-3);
 }
 
 /* 空态 */
@@ -987,7 +987,7 @@ watch(isFullscreen, (v) => {
 .ip-empty p {
   margin: 0;
   font-size: 13px;
-  color: #64748b;
+  color: var(--ink-3);
   font-weight: 600;
 }
 .ip-empty span {
@@ -1020,12 +1020,12 @@ watch(isFullscreen, (v) => {
 .dt-plate {
   font-size: 18px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--ink);
   letter-spacing: 0.4px;
 }
 .dt-s {
   font-size: 12.5px;
-  color: #64748b;
+  color: var(--ink-3);
   margin-top: 6px;
 }
 .dt-x {
@@ -1060,13 +1060,13 @@ watch(isFullscreen, (v) => {
 .dt-sec-t {
   font-size: 12.5px;
   font-weight: 800;
-  color: #334155;
+  color: var(--ink-2);
   letter-spacing: 0.3px;
 }
 .dt-sec-r {
   margin-left: auto;
   font-size: 11.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
 }
 
 /* 逐项矩阵 */
@@ -1075,7 +1075,7 @@ watch(isFullscreen, (v) => {
 }
 .dt-g-label {
   font-size: 11.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
   margin-bottom: 6px;
 }
 .dt-chips {
@@ -1098,7 +1098,7 @@ watch(isFullscreen, (v) => {
   border: 1px solid #fbd5db;
 }
 .mchip.off {
-  background: #f8fafc;
+  background: var(--surface-page);
   color: #b4becb;
 }
 
@@ -1126,7 +1126,7 @@ watch(isFullscreen, (v) => {
 }
 .dt-note-b {
   font-size: 12.5px;
-  color: #334155;
+  color: var(--ink-2);
   line-height: 1.65;
   margin-top: 5px;
   white-space: pre-wrap;
@@ -1162,7 +1162,7 @@ watch(isFullscreen, (v) => {
 }
 .dt-done-meta {
   font-size: 11.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
   margin-top: 6px;
 }
 .dt-handle-row {

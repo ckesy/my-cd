@@ -3032,7 +3032,7 @@ onMounted(async () => {
   overflow-x: hidden;
   padding: 16px 20px 40px;
   box-sizing: border-box;
-  background: #f8fafc;
+  background: var(--surface-page);
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
 }
@@ -3044,7 +3044,7 @@ onMounted(async () => {
   align-items: center;
   margin-bottom: 14px;
   padding: 14px 20px;
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   position: sticky;
@@ -3053,7 +3053,7 @@ onMounted(async () => {
 }
 .page-header h2 {
   margin: 0;
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 800;
   font-size: 18px;
   display: flex;
@@ -3117,27 +3117,27 @@ onMounted(async () => {
 .reject-key {
   flex-shrink: 0;
   width: 60px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 .reject-val {
-  color: #1E293B;
+  color: var(--ink);
   font-weight: 500;
   word-break: break-all;
 }
 .reject-mono {
   font-family: 'Courier New', Courier, monospace;
   font-size: 12px;
-  color: #475569;
+  color: var(--ink-2);
 }
 
 /* ===== 分区标题 ===== */
 .section-title {
   font-size: 15px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   margin: 16px 0 12px 0;
   padding: 10px 14px;
-  background: linear-gradient(90deg, var(--brand-primary-light) 0%, #ffffff 100%);
+  background: linear-gradient(90deg, var(--brand-primary-light) 0%, var(--surface-card) 100%);
   border-radius: 8px;
   border-left: 4px solid var(--brand-primary);
   line-height: 1.2;
@@ -3150,7 +3150,7 @@ onMounted(async () => {
 .checkin-row {
   margin-bottom: 16px;
   padding: 12px 16px;
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
@@ -3159,7 +3159,7 @@ onMounted(async () => {
 }
 .hint-text {
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
   margin-left: 12px;
   font-weight: 500;
 }
@@ -3175,7 +3175,7 @@ onMounted(async () => {
 .checkin-label {
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
   white-space: nowrap;
 }
 .checkin-off-tip {
@@ -3189,7 +3189,7 @@ onMounted(async () => {
 }
 .checkin-value {
   font-size: 12px;
-  color: #475569;
+  color: var(--ink-2);
   font-family: 'Courier New', monospace;
 }
 
@@ -3197,7 +3197,7 @@ onMounted(async () => {
 .lg-progress-card {
   padding: 12px 18px 10px 18px;
   margin-bottom: 10px;
-  background: #ffffff;
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
@@ -3268,7 +3268,7 @@ onMounted(async () => {
 }
 .task-name-display {
   font-size: 14px;
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 600;
 }
 
@@ -3317,7 +3317,7 @@ onMounted(async () => {
 .field-label {
   white-space: nowrap;
   font-size: 13px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 600;
 }
 .required-star {
@@ -3340,7 +3340,7 @@ onMounted(async () => {
   margin: 0 0 10px 0;
   align-items: center;
   padding: 12px 16px;
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
@@ -3351,7 +3351,7 @@ onMounted(async () => {
   font-size: 14px;
 }
 .info-label {
-  color: #475569;
+  color: var(--ink-2);
   white-space: nowrap;
   font-weight: 600;
 }
@@ -3431,7 +3431,7 @@ onMounted(async () => {
   gap: 12px;
   margin-top: 20px;
   padding: 14px 20px;
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
   flex-wrap: wrap;
@@ -3487,7 +3487,7 @@ onMounted(async () => {
   align-items: center;
   margin-bottom: 14px;
   padding: 0 20px;
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
 }
@@ -3499,13 +3499,13 @@ onMounted(async () => {
   background: transparent;
   font-size: 14px;
   font-weight: 600;
-  color: #64748B;
+  color: var(--ink-3);
   cursor: pointer;
   transition: color 0.2s;
   font-family: inherit;
 }
-.detail-tab:hover { color: #475569; }
-.detail-tab.active { color: #0F172A; }
+.detail-tab:hover { color: var(--ink-2); }
+.detail-tab.active { color: var(--ink); }
 .detail-tab.active::after {
   content: '';
   position: absolute;
@@ -3528,7 +3528,7 @@ onMounted(async () => {
 .detail-tabs-hint {
   margin-left: auto;
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
   font-family: 'Courier New', monospace;
 }
 
@@ -3547,7 +3547,7 @@ onMounted(async () => {
 }
 .lg-updated {
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
   font-family: var(--num-font, sans-serif);
   font-variant-numeric: tabular-nums;
 }
@@ -3571,7 +3571,7 @@ onMounted(async () => {
   width: 220px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   cursor: pointer;
   transition: all 0.25s;
@@ -3594,7 +3594,7 @@ onMounted(async () => {
   font-family: 'Courier New', monospace;
   font-size: 12px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
 }
 .lg-status-tag {
   flex-shrink: 0;
@@ -3607,13 +3607,13 @@ onMounted(async () => {
 .lg-record-route {
   margin-top: 6px;
   font-size: 12.5px;
-  color: #1E293B;
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .lg-record-route i { font-style: normal; color: var(--brand-primary); margin: 0 2px; }
-.lg-record-meta { margin-top: 4px; font-size: 11.5px; color: #64748B; }
+.lg-record-meta { margin-top: 4px; font-size: 11.5px; color: var(--ink-3); }
 .lg-record-flag {
   position: absolute;
   top: -1px;
@@ -3632,11 +3632,11 @@ onMounted(async () => {
   gap: 12px;
   padding: 32px 0;
   margin-bottom: 10px;
-  background: #ffffff;
+  background: var(--surface-card);
   border: 1px dashed #E2E8F0;
   border-radius: 12px;
 }
-.lg-empty-text { font-size: 13px; color: #64748B; }
+.lg-empty-text { font-size: 13px; color: var(--ink-3); }
 
 /* ---- 地图 + 时间轴 ---- */
 .lg-main { display: flex; gap: 12px; align-items: stretch; }
@@ -3647,7 +3647,7 @@ onMounted(async () => {
   height: 520px;
   border-radius: 12px;
   overflow: hidden;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border: 1px solid #E2E8F0;
 }
 .lg-map { width: 100%; height: 100%; }
@@ -3663,7 +3663,7 @@ onMounted(async () => {
   padding: 0 40px;
   text-align: center;
   font-size: 13px;
-  color: #64748B;
+  color: var(--ink-3);
   background: rgba(248, 250, 252, 0.93);
   z-index: 5;
 }
@@ -3673,7 +3673,7 @@ onMounted(async () => {
   bottom: 12px;
   min-width: 220px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.97);
+  background: var(--glass-panel);
   border: 1px solid #E2E8F0;
   border-radius: 10px;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
@@ -3694,14 +3694,14 @@ onMounted(async () => {
   font-family: 'Courier New', monospace;
   font-size: 13px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   white-space: nowrap;
 }
-.lg-vc-line { margin-top: 4px; font-size: 12px; color: #475569; }
+.lg-vc-line { margin-top: 4px; font-size: 12px; color: var(--ink-2); }
 .lg-vc-mono {
   font-family: 'Courier New', monospace;
   font-size: 11.5px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 .lg-legend {
   position: absolute;
@@ -3710,11 +3710,11 @@ onMounted(async () => {
   display: flex;
   gap: 12px;
   padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.97);
+  background: var(--glass-panel);
   border: 1px solid #E2E8F0;
   border-radius: 8px;
   font-size: 11.5px;
-  color: #64748B;
+  color: var(--ink-3);
   z-index: 6;
 }
 .lg-legend span { display: inline-flex; align-items: center; gap: 5px; }
@@ -3738,15 +3738,15 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.97);
+  background: var(--glass-panel);
   border: 1px solid #E2E8F0;
   border-radius: 8px;
   font-size: 11.5px;
-  color: #475569;
+  color: var(--ink-2);
   z-index: 6;
 }
-.lg-ti-label { font-weight: 700; color: #0F172A; }
-.lg-ti-mono { font-family: 'Courier New', monospace; color: #64748B; }
+.lg-ti-label { font-weight: 700; color: var(--ink); }
+.lg-ti-mono { font-family: 'Courier New', monospace; color: var(--ink-3); }
 
 /* ---- 节点时间轴 ---- */
 .lg-timeline {
@@ -3754,7 +3754,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   height: 520px;
-  background: #ffffff;
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   border-radius: 12px;
   overflow: hidden;
@@ -3768,7 +3768,7 @@ onMounted(async () => {
   padding: 12px 16px;
   border-bottom: 1px solid #F1F5F9;
 }
-.lg-tl-title { font-size: 13px; font-weight: 700; color: #0F172A; }
+.lg-tl-title { font-size: 13px; font-weight: 700; color: var(--ink); }
 /* ---- 节点时间轴 ----
    版式目标：一条竖轴串起来，每行只有「节点名 …… 进入时间」+ 一行很淡的副说明。
    状态靠圆点颜色表达，不再用文字徽标重复节点名（避免出现「已完成 已完成」）。 */
@@ -3783,16 +3783,16 @@ onMounted(async () => {
   margin: 2px 0 10px;
   max-width: 520px;
 }
-.tl-sec-k { font-size: 12px; font-weight: 700; color: #475569; flex: 0 0 auto; }
+.tl-sec-k { font-size: 12px; font-weight: 700; color: var(--ink-2); flex: 0 0 auto; }
 .tl-sec-v {
-  font-size: 12px; color: #64748B; flex: 0 0 auto;
+  font-size: 12px; color: var(--ink-3); flex: 0 0 auto;
   font-family: var(--num-font, sans-serif);
   font-variant-numeric: tabular-nums;
 }
 .tl-sec-line { flex: 1; height: 1px; background: #E2E8F0; }
 .tl-sec-op {
   flex: 0 0 auto; max-width: 96px;
-  font-size: 11.5px; color: #64748B;
+  font-size: 11.5px; color: var(--ink-3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -3818,7 +3818,7 @@ onMounted(async () => {
   margin-top: 4px;
   border-radius: 50%;
   box-sizing: border-box;
-  background: #fff;
+  background: var(--surface-card);
   border: 2px solid #CBD5E1;
 }
 .tl-node.is-done .tl-dot { background: #0F6E56; border-color: #0F6E56; }
@@ -3832,10 +3832,10 @@ onMounted(async () => {
 .tl-main { flex: 1; min-width: 0; }
 .tl-row { display: flex; align-items: baseline; gap: 7px; }
 .tl-name {
-  font-size: 13.5px; font-weight: 600; color: #0F172A;
+  font-size: 13.5px; font-weight: 600; color: var(--ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.tl-node.is-pending .tl-name { color: #64748B; font-weight: 500; }
+.tl-node.is-pending .tl-name { color: var(--ink-3); font-weight: 500; }
 .tl-badge {
   flex: 0 0 auto;
   padding: 1px 6px;
@@ -3848,26 +3848,26 @@ onMounted(async () => {
   flex: 0 0 auto;
   font-size: 12px;
   font-weight: 600;
-  color: #475569;
+  color: var(--ink-2);
   font-family: var(--num-font, sans-serif);
   font-variant-numeric: tabular-nums;
   letter-spacing: -.1px;
 }
 .tl-time.is-active { color: var(--brand-primary); }
-.tl-time.is-pending { color: #94A3B8; font-weight: 500; }
+.tl-time.is-pending { color: var(--ink-3); font-weight: 500; }
 .tl-time.is-done { color: #0F6E56; }
 
 .tl-sub {
   margin-top: 3px;
   font-size: 12px;
   line-height: 1.6;
-  color: #64748B;
+  color: var(--ink-3);
   word-break: break-all;
 }
 .lg-tl-foot {
   flex-shrink: 0;
   padding: 10px 16px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border-top: 1px solid #F1F5F9;
 }
 .lg-foot-line {
@@ -3877,9 +3877,9 @@ onMounted(async () => {
   gap: 8px;
   font-size: 12px;
   line-height: 1.9;
-  color: #64748B;
+  color: var(--ink-3);
 }
-.lg-foot-line b { color: #334155; font-weight: 600; }
+.lg-foot-line b { color: var(--ink-2); font-weight: 600; }
 .lg-mono { font-family: var(--num-font, sans-serif); font-size: 12px; font-variant-numeric: tabular-nums; }
 
 
@@ -3902,7 +3902,7 @@ onMounted(async () => {
   height: 28px;
   border-radius: 50%;
   border: 2px solid;
-  background: #ffffff;
+  background: var(--surface-card);
   font-size: 12px;
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
@@ -3962,7 +3962,7 @@ onMounted(async () => {
 /* ===== ⭐ 常驻任务：任务级操作条（暂停 / 恢复 / 结束） ===== */
 /* ===== 常驻任务信息卡（运单信息页签内，2026-10-24） ===== */
 .rec-info-card {
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #E9EEF5;
   border-radius: 12px;
   padding: 14px 16px 6px;
@@ -3983,7 +3983,7 @@ onMounted(async () => {
 .ric-title {
   font-size: 13px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
 }
 .ric-status {
   font-size: 11px;
@@ -3994,7 +3994,7 @@ onMounted(async () => {
 .ric-no {
   margin-left: auto;
   font-size: 11.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
 .ric-grid {
@@ -4004,25 +4004,25 @@ onMounted(async () => {
   margin-bottom: 12px;
 }
 .ric-item {
-  background: #F8FAFC;
+  background: var(--surface-page);
   border-radius: 8px;
   padding: 8px 10px;
 }
 .ric-k {
   display: block;
   font-size: 11px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 .ric-v {
   display: block;
   margin-top: 2px;
   font-size: 12.5px;
   font-weight: 600;
-  color: #0F172A;
+  color: var(--ink);
 }
 .ric-sub {
   font-size: 11.5px;
-  color: #64748B;
+  color: var(--ink-3);
   margin: 2px 0 6px;
 }
 .ric-table {
@@ -4038,7 +4038,7 @@ onMounted(async () => {
 .ric-st.todo { color: #B45309; background: #FEF3C7; }
 .ric-st.doing { color: #1D4ED8; background: #EFF6FF; }
 .ric-st.done { color: #047857; background: #ECFDF5; }
-.ric-st.off { color: #64748B; background: #F1F5F9; }
+.ric-st.off { color: var(--ink-3); background: var(--surface-hover); }
 
 .rec-task-bar {
   display: flex;
@@ -4047,7 +4047,7 @@ onMounted(async () => {
   gap: 10px;
   padding: 12px 16px;
   margin-bottom: 12px;
-  background: #ffffff;
+  background: var(--surface-card);
   border: 1px solid #e2e8f0;
   border-left: 3px solid var(--brand-primary);
   border-radius: 12px;
@@ -4061,7 +4061,7 @@ onMounted(async () => {
 .rec-task-name {
   font-size: 13px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 .rec-task-status {
@@ -4080,7 +4080,7 @@ onMounted(async () => {
 .rec-task-hint {
   flex: 1 0 100%;
   font-size: 11.5px;
-  color: #64748B;
+  color: var(--ink-3);
   line-height: 1.6;
 }
 
@@ -4092,7 +4092,7 @@ onMounted(async () => {
   flex-direction: column;
   gap: 12px;
   padding: 12px 16px 14px 16px;
-  background: #ffffff;
+  background: var(--surface-card);
   border: 1px solid #e2e8f0;
   border-radius: 12px;
 }
@@ -4108,7 +4108,7 @@ onMounted(async () => {
   flex-direction: column;
   gap: 4px;
   padding: 8px 10px 4px 10px;
-  background: #f8fafc;
+  background: var(--surface-page);
   border: 1px solid #e2e8f0;
   border-radius: 10px;
 }
@@ -4123,7 +4123,7 @@ onMounted(async () => {
 .lg-gantt-row:hover { background: #eef2f7; }
 /* 当前聚焦这一辆：白底浮起来，其余淡出（与地图联动） */
 .lg-gantt-row.is-on {
-  background: #ffffff;
+  background: var(--surface-card);
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
 }
 .lg-gantt-row.is-dim { opacity: 0.5; }
@@ -4137,16 +4137,16 @@ onMounted(async () => {
 .lg-gantt-name {
   font-size: 12.5px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink);
 }
 .lg-gantt-carry {
   font-size: 11.5px;
-  color: #64748b;
+  color: var(--ink-3);
 }
 .lg-gantt-times {
   margin-left: auto;
   font-size: 11.5px;
-  color: #64748B;
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -4164,21 +4164,21 @@ onMounted(async () => {
   gap: 14px;
   padding: 0 2px;
   font-size: 11.5px;
-  color: #64748b;
+  color: var(--ink-3);
 }
 .lg-map-tools > span {
   display: inline-flex;
   align-items: center;
   gap: 5px;
 }
-.lg-map-focus { margin-left: auto; color: #334155; }
-.lg-map-tip { color: #64748B; }
+.lg-map-focus { margin-left: auto; color: var(--ink-2); }
+.lg-map-tip { color: var(--ink-3); }
 .lg-map-clear {
   margin-left: 6px;
   padding: 1px 8px;
   font-size: 11px;
   color: #a32d2d;
-  background: #ffffff;
+  background: var(--surface-card);
   border: 1px solid #e24b4a;
   border-radius: 999px;
   cursor: pointer;
@@ -4204,8 +4204,8 @@ onMounted(async () => {
   gap: 6px;
   padding: 3px 10px;
   font-size: 11.5px;
-  color: #475569;
-  background: #ffffff;
+  color: var(--ink-2);
+  background: var(--surface-card);
   border: 1px solid #e2e8f0;
   border-radius: 999px;
   cursor: pointer;
@@ -4217,7 +4217,7 @@ onMounted(async () => {
   border-radius: 50%;
   flex-shrink: 0;
 }
-.lg-tl-tab:hover { background: #f1f5f9; }
+.lg-tl-tab:hover { background: var(--surface-hover); }
 .lg-tl-tab.active {
   color: #a32d2d;
   background: #fcebeb;
@@ -4228,13 +4228,13 @@ onMounted(async () => {
   flex-shrink: 0;
   margin: 10px 16px 0 16px;
   padding: 8px 10px;
-  background: #f8fafc;
+  background: var(--surface-page);
   border: 1px solid #eef2f7;
   border-radius: 8px;
 }
 .lg-vc-extra {
   font-style: normal;
-  color: #64748B;
+  color: var(--ink-3);
 }
 .lg-legs-head {
   display: flex;
@@ -4246,16 +4246,16 @@ onMounted(async () => {
 .lg-legs-title {
   font-size: 13px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink);
 }
 .lg-legs-sub {
   font-size: 11.5px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 .lg-legs-hint {
   margin-left: auto;
   font-size: 11.5px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 /* 趟次色点：甘特行、右侧页签、地图轨迹同一颜色 */
 .lg-leg-dot {
@@ -4269,7 +4269,7 @@ onMounted(async () => {
    ⭐ 费用情况
    ============================================================ */
 .fee-panel {
-  background: #F8FAFC;
+  background: var(--surface-page);
   border: 1px solid #E9EEF5;
   border-radius: 10px;
   padding: 12px 14px 16px;
@@ -4280,7 +4280,7 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #E9EEF5;
   border-radius: 9px;
   padding: 12px 14px;
@@ -4300,14 +4300,14 @@ onMounted(async () => {
 .fee-stat span {
   display: block;
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
   margin-bottom: 3px;
 }
 
 .fee-stat b {
   font-size: 18px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: -.3px;
 }
 
@@ -4343,15 +4343,15 @@ onMounted(async () => {
   color: #1D4ED8;
 }
 
-.fbb-k { color: #64748B; }
+.fbb-k { color: var(--ink-3); }
 
 .fbb-who {
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .fbb-n {
-  color: #64748B;
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
 
@@ -4373,7 +4373,7 @@ onMounted(async () => {
 }
 
 .fee-empty {
-  background: #fff;
+  background: var(--surface-card);
   border: 1px dashed #DDE5EF;
   border-radius: 10px;
   padding: 42px 20px;
@@ -4397,16 +4397,16 @@ onMounted(async () => {
   margin: 0 0 5px;
   font-size: 14.5px;
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
 }
 
 .fee-empty span {
   font-size: 12.5px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 .fee-report {
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #E9EEF5;
   border-radius: 10px;
   margin-bottom: 10px;
@@ -4444,7 +4444,7 @@ onMounted(async () => {
 .fr-type.t-weigh { background: #EFF6FF; color: #1D4ED8; }
 .fr-type.t-overtime { background: #FEF3C7; color: #B45309; }
 .fr-type.t-receipt { background: #EFF6FF; color: #1D4ED8; }
-.fr-type.t-cardfix { background: #F1F5F9; color: #64748B; }
+.fr-type.t-cardfix { background: var(--surface-hover); color: var(--ink-3); }
 .fr-type.t-repair { background: #FEF2F2; color: #C8102E; }
 .fr-type.t-violation { background: #FEE2E2; color: #B91C1C; }
 
@@ -4463,7 +4463,7 @@ onMounted(async () => {
 .fr-title b {
   font-size: 14.5px;
   font-weight: 600;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .fr-amount {
@@ -4479,7 +4479,7 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 6px;
   font-size: 12.5px;
-  color: #64748B;
+  color: var(--ink-3);
   margin-top: 4px;
 }
 
@@ -4506,14 +4506,14 @@ onMounted(async () => {
 .fr-who b {
   font-size: 12.5px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .fr-plate {
   font-style: normal;
   font-size: 11px;
   font-weight: 600;
-  color: #475569;
+  color: var(--ink-2);
   background: #EEF2F7;
   border-radius: 5px;
   padding: 1px 5px;
@@ -4525,7 +4525,7 @@ onMounted(async () => {
 }
 
 .fr-arrow {
-  color: #94A3B8;
+  color: var(--ink-3);
   font-size: 14px;
   transition: transform .2s;
 }
@@ -4548,7 +4548,7 @@ onMounted(async () => {
 
 .fr-col-title {
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
   margin-bottom: 8px;
 }
 
@@ -4566,16 +4566,16 @@ onMounted(async () => {
   justify-content: space-between;
   padding: 8px 10px;
   font-size: 13px;
-  color: #475569;
+  color: var(--ink-2);
   border-bottom: 1px solid #F4F7FA;
 }
 
 .fr-item:last-child { border-bottom: none; }
-.fr-item b { color: #0F172A; }
+.fr-item b { color: var(--ink); }
 
 .fr-none {
   font-size: 13px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 .fr-imgs {
@@ -4587,7 +4587,7 @@ onMounted(async () => {
 
 .fr-img {
   font-size: 11.5px;
-  color: #475569;
+  color: var(--ink-2);
   background: #EEF2F7;
   border-radius: 5px;
   padding: 4px 9px;
@@ -4606,8 +4606,8 @@ onMounted(async () => {
   font-size: 10.5px;
   line-height: 1.3;
   text-align: center;
-  color: #94A3B8;
-  background: #F8FAFC;
+  color: var(--ink-3);
+  background: var(--surface-page);
   cursor: pointer;
 }
 
@@ -4620,7 +4620,7 @@ onMounted(async () => {
 .fr-note {
   margin-top: 9px;
   font-size: 12.5px;
-  color: #64748B;
+  color: var(--ink-3);
   line-height: 1.7;
 }
 
@@ -4643,7 +4643,7 @@ onMounted(async () => {
   height: 8px;
   border-radius: 50%;
   border: 2px solid #CBD5E1;
-  background: #fff;
+  background: var(--surface-card);
   margin-top: 5px;
 }
 
@@ -4655,7 +4655,7 @@ onMounted(async () => {
   display: block;
   font-size: 13.5px;
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
   line-height: 1.45;
 }
 
@@ -4663,7 +4663,7 @@ onMounted(async () => {
   display: block;
   font-style: normal;
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
   margin-top: 2px;
 }
 
@@ -4681,7 +4681,7 @@ onMounted(async () => {
 .fr-hint {
   margin-right: auto;
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 .fr-reject {
@@ -4781,7 +4781,7 @@ onMounted(async () => {
 /* 驳回弹窗 */
 .rj-tip {
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
   line-height: 1.7;
   margin-bottom: 10px;
 }
@@ -4795,8 +4795,8 @@ onMounted(async () => {
 
 .rj-chip {
   border: 1px solid #E2E8F0;
-  background: #F8FAFC;
-  color: #475569;
+  background: var(--surface-page);
+  color: var(--ink-2);
   border-radius: 6px;
   padding: 5px 10px;
   font-size: 11.5px;
@@ -4815,7 +4815,7 @@ onMounted(async () => {
 
 .fr-extra {
   font-size: 13px;
-  color: #475569;
+  color: var(--ink-2);
   line-height: 1.8;
 }
 .fr-net { color: var(--brand-primary); font-weight: 700; }
@@ -4846,7 +4846,7 @@ onMounted(async () => {
 }
 
 .as-card {
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #e9eef5;
   border-radius: 12px;
   padding: 13px 14px;
@@ -4861,7 +4861,7 @@ onMounted(async () => {
 
 .as-no {
   font-size: 11px;
-  color: #64748b;
+  color: var(--ink-3);
   letter-spacing: 0.3px;
   font-family: var(--font-num);
 }
@@ -4870,13 +4870,13 @@ onMounted(async () => {
 .as-trip {
   margin-top: 6px;
   font-size: 11px;
-  color: #64748b;
+  color: var(--ink-3);
   line-height: 1.5;
 }
 .as-trip-no {
   display: block;
   font-family: var(--font-num);
-  color: #94a3b8;
+  color: var(--ink-3);
   font-size: 10.5px;
 }
 
@@ -4895,7 +4895,7 @@ onMounted(async () => {
   font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.4px;
-  color: #0f172a;
+  color: var(--ink);
   margin: 7px 0 4px;
   line-height: 1.3;
 }
@@ -4908,7 +4908,7 @@ onMounted(async () => {
 
 .as-sub {
   font-size: 11px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 .as-row {
@@ -4926,19 +4926,19 @@ onMounted(async () => {
 }
 
 .as-row span {
-  color: #64748B;
+  color: var(--ink-3);
   flex: 0 0 auto;
 }
 
 .as-row b {
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
   text-align: right;
   word-break: break-all;
 }
 
 .as-fee {
-  background: linear-gradient(135deg, #fff6f7, #fff);
+  background: linear-gradient(135deg, #fff6f7, var(--surface-card));
   border: 1px solid #f6e3e7;
   border-radius: 12px;
   padding: 12px 14px;
@@ -4956,7 +4956,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   font-size: 10.5px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 .as-fee-v {
@@ -4973,12 +4973,12 @@ onMounted(async () => {
   gap: 10px;
   flex-wrap: wrap;
   font-size: 10px;
-  color: #64748b;
+  color: var(--ink-3);
 }
 
 .as-hint {
   font-size: 10px;
-  color: #64748B;
+  color: var(--ink-3);
   line-height: 1.7;
   padding: 0 2px;
 }

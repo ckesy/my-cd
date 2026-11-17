@@ -1989,7 +1989,7 @@ if (isCustomer) {
   /* ⭐ 父级为 flex 时占满剩余空间（flex-basis 优先于 height），永不撑破弹窗 */
   flex: 1;
   min-height: 0;
-  background: #F1F5F9;
+  background: var(--surface-hover);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -2015,7 +2015,7 @@ if (isCustomer) {
 .floating-card {
   position: absolute;
   z-index: 60;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--glass-panel);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-radius: 14px;
@@ -2081,7 +2081,7 @@ if (isCustomer) {
 .card-title-text {
   font-size: 14px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 
@@ -2106,7 +2106,7 @@ if (isCustomer) {
   height: 28px;
   border: none;
   background: rgba(241, 245, 249, 0.9);
-  color: #64748B;
+  color: var(--ink-3);
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
@@ -2150,10 +2150,10 @@ if (isCustomer) {
   justify-content: center;
   font-size: 17px;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--glass-panel);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  color: #475569;
+  color: var(--ink-2);
   box-shadow:
     0 6px 20px rgba(15, 23, 42, 0.14),
     0 0 0 1px rgba(255, 255, 255, 0.8) inset;
@@ -2226,7 +2226,7 @@ if (isCustomer) {
 
 .info-form :deep(.el-form-item__label) {
   font-weight: 700;
-  color: #1E293B;
+  color: var(--ink);
   font-size: 13px;
   padding: 0 0 6px 0;
   line-height: 1.2;
@@ -2236,7 +2236,7 @@ if (isCustomer) {
 .info-form :deep(.el-select__wrapper),
 .info-form :deep(.el-textarea__inner) {
   border-radius: 10px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-size: 14px;
@@ -2245,28 +2245,28 @@ if (isCustomer) {
 .info-form :deep(.el-input__inner),
 .info-form :deep(.el-textarea__inner) {
   font-size: 14px;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .info-form :deep(.el-input__wrapper:hover),
 .info-form :deep(.el-select__wrapper:hover),
 .info-form :deep(.el-textarea__inner:hover) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.35) inset !important;
 }
 
 .info-form :deep(.el-input__wrapper.is-focus),
 .info-form :deep(.el-select__wrapper.is-focused),
 .info-form :deep(.el-textarea__inner:focus) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 1px var(--brand-primary) inset, 0 0 0 3px rgba(var(--brand-rgb), 0.12) !important;
 }
 
 .info-form :deep(.el-input.is-disabled .el-input__wrapper),
 .info-form :deep(.el-select.is-disabled .el-select__wrapper),
 .info-form :deep(.el-textarea.is-disabled .el-textarea__inner) {
-  background: #F1F5F9 !important;
-  color: #475569;
+  background: var(--surface-hover) !important;
+  color: var(--ink-2);
   cursor: not-allowed;
   opacity: 0.85;
 }
@@ -2351,7 +2351,7 @@ if (isCustomer) {
 
 .plan-block {
   padding: 14px 16px 14px 20px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1.5px solid #E2E8F0;
   border-radius: 12px;
   display: flex;
@@ -2470,7 +2470,7 @@ if (isCustomer) {
 .plan-title-text {
   font-size: 14px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 
@@ -2519,7 +2519,7 @@ if (isCustomer) {
   flex-shrink: 0;
   width: 76px;
   font-size: 13px;
-  color: #475569;
+  color: var(--ink-2);
   font-weight: 600;
 }
 
@@ -2528,7 +2528,7 @@ if (isCustomer) {
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  background: #FAFBFC;
+  background: var(--surface-sunken);
   border-radius: 10px;
   border: 1px dashed #E2E8F0;
 }
@@ -2539,7 +2539,7 @@ if (isCustomer) {
   gap: 6px;
   font-size: 12.5px;
   font-weight: 700;
-  color: #475569;
+  color: var(--ink-2);
 }
 
 .waypoints-title .el-icon {
@@ -2607,8 +2607,8 @@ if (isCustomer) {
   width: 28px;
   height: 28px;
   border: 1px solid #E2E8F0;
-  background: #FFFFFF;
-  color: #94A3B8;
+  background: var(--surface-card);
+  color: var(--ink-3);
   cursor: pointer;
   border-radius: 8px;
   display: flex;
@@ -2629,7 +2629,7 @@ if (isCustomer) {
   padding: 10px;
   text-align: center;
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 500;
 }
 
@@ -2647,7 +2647,7 @@ if (isCustomer) {
   justify-content: center;
   gap: 5px;
   padding: 8px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1.5px dashed #CBD5E1;
   border-radius: 8px;
   font-size: 12.5px;
@@ -2770,19 +2770,19 @@ if (isCustomer) {
 
 .meta-cell:hover {
   border-color: var(--plan-color, #FCA5A5);
-  background: #fff;
+  background: var(--surface-card);
 }
 
 .meta-lbl {
   font-size: 11px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 700;
   letter-spacing: 0.3px;
 }
 
 .meta-val {
   font-size: 14px;
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 800;
   font-family: 'Courier New', monospace;
   line-height: 1.2;
@@ -2793,7 +2793,7 @@ if (isCustomer) {
 
 .meta-val small {
   font-size: 10.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 600;
   margin-left: 2px;
 }
@@ -2806,7 +2806,7 @@ if (isCustomer) {
   justify-content: center;
   gap: 7px;
   padding: 12px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 2px dashed #E2E8F0;
   border-radius: 12px;
   color: var(--brand-primary);
@@ -2822,7 +2822,7 @@ if (isCustomer) {
 
 .add-plan-btn:hover {
   border-color: var(--brand-primary);
-  background: linear-gradient(135deg, var(--brand-primary-light), #FFF);
+  background: linear-gradient(135deg, var(--brand-primary-light), var(--surface-card));
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(var(--brand-rgb), 0.15);
 }
@@ -2841,7 +2841,7 @@ if (isCustomer) {
   align-items: center;
   gap: 6px;
   padding: 5px 8px;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--glass-panel);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: 999px;
@@ -2857,7 +2857,7 @@ if (isCustomer) {
   border-radius: 999px;
   border: none;
   background: rgba(248, 250, 252, 0.9);
-  color: #475569;
+  color: var(--ink-2);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -2921,7 +2921,7 @@ if (isCustomer) {
   border-radius: 8px;
   border: none;
   background: #FCD34D;
-  color: #0F172A;
+  color: var(--ink);
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
@@ -2946,14 +2946,14 @@ if (isCustomer) {
   align-items: center;
   gap: 12px;
   padding: 14px 24px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--glass-panel);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(var(--brand-rgb), 0.2), 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
   font-size: 14px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   pointer-events: none;
 }
 
@@ -2972,12 +2972,12 @@ if (isCustomer) {
   left: 50%;
   transform: translateX(-50%);
   z-index: 55;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--glass-panel);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-radius: 16px;
   padding: 14px 22px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(255, 255, 255, 0.85) inset;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.14), 0 0 0 1px var(--glass-panel) inset;
   border: 1px solid rgba(255, 255, 255, 0.75);
   min-width: 300px;
   pointer-events: none;
@@ -2989,7 +2989,7 @@ if (isCustomer) {
   gap: 8px;
   font-size: 13px;
   font-weight: 700;
-  color: #475569;
+  color: var(--ink-2);
   margin-bottom: 10px;
   letter-spacing: 0.3px;
 }
@@ -3010,11 +3010,11 @@ if (isCustomer) {
 
 .ranging-summary-body { display: flex; align-items: center; gap: 16px; }
 .summary-item { display: flex; flex-direction: column; gap: 3px; }
-.summary-label { font-size: 11px; font-weight: 600; color: #94A3B8; letter-spacing: 0.3px; }
-.summary-value { font-size: 20px; font-weight: 800; color: #0F172A; font-family: 'Courier New', monospace; line-height: 1.1; }
+.summary-label { font-size: 11px; font-weight: 600; color: var(--ink-3); letter-spacing: 0.3px; }
+.summary-value { font-size: 20px; font-weight: 800; color: var(--ink); font-family: 'Courier New', monospace; line-height: 1.1; }
 .summary-value.highlight { color: var(--brand-primary); font-size: 24px; }
 .summary-divider { width: 1px; height: 32px; background: rgba(203, 213, 225, 0.9); }
-.ranging-summary-tip { margin-top: 10px; font-size: 11.5px; color: #94A3B8; font-weight: 500; letter-spacing: 0.2px; }
+.ranging-summary-tip { margin-top: 10px; font-size: 11.5px; color: var(--ink-3); font-weight: 500; letter-spacing: 0.2px; }
 
 .summary-slide-enter-active,
 .summary-slide-leave-active { transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
@@ -3033,7 +3033,7 @@ if (isCustomer) {
 }
 
 .loading-card {
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 16px;
   padding: 28px 40px;
   display: flex;
@@ -3053,7 +3053,7 @@ if (isCustomer) {
 }
 
 @keyframes loadingSpin { to { transform: rotate(360deg); } }
-.loading-card p { font-size: 14px; color: #475569; font-weight: 600; margin: 0; }
+.loading-card p { font-size: 14px; color: var(--ink-2); font-weight: 600; margin: 0; }
 
 /* ⭐ 宽度已由 clamp() 随窗口自适应，这里只处理超窄屏的上下堆叠 */
 @media (max-width: 900px) {
@@ -3088,18 +3088,18 @@ if (isCustomer) {
   padding: 18px 26px;
   margin: 0;
   border-bottom: 1px solid #F1F5F9;
-  background: linear-gradient(180deg, #FFFFFF, #FAFBFC);
+  background: linear-gradient(180deg, var(--surface-card), #FAFBFC);
   flex-shrink: 0;
 }
 .route-form-dialog .el-dialog__title {
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   font-size: 17px;
   letter-spacing: 0.3px;
 }
 .route-form-dialog .el-dialog__body {
   padding: 0;
-  background: #F8FAFC;
+  background: var(--surface-page);
   /* ⭐ 撑满头部/底部之外的剩余高度，内部再交给 .rf-stage */
   flex: 1;
   min-height: 0;
@@ -3109,7 +3109,7 @@ if (isCustomer) {
 }
 .route-form-dialog .el-dialog__footer {
   padding: 14px 26px;
-  background: #fff;
+  background: var(--surface-card);
   border-top: 1px solid #F1F5F9;
   flex-shrink: 0;
 }
@@ -3171,7 +3171,7 @@ if (isCustomer) {
   align-items: center;
   gap: 5px;
   font-size: 13px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 500;
   transition: color 0.28s;
   white-space: nowrap;
@@ -3196,13 +3196,13 @@ if (isCustomer) {
 }
 .fence-cta-pickup .fence-cta-action {
   color: var(--brand-primary);
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1px solid #FCA5A5;
   box-shadow: 0 2px 6px rgba(var(--brand-rgb), 0.06);
 }
 .fence-cta-delivery .fence-cta-action {
   color: #2563EB;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1px solid #93C5FD;
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.06);
 }
@@ -3234,7 +3234,7 @@ if (isCustomer) {
 .fence-cta-delivery .plus-bubble { background: #DBEAFE; color: #2563EB; }
 .fence-cta-pickup:hover .plus-bubble,
 .fence-cta-delivery:hover .plus-bubble {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--surface-hover);
   color: #fff;
   transform: rotate(90deg);
 }
@@ -3251,7 +3251,7 @@ if (isCustomer) {
   line-height: 1.5;
   padding: 10px 14px;
   font-size: 14px;
-  color: #1E293B;
+  color: var(--ink);
   font-weight: 500;
 }
 .route-org-popper .el-select-dropdown__item.is-selected {
@@ -3264,7 +3264,7 @@ if (isCustomer) {
   align-items: center;
   gap: 4px;
   padding: 3px 10px 3px 4px;
-  background: rgba(255, 255, 255, 0.97);
+  background: var(--glass-panel);
   border-radius: 20px;
   border: 2px solid var(--color, #2563EB);
   box-shadow: 0 3px 10px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.7) inset;
@@ -3425,11 +3425,11 @@ if (isCustomer) {
   margin: 0 0 14px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: #f8fafc;
+  background: var(--surface-page);
   border: 1px dashed #dbe3ee;
 }
 .plan-batch-tip {
   font-size: 12px;
-  color: #64748b;
+  color: var(--ink-3);
 }
 </style>

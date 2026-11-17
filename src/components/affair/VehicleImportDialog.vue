@@ -165,13 +165,13 @@ const doImport = async (onlyOk) => {
 
 <style scoped>
 .imp-bar { display: flex; align-items: center; gap: 9px; }
-.imp-file { font-size: 12px; color: #64748B; }
+.imp-file { font-size: 12px; color: var(--ink-3); }
 .imp-sum { display: flex; gap: 14px; align-items: center; margin: 12px 0 8px; font-size: 12.5px; }
 .imp-sum .ok { color: #047857; font-weight: 700; }
 .imp-sum .bad { color: #C8102E; font-weight: 700; }
-.imp-sum .sub { color: #94A3B8; margin-left: auto; }
+.imp-sum .sub { color: var(--ink-3); margin-left: auto; }
 .imp-list { max-height: 320px; overflow: auto; border: 1px solid #EEF2F7; border-radius: 9px; }
-.imp-list .af-table th { background: #F7F9FC; }
+.imp-list .af-table th { background: var(--surface-thead); }
 .imp-list tr.bad td { background: #FFFCFC; }
 .imp-list .err { color: #A32D2D; font-size: 12px; font-weight: 600; }
 </style>

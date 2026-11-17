@@ -207,7 +207,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 
 .tt-total {
   font-size: 12.5px;
-  color: #64748B;
+  color: var(--ink-3);
   white-space: nowrap;
 }
 
@@ -233,9 +233,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   align-items: center;
   justify-content: center;
   border: 1px solid #E2E8F0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 6px;
-  color: #64748B;
+  color: var(--ink-3);
   font-size: 14px;
   cursor: pointer;
   padding: 0;
@@ -275,12 +275,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   box-shadow: 0 10px 32px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.15) !important;
   border-radius: 10px !important;
   overflow: hidden;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 
 .tt-density-dropdown .el-dropdown-menu {
   padding: 4px !important;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 
 .tt-density-dropdown .el-dropdown-menu__item {
@@ -319,7 +319,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   box-shadow: 0 12px 36px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.12) !important;
   border: 2px solid #FFFFFF !important;
   overflow: hidden;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 
 .tt-column-popper .el-popover__title {
@@ -327,7 +327,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 }
 
 .tt-column-setting {
-  background: #FFFFFF;
+  background: var(--surface-card);
 }
 
 .tt-column-header {
@@ -419,7 +419,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 
 .tt-column-checkbox .el-checkbox__label {
   font-size: 13px !important;
-  color: #334155 !important;
+  color: var(--ink-2) !important;
 }
 
 .tt-fix-actions {

@@ -576,8 +576,8 @@ onMounted(async () => {
 }
 
 .status-tag.off {
-  color: #64748B;
-  background: #F1F5F9;
+  color: var(--ink-3);
+  background: var(--surface-hover);
 }
 
 /* 重置密码提示 */
@@ -590,7 +590,7 @@ onMounted(async () => {
   border: 1px solid rgba(var(--brand-rgb), 0.18);
   border-radius: 8px;
   font-size: 13px;
-  color: #475569;
+  color: var(--ink-2);
   margin-bottom: 18px;
 }
 

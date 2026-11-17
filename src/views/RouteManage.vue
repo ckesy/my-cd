@@ -129,7 +129,7 @@
               :size="tableSize"
               v-loading="loading"
               element-loading-text="加载中…"
-              element-loading-background="rgba(255,255,255,0.88)"
+              element-loading-background="var(--glass-panel)"
               height="100%"
               class="custom-table"
             >
@@ -657,7 +657,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .route-page {
   padding: 6px 16px 16px;
-  background-color: #F8FAFC;
+  background-color: var(--surface-page);
   height: calc(100vh - 101px);
   max-height: calc(100vh - 101px);
   box-sizing: border-box;
@@ -666,12 +666,12 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 12px;
   font-size: 13px;
-  color: #1E293B;
+  color: var(--ink);
 }
 
 /* 搜索卡片 */
 .search-card {
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   padding: 14px 16px;
@@ -679,7 +679,7 @@ onBeforeUnmount(() => {
 }
 .search-row { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
 .search-field { display: flex; align-items: center; gap: 8px; }
-.field-label { font-size: 13px; font-weight: 600; color: #334155; white-space: nowrap; }
+.field-label { font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
 .search-btns { display: flex; gap: 10px; margin-left: auto; }
 
 /* 按钮 */
@@ -700,8 +700,8 @@ onBeforeUnmount(() => {
 :deep(.btn-primary:hover) { background: linear-gradient(135deg, var(--brand-primary-dark), var(--brand-primary-deep)); }
 :deep(.btn-outline) {
   border-color: #CBD5E1;
-  color: #334155;
-  background: #fff;
+  color: var(--ink-2);
+  background: var(--surface-card);
 }
 :deep(.btn-outline:hover) {
   border-color: var(--brand-primary);
@@ -718,7 +718,7 @@ onBeforeUnmount(() => {
 .search-row :deep(.el-input__wrapper),
 .search-row :deep(.el-select__wrapper) {
   border-radius: 8px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all 0.25s;
   min-height: 32px;
@@ -730,7 +730,7 @@ onBeforeUnmount(() => {
 }
 .search-row :deep(.el-input__wrapper.is-focus),
 .search-row :deep(.el-select__wrapper.is-focused) {
-  background: #fff !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.15), 0 0 0 1px var(--brand-primary) inset !important;
 }
 
@@ -761,7 +761,7 @@ onBeforeUnmount(() => {
 .table-card {
   flex: 1;
   min-height: 0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   padding: 12px 16px;
@@ -789,7 +789,7 @@ onBeforeUnmount(() => {
 .status-tabs {
   display: inline-flex;
   padding: 3px;
-  background: #F1F5F9;
+  background: var(--surface-hover);
   border-radius: 10px;
   gap: 2px;
 }
@@ -802,7 +802,7 @@ onBeforeUnmount(() => {
   font-family: inherit;
   font-size: 12.5px;
   font-weight: 600;
-  color: #64748B;
+  color: var(--ink-3);
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .status-tab:hover {
@@ -823,9 +823,9 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   border: 1px solid #E2E8F0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 8px;
-  color: #64748B;
+  color: var(--ink-3);
   font-size: 15px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -858,15 +858,15 @@ onBeforeUnmount(() => {
   font-size: 12.5px;
 }
 :deep(.custom-table th.el-table__cell) {
-  background: #F8FAFC !important;
-  color: #0F172A;
+  background: var(--surface-page) !important;
+  color: var(--ink);
   font-weight: 700;
   font-size: 12.5px;
   border-bottom: 1px solid #E2E8F0;
   padding: 9px 0;
 }
 :deep(.custom-table td.el-table__cell) {
-  color: #1E293B;
+  color: var(--ink);
   font-size: 12.5px;
   font-weight: 500;
   border-bottom: 1px solid #F1F5F9;
@@ -875,7 +875,7 @@ onBeforeUnmount(() => {
   background: var(--brand-primary-light) !important;
 }
 :deep(.custom-table .el-table__body tr.el-table__row--striped td.el-table__cell) {
-  background: #FAFBFC;
+  background: var(--surface-sunken);
 }
 
 /* 名称 */
@@ -884,7 +884,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding: 3px 10px 3px 8px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -908,14 +908,14 @@ onBeforeUnmount(() => {
 .name-text {
   font-size: 13px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 .name-disabled-tag {
   padding: 1px 7px;
   border-radius: 8px;
-  background: #F1F5F9;
-  color: #64748B;
+  background: var(--surface-hover);
+  color: var(--ink-3);
   font-size: 10.5px;
   font-weight: 700;
   border: 1px solid #E2E8F0;
@@ -925,7 +925,7 @@ onBeforeUnmount(() => {
 .time-text {
   font-family: 'Courier New', monospace;
   font-size: 12px;
-  color: #475569;
+  color: var(--ink-2);
 }
 .plan-count-tag {
   display: inline-block;
@@ -938,7 +938,7 @@ onBeforeUnmount(() => {
   font-size: 11.5px;
   font-family: 'Courier New', monospace;
 }
-.text-content { color: #334155; font-size: 12.5px; }
+.text-content { color: var(--ink-2); font-size: 12.5px; }
 .text-muted { color: #CBD5E1; font-size: 12.5px; }
 
 /* ============================================================
@@ -966,7 +966,7 @@ onBeforeUnmount(() => {
   height: 24px;
   border-radius: 12px;
   border: 1px solid;
-  background: #fff;
+  background: var(--surface-card);
   font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
@@ -1067,8 +1067,8 @@ onBeforeUnmount(() => {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
 }
-.empty-state p { font-size: 14px; margin: 0; color: #334155; font-weight: 700; }
-.empty-tip { font-size: 12px; color: #94A3B8; }
+.empty-state p { font-size: 14px; margin: 0; color: var(--ink-2); font-weight: 700; }
+.empty-tip { font-size: 12px; color: var(--ink-3); }
 
 /* 分页 */
 .pagination-wrapper {
@@ -1079,11 +1079,11 @@ onBeforeUnmount(() => {
   border-top: 1px solid #F1F5F9;
   flex-shrink: 0;
 }
-.total-text { font-size: 13px; color: #334155; font-weight: 600; }
+.total-text { font-size: 13px; color: var(--ink-2); font-weight: 600; }
 :deep(.custom-pagination .el-pager li) {
   transition: all 0.2s;
   font-weight: 600;
-  color: #334155;
+  color: var(--ink-2);
   min-width: 26px;
   height: 26px;
   line-height: 26px;
@@ -1151,7 +1151,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 10px 32px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.12) !important;
   border-radius: 10px !important;
   overflow: hidden;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 .density-dropdown-red .el-dropdown-menu { padding: 4px !important; }
 .density-dropdown-red .el-dropdown-menu__item {
@@ -1176,7 +1176,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 10px 32px rgba(var(--brand-rgb), 0.18), 0 0 0 1px rgba(var(--brand-rgb), 0.12) !important;
   border-radius: 10px !important;
   overflow: hidden;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
   padding: 0 !important;
 }
 .column-setting-popper .el-popover__title { display: none; }
@@ -1264,12 +1264,12 @@ onBeforeUnmount(() => {
 }
 .delete-confirm-box .el-message-box__title {
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   font-size: 16px;
 }
 .delete-confirm-box .el-message-box__content {
   font-size: 14px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 500;
 }
 </style>

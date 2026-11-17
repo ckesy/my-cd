@@ -114,8 +114,8 @@ const goLogout = () => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #F8FAFC;
-  color: #0F172A;
+  background: var(--surface-page);
+  color: var(--ink);
   font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   overflow: hidden;
 }
@@ -128,7 +128,7 @@ const goLogout = () => {
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border-bottom: 1px solid #E2E8F0;
   z-index: 20;
 }
@@ -158,8 +158,8 @@ const goLogout = () => {
   width: 34px; height: 34px;
   display: flex; align-items: center; justify-content: center;
   border: 1px solid #E2E8F0;
-  background: #FFFFFF;
-  color: #64748B;
+  background: var(--surface-card);
+  color: var(--ink-3);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.28s;
@@ -184,7 +184,7 @@ const goLogout = () => {
   font-size: 16px;
   font-weight: 700;
   letter-spacing: 3px;
-  color: #0F172A;
+  color: var(--ink);
   white-space: nowrap;
 }
 .title-line {
@@ -201,8 +201,8 @@ const goLogout = () => {
   padding: 6px 14px;
   font-size: 12px;
   font-weight: 600;
-  color: #475569;
-  background: #FFFFFF;
+  color: var(--ink-2);
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   border-radius: 6px;
   cursor: pointer;
@@ -233,7 +233,7 @@ const goLogout = () => {
 /* ============ 侧边栏 ============ */
 .admin-sidebar {
   width: 220px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border-right: 1px solid #E2E8F0;
   transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   padding: 14px 10px;
@@ -252,7 +252,7 @@ const goLogout = () => {
   padding: 12px 16px;
   border-radius: 10px;
   cursor: pointer;
-  color: #475569;
+  color: var(--ink-2);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -293,7 +293,7 @@ const goLogout = () => {
   min-width: 0;
   overflow-y: auto;
   padding: 20px;
-  background: #F8FAFC;
+  background: var(--surface-page);
 }
 .admin-content::-webkit-scrollbar { width: 8px; }
 .admin-content::-webkit-scrollbar-thumb {
@@ -374,7 +374,7 @@ const goLogout = () => {
 <!-- ===== 全局：管理端公共样式（浅色） ===== -->
 <style>
 .light-panel {
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   border-radius: 12px;
   padding: 18px 20px;
@@ -399,8 +399,8 @@ const goLogout = () => {
   padding: 7px 16px;
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
-  background: #FFFFFF;
+  color: var(--ink-2);
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   border-radius: 6px;
   cursor: pointer;
@@ -427,17 +427,17 @@ const goLogout = () => {
 .action-btn.danger {
   color: var(--brand-primary);
   border-color: rgba(var(--brand-rgb), 0.4);
-  background: #FFFFFF;
+  background: var(--surface-card);
 }
 .action-btn.danger:hover:not(:disabled) {
   color: #FFFFFF;
   background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
   border-color: transparent;
 }
-.action-btn.ghost { background: transparent; color: #94A3B8; border-color: #E2E8F0; }
+.action-btn.ghost { background: transparent; color: var(--ink-3); border-color: #E2E8F0; }
 .action-btn.ghost:hover:not(:disabled) {
-  background: #F8FAFC;
-  color: #475569;
+  background: var(--surface-page);
+  color: var(--ink-2);
   border-color: #CBD5E1;
 }
 .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -448,7 +448,7 @@ const goLogout = () => {
   gap: 8px;
   font-size: 14px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   margin-bottom: 14px;
 }
 .panel-title .dot {
@@ -459,7 +459,7 @@ const goLogout = () => {
 }
 .panel-title .count {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 400;
   margin-left: auto;
 }
@@ -467,18 +467,18 @@ const goLogout = () => {
 .filter-grid .el-input__wrapper,
 .filter-grid .el-select__wrapper {
   border-radius: 8px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all 0.25s;
 }
 .filter-grid .el-input__wrapper:hover,
 .filter-grid .el-select__wrapper:hover {
   box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.4) inset !important;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 .filter-grid .el-input__wrapper.is-focus,
 .filter-grid .el-select__wrapper.is-focused {
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 1px var(--brand-primary) inset, 0 0 0 3px rgba(var(--brand-rgb), 0.1) !important;
 }
 
@@ -487,7 +487,7 @@ const goLogout = () => {
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12) !important;
   border: 1px solid #E2E8F0 !important;
 }
-.light-select-popper .el-select-dropdown__item { font-size: 13px; color: #334155; }
+.light-select-popper .el-select-dropdown__item { font-size: 13px; color: var(--ink-2); }
 .light-select-popper .el-select-dropdown__item.is-hovering,
 .light-select-popper .el-select-dropdown__item:hover {
   background: var(--brand-primary-light) !important;
@@ -506,7 +506,7 @@ const goLogout = () => {
   --el-table-text-color: #334155;
   --el-table-header-text-color: #475569;
   --el-table-row-hover-bg-color: var(--brand-primary-light);
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -526,8 +526,8 @@ const goLogout = () => {
   margin-right: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: #475569;
-  background: #FFFFFF;
+  color: var(--ink-2);
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   border-radius: 5px;
   cursor: pointer;
@@ -559,25 +559,25 @@ const goLogout = () => {
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
 }
 .light-dialog .el-dialog__title {
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 700;
   letter-spacing: 1px;
 }
 .light-form .el-input__wrapper,
 .light-form .el-textarea__inner {
   border-radius: 8px !important;
-  background: #F8FAFC !important;
+  background: var(--surface-page) !important;
   box-shadow: 0 0 0 1px #E2E8F0 inset !important;
   transition: all 0.25s;
 }
 .light-form .el-input__wrapper:hover,
 .light-form .el-textarea__inner:hover {
   box-shadow: 0 0 0 1px rgba(var(--brand-rgb), 0.4) inset !important;
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
 }
 .light-form .el-input__wrapper.is-focus,
 .light-form .el-textarea__inner:focus {
-  background: #FFFFFF !important;
+  background: var(--surface-card) !important;
   box-shadow: 0 0 0 1px var(--brand-primary) inset, 0 0 0 3px rgba(var(--brand-rgb), 0.1) !important;
 }
 </style>

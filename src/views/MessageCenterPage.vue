@@ -46,7 +46,7 @@
           <div class="d-title">{{ sel.title }}</div>
           <div class="d-tags">
             <span class="af-pill" :style="{ background: sel.bg, color: sel.color }">{{ sel.cat }}</span>
-            <span class="af-pill" style="background:#F1F5F9;color:#64748B">{{ sel.source || '自动' }}</span>
+            <span class="af-pill" style="background:var(--surface-hover);color:#64748B">{{ sel.source || '自动' }}</span>
           </div>
           <div class="d-body">{{ sel.desc }}</div>
 
@@ -156,16 +156,16 @@ onMounted(load)
 <style scoped>
 .mc3 { flex: 1; min-height: 0; display: grid; grid-template-columns: 180px 1fr 320px; gap: 12px; }
 .col-cat, .col-list, .col-detail { min-height: 0; }
-.cat-title { font-size: 11px; font-weight: 800; color: #94A3B8; letter-spacing: 1px; padding: 3px 9px 8px; }
+.cat-title { font-size: 11px; font-weight: 800; color: var(--ink-3); letter-spacing: 1px; padding: 3px 9px 8px; }
 .cat {
   display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 7px;
-  font-size: 12.5px; font-weight: 600; color: #64748B; cursor: pointer;
+  font-size: 12.5px; font-weight: 600; color: var(--ink-3); cursor: pointer;
 }
-.cat:hover { background: #F8FAFC; }
+.cat:hover { background: var(--surface-page); }
 .cat.on { background: #FDF2F4; color: #C8102E; font-weight: 800; }
 .cat em { margin-left: auto; font-style: normal; font-weight: 800; font-family: var(--num-font, Arial, sans-serif); }
 .list-head { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border-bottom: 1px solid #EEF2F7; }
-.list-head .sub { font-size: 11.5px; color: #94A3B8; }
+.list-head .sub { font-size: 11.5px; color: var(--ink-3); }
 .list-body { height: calc(100% - 49px); overflow: auto; }
 .mc-row {
   display: flex; gap: 10px; padding: 11px 13px; border-bottom: 1px solid #F4F7FA;
@@ -176,14 +176,14 @@ onMounted(load)
 .mc-row .ic { width: 26px; height: 26px; border-radius: 8px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 800; }
 .mc-row .m { flex: 1; min-width: 0; }
 .mc-row .m b { font-size: 12.5px; display: block; line-height: 1.5; }
-.mc-row .m p { margin: 2px 0 0; font-size: 11.5px; color: #94A3B8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mc-row .m p { margin: 2px 0 0; font-size: 11.5px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mc-row .tm { font-size: 11px; color: #B6C0CC; flex: 0 0 auto; font-family: var(--num-font, Arial, sans-serif); }
 .d-title { font-size: 15px; font-weight: 800; line-height: 1.5; letter-spacing: -.2px; }
 .d-tags { display: flex; gap: 6px; margin: 9px 0 12px; }
-.d-body { font-size: 12.5px; color: #475569; line-height: 1.85; }
+.d-body { font-size: 12.5px; color: var(--ink-2); line-height: 1.85; }
 .d-box { background: #FAFCFF; border: 1px solid #EEF2F7; border-radius: 9px; padding: 10px 12px; margin-top: 12px; }
 .d-box .row { display: flex; gap: 8px; line-height: 2; }
-.d-box .row span { width: 68px; color: #94A3B8; font-size: 12px; }
+.d-box .row span { width: 68px; color: var(--ink-3); font-size: 12px; }
 .d-actions { margin-top: 16px; }
 .col-detail { overflow: auto; }
 </style>

@@ -39,7 +39,7 @@
     <div class="fl-card fade-up" :class="{ 'is-fullscreen': isFullscreen }">
       <el-table :data="pagedRows" :size="tableSize" stripe height="100%"
         v-loading="loading" element-loading-text="加载中…"
-        element-loading-background="rgba(255,255,255,.88)" class="custom-table"
+        element-loading-background="var(--glass-panel)" class="custom-table"
         :row-key="(r) => r.key">
 
         <!-- 费用 -->
@@ -851,29 +851,29 @@ onMounted(load)
 /* 状态标签 */
 .fl-tabs { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 2px; }
 .fl-tab {
-  font: inherit; font-size: 13px; color: #475569;
-  background: #fff; border: 1px solid #E6ECF3;
+  font: inherit; font-size: 13px; color: var(--ink-2);
+  background: var(--surface-card); border: 1px solid #E6ECF3;
   border-radius: 8px; padding: 6px 13px; cursor: pointer;
   display: inline-flex; align-items: center; gap: 6px; transition: .15s;
 }
-.fl-tab:hover { border-color: #CBD5E1; color: #0F172A; }
+.fl-tab:hover { border-color: #CBD5E1; color: var(--ink); }
 .fl-tab.on { background: var(--brand-primary); border-color: var(--brand-primary); color: #fff; font-weight: 700; }
 .fl-tab-n {
   font-size: 10.5px; font-weight: 700; padding: 0 5px; border-radius: 4px;
   background: rgba(15,23,42,.06); color: inherit;
 }
-.fl-tab.on .fl-tab-n { background: rgba(255,255,255,.22); }
+.fl-tab.on .fl-tab-n { background: rgba(255, 255, 255, .24); }
 
 /* 筛选 */
 .fl-filter {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  background: #fff; border: 1px solid #E6ECF3; border-radius: 10px; padding: 12px 14px;
+  background: var(--surface-card); border: 1px solid #E6ECF3; border-radius: 10px; padding: 12px 14px;
 }
 
 /* 工具行 */
 .fl-toolbar { display: flex; align-items: center; gap: 10px; padding: 0 2px; }
 .tl-bar { width: 3px; height: 15px; border-radius: 2px; background: var(--brand-primary); }
-.fl-toolbar h2 { margin: 0; font-size: 14px; font-weight: 800; color: #0F172A; }
+.fl-toolbar h2 { margin: 0; font-size: 14px; font-weight: 800; color: var(--ink); }
 .tl-hint { font-size: 11px; color: #B4BECB; }
 .fl-toolbar :deep(.table-tools) { margin-left: auto; }
 
@@ -881,7 +881,7 @@ onMounted(load)
 .fl-card {
   flex: 1; min-height: 0;
   display: flex; flex-direction: column;
-  background: #fff; border: 1px solid #E6ECF3; border-radius: 10px;
+  background: var(--surface-card); border: 1px solid #E6ECF3; border-radius: 10px;
   overflow: hidden;
 }
 .fl-card.is-fullscreen {
@@ -889,32 +889,32 @@ onMounted(load)
 }
 .fl-pager {
   flex: 0 0 auto; display: flex; justify-content: flex-end;
-  padding: 10px 14px; border-top: 1px solid #F1F5F9; background: #fff;
+  padding: 10px 14px; border-top: 1px solid #F1F5F9; background: var(--surface-card);
 }
 
 /* 单元格 */
 /* 表头：12px / 深一档，原来 11px 灰字在浅底上发虚 */
 .fl-card :deep(.el-table th.el-table__cell) {
   font-size: 12px;
-  color: #475569;
+  color: var(--ink-2);
   font-weight: 700;
 }
 /* 行高松一点，字大了需要呼吸 */
 .fl-card :deep(.el-table td.el-table__cell) { padding: 13px 0; }
 
 .cell-amt { display: flex; align-items: baseline; gap: 8px; }
-.amt { font-size: 15.5px; font-weight: 800; color: #0F172A; letter-spacing: -.3px; }
+.amt { font-size: 15.5px; font-weight: 800; color: var(--ink); letter-spacing: -.3px; }
 .amt-tag {
   font-size: 11px; font-weight: 700; color: #92400E;
   background: #FEF3C7; border-radius: 4px; padding: 2px 7px;
 }
 .cell-types { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
 .tp {
-  font-size: 11px; font-weight: 600; color: #475569;
+  font-size: 11px; font-weight: 600; color: var(--ink-2);
   background: #EEF2F7; border-radius: 4px; padding: 2px 7px;
 }
-.cell-main { font-size: 13px; color: #0F172A; font-weight: 600; }
-.cell-sub { font-size: 12px; color: #94A3B8; margin-top: 3px; }
+.cell-main { font-size: 13px; color: var(--ink); font-weight: 600; }
+.cell-sub { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
 /* 常驻小标：跟运单任务名并排 */
 .rec-mini {
   margin-left: 6px;
@@ -926,7 +926,7 @@ onMounted(load)
   padding: 0 5px;
   vertical-align: 1px;
 }
-.cell-time { font-size: 12.5px; color: #64748B; }
+.cell-time { font-size: 12.5px; color: var(--ink-3); }
 
 /* 状态 */
 .st { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; }
@@ -943,14 +943,14 @@ onMounted(load)
   display: flex; align-items: flex-start; gap: 12px;
   padding: 18px 18px 15px; border-bottom: 1px solid #F1F5F9;
 }
-.dt-t { font-size: 17.5px; font-weight: 800; color: #0F172A; letter-spacing: -.2px; }
-.dt-s { font-size: 13.5px; color: #64748B; margin-top: 6px; }
+.dt-t { font-size: 17.5px; font-weight: 800; color: var(--ink); letter-spacing: -.2px; }
+.dt-s { font-size: 13.5px; color: var(--ink-3); margin-top: 6px; }
 .dt-amt-inline { font-size: 15px; font-weight: 800; color: var(--brand-primary); margin-left: 5px; }
 .dt-x { margin-left: auto; color: #C4CDD9; font-size: 21px; cursor: pointer; line-height: 1; }
 
 .dt-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 16px; }
 .dt-label {
-  font-size: 12.5px; font-weight: 800; color: #64748B;
+  font-size: 12.5px; font-weight: 800; color: var(--ink-3);
   letter-spacing: .4px; margin-bottom: 9px;
 }
 
@@ -967,8 +967,8 @@ onMounted(load)
   height: 24px;
   padding: 0 10px;
   border-radius: 999px;
-  background: #F1F5F9;
-  color: #475569;
+  background: var(--surface-hover);
+  color: var(--ink-2);
   font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
@@ -983,13 +983,13 @@ onMounted(load)
 .dt-cards { display: flex; flex-direction: column; gap: 10px; }
 .fc {
   border: 1px solid #E9EEF5; border-radius: 11px;
-  background: #fff; overflow: hidden;
+  background: var(--surface-card); overflow: hidden;
 }
 .fc-hd { display: flex; align-items: flex-start; gap: 11px; padding: 13px 13px 12px; }
 /* ⭐ 待审核这笔的勾选圆点：只有勾中的才会被「驳回 / 通过」处理 */
 .fc-pick {
   flex: 0 0 auto; width: 20px; height: 20px; margin-top: 5px;
-  border: 1.5px solid #CBD5E1; border-radius: 50%; background: #fff;
+  border: 1.5px solid #CBD5E1; border-radius: 50%; background: var(--surface-card);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; padding: 0; transition: .15s;
 }
@@ -1002,32 +1002,32 @@ onMounted(load)
 .fc.is-picked { border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(var(--brand-rgb), .1); }
 /* 已通过 / 已打款：灰圈说明"不是坏了，是不能再驳回" */
 .fc-pick.is-off {
-  background: #F8FAFC; border-style: dashed; border-color: #CBD5E1;
+  background: var(--surface-page); border-style: dashed; border-color: #CBD5E1;
   cursor: not-allowed; color: #CBD5E1;
 }
 .fc-pick.is-off svg { opacity: 1; transform: scale(.9); }
 .fc-ico {
   width: 30px; height: 30px; border-radius: 8px; flex: 0 0 auto;
-  background: #EEF2F7; color: #475569; font-size: 12.5px; font-weight: 800;
+  background: #EEF2F7; color: var(--ink-2); font-size: 12.5px; font-weight: 800;
   display: flex; align-items: center; justify-content: center;
 }
 .fc-tt { flex: 1; min-width: 0; }
 .fc-t { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.fc-t b { font-size: 14.5px; color: #0F172A; font-weight: 700; }
+.fc-t b { font-size: 14.5px; color: var(--ink); font-weight: 700; }
 .fc-st { font-size: 11.5px; }
-.fc-d { font-size: 12px; color: #94A3B8; margin-top: 4px; line-height: 1.5; }
-.fc-amt { font-size: 16.5px; font-weight: 800; color: #0F172A; letter-spacing: -.3px; white-space: nowrap; }
+.fc-d { font-size: 12px; color: var(--ink-3); margin-top: 4px; line-height: 1.5; }
+.fc-amt { font-size: 16.5px; font-weight: 800; color: var(--ink); letter-spacing: -.3px; white-space: nowrap; }
 
 .fc-vch { border-top: 1px dashed #E9EEF5; background: #FAFBFD; padding: 11px 13px 13px; }
-.fc-vch-hd { font-size: 11.5px; font-weight: 700; color: #64748B; letter-spacing: .2px; margin-bottom: 9px; }
-.fc-novch { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #94A3B8; }
+.fc-vch-hd { font-size: 11.5px; font-weight: 700; color: var(--ink-3); letter-spacing: .2px; margin-bottom: 9px; }
+.fc-novch { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-3); }
 .fc-novch i { width: 5px; height: 5px; border-radius: 50%; background: #CBD5E1; }
 
 .dt-sum {
   display: flex; justify-content: flex-end; align-items: baseline; gap: 8px;
   margin-top: 12px; padding: 12px 14px; border-radius: 11px;
-  background: #F7F9FC; border: 1px solid #EDF1F6;
-  font-size: 12.5px; color: #64748B;
+  background: var(--surface-thead); border: 1px solid #EDF1F6;
+  font-size: 12.5px; color: var(--ink-3);
 }
 .dt-sum b { font-size: 20px; color: var(--brand-primary); letter-spacing: -.4px; }
 
@@ -1040,13 +1040,13 @@ onMounted(load)
 .dt-dot.ok { background: #15803D; box-shadow: 0 0 0 2.5px rgba(21,128,61,.13); }
 .dt-dot.no { background: #A00D24; box-shadow: 0 0 0 2.5px rgba(160,13,36,.13); }
 .dt-dot.wait { background: #B45309; box-shadow: 0 0 0 2.5px rgba(180,83,9,.13); }
-.dt-step-txt { font-size: 11px; color: #64748B; line-height: 1.6; }
-.dt-step-txt b { color: #0F172A; }
+.dt-step-txt { font-size: 11px; color: var(--ink-3); line-height: 1.6; }
+.dt-step-txt b { color: var(--ink); }
 .dt-step-txt em { font-style: normal; color: #B4BECB; margin-left: 6px; }
 .dt-empty { font-size: 11px; color: #C4CDD9; }
 
-.dt-kv { display: flex; justify-content: space-between; padding: 5px 0; font-size: 11.5px; color: #64748B; }
-.dt-kv b { color: #0F172A; font-weight: 700; }
+.dt-kv { display: flex; justify-content: space-between; padding: 5px 0; font-size: 11.5px; color: var(--ink-3); }
+.dt-kv b { color: var(--ink); font-weight: 700; }
 
 /* 底部操作栏 */
 .dt-foot {
@@ -1054,15 +1054,15 @@ onMounted(load)
   display: flex; gap: 10px; flex-wrap: wrap;
   padding: 14px 16px 16px;
   border-top: 1px solid #F1F5F9;
-  background: #fff;
+  background: var(--surface-card);
 }
 .dt-foot :deep(.el-button) { flex: 1 1 auto; min-width: 104px; margin: 0; height: 44px; font-size: 14px; border-radius: 10px; padding: 0 14px; }
-.dt-ghost { background: #fff; border: 1px solid #E2E8F0; color: #64748B; }
+.dt-ghost { background: var(--surface-card); border: 1px solid #E2E8F0; color: var(--ink-3); }
 /* 通过 = 绿 */
 .dt-ok { background: #15803D; border-color: #15803D; color: #fff; font-weight: 700; }
 .dt-ok:hover { background: #166534; border-color: #166534; }
 /* 送老板 = 蓝（不用黄色，避免和「通过并付款」混） */
-.dt-esc { background: #fff; border: 1px solid #BFDBFE; color: #1D4ED8; font-weight: 700; }
+.dt-esc { background: var(--surface-card); border: 1px solid #BFDBFE; color: #1D4ED8; font-weight: 700; }
 .dt-esc:hover { background: #EFF6FF; border-color: #93C5FD; }
 /* 通过并付款 = 黄 */
 .dt-warn { background: #D97706; border-color: #D97706; color: #fff; font-weight: 700; }
@@ -1073,27 +1073,27 @@ onMounted(load)
 .dt-img-err {
   width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 2px; text-align: center; line-height: 1.3;
-  font-size: 11px; color: #94A3B8; background: #F7F9FC; cursor: pointer;
+  font-size: 11px; color: var(--ink-3); background: var(--surface-thead); cursor: pointer;
 }
-.dt-img { width: 76px; height: 76px; border-radius: 9px; border: 1px solid #E9EEF5; background: #fff; cursor: zoom-in; }
+.dt-img { width: 76px; height: 76px; border-radius: 9px; border: 1px solid #E9EEF5; background: var(--surface-card); cursor: zoom-in; }
 /* 链接没签下来 / 签名失败的占位：灰块 + 文字，别留空白 */
 .dt-img-ph {
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; color: #B4BECB; background: #F7F9FC; cursor: default;
+  font-size: 11px; color: #B4BECB; background: var(--surface-thead); cursor: default;
 }
 /* 非图片凭证（pdf / 表格等）：可点的文件块 */
 .dt-file {
   display: inline-flex; align-items: center; gap: 7px; height: 76px;
   max-width: 100%; padding: 0 12px; border-radius: 9px;
-  border: 1px solid #E9EEF5; background: #fff; text-decoration: none;
+  border: 1px solid #E9EEF5; background: var(--surface-card); text-decoration: none;
 }
 .dt-file-ic {
   width: 24px; height: 24px; border-radius: 6px; flex: 0 0 auto;
-  background: #E2E8F0; color: #475569; font-size: 10.5px;
+  background: #E2E8F0; color: var(--ink-2); font-size: 10.5px;
   display: flex; align-items: center; justify-content: center;
 }
 .dt-file-n {
-  font-size: 12px; color: #334155; max-width: 190px;
+  font-size: 12px; color: var(--ink-2); max-width: 190px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 </style>

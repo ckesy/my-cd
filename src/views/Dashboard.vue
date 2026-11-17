@@ -1,5 +1,5 @@
 <template>
-  <el-container style="height:100vh; overflow: hidden; background-color: #F8FAFC;">
+  <el-container class="dash-shell">
     <!-- 侧边栏：窄条 64px，悬停临时展开，图钉固定 -->
     <el-aside v-if="!isScreenRoute" :width="navPinned ? '220px' : '64px'" class="sidebar-container">
       <div class="nav-shell" :class="{ expanded: navPinned || navHover, pinned: navPinned }"
@@ -48,7 +48,7 @@
           <button class="back-btn-home" @click="goHome">返回首页</button>
         </div>
 
-        <div v-else class="content-wrapper animate-fade-up" :class="{ 'screen-wrap': isScreenRoute }">
+        <div v-else class="content-wrapper" :class="{ 'screen-wrap': isScreenRoute }">
           <!-- 数据大屏（沉浸模式） -->
           <!-- ⭐ keep-alive：两块大屏来回切不销毁，地图与已取到的数据都留着，切回来是瞬时的 -->
           <!-- ⭐ transition：两块屏都是 absolute 铺满，交叉淡入淡出，不会露出底色 -->
@@ -677,13 +677,13 @@ const goLogin = () => {
 
 <style scoped>
 .el-container {
-  background-color: #F8FAFC;
+  background-color: var(--surface-page);
 }
 
 .sidebar-container {
-  background: #FFFFFF;
-  box-shadow: 1px 0 8px rgba(0, 0, 0, 0.03);
-  border-right: 1px solid #E2E8F0;
+  background: var(--surface-sider);
+  box-shadow: none;
+  border-right: 1px solid var(--line);
   z-index: 30;
   overflow: visible !important;
   position: relative;
@@ -697,7 +697,7 @@ const goLogin = () => {
   top: 0;
   bottom: 0;
   width: 64px;
-  background: #FFFFFF;
+  background: var(--surface-sider);
   overflow: hidden;
   transition: width .28s cubic-bezier(.34, 1.2, .64, 1), box-shadow .28s ease;
   z-index: 31;
@@ -717,15 +717,15 @@ const goLogin = () => {
   justify-content: space-between;
   padding: 0 16px;
   height: 48px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #F1F5F9;
+  background: var(--surface-header);
+  border-bottom: 1px solid var(--line-soft);
   z-index: 9;
 }
 
 .dashboard-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1E293B;
+  color: var(--ink-on-header, var(--ink));
   letter-spacing: 0.5px;
 }
 
@@ -748,9 +748,9 @@ const goLogin = () => {
   align-items: center;
   justify-content: center;
   border: 1px solid #E2E8F0;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 8px;
-  color: #64748B;
+  color: var(--ink-3);
   font-size: 15px;
   cursor: pointer;
   padding: 0;
@@ -798,7 +798,7 @@ const goLogin = () => {
   right: 0;
   width: 268px;
   z-index: 51;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #E8EDF4;
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
@@ -812,7 +812,7 @@ const goLogin = () => {
   padding: 4px 6px 8px;
   font-size: 12.5px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   border-bottom: 1px solid #F1F5F9;
   margin-bottom: 4px;
 }
@@ -820,7 +820,7 @@ const goLogin = () => {
 .tp-refresh {
   font-size: 11.5px;
   font-weight: 500;
-  color: #94A3B8;
+  color: var(--ink-3);
   cursor: pointer;
 }
 
@@ -836,7 +836,7 @@ const goLogin = () => {
   transition: background 0.18s;
 }
 
-.tp-row:hover { background: #F8FAFC; }
+.tp-row:hover { background: var(--surface-page); }
 
 .tp-ic {
   width: 26px;
@@ -861,14 +861,14 @@ const goLogin = () => {
 .tp-m b {
   display: block;
   font-size: 12.5px;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .tp-m em {
   display: block;
   font-style: normal;
   font-size: 11px;
-  color: #94A3B8;
+  color: var(--ink-3);
   margin-top: 1px;
 }
 
@@ -883,7 +883,7 @@ const goLogin = () => {
   padding: 14px 6px 8px;
   text-align: center;
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
 }
 
 .action-btn {
@@ -903,8 +903,27 @@ const goLogin = () => {
 }
 
 .settings-btn {
-  border-color: #E2E8F0;
-  color: #64748B;
+  border-color: var(--line);
+  color: var(--ink-3);
+}
+
+/* ⭐ b/c 是深色顶栏：白底浅字的按钮在上面会看不见，改成半透明白描边 */
+html[data-scheme="b"] .settings-btn,
+html[data-scheme="b"] .back-btn,
+html[data-scheme="c"] .settings-btn,
+html[data-scheme="c"] .back-btn {
+  background: rgba(255, 255, 255, .08) !important;
+  border-color: rgba(255, 255, 255, .18) !important;
+  color: #C6D1E0 !important;
+}
+
+html[data-scheme="b"] .settings-btn:hover,
+html[data-scheme="b"] .back-btn:hover,
+html[data-scheme="c"] .settings-btn:hover,
+html[data-scheme="c"] .back-btn:hover {
+  background: rgba(255, 255, 255, .14) !important;
+  border-color: rgba(255, 255, 255, .32) !important;
+  color: #FFFFFF !important;
 }
 
 .settings-btn:hover {
@@ -914,9 +933,9 @@ const goLogin = () => {
 }
 
 .back-btn {
-  border-color: #E2E8F0 !important;
-  color: #64748B !important;
-  background: #FFFFFF !important;
+  border-color: var(--line) !important;
+  color: var(--ink-3) !important;
+  background: var(--surface-card) !important;
 }
 
 .back-btn:hover {
@@ -953,7 +972,7 @@ const goLogin = () => {
   align-items: center;
   padding: 6px 16px;
   min-height: 36px;
-  background: #FFFFFF;
+  background: var(--surface-tabs);
 }
 
 .page-tabs::-webkit-scrollbar {
@@ -982,15 +1001,15 @@ const goLogin = () => {
   border-radius: 6px;
   cursor: pointer;
   border: 1px solid transparent;
-  background: #F8FAFC;
-  color: #64748B;
+  background: var(--surface-page);
+  color: var(--ink-3);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
 }
 
 .tab-item:hover {
-  background: #F1F5F9;
-  color: #1E293B;
+  background: var(--surface-hover);
+  color: var(--ink);
   transform: translateY(-1px);
 }
 
@@ -1008,7 +1027,7 @@ const goLogin = () => {
 }
 
 .tab-item .el-tag__close {
-  color: #94A3B8;
+  color: var(--ink-3);
   font-size: 12px;
   margin-left: 2px;
   opacity: 0;
@@ -1038,12 +1057,29 @@ const goLogin = () => {
   padding: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  background: #F8FAFC;
+  background-color: var(--surface-page);
+  background-image: var(--stage-wash);
+}
+
+/* 外壳根节点：底色 + 自然系的"天光渐变"都放这里
+   ⭐ 类名不要叫 .app-shell —— App.vue 的登录壳占用了同名，容易串样式 */
+.dash-shell {
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--surface-page);
+  background-image: var(--stage-wash);
+  align-items: stretch;
 }
 
 .content-wrapper {
   padding: 0 16px 16px 0;
   min-height: 100%;
+  /* ⭐⭐ 这一行不能删：FullMap 的 .fullmap 是 position:fixed，
+     需要一个「包含块」让它相对内容区（顶栏下方 / 侧栏右侧）定位，
+     而不是铺满整个视口。
+     原来这个包含块是 animate-fade-up 播完留下的 transform 顺带提供的，
+     动画删掉后必须显式补上，否则固定侧边栏时地图不会跟着让位。 */
+  transform: translateZ(0);
 }
 
 /* ⭐ 数据大屏：外壳（侧栏/顶栏/标签页）已 v-if 掉，这里要让主区真正吃满全屏。
@@ -1160,7 +1196,7 @@ const goLogin = () => {
 
 h2 {
   margin: 0 0 12px 0;
-  color: #1E293B;
+  color: var(--ink);
   font-weight: 600;
 }
 
@@ -1209,13 +1245,13 @@ h2 {
 
 .no-permission h2 {
   font-size: 20px;
-  color: #0F172A;
+  color: var(--ink);
   margin: 0;
 }
 
 .no-permission p {
   font-size: 13px;
-  color: #64748B;
+  color: var(--ink-3);
   margin: 0;
 }
 
@@ -1401,7 +1437,7 @@ h2 {
 }
 
 .light-panel {
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   border-radius: 12px;
   padding: 18px 20px;
@@ -1419,7 +1455,7 @@ h2 {
   gap: 8px;
   font-size: 14px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   margin-bottom: 14px;
 }
 
@@ -1433,7 +1469,7 @@ h2 {
 
 .panel-title .count {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 400;
   margin-left: auto;
 }

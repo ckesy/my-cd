@@ -386,12 +386,12 @@ const handleClosed = () => {
 .sd-title {
   font-size: 16px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 .sd-subtitle {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 500;
   margin-top: 2px;
 }
@@ -418,7 +418,7 @@ const handleClosed = () => {
   width: 3px;
   height: 14px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--glass-panel);
 }
 .sd-badge {
   display: inline-flex;
@@ -453,7 +453,7 @@ const handleClosed = () => {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid #E2E8F0;
-  background: #F1F5F9;
+  background: var(--surface-hover);
 }
 .sd-map {
   width: 100%;
@@ -467,9 +467,9 @@ const handleClosed = () => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-size: 13px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   z-index: 5;
 }
 .sd-map-empty .el-icon { font-size: 36px; }
@@ -481,13 +481,13 @@ const handleClosed = () => {
   display: flex;
   gap: 12px;
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--glass-panel);
   border-radius: 8px;
   border: 1px solid #E2E8F0;
   backdrop-filter: blur(8px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   font-size: 11.5px;
-  color: #475569;
+  color: var(--ink-2);
   font-weight: 600;
   z-index: 10;
   animation: sdLegendIn 0.6s 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
@@ -601,11 +601,11 @@ const handleClosed = () => {
 .sd-duration-value small {
   font-size: 13px;
   font-weight: 600;
-  color: #64748B;
+  color: var(--ink-3);
 }
 .sd-duration-label {
   font-size: 12.5px;
-  color: #64748B;
+  color: var(--ink-3);
   font-weight: 600;
   margin-top: 2px;
 }
@@ -624,7 +624,7 @@ const handleClosed = () => {
   grid-template-columns: 1fr 1fr;
   gap: 10px 12px;
   padding: 14px;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #F1F5F9;
   border-radius: 12px;
   animation: sdCardIn 0.5s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
@@ -641,14 +641,14 @@ const handleClosed = () => {
 }
 .sd-info-label {
   font-size: 11px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 700;
   letter-spacing: 0.3px;
   text-transform: uppercase;
 }
 .sd-info-value {
   font-size: 13px;
-  color: #0F172A;
+  color: var(--ink);
   font-weight: 600;
   word-break: break-all;
   line-height: 1.35;
@@ -678,7 +678,7 @@ const handleClosed = () => {
   gap: 6px;
   font-size: 13.5px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
 }
 .sd-timeline-title .el-icon {
   color: #3B82F6;
@@ -686,7 +686,7 @@ const handleClosed = () => {
 }
 .sd-timeline-tip {
   font-size: 11.5px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-weight: 500;
 }
 
@@ -717,7 +717,7 @@ const handleClosed = () => {
   padding: 10px 14px 10px 12px;
   min-width: 280px;
   max-width: 340px;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   border-radius: 10px;
   cursor: pointer;
@@ -739,7 +739,7 @@ const handleClosed = () => {
 }
 .sd-timeline-item.active {
   border-color: #3B82F6;
-  background: linear-gradient(135deg, #EFF6FF, #FFFFFF);
+  background: linear-gradient(135deg, #EFF6FF, var(--surface-card));
   box-shadow: 0 10px 24px rgba(59, 130, 246, 0.28);
   transform: translateY(-3px);
 }
@@ -828,7 +828,7 @@ const handleClosed = () => {
   align-items: center;
   gap: 4px;
   font-size: 11.5px;
-  color: #475569;
+  color: var(--ink-2);
   min-width: 0;
   line-height: 1.35;
 }
@@ -865,13 +865,13 @@ const handleClosed = () => {
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .sd-btn.ghost {
-  background: #F1F5F9;
-  color: #475569;
+  background: var(--surface-hover);
+  color: var(--ink-2);
   border: 1px solid #E2E8F0;
 }
 .sd-btn.ghost:hover {
   background: #E2E8F0;
-  color: #1E293B;
+  color: var(--ink);
   transform: translateY(-2px);
 }
 </style>
@@ -890,17 +890,17 @@ const handleClosed = () => {
   padding: 18px 24px;
   margin: 0;
   border-bottom: 1px solid #F1F5F9;
-  background: linear-gradient(180deg, #FFFFFF, #FAFBFC);
+  background: linear-gradient(180deg, var(--surface-card), #FAFBFC);
 }
 .stay-detail-dialog .el-dialog__body {
   padding: 20px 24px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   max-height: 72vh;
   overflow-y: auto;
 }
 .stay-detail-dialog .el-dialog__footer {
   padding: 14px 24px;
-  background: #fff;
+  background: var(--surface-card);
   border-top: 1px solid #F1F5F9;
 }
 

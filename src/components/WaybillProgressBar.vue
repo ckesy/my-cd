@@ -303,12 +303,12 @@ const metricClass = computed(() => {
 .wpb-label {
   font-size: 12.5px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink);
   white-space: nowrap;
 }
 .wpb-sub {
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
   white-space: nowrap;
 }
 .wpb-flag {
@@ -338,7 +338,7 @@ const metricClass = computed(() => {
   color: #b45309;
 }
 .wpb-metrics.is-idle {
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 /* ---- 刻度 ---- */
@@ -353,7 +353,7 @@ const metricClass = computed(() => {
   top: 0;
   transform: translateX(-50%);
   font-size: 11px;
-  color: #64748B;
+  color: var(--ink-3);
   white-space: nowrap;
 }
 .wpb-tick.is-start {
@@ -374,7 +374,7 @@ const metricClass = computed(() => {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: #f1f5f9;
+  background: var(--surface-hover);
 }
 .wpb-plan {
   position: absolute;
@@ -439,7 +439,7 @@ const metricClass = computed(() => {
   gap: 14px;
   margin-top: 3px;
   font-size: 11.5px;
-  color: #475569;
+  color: var(--ink-2);
 }
 .wpb-legend span {
   display: inline-flex;
@@ -477,6 +477,6 @@ const metricClass = computed(() => {
 .wpb-none {
   padding: 14px 0;
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 </style>

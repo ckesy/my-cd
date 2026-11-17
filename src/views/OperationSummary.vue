@@ -1164,7 +1164,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: #f8fafc;
+  background: var(--surface-page);
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC',
     'HarmonyOS Sans SC', 'Microsoft YaHei', Arial, sans-serif;
 }
@@ -1174,7 +1174,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #edf1f6;
   border-radius: 11px;
   padding: 7px 11px;
@@ -1187,7 +1187,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   gap: 2px;
   padding: 2px;
   border-radius: 8px;
-  background: #f1f5f9;
+  background: var(--surface-hover);
   margin-right: 2px;
 }
 
@@ -1197,7 +1197,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   font-family: inherit;
   font-size: 12px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--ink-3);
   padding: 5px 13px;
   border-radius: 6px;
   cursor: pointer;
@@ -1207,14 +1207,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 .modes button:hover { color: var(--brand-primary); }
 
 .modes button.active {
-  background: #fff;
+  background: var(--surface-card);
   color: var(--brand-primary);
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1);
 }
 
 .range-tip {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--ink-3);
   font-weight: 600;
   padding-left: 4px;
 }
@@ -1249,8 +1249,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 
 :deep(.btn-outline) {
   border-color: #e2e8f0;
-  color: #475569;
-  background: #fff;
+  color: var(--ink-2);
+  background: var(--surface-card);
 }
 :deep(.btn-outline:hover) {
   border-color: var(--brand-primary);
@@ -1282,7 +1282,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 }
 
 .tile {
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #edf1f6;
   border-radius: 11px;
   padding: 8px 10px;
@@ -1330,15 +1330,15 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 .t-title {
   font-size: 12.5px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--ink);
   letter-spacing: 0.2px;
   white-space: nowrap;
 }
 
 .scope {
   border: 1px solid #e8edf4;
-  background: #f8fafc;
-  color: #94a3b8;
+  background: var(--surface-page);
+  color: var(--ink-3);
   font-family: inherit;
   font-size: 10px;
   font-weight: 700;
@@ -1421,7 +1421,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   right: 0;
   bottom: 0;
   height: 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0), #fff 80%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), var(--surface-card) 80%);
   pointer-events: none;
 }
 
@@ -1429,7 +1429,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 .expander {
   position: absolute;
   inset: 0;
-  background: #f8fafc;
+  background: var(--surface-page);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
@@ -1442,7 +1442,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #edf1f6;
   border-radius: 11px 11px 0 0;
   flex-shrink: 0;
@@ -1451,8 +1451,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 
 .back {
   border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #475569;
+  background: var(--surface-card);
+  color: var(--ink-2);
   font-family: inherit;
   font-size: 14px;
   font-weight: 700;
@@ -1466,15 +1466,15 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 .exp-title {
   font-size: 16px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--ink);
   letter-spacing: 0.3px;
 }
 
 .exp-scope {
   font-size: 12.5px;
-  color: #94a3b8;
+  color: var(--ink-3);
   font-weight: 700;
-  background: #f8fafc;
+  background: var(--surface-page);
   border: 1px solid #e8edf4;
   border-radius: 6px;
   padding: 3px 9px;
@@ -1483,14 +1483,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 .close-x {
   border: 0;
   background: transparent;
-  color: #94a3b8;
+  color: var(--ink-3);
   font-size: 18px;
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 6px;
 }
 
-.close-x:hover { background: #f1f5f9; color: var(--brand-primary); }
+.close-x:hover { background: var(--surface-hover); color: var(--brand-primary); }
 
 .month-nav {
   display: inline-flex;
@@ -1503,11 +1503,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 
 .month-nav button {
   border: 0;
-  background: #fff;
+  background: var(--surface-card);
   width: 30px;
   height: 34px;
   cursor: pointer;
-  color: #64748b;
+  color: var(--ink-3);
   font-size: 15px;
 }
 
@@ -1516,7 +1516,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 .month-nav span {
   font-size: 13.5px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--ink);
   padding: 0 10px;
 }
 
@@ -1525,7 +1525,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   gap: 2px;
   padding: 2px;
   border-radius: 7px;
-  background: #f1f5f9;
+  background: var(--surface-hover);
 }
 
 .chips button {
@@ -1534,7 +1534,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
   font-family: inherit;
   font-size: 12.5px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--ink-3);
   padding: 6px 13px;
   border-radius: 6px;
   cursor: pointer;
@@ -1542,7 +1542,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 }
 
 .chips button.active {
-  background: #fff;
+  background: var(--surface-card);
   color: var(--brand-primary);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
 }
@@ -1550,7 +1550,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 .exp-body {
   flex: 1;
   min-height: 0;
-  background: #fff;
+  background: var(--surface-card);
   border: 1px solid #edf1f6;
   border-top: 0;
   border-radius: 0 0 11px 11px;
@@ -1561,6 +1561,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 .exp-enter-from, .exp-leave-to { opacity: 0; transform: translateY(8px) scale(0.99); }
 
 .scope-form { display: flex; flex-direction: column; gap: 10px; }
-.scope-hint { margin: 0; font-size: 12px; color: #64748b; }
-.scope-hint b { color: #0f172a; }
+.scope-hint { margin: 0; font-size: 12px; color: var(--ink-3); }
+.scope-hint b { color: var(--ink); }
 </style>

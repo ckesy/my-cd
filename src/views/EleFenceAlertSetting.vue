@@ -1026,13 +1026,13 @@ onMounted(async () => {
 <style scoped>
 .alert-setting-page {
   padding: 6px 16px 16px;
-  background-color: #f8fafc;
+  background-color: var(--surface-page);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   gap: 14px;
   font-size: 14px;
-  color: #1E293B;
+  color: var(--ink);
 }
 
 /* ========== 只读提示横幅 ========== */
@@ -1068,7 +1068,7 @@ onMounted(async () => {
 
 /* ========== 页面头部 ⭐ 滚动时固定 ========== */
 .page-header {
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 12px;
   padding: 14px 20px;
   display: flex;
@@ -1119,13 +1119,13 @@ onMounted(async () => {
 .header-title-text h2 {
   font-size: 18px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   margin: 0 0 2px 0;
   line-height: 1.2;
 }
 .header-title-text p {
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
   margin: 0;
   line-height: 1.2;
   font-weight: 500;
@@ -1155,7 +1155,7 @@ onMounted(async () => {
 }
 :deep(.btn-outline) {
   border-color: #CBD5E1;
-  color: #334155;
+  color: var(--ink-2);
 }
 :deep(.btn-outline:hover) {
   border-color: var(--brand-primary);
@@ -1173,7 +1173,7 @@ onMounted(async () => {
 
 .switch-card {
   position: relative;
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 14px;
   padding: 14px 16px;
   cursor: pointer;
@@ -1290,7 +1290,7 @@ onMounted(async () => {
 .switch-card-text h3 {
   font-size: 15px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   margin: 0 0 2px 0;
   transition: color 0.3s;
 }
@@ -1302,7 +1302,7 @@ onMounted(async () => {
 }
 .switch-card-text p {
   font-size: 11px;
-  color: #64748B;
+  color: var(--ink-3);
   margin: 0;
   font-weight: 500;
   white-space: nowrap;
@@ -1339,7 +1339,7 @@ onMounted(async () => {
 .status-text {
   font-size: 11px;
   font-weight: 700;
-  color: #64748B;
+  color: var(--ink-3);
   transition: color 0.3s;
   letter-spacing: 0.3px;
 }
@@ -1422,11 +1422,11 @@ onMounted(async () => {
 }
 
 .speeding-banner {
-  background: #ffffff;
+  background: var(--surface-card);
   border: 1px dashed #FCA5A5;
 }
 .staying-banner {
-  background: #ffffff;
+  background: var(--surface-card);
   border: 1px dashed #93C5FD;
 }
 
@@ -1467,12 +1467,12 @@ onMounted(async () => {
 .banner-text h3 {
   font-size: 14px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   margin: 0 0 2px 0;
 }
 .banner-text p {
   font-size: 11px;
-  color: #64748B;
+  color: var(--ink-3);
   margin: 0;
   font-weight: 500;
 }
@@ -1519,7 +1519,7 @@ onMounted(async () => {
 }
 
 .config-block {
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 12px;
   padding: 12px;
   border: 1px solid #E2E8F0;
@@ -1641,7 +1641,7 @@ onMounted(async () => {
 .block-label {
   font-size: 12px;
   font-weight: 700;
-  color: #334155;
+  color: var(--ink-2);
 }
 
 .block-body {
@@ -1656,7 +1656,7 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #F1F5F9;
+  background: var(--surface-hover);
   border: 1px solid transparent;
   border-radius: 8px;
   cursor: pointer;
@@ -1665,7 +1665,7 @@ onMounted(async () => {
 }
 
 .fence-select-trigger:hover {
-  background: #ffffff;
+  background: var(--surface-card);
   border-color: var(--brand-primary);
   box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.08);
   transform: translateY(-1px);
@@ -1691,7 +1691,7 @@ onMounted(async () => {
   opacity: 0.85;
 }
 .fence-select-trigger.readonly:hover {
-  background: #F1F5F9;
+  background: var(--surface-hover);
   border-color: transparent;
   box-shadow: none;
   transform: none;
@@ -1699,7 +1699,7 @@ onMounted(async () => {
 
 .trigger-icon {
   font-size: 14px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 .fence-select-trigger.active .trigger-icon {
   color: var(--brand-primary);
@@ -1712,10 +1712,10 @@ onMounted(async () => {
   flex: 1;
   font-size: 13px;
   font-weight: 600;
-  color: #64748B;
+  color: var(--ink-3);
 }
 .fence-select-trigger.active .trigger-text {
-  color: #0F172A;
+  color: var(--ink);
 }
 .active-text {
   color: #991B1B;
@@ -1726,7 +1726,7 @@ onMounted(async () => {
 
 .trigger-arrow {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .trigger-arrow.rotate {
@@ -1850,7 +1850,7 @@ onMounted(async () => {
 .config-block:hover .value-number { transform: scale(1.08); }
 .value-unit {
   font-size: 11px;
-  color: #64748B;
+  color: var(--ink-3);
   margin-left: 2px;
   font-weight: 600;
 }
@@ -1875,7 +1875,7 @@ onMounted(async () => {
   width: 14px;
   height: 14px;
   border: 3px solid var(--brand-primary);
-  background: #FFFFFF;
+  background: var(--surface-card);
   box-shadow: 0 2px 8px rgba(211, 47, 47, 0.35);
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -1889,14 +1889,14 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   font-size: 10px;
-  color: #94A3B8;
+  color: var(--ink-3);
   margin-top: 2px;
   font-weight: 600;
 }
 
 .empty-hint {
   font-size: 11px;
-  color: #64748B;
+  color: var(--ink-3);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1915,7 +1915,7 @@ onMounted(async () => {
 
 /* ========== 空状态 ========== */
 .empty-state {
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 16px;
   padding: 60px 20px;
   text-align: center;
@@ -1942,13 +1942,13 @@ onMounted(async () => {
 }
 .empty-state h3 {
   font-size: 16px;
-  color: #0F172A;
+  color: var(--ink);
   margin: 0 0 8px 0;
   font-weight: 700;
 }
 .empty-state p {
   font-size: 13px;
-  color: #64748B;
+  color: var(--ink-3);
   margin: 0;
   font-weight: 500;
 }
@@ -1999,7 +1999,7 @@ onMounted(async () => {
   border: 1px solid #E2E8F0 !important;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12) !important;
   overflow: hidden;
-  background: #ffffff;
+  background: var(--surface-card);
 }
 
 .fence-picker-content {
@@ -2018,13 +2018,13 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border-bottom: 1px solid #F1F5F9;
 }
 .picker-toolbar .el-checkbox__label {
   font-size: 13px !important;
   font-weight: 700 !important;
-  color: #334155 !important;
+  color: var(--ink-2) !important;
 }
 .speeding-picker-popper .picker-toolbar .el-checkbox__input.is-checked .el-checkbox__inner,
 .speeding-picker-popper .picker-toolbar .el-checkbox__input.is-indeterminate .el-checkbox__inner {
@@ -2039,7 +2039,7 @@ onMounted(async () => {
 
 .picker-count {
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
   font-weight: 600;
 }
 .picker-count b {
@@ -2068,7 +2068,7 @@ onMounted(async () => {
   position: relative;
 }
 .picker-item:hover {
-  background: #F8FAFC;
+  background: var(--surface-page);
   transform: translateX(2px);
 }
 .picker-item.selected {
@@ -2100,7 +2100,7 @@ onMounted(async () => {
   gap: 7px;
   font-size: 13px;
   font-weight: 600;
-  color: #1E293B;
+  color: var(--ink);
 }
 
 .ftype-name {
@@ -2148,7 +2148,7 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-size: 13px;
 }
 .picker-empty .el-icon {
@@ -2178,7 +2178,7 @@ onMounted(async () => {
   gap: 8px;
   padding: 10px 12px;
   border-top: 1px solid #F1F5F9;
-  background: #F8FAFC;
+  background: var(--surface-page);
 }
 .speeding-confirm-btn {
   background-color: var(--brand-primary) !important;
@@ -2203,12 +2203,12 @@ onMounted(async () => {
 }
 .global-alert-confirm-box .el-message-box__title {
   font-weight: 700 !important;
-  color: #0F172A !important;
+  color: var(--ink) !important;
   font-size: 16px !important;
 }
 .global-alert-confirm-box .el-message-box__content {
   font-size: 14px !important;
-  color: #334155 !important;
+  color: var(--ink-2) !important;
   line-height: 1.6 !important;
   font-weight: 500 !important;
 }
@@ -2235,7 +2235,7 @@ onMounted(async () => {
 }
 .success-overlay .success-card {
   position: relative;
-  background: #ffffff;
+  background: var(--surface-card);
   border-radius: 20px;
   padding: 32px 48px;
   display: flex;

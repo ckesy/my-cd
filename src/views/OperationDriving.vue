@@ -25,13 +25,13 @@ import { Guide } from '@element-plus/icons-vue'
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #F8FAFC;
+  background: var(--surface-page);
 }
 
 .placeholder-card {
   width: 100%;
   max-width: 520px;
-  background: #fff;
+  background: var(--surface-card);
   border-radius: 14px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   padding: 56px 40px;
@@ -59,19 +59,19 @@ import { Guide } from '@element-plus/icons-vue'
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
 }
 
 .placeholder-card p {
   margin: 0;
   font-size: 13px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 .placeholder-tip {
   margin-top: 6px;
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ink-3);
   border-top: 1px dashed #E2E8F0;
   padding-top: 14px;
   width: 100%;

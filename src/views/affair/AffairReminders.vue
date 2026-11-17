@@ -9,7 +9,7 @@
         <el-select v-model="q.certType" placeholder="证件类型" clearable style="width:130px">
           <el-option v-for="t in CERT_TYPES" :key="t.key" :label="t.name" :value="t.key" />
         </el-select>
-        <span class="sub" style="color:#94A3B8;font-size:12px">共 {{ filtered.length }} 条</span>
+        <span class="sub" style="color:var(--ink-3);font-size:12px">共 {{ filtered.length }} 条</span>
         <div style="margin-left:auto;display:flex;gap:7px">
           <el-button size="small" plain :loading="loading" @click="refresh">刷新</el-button>
           <el-button size="small" type="danger" @click="addOpen = true">+ 人工添加</el-button>
@@ -47,12 +47,12 @@
             <span class="af-pill" :style="{ background: meta(r.level).bg, color: meta(r.level).color }">
               <i class="d"></i>{{ r.level }}
             </span>
-            <span class="af-pill" style="background:#F1F5F9;color:#64748B">
+            <span class="af-pill" style="background:var(--surface-hover);color:#64748B">
               {{ r.source === 'manual' ? '人工' : '自动' }}
             </span>
             <span class="tm">{{ r.due_date || '按里程' }}</span>
             <span v-if="status !== '待处理'" class="af-pill"
-              :style="r.status === '已处理' ? 'background:#ECFDF5;color:#047857' : 'background:#F1F5F9;color:#64748B'">
+              :style="r.status === '已处理' ? 'background:#ECFDF5;color:#047857' : 'background:var(--surface-hover);color:#64748B'">
               {{ r.status }}
             </span>
           </div>
@@ -192,8 +192,8 @@ onMounted(async () => {
 
 <style scoped>
 .tabs { display: flex; gap: 5px; margin-bottom: 11px; flex-wrap: wrap; }
-.tabs span { font-size: 12.5px; font-weight: 700; color: #64748B; padding: 6px 12px; border-radius: 8px; cursor: pointer; user-select: none; }
-.tabs span:hover { background: #F8FAFC; }
+.tabs span { font-size: 12.5px; font-weight: 700; color: var(--ink-3); padding: 6px 12px; border-radius: 8px; cursor: pointer; user-select: none; }
+.tabs span:hover { background: var(--surface-page); }
 .tabs span.on { background: #FDF2F4; color: #C8102E; }
 .tabs em { font-style: normal; margin-left: 5px; font-weight: 800; font-family: var(--num-font, Arial, sans-serif); }
 </style>

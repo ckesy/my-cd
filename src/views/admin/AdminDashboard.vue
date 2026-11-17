@@ -196,7 +196,7 @@ onMounted(loadStats)
   align-items: center;
   gap: 18px;
   padding: 22px 26px;
-  background: linear-gradient(120deg, #FFFFFF 0%, var(--brand-primary-light) 60%, #FFFFFF 100%);
+  background: linear-gradient(120deg, var(--surface-card) 0%, var(--brand-primary-light) 60%, var(--surface-card) 100%);
   border: 1px solid #E2E8F0;
   border-radius: 12px;
   overflow: hidden;
@@ -233,13 +233,13 @@ onMounted(loadStats)
   margin: 0 0 4px;
   font-size: 18px;
   font-weight: 700;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 1px;
 }
 .welcome-text p {
   margin: 0;
   font-size: 13px;
-  color: #64748B;
+  color: var(--ink-3);
 }
 
 .stat-grid {
@@ -255,7 +255,7 @@ onMounted(loadStats)
   gap: 16px;
   padding: 22px 22px;
   border-radius: 12px;
-  background: #FFFFFF;
+  background: var(--surface-card);
   border: 1px solid #E2E8F0;
   box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
   overflow: hidden;
@@ -320,14 +320,14 @@ onMounted(loadStats)
 .stat-value {
   font-size: 28px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   font-family: 'Courier New', monospace;
   line-height: 1.1;
   letter-spacing: -0.5px;
 }
 .stat-label {
   font-size: 12.5px;
-  color: #64748B;
+  color: var(--ink-3);
   margin-top: 4px;
   letter-spacing: 0.5px;
 }
@@ -381,7 +381,7 @@ onMounted(loadStats)
 
 .bar-label {
   font-size: 13px;
-  color: #334155;
+  color: var(--ink-2);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -391,7 +391,7 @@ onMounted(loadStats)
 .bar-track {
   position: relative;
   height: 26px;
-  background: #F1F5F9;
+  background: var(--surface-hover);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -452,7 +452,7 @@ onMounted(loadStats)
 .recent-item {
   padding: 12px 14px;
   border-radius: 10px;
-  background: #F8FAFC;
+  background: var(--surface-page);
   border: 1px solid #E2E8F0;
   cursor: default;
   opacity: 0;
@@ -464,7 +464,7 @@ onMounted(loadStats)
   to   { opacity: 1; transform: translateY(0); }
 }
 .recent-item:hover {
-  background: #FFFFFF;
+  background: var(--surface-card);
   border-color: rgba(var(--brand-rgb), 0.35);
   transform: translateX(4px);
   box-shadow: 0 4px 16px rgba(var(--brand-rgb), 0.1);
@@ -473,7 +473,7 @@ onMounted(loadStats)
 .recent-plate {
   font-size: 14px;
   font-weight: 800;
-  color: #0F172A;
+  color: var(--ink);
   letter-spacing: 0.8px;
   margin-bottom: 4px;
 }
@@ -483,7 +483,7 @@ onMounted(loadStats)
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #64748B;
+  color: var(--ink-3);
   margin-bottom: 4px;
 }
 .meta-org { color: var(--brand-primary); font-weight: 600; }
@@ -491,7 +491,7 @@ onMounted(loadStats)
 
 .recent-time {
   font-size: 11px;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-family: 'Courier New', monospace;
 }
 
@@ -500,7 +500,7 @@ onMounted(loadStats)
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #94A3B8;
+  color: var(--ink-3);
   font-size: 13px;
   padding: 40px 0;
 }

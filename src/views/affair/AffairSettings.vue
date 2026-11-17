@@ -154,8 +154,8 @@ onMounted(load)
 
 <style scoped>
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.fld label { display: block; font-size: 12.5px; color: #64748B; font-weight: 600; margin-bottom: 6px; }
-.hint { font-size: 11.5px; color: #94A3B8; }
+.fld label { display: block; font-size: 12.5px; color: var(--ink-3); font-weight: 600; margin-bottom: 6px; }
+.hint { font-size: 11.5px; color: var(--ink-3); }
 .recv { display: flex; flex-direction: column; gap: 8px; }
 .recv-row {
   display: flex; align-items: center; gap: 12px; padding: 11px 13px;
@@ -163,13 +163,13 @@ onMounted(load)
 }
 .recv-m { flex: 1; }
 .recv-m b { font-size: 13px; }
-.recv-m p { margin: 2px 0 0; font-size: 11.5px; color: #94A3B8; }
+.recv-m p { margin: 2px 0 0; font-size: 11.5px; color: var(--ink-3); }
 .defs { display: flex; flex-direction: column; gap: 9px; }
 .def-row { display: flex; align-items: center; gap: 12px; }
 .def-row .af-ctype { flex: 0 0 auto; min-width: 58px; justify-content: center; }
 .def-row .hint { margin-left: auto; }
 .src {
   height: 32px; display: flex; align-items: center; padding: 0 11px;
-  border: 1px dashed #E2E8F0; border-radius: 8px; font-size: 12px; color: #94A3B8;
+  border: 1px dashed #E2E8F0; border-radius: 8px; font-size: 12px; color: var(--ink-3);
 }
 </style>
