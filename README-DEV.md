@@ -50,8 +50,8 @@ API 网关（小程序 HTTP 用）：https://wuxian-token-d0guymjkpadcd1f22.api.
 三、🔑 Key / Token 速查
 高德
 名称	值
-JS API Key	273f5c474604b71906674aac159b8f45
-Web 服务 Key	491d5475803e65c06ba6169bdaf3e1f3
+JS API Key	<高德 JS Key：在 .env 的 VITE_AMAP_KEY 中配置>
+Web 服务 Key	<高德 Web Key：在云函数环境变量 AMAP_WEB_KEY 中配置>
 猎鹰 SID	1078871
 数字签名	必须关闭
 猎鹰 API	必须勾选
@@ -59,7 +59,7 @@ Web 服务 Key	491d5475803e65c06ba6169bdaf3e1f3
 IP 白名单	必须留空
 东风
 名称	值
-Token	c40c7311ff604a598b9fb791a63e9deb
+Token	<东风 Token：见云函数环境变量 DONGFENG_TOKEN，不再在代码/文档中留存明文>
 旧 Supabase（已弃用）
 项目 ID：sfwwbcrpouelrjavecfj
 
@@ -79,7 +79,7 @@ vehicle-list	小程序车辆列表 + 实时定位（司机只看绑定车）	wx.
 小程序云函数环境变量：
 
 text
-DONGFENG_TOKEN = c40c7311ff604a598b9fb791a63e9deb
+DONGFENG_TOKEN = <东风 Token：见云函数环境变量 DONGFENG_TOKEN，不再在代码/文档中留存明文>
 ⚠️ 关键坑：
 
 Web 端不用 app.callFunction（匿名会报 EXCEED_AUTHORITY），必须走 HTTP 网关
@@ -117,7 +117,7 @@ https://restapi.amap.com/v3/config/district?key=xxx&keywords=140700&extensions=a
 5.4 驾车路线规划（JS API 插件）
 js
 const AMap = await AMapLoader.load({
-  key: '273f5c474604b71906674aac159b8f45',
+  key: '<高德 JS Key：在 .env 的 VITE_AMAP_KEY 中配置>',
   version: '2.0',
   plugins: ['AMap.Geocoder', 'AMap.TileLayer.Satellite', 'AMap.TileLayer.RoadNet', 'AMap.Driving'],
 })
@@ -756,10 +756,10 @@ git add . && git commit -m "feat: xxx" && git push origin main
 CloudBase 环境 ID	wuxian-token-d0guymjkpadcd1f22
 HTTP 网关	https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com
 API 网关（小程序）	https://wuxian-token-d0guymjkpadcd1f22.api.tcloudbasegateway.com
-高德 JS Key	273f5c474604b71906674aac159b8f45
-高德 Web Key	491d5475803e65c06ba6169bdaf3e1f3
+高德 JS Key	<高德 JS Key：在 .env 的 VITE_AMAP_KEY 中配置>
+高德 Web Key	<高德 Web Key：在云函数环境变量 AMAP_WEB_KEY 中配置>
 高德猎鹰 SID	1078871
-东风 Token	c40c7311ff604a598b9fb791a63e9deb
+东风 Token	<东风 Token：见云函数环境变量 DONGFENG_TOKEN，不再在代码/文档中留存明文>
 FullMap 并发	15
 超速/停留云函数并发	20
 vehicle-list 并发	15

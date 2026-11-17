@@ -29,7 +29,12 @@ try {
 }
 
 const DF_URL = 'https://dfcvyl.dfcv.com.cn/api/admin/openapi/api/track/tripAnalysisOil'
-const DF_TOKEN = process.env.DONGFENG_TOKEN || 'c40c7311ff604a598b9fb791a63e9deb'
+/* ⚠️ Token 只从云函数环境变量读取，代码中不再保留任何明文兜底。 */
+const DF_TOKEN = String(process.env.DONGFENG_TOKEN || '').trim()
+function requireDfToken() {
+  if (!DF_TOKEN) throw new Error('缺少环境变量 DONGFENG_TOKEN（东风接口 Token 已不再内置）')
+  return DF_TOKEN
+}
 const FETCH_TIMEOUT = 25000
 const CONCURRENCY = 5
 const MAX_DAYS = 62
@@ -103,7 +108,7 @@ const parseDT = (s) => {
 }
 async function fetchOil(vin, date) {
   try {
-    const qs = new URLSearchParams({ token: DF_TOKEN, carId: vin, startTime: date, endTime: date })
+    const qs = new URLSearchParams({ token: requireDfToken(), carId: vin, startTime: date, endTime: date })
     const res = await postJson(`${DF_URL}?${qs.toString()}`, '{}', FETCH_TIMEOUT)
     if (res.status !== 200) return { ok: false, reason: `http ${res.status}` }
     const data = JSON.parse(res.text)

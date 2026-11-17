@@ -19,15 +19,14 @@
 import dayjs from 'dayjs'
 import { supabase } from '@/utils/supabase'
 
-export const DONGFENG_TRACK_URL =
-  'https://dfcvyl.dfcv.com.cn/api/admin/openapi/api/track/history'
+/* ⭐ 东风 Token 已收归服务端（cloudfunctions/dongfeng-track）。
+   前端不再持有任何东风密钥，轨迹/能耗请求统一走网关，浏览器里搜不到 Token。
+   换环境只需改 VITE_DONGFENG_GATEWAY，不用动代码。 */
+export const DONGFENG_GATEWAY =
+  import.meta.env.VITE_DONGFENG_GATEWAY ||
+  'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com/dongfeng-track'
 export const DONGFENG_LIVE_URL =
   'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com/dongfeng-lostlocation'
-
-/* ⚠️ Token 目前走前端直连。该接口会回显任意 Origin，等于公开可读，
-   建议后续改由云函数中转，届时只需把下面这行换成环境变量 */
-export const DONGFENG_TOKEN =
-  import.meta.env.VITE_DONGFENG_TOKEN || 'c40c7311ff604a598b9fb791a63e9deb'
 
 export const TRACK_MAX_POINTS = 2000
 export const STALE_MINUTES = 30
@@ -199,6 +198,56 @@ export async function resolveVin(plate) {
 const TRACK_CACHE = new Map()
 const TRACK_TTL = 25 * 1000
 
+/* ============================================================
+   网关调用
+   ------------------------------------------------------------
+   所有东风接口经由 cloudfunctions/dongfeng-track 中转，
+   Token 只存在于服务端环境变量；前端只传业务参数 + 当前账号。
+   ============================================================ */
+
+function currentAccount() {
+  return String(currentUser.account || currentUser.phone || currentUser.username || '').trim()
+}
+
+/**
+ * 调用东风网关
+ * @param {object} payload { action:'history'|'oil', vin, ... }
+ * @param {number} timeoutMs
+ * @returns {Promise<{code:number,data:any,msg?:string}>} 原样透传上游结构
+ */
+export async function callDongfengGateway(payload, timeoutMs = 20000) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(DONGFENG_GATEWAY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, account: currentAccount() }),
+      signal: controller.signal,
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok && !json.code) {
+      return { code: res.status, msg: `网关返回 HTTP ${res.status}`, data: null }
+    }
+    return json
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * 历史轨迹原始返回 —— 需要 mileage 等字段的调用方复用它，别再自己拼东风 URL
+ * @returns {Promise<{code:number,data:any[],msg?:string}>}
+ */
+export async function fetchTrackRaw(vin, beginTime, endTime, timeoutMs = 20000) {
+  if (!vin || !beginTime || !endTime) return { code: 400, msg: '缺少参数', data: [] }
+  const json = await callDongfengGateway({ action: 'history', vin, beginTime, endTime }, timeoutMs)
+  if (!json || json.code !== 1) {
+    return { code: (json && json.code) || -1, msg: (json && json.msg) || '网关无响应', data: [] }
+  }
+  return json
+}
+
 /**
  * 历史行驶轨迹
  * @param {string} vin     完整 VIN
@@ -209,36 +258,26 @@ export async function fetchTrack(vin, beginAt) {
   const hit = TRACK_CACHE.get(key)
   if (hit && Date.now() - hit.at < TRACK_TTL) return hit.points
 
-  const params = new URLSearchParams({
-    token: DONGFENG_TOKEN,
-    carId: vin,
-    beginTime: dayjs(parseTimeMs(beginAt) || Date.now()).format('YYYY-MM-DD HH:mm:ss'),
-    endTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-  })
+  const beginTime = dayjs(parseTimeMs(beginAt) || Date.now()).format('YYYY-MM-DD HH:mm:ss')
+  const endTime = dayjs().format('YYYY-MM-DD HH:mm:ss')
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 20000)
-  try {
-    const res = await fetch(`${DONGFENG_TRACK_URL}?${params.toString()}`, {
-      signal: controller.signal,
-    })
-    if (!res.ok) throw new Error('HTTP ' + res.status)
-    const json = await res.json()
-    if (json.code !== 1 || !Array.isArray(json.data)) return []
-    const points = json.data
-      .map((p) => ({
-        lng: parseFloat(p.longitude),
-        lat: parseFloat(p.latitude),
-        speed: parseFloat(p.velocity) || 0,
-        time: p.sendTime,
-      }))
-      .filter((p) => !isNaN(p.lng) && !isNaN(p.lat))
-      .sort((a, b) => parseTimeMs(a.time) - parseTimeMs(b.time))
-    TRACK_CACHE.set(key, { at: Date.now(), points })
-    return points
-  } finally {
-    clearTimeout(timeoutId)
+  const json = await fetchTrackRaw(vin, beginTime, endTime, 20000)
+  if (!json || json.code !== 1 || !Array.isArray(json.data)) {
+    /* 服务端未配 Token / 账号无效 / 限流都会走到这里：不抛异常，让上层给可读提示 */
+    if (json && json.msg) console.warn('[轨迹] 网关返回：', json.msg)
+    return []
   }
+  const points = json.data
+    .map((p) => ({
+      lng: parseFloat(p.longitude),
+      lat: parseFloat(p.latitude),
+      speed: parseFloat(p.velocity) || 0,
+      time: p.sendTime,
+    }))
+    .filter((p) => !isNaN(p.lng) && !isNaN(p.lat))
+    .sort((a, b) => parseTimeMs(a.time) - parseTimeMs(b.time))
+  TRACK_CACHE.set(key, { at: Date.now(), points })
+  return points
 }
 
 /** 实时定位兜底（8s 超时），返回 { plate, lng, lat, speed, status, reportTime, locationText } */

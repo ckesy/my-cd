@@ -596,7 +596,7 @@ watch(visible, (val) => emit('update:modelValue', val))
 const initMap = async () => {
   try {
     AMapInstance = await AMapLoader.load({
-      key: '273f5c474604b71906674aac159b8f45',
+      key: String(import.meta.env.VITE_AMAP_KEY || '').trim(),
       version: '2.0',
       plugins: [
         'AMap.CircleEditor', 'AMap.PolygonEditor', 'AMap.PolylineEditor',

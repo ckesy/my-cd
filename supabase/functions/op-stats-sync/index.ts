@@ -17,13 +17,13 @@ import { corsHeaders } from 'https://esm.sh/@supabase/supabase-js@2/cors'
  */
 
 const DF_URL = 'https://dfcvyl.dfcv.com.cn/api/admin/openapi/api/track/tripAnalysisOil'
-const DF_TOKEN_FALLBACK = 'c40c7311ff604a598b9fb791a63e9deb'
 const FETCH_TIMEOUT = 25000
 const CONCURRENCY = 6
 
 const SB_URL = Deno.env.get('SUPABASE_URL') || ''
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-const DF_TOKEN = Deno.env.get('DONGFENG_TOKEN') || DF_TOKEN_FALLBACK
+/* ⚠️ Token 只从环境变量读取，代码中不再保留任何明文兜底。 */
+const DF_TOKEN = (Deno.env.get('DONGFENG_TOKEN') || '').trim()
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -62,6 +62,7 @@ async function sb(path: string, init: RequestInit = {}) {
 
 /** 单车某天 */
 async function fetchOil(vin: string, date: string) {
+  if (!DF_TOKEN) return { ok: false, reason: '服务端未配置 DONGFENG_TOKEN' }
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT)
   try {

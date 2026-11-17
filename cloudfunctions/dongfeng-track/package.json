@@ -1,0 +1,9 @@
+{
+  "name": "dongfeng-track",
+  "version": "1.0.0",
+  "description": "东风车联网轨迹/能耗中转网关：Token 只存在于服务端环境变量",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.18.3"
+  }
+}

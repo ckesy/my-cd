@@ -29,7 +29,12 @@ try {
 }
 
 const DF_TRACK_URL = 'https://dfcvyl.dfcv.com.cn/api/admin/openapi/api/track/history'
-const DF_TOKEN = process.env.DONGFENG_TOKEN || 'c40c7311ff604a598b9fb791a63e9deb'
+/* ⚠️ Token 只从云函数环境变量读取，代码中不再保留任何明文兜底。 */
+const DF_TOKEN = String(process.env.DONGFENG_TOKEN || '').trim()
+function requireDfToken() {
+  if (!DF_TOKEN) throw new Error('缺少环境变量 DONGFENG_TOKEN（东风接口 Token 已不再内置）')
+  return DF_TOKEN
+}
 const TIMEOUT = 22000
 const CONCURRENCY = 6
 const MAX_DAYS = 15
@@ -95,7 +100,7 @@ const parseDT = (s) => {
 async function fetchTrack(vin, date) {
   try {
     const qs = new URLSearchParams({
-      token: DF_TOKEN,
+      token: requireDfToken(),
       carId: vin,
       beginTime: `${date} 00:00:00`,
       endTime: `${date} 23:59:59`,

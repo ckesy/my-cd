@@ -227,20 +227,13 @@ export async function fetchCurrentKm(plate) {
   const hit = KM_CACHE.get(plate)
   if (hit && Date.now() - hit.at < KM_TTL) return hit.km
   try {
-    const { resolveVin, fetchTrack } = await import('@/utils/waybillProgress')
+    const { resolveVin, fetchTrackRaw } = await import('@/utils/waybillProgress')
     const vin = await resolveVin(plate)
     if (!vin) return null
     const begin = dayjs().startOf('day').format('YYYY-MM-DD HH:mm:ss')
-    const pts = await fetchTrack(vin, begin)
-    // fetchTrack 只保留经纬度，里程要自己拉一次
-    const { DONGFENG_TRACK_URL, DONGFENG_TOKEN } = await import('@/utils/waybillProgress')
-    const params = new URLSearchParams({
-      token: DONGFENG_TOKEN, carId: vin,
-      beginTime: begin, endTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-    })
-    const res = await fetch(`${DONGFENG_TRACK_URL}?${params.toString()}`)
-    const json = await res.json()
-    if (json.code !== 1 || !Array.isArray(json.data)) return null
+    // 直接取轨迹原始返回：一次请求拿到里程表读数（fetchTrack 只保留经纬度，不够用）
+    const json = await fetchTrackRaw(vin, begin, dayjs().format('YYYY-MM-DD HH:mm:ss'))
+    if (!json || json.code !== 1 || !Array.isArray(json.data)) return null
     const maxM = json.data.reduce((m, p) => Math.max(m, Number(p.mileage) || 0), 0)
     const km = maxM > 0 ? maxM / 1000 : null
     KM_CACHE.set(plate, { km, at: Date.now() })

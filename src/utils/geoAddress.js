@@ -14,7 +14,9 @@
 import AMapLoader from '@amap/amap-jsapi-loader'
 
 /** 与大屏 / 电子围栏同一把 Web 端 key */
-const AMAP_KEY = '273f5c474604b71906674aac159b8f45'
+/* 高德 Key 走环境变量（VITE_AMAP_KEY），代码中不再保留明文。
+   JS API Key 在前端必然公开，安全性靠高德控制台的域名白名单 + 配额告警约束。 */
+const AMAP_KEY = String(import.meta.env.VITE_AMAP_KEY || '').trim()
 const MAX_CACHE = 1500
 const TIMEOUT = 6000
 

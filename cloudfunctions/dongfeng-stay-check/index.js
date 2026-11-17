@@ -5,8 +5,14 @@
 const https = require('https')
 const { URL } = require('url')
 
-const DONGFENG_TOKEN = process.env.DONGFENG_TOKEN || 'c40c7311ff604a598b9fb791a63e9deb'
-const AMAP_WEB_KEY = process.env.AMAP_WEB_KEY || '491d5475803e65c06ba6169bdaf3e1f3'
+/* ⚠️ Token 只从云函数环境变量读取，代码中不再保留任何明文兜底。 */
+const DONGFENG_TOKEN = String(process.env.DONGFENG_TOKEN || '').trim()
+function requireDfToken() {
+  if (!DONGFENG_TOKEN) throw new Error('缺少环境变量 DONGFENG_TOKEN（东风接口 Token 已不再内置）')
+  return DONGFENG_TOKEN
+}
+/* ⚠️ 高德 Web Key 只从云函数环境变量读取，代码中不再保留明文兜底。 */
+const AMAP_WEB_KEY = String(process.env.AMAP_WEB_KEY || '').trim()
 const STOP_API = 'https://dfcvyl.dfcv.com.cn/api/admin/openapi/api/track/stopEvent'
 const HISTORY_API = 'https://dfcvyl.dfcv.com.cn/api/admin/openapi/api/track/history'
 
@@ -190,7 +196,7 @@ async function prepareDistrictBoundaries(fences) {
 // 拉停留事件 / 历史轨迹
 // ============================================================
 async function fetchStopEvents(carId, startTime, endTime) {
-    const qs = `token=${DONGFENG_TOKEN}&carId=${encodeURIComponent(carId)}&beginTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}`
+    const qs = `token=${requireDfToken()}&carId=${encodeURIComponent(carId)}&beginTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}`
     const url = `${STOP_API}?${qs}`
     const res = await httpsGet(url, 15000)
     if (res.code !== 1) throw new Error(res.msg || '东风接口返回非成功')
@@ -198,7 +204,7 @@ async function fetchStopEvents(carId, startTime, endTime) {
 }
 
 async function fetchHistoryTrack(carId, startTime, endTime) {
-    const qs = `token=${DONGFENG_TOKEN}&carId=${encodeURIComponent(carId)}&beginTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}`
+    const qs = `token=${requireDfToken()}&carId=${encodeURIComponent(carId)}&beginTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}`
     const url = `${HISTORY_API}?${qs}`
     const res = await httpsGet(url, 20000)
     if (res.code !== 1) throw new Error(res.msg || '轨迹接口返回非成功')

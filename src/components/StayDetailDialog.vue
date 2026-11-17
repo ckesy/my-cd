@@ -192,7 +192,7 @@ const fmtCoord = (v) => {
 // ============================================================
 // 高德地图加载
 // ============================================================
-const AMAP_KEY = '273f5c474604b71906674aac159b8f45'
+const AMAP_KEY = String(import.meta.env.VITE_AMAP_KEY || '').trim()
 let amapPromise = null
 const loadAMap = () => {
   if (amapPromise) return amapPromise

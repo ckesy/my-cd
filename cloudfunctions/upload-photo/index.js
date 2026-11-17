@@ -84,28 +84,65 @@ function parseBody(event) {
   return event
 }
 
+/* ============================================================
+   路径白名单
+   ------------------------------------------------------------
+   此前任何调用方都能对桶内**任意路径**签发上传/下载地址，等于把整个桶交出去：
+     · signPut 可覆盖他人文件、写入钓鱼 HTML（桶若开静态托管）
+     · signGet 可读取桶内任何非业务对象
+   这里加两道闸：限定前缀 + 阻断路径穿越。
+   ⚠️ 仍属「弱防护」：signGet 可读 reports/ 下任意 key。要根治需按登录会话
+      校验 key 归属，属后续独立改造（见安全整改清单 A4 备注）。
+   ============================================================ */
+
+const ALLOWED_PREFIXES = ['reports/']
+const KEY_MAX_LEN = 180
+
+function normalizeKey(raw) {
+  const key = String(raw == null ? '' : raw).trim().replace(/^\/+/, '')
+  if (!key) return { ok: false, error: '缺少 key/path' }
+  if (key.length > KEY_MAX_LEN) return { ok: false, error: 'path 太长' }
+  if (key.includes('..') || key.includes('\\') || key.includes('\u0000')) {
+    return { ok: false, error: 'path 含非法字符' }
+  }
+  if (!ALLOWED_PREFIXES.some((p) => key.startsWith(p))) {
+    return { ok: false, error: 'path 不在允许目录内（仅 reports/）' }
+  }
+  return { ok: true, key }
+}
+
 exports.main = async (event) => {
   try {
     const body = parseBody(event)
     const action = String(body.action || 'signPut')
 
     if (action === 'signPut') {
-      const key = String(body.path || '').replace(/^\/+/, '')
-      if (!key) return { ok: false, error: '缺少 path' }
-      if (key.length > 180) return { ok: false, error: 'path 太长' }
+      const parsed = normalizeKey(body.path)
+      if (!parsed.ok) return { ok: false, error: parsed.error }
+      const key = parsed.key
       const url = await signUrl(key, 'PUT', 600)
       if (!url) return { ok: false, error: '签名失败' }
       return { ok: true, key, url, bucket: BUCKET, region: REGION }
     }
 
     if (action === 'signGet') {
-      const keys = Array.isArray(body.keys) ? body.keys.filter(Boolean).slice(0, 20) : []
-      if (!keys.length) return { ok: false, error: '缺少 keys' }
+      const raw = Array.isArray(body.keys) ? body.keys.filter(Boolean).slice(0, 20) : []
+      if (!raw.length) return { ok: false, error: '缺少 keys' }
       const urls = {}
-      for (let i = 0; i < keys.length; i++) {
-        urls[keys[i]] = await signUrl(String(keys[i]), 'GET', 3600)
+      const rejected = []
+      for (let i = 0; i < raw.length; i++) {
+        const parsed = normalizeKey(raw[i])
+        if (!parsed.ok) {
+          rejected.push(String(raw[i]))
+          continue
+        }
+        /* 返回结构沿用原始 key，前端取值逻辑不用改 */
+        urls[raw[i]] = await signUrl(parsed.key, 'GET', 3600)
       }
-      return { ok: true, urls }
+      if (!Object.keys(urls).length) {
+        return { ok: false, error: '所有 key 都不在允许目录内', rejected }
+      }
+      return { ok: true, urls, ...(rejected.length ? { rejected } : {}) }
     }
 
     return { ok: false, error: '未知 action：' + action }

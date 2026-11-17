@@ -21,12 +21,7 @@
  *   取 `track/history` 当天最后一个点的 mileage（单位 米），÷1000 → km
  * ============================================================
  */
-import { DONGFENG_TOKEN } from './waybillProgress'
-
-export const DONGFENG_OIL_URL =
-  'https://dfcvyl.dfcv.com.cn/api/admin/openapi/api/track/tripAnalysisOil'
-export const DONGFENG_TRACK_URL =
-  'https://dfcvyl.dfcv.com.cn/api/admin/openapi/api/track/history'
+import { callDongfengGateway, fetchTrackRaw } from './waybillProgress'
 
 const OIL_TIMEOUT = 25000
 const TRACK_TIMEOUT = 20000
@@ -45,33 +40,15 @@ const odoCache = new Map()
 export async function fetchTripOil(vin, startTime, endTime) {
   if (!vin) return { ok: false, reason: '缺少 VIN' }
 
-  const qs = new URLSearchParams({
-    token: DONGFENG_TOKEN,
-    carId: vin,
-    startTime,
-    endTime,
-  })
-
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), OIL_TIMEOUT)
   try {
-    const res = await fetch(`${DONGFENG_OIL_URL}?${qs.toString()}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-      signal: controller.signal,
-    })
-    if (!res.ok) return { ok: false, reason: `HTTP ${res.status}` }
-    const json = await res.json()
-    if (json.code !== 1 || !json.data) {
-      return { ok: false, reason: json.msg || '无数据' }
+    const json = await callDongfengGateway({ action: 'oil', vin, startTime, endTime }, OIL_TIMEOUT)
+    if (!json || json.code !== 1 || !json.data) {
+      return { ok: false, reason: (json && json.msg) || '无数据' }
     }
     return { ok: true, data: json.data }
   } catch (err) {
     const reason = err.name === 'AbortError' ? '请求超时（25s）' : err.message
     return { ok: false, reason }
-  } finally {
-    clearTimeout(timer)
   }
 }
 
@@ -89,22 +66,9 @@ export async function fetchOdometerKm(vin, dateStr, force = false) {
   const hit = odoCache.get(key)
   if (!force && hit && Date.now() - hit.at < ODO_TTL) return hit.km
 
-  const params = new URLSearchParams({
-    token: DONGFENG_TOKEN,
-    carId: vin,
-    beginTime: `${dateStr} 00:00:00`,
-    endTime: `${dateStr} 23:59:59`,
-  })
-
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), TRACK_TIMEOUT)
   try {
-    const res = await fetch(`${DONGFENG_TRACK_URL}?${params.toString()}`, {
-      signal: controller.signal,
-    })
-    if (!res.ok) return null
-    const json = await res.json()
-    if (json.code !== 1 || !Array.isArray(json.data) || !json.data.length) return null
+    const json = await fetchTrackRaw(vin, `${dateStr} 00:00:00`, `${dateStr} 23:59:59`, TRACK_TIMEOUT)
+    if (!json || json.code !== 1 || !Array.isArray(json.data) || !json.data.length) return null
 
     let maxMeter = 0
     json.data.forEach((p) => {
@@ -119,7 +83,5 @@ export async function fetchOdometerKm(vin, dateStr, force = false) {
   } catch (err) {
     console.warn(`[运行报表] 累计里程获取失败 ${vin}：`, err.message)
     return null
-  } finally {
-    clearTimeout(timer)
   }
 }

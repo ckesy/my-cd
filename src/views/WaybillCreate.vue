@@ -910,7 +910,7 @@ import { parseLngLat } from '@/utils/waybillProgress'
 import AddEleFenceDialog from '@/components/AddEleFenceDialog.vue'
 
 /* 高德 JS API Key（与 FullMap / RouteFormDialog 一致） */
-const AMAP_KEY = '273f5c474604b71906674aac159b8f45'
+const AMAP_KEY = String(import.meta.env.VITE_AMAP_KEY || '').trim()
 
 const router = useRouter()
 const route = useRoute()

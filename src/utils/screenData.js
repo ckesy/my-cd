@@ -15,7 +15,7 @@
  */
 import dayjs from 'dayjs'
 import { supabase } from './supabase'
-import { DONGFENG_TOKEN, DONGFENG_TRACK_URL, fetchRealtime } from './waybillProgress'
+import { fetchTrackRaw, fetchRealtime } from './waybillProgress'
 import { fetchDailyStats, aggregate, rowToStat } from './opStats'
 import { moduleFlags, approvalState } from './modules'
 
@@ -163,20 +163,10 @@ async function fetchDayMileage(vin, dateStr) {
   const hit = mileCache.get(key)
   if (hit && Date.now() - hit.at < MILE_TTL) return hit.km
 
-  const params = new URLSearchParams({
-    token: DONGFENG_TOKEN,
-    carId: vin,
-    beginTime: `${dateStr} 00:00:00`,
-    endTime: `${dateStr} 23:59:59`,
-  })
-  const ac = new AbortController()
-  const timer = setTimeout(() => ac.abort(), MILE_TIMEOUT)
   try {
-    const res = await fetch(`${DONGFENG_TRACK_URL}?${params.toString()}`, { signal: ac.signal })
+    const json = await fetchTrackRaw(vin, `${dateStr} 00:00:00`, `${dateStr} 23:59:59`, MILE_TIMEOUT)
     /* ⭐ 失败也要落缓存（值 null）：否则每轮刷新都会重打一遍超时的车 */
-    if (!res.ok) { mileCache.set(key, { km: null, at: Date.now() }); return null }
-    const json = await res.json()
-    if (json.code !== 1 || !Array.isArray(json.data) || json.data.length < 2) {
+    if (!json || json.code !== 1 || !Array.isArray(json.data) || json.data.length < 2) {
       mileCache.set(key, { km: null, at: Date.now() })
       return null
     }
@@ -191,8 +181,6 @@ async function fetchDayMileage(vin, dateStr) {
     return val
   } catch (e) {
     return null
-  } finally {
-    clearTimeout(timer)
   }
 }
 

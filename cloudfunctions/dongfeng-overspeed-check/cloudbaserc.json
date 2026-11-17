@@ -1,12 +1,12 @@
 {
-  "envId": "YOUR_ENV_ID",
+  "envId": "wuxian-token-d0guymjkpadcd1f22",
   "functionRoot": "./",
   "functions": [
     {
-      "name": "test-scf-nodejs-helloworld",
+      "name": "dongfeng-overspeed-check",
       "runtime": "Nodejs18.15",
       "handler": "index.main",
-      "timeout": 10,
+      "timeout": 30,
       "memorySize": 256,
       "installDependency": true,
       "dir": "."

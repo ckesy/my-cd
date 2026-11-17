@@ -464,7 +464,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue', 'success'])
 
-const AMAP_KEY = '273f5c474604b71906674aac159b8f45'
+const AMAP_KEY = String(import.meta.env.VITE_AMAP_KEY || '').trim()
 
 // ============================================================
 // 方案配色

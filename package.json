@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/check-secrets.mjs",
     "build": "vite build",
+    "build:obf": "OBFUSCATE=1 vite build",
+    "check:secrets": "node scripts/check-secrets.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -24,6 +27,7 @@
   "devDependencies": {
     "@cloudbase/node-sdk": "^3.18.3",
     "@vitejs/plugin-vue": "^6.0.6",
+    "javascript-obfuscator": "^5.10.1",
     "vite": "^8.0.12"
   }
 }

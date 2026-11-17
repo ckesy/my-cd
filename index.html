@@ -11,10 +11,12 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
   <title>东风车队管理平台</title>
   
-  <!-- 高德地图安全密钥配置（必须在任何 JS 代码之前） -->
+  <!-- 高德地图安全密钥配置（必须在任何 JS 代码之前）
+       值由 Vite 在构建时从 .env 的 VITE_AMAP_SECURITY_CODE 注入，
+       源码与仓库中不再出现明文。 -->
   <script type="text/javascript">
     window._AMapSecurityConfig = {
-      securityJsCode: '3885fd4bf9abda7eeda984c2bfe3c9de'
+      securityJsCode: '%VITE_AMAP_SECURITY_CODE%'
     }
   </script>
 </head>

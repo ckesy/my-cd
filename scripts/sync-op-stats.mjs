@@ -23,7 +23,12 @@ const require = createRequire(import.meta.url)
 const tcb = require('@cloudbase/node-sdk')
 
 const DF_URL = 'https://dfcvyl.dfcv.com.cn/api/admin/openapi/api/track/tripAnalysisOil'
-const DF_TOKEN = process.env.DONGFENG_TOKEN || 'c40c7311ff604a598b9fb791a63e9deb'
+/* ⚠️ Token 只从环境变量读取，代码中不再保留明文兜底。 */
+const DF_TOKEN = String(process.env.DONGFENG_TOKEN || '').trim()
+if (!DF_TOKEN) {
+  console.error('[sync-op-stats] 缺少环境变量 DONGFENG_TOKEN，终止执行')
+  process.exit(1)
+}
 const ENV_ID = process.env.TCB_ENV || 'wuxian-token-d0guymjkpadcd1f22'
 const CONCURRENCY = 5
 const FETCH_TIMEOUT = 25000

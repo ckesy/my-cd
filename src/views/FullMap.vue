@@ -378,7 +378,7 @@ import { supabase } from '@/utils/supabase'
 import dayjs from 'dayjs'
 import { loadVehicleTrip, computeProgress, traveledMetersSince } from '@/utils/waybillProgress'
 
-const AMAP_KEY = '273f5c474604b71906674aac159b8f45'
+const AMAP_KEY = String(import.meta.env.VITE_AMAP_KEY || '').trim()
 const DONGFENG_API_URL = 'https://wuxian-token-d0guymjkpadcd1f22-1447716425.ap-shanghai.app.tcloudbase.com/dongfeng-lostlocation'
 
 /* ⭐ 2026-10-24：车多时拉实时位置太慢，并发 15 → 24。

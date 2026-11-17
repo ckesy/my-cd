@@ -239,7 +239,8 @@ import { fetchRealtime } from '@/utils/waybillProgress'
 import { fetchTripOil, fetchOdometerKm } from '@/utils/dongfengReport'
 import { fetchDailyStats, aggregate } from '@/utils/opStats'
 
-const AMAP_KEY = '273f5c474604b71906674aac159b8f45'
+/* 高德 Key 走环境变量（VITE_AMAP_KEY），不再硬编码 */
+const AMAP_KEY = String(import.meta.env.VITE_AMAP_KEY || '').trim()
 const CONCURRENCY = 8
 
 // ============================================================
