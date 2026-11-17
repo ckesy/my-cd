@@ -342,8 +342,14 @@ const radarWeak = computed(() => {
   return { name: axes[i], value: v[i] }
 })
 
-/* 洞察里把数字加粗，读起来更有重点 */
-const highlight = (txt) => String(txt || '').replace(/(\d+(?:\.\d+)?%?)/g, '<b>$1</b>')
+/* 洞察里把数字加粗，读起来更有重点。
+   ⚠️ 因为走 v-html，必须先转义 HTML：否则文本里出现 <img onerror=...> 会直接执行。 */
+const escapeHtml = (s) =>
+  String(s ?? '').replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+  )
+const highlight = (txt) => escapeHtml(txt).replace(/(\d+(?:\.\d+)?%?)/g, '<b>$1</b>')
 
 // ---------------- 图表 ----------------
 /* ⭐ 折线轴不做 0 基线：电耗都在 125~140 之间，从 0 起就是一条直线，看不出波动 */

@@ -109,7 +109,9 @@ const handleLogin = async () => {
       }
     }
 
-    console.log('[登录调试] 查到用户:', userData)
+    /* ⚠️ 只打非敏感字段：userData 来自 users 表 select('*')，含 password 列，
+       整个对象打印等于把用户密码明文写进浏览器控制台（投屏/录屏/远程协助都会泄露） */
+    console.log('[登录] 查到用户:', userData.id, userData.account, '| status =', userData.status)
 
     if (!userData) {
       ElMessage.error('账号或密码不正确')
@@ -121,6 +123,12 @@ const handleLogin = async () => {
       ElMessage.error('账号或密码不正确')
       return
     }
+
+    /* ⭐ 校验完立即从内存丢弃密码。
+       users 表用 select('*') 查，password 本来就会随响应回到浏览器（Network 面板可见）；
+       这里把它删掉，后续无论打日志、JSON.stringify 还是写入 localStorage 都不会再带上它。
+       ⚠️ 根治要靠服务端校验密码（云函数登录），属架构级改造，暂不做。 */
+    delete userData.password
 
     // 状态校验
     if (Number(userData.status) !== 1) {

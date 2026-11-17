@@ -119,6 +119,11 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
+    /* 生产包剔除调试日志：保留 console.error / warn，线上排障还要用 */
+    esbuild: {
+      pure: ['console.log', 'console.debug', 'console.info'],
+      drop: ['debugger'],
+    },
     build: {
       /* 混淆后 sourcemap 无意义且会泄露结构，统一关闭 */
       sourcemap: false,

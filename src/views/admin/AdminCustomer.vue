@@ -189,6 +189,23 @@ const confirmDesc = computed(() => {
   }
 })
 
+/* ⚠️ 客户名来自用户输入，走 v-html 前必须转义，否则名字里带 HTML 标签会执行 */
+const escapeHtml = (s) =>
+  String(s ?? '').replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+  )
+
+const confirmDescHtml = computed(() => {
+  if (!confirmRow.value) return ''
+  const name = escapeHtml(confirmRow.value.name)
+  const tpl =
+    confirmType.value === 'disable'
+      ? `停用后「${name}」将无法登录客户端，车辆数据仍会保留。`
+      : `启用后「${name}」可以正常登录客户端。`
+  return tpl.replace(`「${name}」`, `<b>「${name}」</b>`)
+})
+
 const confirmOkText = computed(() => {
   return confirmType.value === 'disable' ? '确定停用' : '确定启用'
 })
@@ -1802,9 +1819,7 @@ watch(viewMode, async (val) => {
             </div>
 
             <h3 class="confirm-title">{{ confirmTitle }}</h3>
-            <p class="confirm-desc"
-              v-html="confirmDesc.replace(`「${confirmRow?.name}」`, `<b>「${confirmRow?.name}」</b>`)">
-            </p>
+            <p class="confirm-desc" v-html="confirmDescHtml"></p>
 
             <div class="confirm-actions">
               <button class="confirm-btn cancel" @click="closeConfirm">取消</button>
