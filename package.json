@@ -9,6 +9,8 @@
     "build": "vite build",
     "build:obf": "OBFUSCATE=1 vite build",
     "check:secrets": "node scripts/check-secrets.mjs",
+    "verify:deploy": "node scripts/verify-deploy.mjs",
+    "deploy": "npm run build && npx tcb hosting deploy dist --concurrency 10 && node scripts/verify-deploy.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
