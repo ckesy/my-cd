@@ -3339,7 +3339,7 @@ onBeforeUnmount(() => {
   height: 28px;
   padding: 0 10px;
   border-radius: 8px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   color: var(--ink-2);
   font-size: 11.5px;
@@ -3385,7 +3385,7 @@ onBeforeUnmount(() => {
   height: 22px;
   padding: 0 8px;
   border-radius: 999px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   color: var(--ink-3);
   font-size: 10.5px;
@@ -3698,7 +3698,7 @@ onBeforeUnmount(() => {
 .vrow.tone-load::after { background: #D97706; }
 .vrow.tone-done::after { background: #16A34A; }
 
-.vrow.has-task .vplate { color: #0B1220; }
+.vrow.has-task .vplate { color: var(--ink); }
 
 .vrow.has-task {
   background: linear-gradient(90deg, rgba(79, 70, 229, .028), rgba(79, 70, 229, 0) 82%);
@@ -4299,7 +4299,7 @@ onBeforeUnmount(() => {
 .amap-popup-value { color: var(--ink); font-weight: 600; text-align: right; word-break: break-all; flex: 1; }
 .amap-popup-value.mono { font-family: 'Courier New', monospace; font-size: 11px; }
 .amap-popup-actions { display: flex; gap: 8px; margin-top: 12px; }
-.amap-popup-btn { flex: 1; padding: 7px 0; border-radius: 16px; font-size: 11.5px; font-weight: 700; cursor: pointer; transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); background: var(--surface-hover); color: var(--ink-2); border: 1px solid #E2E8F0; outline: none; font-family: inherit; position: relative; overflow: hidden; }
+.amap-popup-btn { flex: 1; padding: 7px 0; border-radius: 16px; font-size: 11.5px; font-weight: 700; cursor: pointer; transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); background: var(--surface-hover); color: var(--ink-2); border: 1px solid var(--card-edge); outline: none; font-family: inherit; position: relative; overflow: hidden; }
 .amap-popup-btn::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(var(--brand-rgb), 0.18), transparent); transition: left 0.5s ease; }
 .amap-popup-btn:hover::after { left: 100%; }
 .amap-popup-btn:hover { background: var(--brand-primary-light); border-color: #FCA5A5; color: var(--brand-primary); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(var(--brand-rgb), 0.15); }
@@ -4757,7 +4757,7 @@ onBeforeUnmount(() => {
   width: 28px;
   height: 26px;
   border-radius: 7px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   color: var(--ink-3);
   font-size: 13px;

@@ -161,7 +161,31 @@ const enterClient = async () => {
     isSubAccount: false,
   }
 
+  /* ⭐ 兜底：当前是管理员、但没记下「真正的登录者」→ 先补上。
+     之后 currentUser 会被换成客户，Dashboard 靠 originalUser 判断要不要
+     显示「返回入口」。少了它，管理员进来就出不去了。 */
+  try {
+    const prevUser = JSON.parse(localStorage.getItem('currentUser') || 'null')
+    if (!localStorage.getItem('originalUser') && prevUser && prevUser.role === 'admin') {
+      localStorage.setItem('originalUser', JSON.stringify(prevUser))
+    }
+  } catch { /* 读不到就跳过 */ }
+
   localStorage.setItem('currentUser', JSON.stringify(account))
+
+  /* ⭐⭐ 换账号了就必须换皮肤。
+     这里是 SPA 内 router.push，页面不会重新加载，main.js 里的 applyTheme 不会再跑一遍，
+     所以「管理员设置的主题」会一路带到每个客户身上 —— 必须在这里手动切。 */
+  try {
+    const themeMod = await import('@/utils/theme')
+    const { supabase: sb } = await import('@/utils/supabase')
+    const { applyTheme, readLocalTheme, loadRemoteTheme, accountOf, themeUserOf, DEFAULT_THEME } = themeMod
+    applyTheme(readLocalTheme(accountOf(themeUserOf(account))) || DEFAULT_THEME)
+    const remote = await loadRemoteTheme(sb, themeUserOf(account))
+    if (remote) applyTheme(remote)
+  } catch (e) {
+    console.error('[进入客户] 主题切换失败', e)
+  }
 
   // ⭐ 4. 记录最近进入
   saveRecentCustomer(customer.id)
@@ -864,7 +888,7 @@ const goLogout = () => {
 .portal-select-popper {
   border-radius: 10px !important;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.15) !important;
-  border: 1px solid #E2E8F0 !important;
+  border: 1px solid var(--card-edge) !important;
   padding: 6px !important;
 }
 .portal-select-popper .el-select-dropdown__item {

@@ -17,20 +17,25 @@
       try {
         var saved = ''
         var u = null
+        var orig = null
         try { u = JSON.parse(localStorage.getItem('currentUser') || 'null') } catch (e) { u = null }
-        if (u && u.account) saved = localStorage.getItem('app_theme:' + u.account) || ''
-        if (!saved) saved = localStorage.getItem('app_theme') || ''
+        try { orig = JSON.parse(localStorage.getItem('originalUser') || 'null') } catch (e) { orig = null }
+        /* ⭐ 管理员代看客户时，皮肤跟管理员（和 utils/theme.js 的 themeUserOf 同口径），
+           否则这里会先按客户账号读、读不到再用默认，首屏闪一下才被 JS 纠正。 */
+        var who = (orig && orig.role === 'admin' && u && u.role === 'customer') ? orig : u
+        var acc = who ? String(who.account || who.phone || '').trim() : ''
+        if (acc) saved = localStorage.getItem('app_theme:' + acc) || ''
         var scheme = saved.indexOf(':') > -1 ? saved.split(':')[0] : 'f'
-        if ('abcdef'.indexOf(scheme) < 0) scheme = 'f'
+        if ('abdef'.indexOf(scheme) < 0) scheme = 'f'
         var bg = {
-          a: '#E9E3D6', b: '#E9EEF5', c: '#0D131F',
+          a: '#E9E3D6', b: '#E9EEF5',
           d: '#E9EDE0', e: '#DFE8D8', f: '#F8FAFC'
         }[scheme]
         var el = document.documentElement
         el.setAttribute('data-scheme', scheme)
         el.style.backgroundColor = bg
         /* 让浏览器原生控件（滚动条、input）也跟着变暗 */
-        el.style.colorScheme = scheme === 'c' ? 'dark' : 'light'
+        el.style.colorScheme = 'light'
       } catch (e) { /* 隐私模式读不到 localStorage，用默认浅色 */ }
     })()
   </script>

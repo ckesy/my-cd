@@ -1613,7 +1613,7 @@ onBeforeUnmount(() => {
 .icon-btn {
   width: 32px; height: 32px;
   display: flex; align-items: center; justify-content: center;
-  border: 1px solid #E2E8F0; background: var(--surface-card);
+  border: 1px solid var(--card-edge); background: var(--surface-card);
   border-radius: 6px; color: var(--ink-3); font-size: 15px;
   cursor: pointer;
   transition: all 0.25s;
@@ -1969,7 +1969,7 @@ onBeforeUnmount(() => {
   transition: all 0.25s;
 }
 .action-btn-footer.small { padding: 6px 14px; font-size: 12.5px; }
-.action-btn-footer.ghost { background: var(--surface-hover); color: var(--ink-2); border: 1px solid #E2E8F0; }
+.action-btn-footer.ghost { background: var(--surface-hover); color: var(--ink-2); border: 1px solid var(--card-edge); }
 .action-btn-footer.ghost:hover { background: #E2E8F0; color: var(--ink); transform: translateY(-2px); }
 .action-btn-footer.primary {
   color: #FFFFFF;

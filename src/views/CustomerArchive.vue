@@ -1697,7 +1697,7 @@ defineExpose({ fetchCustomers })
   padding: 7px 10px;
   border-radius: 6px;
   background: var(--surface-page);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   margin-bottom: 8px;
 }
 
@@ -1813,7 +1813,7 @@ defineExpose({ fetchCustomers })
 }
 
 .btn-ghost {
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   color: var(--ink-3);
   margin-right: 8px;

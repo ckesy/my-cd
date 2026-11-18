@@ -5,7 +5,7 @@ import { supabase } from '@/utils/supabase'
 import {
   THEMES, DEFAULT_THEME, SCHEMES, DEFAULT_SCHEME, applyTheme,
   readLocalTheme, writeLocalTheme, saveRemoteTheme,
-  parseTheme, serializeTheme, findTheme, findScheme,
+  parseTheme, serializeTheme, findTheme, findScheme, accountOf, themeUserOf,
 } from '@/utils/theme'
 
 const props = defineProps({
@@ -34,7 +34,7 @@ watch(visible, (val) => {
     refreshUser()
     /* ⭐ 主题按账号取：同一台电脑换账号登录，各看各的皮肤。
        值是 "版式:配色" 复合串，老数据只有颜色，parseTheme 会按原样版式兜底 */
-    const saved = readLocalTheme(currentUser.value?.account) || DEFAULT_THEME
+    const saved = readLocalTheme(accountOf(themeUserOf(currentUser.value))) || DEFAULT_THEME
     const parsed = parseTheme(saved)
     schemeKey.value = parsed.scheme
     themeKey.value = parsed.color
@@ -60,7 +60,6 @@ const SCHEME_PREVIEW = {
   d: { sider: '#FAF8F1', page: '#E9EDE0', head: '#FAF8F1', tabs: '#F5F3EA', card: '#FFFFFF', line: '#DCDFCE' },
   e: { sider: '#F3F8EF', page: '#DFE8D8', head: '#F4F8EF', tabs: '#EFF4E8', card: '#FFFFFF', line: '#D6E0D1' },
   a: { sider: '#E1D9C9', page: '#E9E3D6', head: '#FAF6EE', tabs: '#F2ECE0', card: '#FFFDF9', line: '#D8CFBD' },
-  c: { sider: '#0A0F17', page: '#0D131F', head: '#121A26', tabs: '#111925', card: '#19222F', line: '#2C3849' },
 }
 
 const schemeList = computed(() => SCHEMES.map((s) => ({ ...s, p: SCHEME_PREVIEW[s.key] || SCHEME_PREVIEW.f })))
@@ -71,8 +70,8 @@ const colorName = computed(() => findTheme(themeKey.value).name)
 async function commitTheme() {
   const val = serializeTheme(schemeKey.value, themeKey.value)
   applyTheme(val)
-  writeLocalTheme(val, currentUser.value?.account)
-  const ok = await saveRemoteTheme(supabase, currentUser.value, val)
+  writeLocalTheme(val, accountOf(themeUserOf(currentUser.value)))
+  const ok = await saveRemoteTheme(supabase, themeUserOf(currentUser.value), val)
   if (ok) ElMessage.success('已保存到当前账号')
   else ElMessage.warning('已应用到当前设备（账号同步未生效，需先执行 users.theme 迁移）')
 }
@@ -663,7 +662,7 @@ const savePassword = async () => {
   padding: 18px 20px;
   background: linear-gradient(120deg, var(--brand-primary-light) 0%, var(--surface-card) 100%);
   border-radius: 12px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   margin-bottom: 18px;
 }
 
@@ -807,7 +806,7 @@ const savePassword = async () => {
   font-weight: 600;
   color: var(--ink-2);
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);

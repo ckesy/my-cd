@@ -2632,7 +2632,7 @@ defineExpose({ isDirty })
   border-radius: 12px;
   padding: 14px 18px 10px 18px;
   margin-bottom: 16px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
@@ -2972,7 +2972,7 @@ defineExpose({ isDirty })
   margin-top: 12px;
   padding: 8px 14px 8px 18px;
   background: linear-gradient(135deg, #FAFBFC, #F1F5F9);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 10px;
   overflow: hidden;
   animation: stripIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -3026,7 +3026,7 @@ defineExpose({ isDirty })
   font-weight: 800;
   color: var(--ink-3);
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   letter-spacing: 0.3px;
   flex-shrink: 0;
 }
@@ -3114,7 +3114,7 @@ defineExpose({ isDirty })
   border-radius: 10px;
   padding: 8px 16px;
   margin-bottom: 8px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .cargo-row:hover {
@@ -3148,7 +3148,7 @@ defineExpose({ isDirty })
   border-radius: 10px;
   padding: 8px 16px;
   margin-bottom: 8px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .assign-card:hover {
@@ -3810,7 +3810,7 @@ defineExpose({ isDirty })
   padding: 2px 8px 2px 3px;
   border-radius: 999px;
   background: var(--surface-page);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   font-size: 11px;
   color: var(--ink-2);
   font-weight: 600;

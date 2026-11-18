@@ -452,7 +452,7 @@ const handleClosed = () => {
   height: 340px;
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-hover);
 }
 .sd-map {
@@ -483,7 +483,7 @@ const handleClosed = () => {
   padding: 8px 12px;
   background: var(--glass-panel);
   border-radius: 8px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   backdrop-filter: blur(8px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   font-size: 11.5px;
@@ -718,7 +718,7 @@ const handleClosed = () => {
   min-width: 280px;
   max-width: 340px;
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 10px;
   cursor: pointer;
   overflow: hidden;
@@ -867,7 +867,7 @@ const handleClosed = () => {
 .sd-btn.ghost {
   background: var(--surface-hover);
   color: var(--ink-2);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
 }
 .sd-btn.ghost:hover {
   background: #E2E8F0;

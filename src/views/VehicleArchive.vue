@@ -1268,7 +1268,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   border-radius: 6px;
   color: var(--ink-3);
@@ -1923,7 +1923,7 @@ onBeforeUnmount(() => {
 .action-btn-footer.ghost {
   background: var(--surface-hover);
   color: var(--ink-2);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
 }
 
 .action-btn-footer.ghost:hover {
@@ -2275,7 +2275,7 @@ body {
 .cert-days { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 2px 0 9px; }
 .cert-days-lb { font-size: 12px; color: var(--ink-3); font-weight: 600; margin-right: 3px; }
 .cert-chip {
-  height: 24px; padding: 0 10px; border-radius: 12px; border: 1px solid #E2E8F0;
+  height: 24px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--card-edge);
   background: var(--surface-card); font-size: 11.5px; font-weight: 700; color: var(--ink-3);
   display: inline-flex; align-items: center; cursor: pointer;
 }

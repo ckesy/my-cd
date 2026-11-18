@@ -2606,7 +2606,7 @@ if (isCustomer) {
   flex-shrink: 0;
   width: 28px;
   height: 28px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   color: var(--ink-3);
   cursor: pointer;

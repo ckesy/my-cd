@@ -1386,7 +1386,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   color: var(--ink-3);
   border-radius: 6px;
@@ -1687,7 +1687,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   border-radius: 6px;
   color: var(--ink-3);

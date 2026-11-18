@@ -822,7 +822,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   border-radius: 8px;
   color: var(--ink-3);
@@ -885,7 +885,7 @@ onBeforeUnmount(() => {
   gap: 8px;
   padding: 3px 10px 3px 8px;
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -918,7 +918,7 @@ onBeforeUnmount(() => {
   color: var(--ink-3);
   font-size: 10.5px;
   font-weight: 700;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   letter-spacing: 0.3px;
 }
 

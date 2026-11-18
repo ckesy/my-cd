@@ -861,7 +861,7 @@ onMounted(fetchList)
   width: 100%;
   height: 32px;
   padding: 0 10px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 6px;
   background: var(--surface-page);
   box-sizing: border-box;

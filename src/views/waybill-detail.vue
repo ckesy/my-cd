@@ -3198,7 +3198,7 @@ onMounted(async () => {
   padding: 12px 18px 10px 18px;
   margin-bottom: 10px;
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
@@ -3219,7 +3219,7 @@ onMounted(async () => {
   border-radius: 12px;
   padding: 14px 18px 10px 18px;
   margin-bottom: 16px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
@@ -3367,7 +3367,7 @@ onMounted(async () => {
   border-radius: 10px;
   padding: 8px 16px;
   margin-bottom: 8px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .cargo-row:hover {
@@ -3392,7 +3392,7 @@ onMounted(async () => {
   border-radius: 10px;
   padding: 8px 16px;
   margin-bottom: 8px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .assign-card:hover {
@@ -3572,7 +3572,7 @@ onMounted(async () => {
   padding: 10px 12px;
   border-radius: 10px;
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   cursor: pointer;
   transition: all 0.25s;
 }
@@ -3648,7 +3648,7 @@ onMounted(async () => {
   border-radius: 12px;
   overflow: hidden;
   background: var(--surface-page);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
 }
 .lg-map { width: 100%; height: 100%; }
 .lg-map-mask {
@@ -3674,7 +3674,7 @@ onMounted(async () => {
   min-width: 220px;
   padding: 10px 12px;
   background: var(--glass-panel);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 10px;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
   z-index: 6;
@@ -3711,7 +3711,7 @@ onMounted(async () => {
   gap: 12px;
   padding: 6px 10px;
   background: var(--glass-panel);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 8px;
   font-size: 11.5px;
   color: var(--ink-3);
@@ -3739,7 +3739,7 @@ onMounted(async () => {
   gap: 10px;
   padding: 6px 10px;
   background: var(--glass-panel);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 8px;
   font-size: 11.5px;
   color: var(--ink-2);
@@ -3755,7 +3755,7 @@ onMounted(async () => {
   flex-direction: column;
   height: 520px;
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -4048,7 +4048,7 @@ onMounted(async () => {
   padding: 12px 16px;
   margin-bottom: 12px;
   background: var(--surface-card);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--card-edge);
   border-left: 3px solid var(--brand-primary);
   border-radius: 12px;
 }
@@ -4093,7 +4093,7 @@ onMounted(async () => {
   gap: 12px;
   padding: 12px 16px 14px 16px;
   background: var(--surface-card);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--card-edge);
   border-radius: 12px;
 }
 /* 多车地图：和右侧「节点时间」面板等高，左右对齐 */
@@ -4109,7 +4109,7 @@ onMounted(async () => {
   gap: 4px;
   padding: 8px 10px 4px 10px;
   background: var(--surface-page);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--card-edge);
   border-radius: 10px;
 }
 .lg-gantt-row {
@@ -4206,7 +4206,7 @@ onMounted(async () => {
   font-size: 11.5px;
   color: var(--ink-2);
   background: var(--surface-card);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--card-edge);
   border-radius: 999px;
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
@@ -4794,7 +4794,7 @@ onMounted(async () => {
 }
 
 .rj-chip {
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-page);
   color: var(--ink-2);
   border-radius: 6px;

@@ -969,7 +969,7 @@ const handleConfirm = () => {
     font-size: 11px;
     color: var(--ink-3);
     background: var(--surface-page);
-    border: 1px solid #E2E8F0;
+    border: 1px solid var(--card-edge);
     padding: 2px 8px;
     border-radius: 6px;
     flex-shrink: 0;

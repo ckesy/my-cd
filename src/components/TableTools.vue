@@ -232,7 +232,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   border-radius: 6px;
   color: var(--ink-3);

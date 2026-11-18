@@ -700,7 +700,7 @@ watch(() => props.modelValue, async (val) => {
 }
 .osd-btn.ghost {
   background: var(--surface-hover); color: var(--ink-2);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
 }
 .osd-btn.ghost:hover {
   background: #E2E8F0; color: var(--ink);

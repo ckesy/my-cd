@@ -1057,7 +1057,7 @@ onMounted(load)
   background: var(--surface-card);
 }
 .dt-foot :deep(.el-button) { flex: 1 1 auto; min-width: 104px; margin: 0; height: 44px; font-size: 14px; border-radius: 10px; padding: 0 14px; }
-.dt-ghost { background: var(--surface-card); border: 1px solid #E2E8F0; color: var(--ink-3); }
+.dt-ghost { background: var(--surface-card); border: 1px solid var(--card-edge); color: var(--ink-3); }
 /* 通过 = 绿 */
 .dt-ok { background: #15803D; border-color: #15803D; color: #fff; font-weight: 700; }
 .dt-ok:hover { background: #166534; border-color: #166534; }

@@ -394,7 +394,7 @@ const drillTo = (trip) => {
 .rtg-hist {
   padding: 12px 16px 14px 16px;
   background: var(--surface-card);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--card-edge);
   border-radius: 12px;
 }
 .rtg-hist-head {
@@ -498,7 +498,7 @@ const drillTo = (trip) => {
 .rtg-main {
   padding: 12px 16px 14px 16px;
   background: var(--surface-card);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--card-edge);
   border-radius: 12px;
 }
 .rtg-main-head {

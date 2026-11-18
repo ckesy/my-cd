@@ -1875,7 +1875,7 @@ watch(viewMode, async (val) => {
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   color: var(--ink-3);
   border-radius: 6px;
@@ -2066,7 +2066,7 @@ watch(viewMode, async (val) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   border-radius: 6px;
   color: var(--ink-3);
@@ -2532,7 +2532,7 @@ watch(viewMode, async (val) => {
 .confirm-btn.cancel {
   background: var(--surface-hover);
   color: var(--ink-2);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
 }
 
 .confirm-btn.cancel:hover {
@@ -2904,7 +2904,7 @@ watch(viewMode, async (val) => {
   padding: 8px 12px;
   border-radius: 8px;
   background: var(--surface-page);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   height: auto !important;
   display: flex;

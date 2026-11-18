@@ -197,7 +197,7 @@ onMounted(loadStats)
   gap: 18px;
   padding: 22px 26px;
   background: linear-gradient(120deg, var(--surface-card) 0%, var(--brand-primary-light) 60%, var(--surface-card) 100%);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 12px;
   overflow: hidden;
   animation: bannerIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -256,7 +256,7 @@ onMounted(loadStats)
   padding: 22px 22px;
   border-radius: 12px;
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
   overflow: hidden;
   opacity: 0;
@@ -453,7 +453,7 @@ onMounted(loadStats)
   padding: 12px 14px;
   border-radius: 10px;
   background: var(--surface-page);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   cursor: default;
   opacity: 0;
   animation: recentIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;

@@ -291,9 +291,24 @@ const isImpersonatingAdmin = computed(() => {
 })
 
 // 👇 返回入口（恢复管理员身份后跳 /portal）
-const goBackToPortal = () => {
+const goBackToPortal = async () => {
   if (originalUser) {
     localStorage.setItem('currentUser', JSON.stringify(originalUser))
+    /* ⚠️ 这里**不能**删 originalUser：它记的是"真正的登录者"，
+       只有退出登录时才该清。删掉之后，下次再进客户就认不出管理员身份，
+       顶栏的「返回入口」按钮会消失（就是"有时候没有"的那个 bug）。 */
+    /* ⭐ 换回管理员 → 皮肤也要换回管理员自己的，
+       否则从客户返回后顶栏还是客户那套颜色 */
+    try {
+      const themeMod = await import('@/utils/theme')
+      const { supabase: sb } = await import('@/utils/supabase')
+      const { applyTheme, readLocalTheme, loadRemoteTheme, accountOf, themeUserOf, DEFAULT_THEME } = themeMod
+      applyTheme(readLocalTheme(accountOf(themeUserOf(originalUser))) || DEFAULT_THEME)
+      const remote = await loadRemoteTheme(sb, themeUserOf(originalUser))
+      if (remote) applyTheme(remote)
+    } catch (e) {
+      console.error('[返回入口] 主题恢复失败', e)
+    }
   }
   router.push('/portal')
 }
@@ -747,7 +762,7 @@ const goLogin = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   border-radius: 8px;
   color: var(--ink-3);
@@ -905,22 +920,14 @@ const goLogin = () => {
 .settings-btn {
   border-color: var(--line);
   color: var(--ink-3);
-}
-
-/* ⭐ b/c 是深色顶栏：白底浅字的按钮在上面会看不见，改成半透明白描边 */
+}/* ⭐ b/c 是深色顶栏：白底浅字的按钮在上面会看不见，改成半透明白描边 */
 html[data-scheme="b"] .settings-btn,
-html[data-scheme="b"] .back-btn,
-html[data-scheme="c"] .settings-btn,
-html[data-scheme="c"] .back-btn {
+html[data-scheme="b"] .back-btn {
   background: rgba(255, 255, 255, .08) !important;
   border-color: rgba(255, 255, 255, .18) !important;
   color: #C6D1E0 !important;
-}
-
-html[data-scheme="b"] .settings-btn:hover,
-html[data-scheme="b"] .back-btn:hover,
-html[data-scheme="c"] .settings-btn:hover,
-html[data-scheme="c"] .back-btn:hover {
+}html[data-scheme="b"] .settings-btn:hover,
+html[data-scheme="b"] .back-btn:hover {
   background: rgba(255, 255, 255, .14) !important;
   border-color: rgba(255, 255, 255, .32) !important;
   color: #FFFFFF !important;
@@ -1403,7 +1410,7 @@ h2 {
 <!-- ===== 全局样式 ===== -->
 <style>
 .settings-popover {
-  border: 1px solid #E2E8F0 !important;
+  border: 1px solid var(--card-edge) !important;
   border-radius: 8px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
   padding: 6px 12px !important;
@@ -1438,7 +1445,7 @@ h2 {
 
 .light-panel {
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 12px;
   padding: 18px 20px;
   box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);

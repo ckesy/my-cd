@@ -505,7 +505,7 @@ const submit = () => (props.mode === 'revoke' ? submitRevoke() : submitPay())
 .pd-chip {
   padding: 5px 12px;
   border-radius: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   font-size: 12px;
   color: var(--ink-2);

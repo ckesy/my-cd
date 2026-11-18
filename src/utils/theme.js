@@ -101,7 +101,6 @@ export const SCHEMES = [
   { key: 'd', name: '晨雾', tag: '自然系', desc: '绿灰天光 + 大圆角 + 胶囊控件' },
   { key: 'e', name: '林间', tag: '自然系', desc: '绿得更沉一档' },
   { key: 'a', name: '暖灰纸感', tag: '纸感', desc: '米色底，最不刺眼' },
-  { key: 'c', name: '全深色', tag: '夜间', desc: '整体转为暗色' },
 ]
 
 export const DEFAULT_SCHEME = 'f'
@@ -134,18 +133,35 @@ export const serializeTheme = (scheme, color) => `${scheme}:${color}`
 /* ⭐ 2026-10-24：主题改成**跟账号走**。
    以前存的是 app_theme 一个全局 key，同一个浏览器里换个账号登录还是上一个人的皮肤，
    看起来像"改皮肤影响到了别人"。现在 key 带上账号：app_theme:15035660020 */
+/* ⚠️ account 为空时**绝不能**退到全局 key —— 那会让"管理员设一次，
+   所有没设过的账号全跟着变"。空账号写进独立的 __anon__ 桶。 */
+const ANON_KEY = `${STORAGE_KEY}:__anon__`
 const keyOf = (account) => {
   const a = String(account || '').trim()
-  return a ? `${STORAGE_KEY}:${a}` : STORAGE_KEY
+  return a ? `${STORAGE_KEY}:${a}` : ANON_KEY
 }
 
-/** 本地缓存（按账号；没传账号时退回老 key，保证刷新不闪） */
+/**
+ * 本地缓存（严格按账号）。
+ * ⭐ 2026-11-18：去掉了「读不到就读全局 app_theme」的兜底。
+ *   那条兜底是这次"管理员换肤后每个客户端都跟着变"的元凶：
+ *   管理员账号 account 为空时把主题写进了全局 key，
+ *   其他账号自己没有记录 → 全部命中兜底 → 全都变成管理员那套。
+ *   现在全局 key 只做**一次性迁移**，迁完立即删除，不再污染其他账号。
+ */
 export function readLocalTheme(account) {
   try {
-    const hit = localStorage.getItem(keyOf(account))
+    const a = String(account || '').trim()
+    if (!a) return ''
+    const hit = localStorage.getItem(keyOf(a))
     if (hit) return hit
-    /* 老数据迁移：只有全局 key 时先用一次，用户动一次皮肤就会写到自己的 key 下 */
-    return localStorage.getItem(STORAGE_KEY) || ''
+    /* ⚠️ 老版本的全局 key 一律**直接清掉，不做迁移**：
+       它可能正是管理员写进去的那一份，谁先登录谁就把它继承走 ——
+       宁可让那个人回一次默认皮肤，也不能让一个设置到处传染。 */
+    if (localStorage.getItem(STORAGE_KEY) !== null) {
+      localStorage.removeItem(STORAGE_KEY)
+    }
+    return ''
   } catch {
     return ''
   }
@@ -153,14 +169,36 @@ export function readLocalTheme(account) {
 
 export function writeLocalTheme(key, account) {
   try {
+    /* 没有账号标识就不写：宁可用默认皮肤，也不能写全局去影响别人 */
+    if (!String(account || '').trim()) return
     localStorage.setItem(keyOf(account), key)
   } catch {
     /* 隐私模式忽略 */
   }
 }
 
-/** 当前账号标识：**不再取 masterAccount** —— 同租户的账号各存各的 */
-function accountOf(user) {
+/**
+ * 「皮肤归谁」—— 决定读/写哪一份主题。
+ * ------------------------------------------------------------
+ * ⭐⭐ 管理员代看客户时（originalUser 是 admin、currentUser 是 customer），
+ *   **皮肤仍然跟管理员走**。理由：
+ *   - 皮肤是"这台电脑前坐的人"的偏好，不是"被查看的数据"的属性；
+ *   - 管理员要轮着进十几个客户，每进一个换一套色，界面一直在跳，
+ *     反而看不清业务数据（用户原话：「皮肤不应该同步」）。
+ *   客户自己设的皮肤存在客户账号下，只有客户本人登录时才生效。
+ */
+export function themeUserOf(user) {
+  try {
+    const orig = JSON.parse(localStorage.getItem('originalUser') || 'null')
+    if (orig && orig.role === 'admin' && user && user.role === 'customer') return orig
+  } catch { /* 读不到就按当前用户 */ }
+  return user
+}
+
+/** 当前账号标识：**不再取 masterAccount** —— 同租户的账号各存各的。
+ *  ⭐ 必须 export：组件里以前直接取 user.account，管理员账号常常只有 phone，
+ *  取到空串就会把主题写到全局 key 上。统一走这里。 */
+export function accountOf(user) {
   if (!user) return ''
   return String(user.account || user.phone || '').trim()
 }
@@ -195,8 +233,7 @@ export function applyTheme(value) {
   const { scheme, color } = parseTheme(value)
   const t = findTheme(color)
 
-  /* ⭐ 深色版式下品牌色必须提亮，否则藏青/墨绿这类深色糊进背景里 */
-  const main = scheme === 'c' ? mixWhite(t.main, 0.26) : t.main
+  const main = t.main
 
   const el = document.documentElement
   /* ⭐ 换肤时先关掉所有过渡，否则会看到"半深半浅"的中间帧（用户会当成闪屏） */
@@ -205,11 +242,8 @@ export function applyTheme(value) {
   el.setAttribute('data-theme', t.key)
   el.style.setProperty('--brand-primary', main)
   el.style.setProperty('--brand-rgb', hexToRgb(main))
-  el.style.setProperty('--brand-primary-hover', scheme === 'c' ? mixWhite(t.hover, 0.2) : t.hover)
-  /* 深色下「品牌浅底」必须变深，否则所有用它当背景的地方（标签、选中行、
-     日期框）都会是一块浅粉 */
-  el.style.setProperty('--brand-primary-light',
-    scheme === 'c' ? `rgba(${hexToRgb(main)}, .16)` : t.light)
+  el.style.setProperty('--brand-primary-hover', t.hover)
+  el.style.setProperty('--brand-primary-light', t.light)
   el.style.setProperty('--brand-primary-dark', t.dark)
   /* 两帧之后再放开过渡，确保新配色已经落绘 */
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove('theme-switching')))

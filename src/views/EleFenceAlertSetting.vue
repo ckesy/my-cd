@@ -1522,7 +1522,7 @@ onMounted(async () => {
   background: var(--surface-card);
   border-radius: 12px;
   padding: 12px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
@@ -1996,7 +1996,7 @@ onMounted(async () => {
 .fence-picker-popper.el-popover {
   padding: 0 !important;
   border-radius: 12px !important;
-  border: 1px solid #E2E8F0 !important;
+  border: 1px solid var(--card-edge) !important;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12) !important;
   overflow: hidden;
   background: var(--surface-card);

@@ -630,7 +630,7 @@ function onClosed() {
   font-size: 12px;
   color: var(--ink-2);
   background: var(--surface-page);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--card-edge);
   border-radius: 6px;
   padding: 4px 10px;
   cursor: pointer;
@@ -714,7 +714,7 @@ function onClosed() {
   height: 32px;
   padding: 0 15px;
   border-radius: 7px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   color: var(--ink-2);
   font-size: 12.5px;

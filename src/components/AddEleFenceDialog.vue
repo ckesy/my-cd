@@ -1696,7 +1696,7 @@ const submitForm = (isContinue) => {
   justify-content: center;
   gap: 6px;
   padding: 6px 14px 6px 8px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 8px;
   background: var(--surface-card);
   cursor: pointer;

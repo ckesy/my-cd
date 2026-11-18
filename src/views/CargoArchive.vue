@@ -1301,7 +1301,7 @@ defineExpose({ fetchCargos })
 }
 
 .btn-ghost {
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   color: var(--ink-3);
   margin-right: 8px;

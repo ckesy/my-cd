@@ -1450,7 +1450,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 }
 
 .back {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   color: var(--ink-2);
   font-family: inherit;
@@ -1495,7 +1495,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEsc))
 .month-nav {
   display: inline-flex;
   align-items: center;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--card-edge);
   border-radius: 8px;
   overflow: hidden;
   height: 34px;

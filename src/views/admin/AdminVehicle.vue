@@ -1337,7 +1337,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   border-radius: 6px;
   color: var(--ink-3);
@@ -1606,7 +1606,7 @@ onBeforeUnmount(() => {
 .action-btn-footer.ghost {
   background: var(--surface-hover);
   color: var(--ink-2);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
 }
 
 .action-btn-footer.ghost:hover:not(:disabled) {
@@ -1667,7 +1667,7 @@ onBeforeUnmount(() => {
   margin-top: 12px;
   padding: 10px 14px;
   background: var(--surface-page);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 8px;
   max-height: 120px;
   overflow-y: auto;
@@ -1691,7 +1691,7 @@ onBeforeUnmount(() => {
   padding: 3px 10px;
   border-radius: 6px;
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   color: var(--ink-2);
   font-size: 12px;
   font-weight: 600;
@@ -1710,7 +1710,7 @@ onBeforeUnmount(() => {
   padding: 12px 14px;
   border-radius: 8px;
   background: var(--surface-page);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   transition: all 0.3s;
 }
 
@@ -1794,7 +1794,7 @@ onBeforeUnmount(() => {
   padding: 7px 10px;
   border-radius: 6px;
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   font-size: 13px;
   transition: all 0.25s;
 }

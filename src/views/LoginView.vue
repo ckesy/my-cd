@@ -453,13 +453,18 @@ const handleLogin = async () => {
 
     /* ⭐ 换账号 → 立刻切到该账号自己的皮肤（同设备多账号互不影响） */
     try {
-      const { applyTheme, readLocalTheme, DEFAULT_THEME, loadRemoteTheme } = await import('@/utils/theme')
+      /* ⚠️ 动态 import 必须把用到的成员全部解构出来。
+         之前漏了 accountOf，这里抛 ReferenceError 被 catch 吞掉，
+         结果主题压根没切 —— 新账号进来看到的还是上一个人的皮肤。 */
+      const themeMod = await import('@/utils/theme')
       const { supabase } = await import('@/utils/supabase')
-      applyTheme(readLocalTheme(account.account) || DEFAULT_THEME)
-      const remote = await loadRemoteTheme(supabase, account)
+      const { applyTheme, readLocalTheme, loadRemoteTheme, accountOf, themeUserOf, DEFAULT_THEME } = themeMod
+      applyTheme(readLocalTheme(accountOf(themeUserOf(account))) || DEFAULT_THEME)
+      const remote = await loadRemoteTheme(supabase, themeUserOf(account))
       if (remote) applyTheme(remote)
     } catch (e) {
-      console.warn('[登录] 主题切换失败（忽略）', e && (e.message || e))
+      /* 别静默：这条一旦失败就是"皮肤串号"，必须留痕 */
+      console.error('[登录] 主题切换失败', e)
     }
 
     if (isAdmin) {

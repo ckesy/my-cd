@@ -339,7 +339,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
 .km {
   font-size: 15px;
   font-weight: 800;
-  color: #111827;
+  color: var(--ink);
   line-height: 1.1;
   margin-top: auto;
   letter-spacing: -0.2px;
@@ -457,7 +457,7 @@ const rhythm = computed(() => props.payload.rhythm || [])
   justify-content: center;
   font-size: 9.5px;
   font-weight: 700;
-  color: #111827;
+  color: var(--ink);
   background: var(--surface-page);
 }
 .mx-row.head .mx-cell {

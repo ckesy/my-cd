@@ -443,13 +443,9 @@ const reportOn = computed(() => isMaster.value || !moduleHidden('report'))
   background-color: transparent !important;
   color: var(--brand-primary) !important;
   transform: translateX(4px);
-}
-
-/* ⭐ b/c 侧栏是深色：品牌色 hover 字在深底上会糊，换成浅色 */
+}/* ⭐ b/c 侧栏是深色：品牌色 hover 字在深底上会糊，换成浅色 */
 html[data-scheme="b"] .sidebar-menu :deep(.el-menu-item:hover),
-html[data-scheme="b"] .sidebar-menu :deep(.el-sub-menu__title:hover),
-html[data-scheme="c"] .sidebar-menu :deep(.el-menu-item:hover),
-html[data-scheme="c"] .sidebar-menu :deep(.el-sub-menu__title:hover) {
+html[data-scheme="b"] .sidebar-menu :deep(.el-sub-menu__title:hover) {
   color: var(--ink-on-sider-active) !important;
 }
 
@@ -481,13 +477,6 @@ html[data-scheme="c"] .sidebar-menu :deep(.el-sub-menu__title:hover) {
   }
 }
 
-/* ⭐ 深色主题：选中竖条用青蓝，比纯白/品牌红更"科技感" */
-html[data-scheme="c"] .sidebar-menu :deep(.el-menu-item.is-active)::after,
-html[data-scheme="c"] .sidebar-menu :deep(.el-sub-menu .el-menu-item.is-active)::after {
-  background: #38BDF8;
-  box-shadow: 0 0 10px rgba(56, 189, 248, .55);
-}
-
 .sidebar-menu :deep(.el-sub-menu:has(.el-menu-item.is-active) .el-sub-menu__title) {
   color: var(--nav-active-fg) !important;
   background-color: var(--nav-active-bg) !important;
@@ -499,9 +488,15 @@ html[data-scheme="c"] .sidebar-menu :deep(.el-sub-menu .el-menu-item.is-active):
   color: var(--nav-active-fg);
 }
 
-.sidebar-menu :deep(.el-menu--inline) {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* ⭐ 展开的子菜单容器：EP 会给它铺一层 --el-menu-bg-color（默认纯白），
+   于是云白/暖灰主题下侧栏里出现一块比周围更白的矩形，右上右下还是直角。
+   这里让它透明、跟侧栏融为一体（深色主题本来就是这样）。 */
+.sidebar-menu :deep(.el-menu--inline),
+.sidebar-menu :deep(.el-sub-menu .el-menu) {
+  background-color: transparent !important;
+  border-radius: var(--r-nav);
   overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 窄条时子菜单内容不占位（避免出现空白行） */
@@ -537,3 +532,10 @@ html[data-scheme="c"] .sidebar-menu :deep(.el-sub-menu .el-menu-item.is-active):
   z-index: 1;
 }
 </style>
+/* 子菜单项：圆角 + 右侧留白，避免选中块贴到侧栏边缘（直角观感）
+   —— 展开区域的容器已经透明，块感只来自选中项本身 */
+.sidebar-menu :deep(.el-menu--inline .el-menu-item) {
+  border-radius: var(--r-nav) !important;
+  margin-left: 20px !important;
+  margin-right: 10px !important;
+}

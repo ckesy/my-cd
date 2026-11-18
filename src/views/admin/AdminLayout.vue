@@ -157,7 +157,7 @@ const goLogout = () => {
 .icon-btn {
   width: 34px; height: 34px;
   display: flex; align-items: center; justify-content: center;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   color: var(--ink-3);
   border-radius: 8px;
@@ -203,7 +203,7 @@ const goLogout = () => {
   font-weight: 600;
   color: var(--ink-2);
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -375,7 +375,7 @@ const goLogout = () => {
 <style>
 .light-panel {
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 12px;
   padding: 18px 20px;
   box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
@@ -401,7 +401,7 @@ const goLogout = () => {
   font-weight: 600;
   color: var(--ink-2);
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -485,7 +485,7 @@ const goLogout = () => {
 .light-select-popper {
   border-radius: 8px !important;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12) !important;
-  border: 1px solid #E2E8F0 !important;
+  border: 1px solid var(--card-edge) !important;
 }
 .light-select-popper .el-select-dropdown__item { font-size: 13px; color: var(--ink-2); }
 .light-select-popper .el-select-dropdown__item.is-hovering,
@@ -528,7 +528,7 @@ const goLogout = () => {
   font-weight: 600;
   color: var(--ink-2);
   background: var(--surface-card);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 5px;
   cursor: pointer;
   transition: all 0.25s;

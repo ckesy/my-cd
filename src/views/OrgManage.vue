@@ -1696,7 +1696,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   border-radius: 6px;
   color: var(--ink-3);
@@ -2014,7 +2014,7 @@ onBeforeUnmount(() => {
 .action-btn-footer.ghost {
   background: var(--surface-hover);
   color: var(--ink-2);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
 }
 
 .action-btn-footer.ghost:hover:not(:disabled) {
@@ -2200,7 +2200,7 @@ onBeforeUnmount(() => {
   grid-template-columns: 1fr 40px 1fr;
   background: var(--surface-card);
   border-radius: 14px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   overflow: hidden;
   /* ⭐ 常规 520 高；矮屏时允许被压缩（列内部各自滚动），不会顶出弹窗 */
   flex: 0 1 520px;
@@ -2747,7 +2747,7 @@ onBeforeUnmount(() => {
 .card-action.move-out {
   background: var(--surface-hover);
   color: var(--ink-3);
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
 }
 
 .card-action.move-out:hover {

@@ -149,7 +149,7 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
 .mc-wrap { position: relative; }
 .mc-bell {
   position: relative; width: 32px; height: 32px; border-radius: 8px;
-  border: 1px solid #E2E8F0; background: var(--surface-card); color: var(--ink-3);
+  border: 1px solid var(--card-edge); background: var(--surface-card); color: var(--ink-3);
   display: flex; align-items: center; justify-content: center; cursor: pointer;
   transition: all .16s;
 }
@@ -164,7 +164,7 @@ onBeforeUnmount(() => { if (timer) clearInterval(timer) })
 .mc-mask { position: fixed; inset: 0; z-index: 900; }
 .mc-panel {
   position: absolute; top: 40px; right: 0; width: 400px; z-index: 901;
-  background: var(--surface-card); border-radius: 12px; border: 1px solid #E2E8F0;
+  background: var(--surface-card); border-radius: 12px; border: 1px solid var(--card-edge);
   box-shadow: 0 16px 44px rgba(15, 23, 42, .16);
   display: flex; flex-direction: column; max-height: 560px; overflow: hidden;
 }

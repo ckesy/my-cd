@@ -925,7 +925,7 @@ onMounted(async () => {
   height: 480px;
   transform-origin: top left;
   background: #FDFEFF;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 12px 34px rgba(15, 23, 42, .08);
@@ -1279,7 +1279,7 @@ onMounted(async () => {
 .np-btn.danger:hover { background: #1E293B; }
 .np-btn.primary { color: #fff; background: var(--brand-primary); border: none; }
 .np-btn.primary:hover { background: #A00D24; }
-.np-btn.line { color: var(--ink-3); background: var(--surface-card); border: 1px solid #E2E8F0; }
+.np-btn.line { color: var(--ink-3); background: var(--surface-card); border: 1px solid var(--card-edge); }
 .np-btn.line:hover { border-color: #CBD5E1; color: var(--ink); }
 .np-hint { font-size: 10.5px; color: #C4CDD9; line-height: 1.5; margin-left: auto; }
 

@@ -5,7 +5,7 @@ import './style.css'                    // ← 保留你的全局样式
 import App from './App.vue'
 import router from './router'
 import { supabase, ensureAnonymousLogin } from './utils/supabase'
-import { applyTheme, readLocalTheme, DEFAULT_THEME, loadRemoteTheme } from './utils/theme'
+import { applyTheme, readLocalTheme, accountOf, themeUserOf, DEFAULT_THEME, loadRemoteTheme } from './utils/theme'
 import { registerServiceWorker } from './utils/swRegister'
 
 // 1. 导入中文语言包和 dayjs
@@ -24,7 +24,7 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 const bootUser = (() => {
   try { return JSON.parse(localStorage.getItem('currentUser') || 'null') } catch { return null }
 })()
-applyTheme(readLocalTheme(bootUser && bootUser.account) || DEFAULT_THEME)
+applyTheme(readLocalTheme(accountOf(themeUserOf(bootUser))) || DEFAULT_THEME)
 
 const app = createApp(App)
 
@@ -46,7 +46,7 @@ app.mount('#app')
   try {
     const u = JSON.parse(localStorage.getItem('currentUser') || 'null')
     if (!u) return
-    const remote = await loadRemoteTheme(supabase, u)
+    const remote = await loadRemoteTheme(supabase, themeUserOf(u))
     if (remote) applyTheme(remote)
   } catch (e) {
     /* 拿不到就用本地缓存 */

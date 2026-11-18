@@ -1087,7 +1087,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   border-radius: 8px;
   color: var(--ink-3);
@@ -1187,7 +1187,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.custom-table td.el-table__cell) {
-  color: #1F2937;
+  color: var(--ink);
   font-size: 13px;
   font-weight: 500;
   border-bottom: 1px solid #F1F5F9;
@@ -1223,7 +1223,7 @@ onBeforeUnmount(() => {
 .num-text {
   font-family: var(--num-font);
   font-weight: 600;
-  color: #111827;
+  color: var(--ink);
   font-size: 13.5px;
   letter-spacing: 0.2px;
   font-variant-numeric: tabular-nums;
@@ -1250,7 +1250,7 @@ onBeforeUnmount(() => {
 }
 
 .text-content {
-  color: #1F2937;
+  color: var(--ink);
   font-size: 13px;
   font-weight: 500;
 }
@@ -1543,7 +1543,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--card-edge);
   background: var(--surface-card);
   border-radius: 4px;
   color: var(--ink-3);

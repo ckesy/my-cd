@@ -44,6 +44,8 @@
   --surface-hover: #F1F5F9;
   --line: #E2E8F0;
   --line-soft: #EEF2F7;
+  /* 卡片外框（浅色是浅灰线，深色主题下换成青蓝，带一点科技感） */
+  --card-edge: #E2E8F0;
   --ink: #0F172A;
   --ink-2: #334155;
   --ink-3: #64748B;
@@ -479,36 +481,6 @@ html[data-scheme="b"] {
   --sider-bar-w: 2.5px;
 }
 
-/* ---------- c 全深色 ---------- */
-html[data-scheme="c"] {
-  --surface-page: #0D131F;
-  --surface-card: #19222F;
-  --surface-header: #121A26;
-  --surface-tabs: #111925;
-  --surface-sider: #0A0F17;
-  --surface-sider-active: #1F2A3B;
-  --surface-thead: #1F2937;
-  --surface-sunken: #141C29;
-  --surface-hover: #1E2836;
-  --line: #2C3849;
-  --line-soft: #232E3C;
-  --ink: #EDF3FB;
-  --ink-2: #B7C5D7;
-  --ink-3: #7B8CA3;
-  --ink-on-sider: #7C8CA3;
-  --ink-on-sider-active: #FFFFFF;
-  --ink-on-header: #FFFFFF;
-  --shadow-card: none;
-  --glass-panel: rgba(25, 34, 47, .95);
-  --row-recurring-bg: rgba(245, 166, 35, .09);
-  --row-recurring-hover: rgba(245, 166, 35, .16);
-  --el-mask-color: rgba(13, 19, 31, .82);
-  --nav-active-bg: var(--surface-sider-active);
-  --nav-active-fg: #FFFFFF;
-  --r-card: 10px; --r-ctl: 8px; --r-nav: 8px; --r-tab: 6px;
-  --sider-bar-w: 2.5px;
-}
-
 /* ---------- d 晨雾（自然系） ---------- */
 html[data-scheme="d"] {
   --surface-page: #E9EDE0;
@@ -589,32 +561,7 @@ html:root {
      写成深色会把所有加载态变成灰黑块。 */
   --el-mask-color: rgba(255, 255, 255, .88);
   --el-overlay-color-lighter: rgba(15, 23, 42, .5);
-}
-
-/* 暗色下 EP 的表格/输入框自己带白底，逐类补掉 */
-html[data-scheme="c"] .el-table,
-html[data-scheme="c"] .el-table tr,
-html[data-scheme="c"] .el-table th.el-table__cell,
-html[data-scheme="c"] .el-table td.el-table__cell {
-  background-color: var(--surface-card);
-}
-html[data-scheme="c"] .el-table th.el-table__cell { background-color: var(--surface-thead); }
-html[data-scheme="c"] .el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
-  background-color: var(--surface-hover);
-}
-html[data-scheme="c"] .el-input__wrapper,
-html[data-scheme="c"] .el-select__wrapper,
-html[data-scheme="c"] .el-textarea__inner {
-  background-color: #121A27;
-  box-shadow: 0 0 0 1px var(--line) inset;
-}
-html[data-scheme="c"] .el-dialog,
-html[data-scheme="c"] .el-drawer,
-html[data-scheme="c"] .el-popper.is-light {
-  background: var(--surface-card);
-}
-
-/* ============================================================
+}/* ============================================================
    页面根容器兜底
    ------------------------------------------------------------
    各业务页把页面底写死成 #F8FAFC（165 处，散在 47 个文件里），
@@ -623,11 +570,9 @@ html[data-scheme="c"] .el-popper.is-light {
    ⚠️ F 云白不加这条 —— 它是线上原样，必须一模一样。
    ============================================================ */
 html[data-scheme="a"] .content-wrapper > div,
-html[data-scheme="a"] .content-wrapper > section,
-html[data-scheme="b"] .content-wrapper > div,
-html[data-scheme="b"] .content-wrapper > section,
-html[data-scheme="c"] .content-wrapper > div,
-html[data-scheme="c"] .content-wrapper > section {
+  html[data-scheme="a"] .content-wrapper > section,
+  html[data-scheme="b"] .content-wrapper > div,
+  html[data-scheme="b"] .content-wrapper > section {
   background-color: var(--surface-page) !important;
 }
 /* d/e 要透出天光渐变，所以保持透明（渐变铺在 .dash-shell 上） */
@@ -713,22 +658,6 @@ html.theme-switching *::after {
 }
 
 /* ============================================================
-   深色主题的「科技感」强调色
-   ------------------------------------------------------------
-   深色下白/浅色的选中边、聚焦框太刺眼，也缺科技感，
-   统一换成青蓝（#38BDF8）。浅色五套不受影响。
-   ============================================================ */
-html[data-scheme="c"] .el-input__wrapper.is-focus,
-html[data-scheme="c"] .el-select__wrapper.is-focused,
-html[data-scheme="c"] .el-textarea__inner:focus {
-  box-shadow: 0 0 0 1px #38BDF8 inset, 0 0 0 3px rgba(56, 189, 248, .16) !important;
-}
-html[data-scheme="c"] .el-table__body tr.current-row > td.el-table__cell,
-html[data-scheme="c"] .el-table__body tr.el-table__row--striped.current-row > td.el-table__cell {
-  background-color: rgba(56, 189, 248, .14) !important;
-}
-
-/* ============================================================
    折叠侧栏的子菜单浮层（el-menu--popup）
    ------------------------------------------------------------
    它是 teleport 到 body 的，组件里的 scoped 样式够不到，
@@ -764,35 +693,4 @@ html[data-scheme="c"] .el-table__body tr.el-table__row--striped.current-row > td
 .el-popper:has(.el-menu--popup) .el-popper__arrow::before {
   background: var(--surface-sider) !important;
   border-color: var(--line) !important;
-}
-
-/* ============================================================
-   暗色表格的最终分层（覆盖前面所有冲突写法）
-   ------------------------------------------------------------
-   底色垫在 <tr>，单元格透明：
-   普通列 / 左右固定列 / 常驻任务高亮行 露出的都是同一层底色，
-   不会出现"固定列比中间暗一块"（那是 td 各自带背景导致的）。
-   hover 用 :not(:hover) 排除，交给 EP 自己的规则。
-   ============================================================ */
-html[data-scheme="c"] .el-table__body tr,
-html[data-scheme="c"] .el-table__body .el-table__row {
-  background-color: var(--surface-card);
-}
-/* ⚠️ 必须排除固定列：它们要 inherit 行的底色，透明会在横向滚动时透出下层 */
-html[data-scheme="c"] .el-table__body tr:not(:hover) > td.el-table__cell:not(.el-table-fixed-column--left):not(.el-table-fixed-column--right) {
-  background-color: transparent !important;
-}
-/* ⚠️ 固定列必须不透明（inherit 拿 tr 的底色），否则横向滚动时
-   下面的列会从固定列里透出来 */
-html[data-scheme="c"] .el-table .el-table-fixed-column--left,
-html[data-scheme="c"] .el-table .el-table-fixed-column--right {
-  background-color: inherit;
-  /* EP 给固定列加了一层投影，深色下看起来就是"这两列暗一块" */
-  box-shadow: none !important;
-}
-html[data-scheme="c"] .el-table th.el-table__cell {
-  background-color: var(--surface-thead) !important;
-}
-html[data-scheme="c"] .el-table__row.is-recurring {
-  background-color: var(--row-recurring-bg, rgba(245, 166, 35, .09)) !important;
 }
