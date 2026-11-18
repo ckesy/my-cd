@@ -1,0 +1,11 @@
+{
+  "name": "ai-token",
+  "version": "1.0.0",
+  "description": "签发 AI 助手会话令牌（服务端签发，前端不可伪造）",
+  "main": "index.js",
+  "type": "commonjs",
+  "license": "ISC",
+  "engines": {
+    "node": "18"
+  }
+}

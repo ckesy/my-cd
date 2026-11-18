@@ -40,7 +40,7 @@
       <el-table :data="pagedRows" :size="tableSize" stripe height="100%"
         v-loading="loading" element-loading-text="加载中…"
         element-loading-background="var(--glass-panel)" class="custom-table"
-        :row-key="(r) => r.key">
+        :row-key="(r) => r.key" :row-class-name="rowClassName" :cell-style="cellStyle">
 
         <!-- 费用 -->
         <el-table-column v-if="colOn('fee')" label="费用" min-width="200">
@@ -237,11 +237,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { supabase } from '@/utils/supabase'
 import { moduleFlags, approvalOn } from '@/utils/modules'
 import { signGetCached, forgetCosUrl } from '@/utils/cos'
@@ -304,6 +304,82 @@ const isFullscreen = ref(false)
 const drawer = ref(false)
 const cur = ref(null)
 const router = useRouter()
+const route = useRoute()
+
+/* ============================================================
+   从 AI 助手「去审批」跳过来时，高亮对应行
+   ------------------------------------------------------------
+   URL 形如 /fee/list?ids=3,4,5 —— 这些是 reports.id。
+   行是「按运单聚合」过的，所以一行可能包含多笔（row.items），
+   任意一笔命中就整行高亮，并把第一行滚到视口中间。
+   8 秒后自动取消高亮，避免页面一直花。
+   ============================================================ */
+const hitIds = ref(new Set())
+let hitTimer = null
+
+/** 取一行涉及的所有费用 id（聚合行 + 单笔行都覆盖） */
+function idsOfRow(row) {
+  const out = []
+  if (row == null) return out
+  if (row.id != null) out.push(String(row.id))
+  if (Array.isArray(row.items)) {
+    row.items.forEach((it) => { if (it && it.id != null) out.push(String(it.id)) })
+  }
+  return out
+}
+
+function rowClassName({ row }) {
+  if (!hitIds.value.size) return ''
+  return idsOfRow(row).some((id) => hitIds.value.has(id)) ? 'row-hit' : ''
+}
+
+/**
+ * 同一件事用行内样式再做一遍。
+ * 原因：scoped 的 :deep 对 el-table 内部的 tr/td 不稳，class 有时加不上；
+ * 行内 animation 优先级最高，一定能看见。两者叠加不影响。
+ */
+function cellStyle({ row }) {
+  if (!hitIds.value.size) return {}
+  const hit = idsOfRow(row).some((id) => hitIds.value.has(id))
+  /* animation + 底色一起给：即使 class 完全没生效，行内也能保证「闪 + 落底色」 */
+  return hit ? { animation: 'feeRowHit 0.9s ease-in-out 3', backgroundColor: '#fdf0f2' } : {}
+}
+
+async function highlightFromQuery() {
+  const raw = String(route.query.ids || '')
+  const ids = raw.split(',').map((s) => s.trim()).filter(Boolean)
+  if (!ids.length) return
+
+  /* 目标行可能在别的页码，先回第 1 页再算 */
+  if (page.value !== 1) {
+    page.value = 1
+    await nextTick()
+  }
+
+  hitIds.value = new Set(ids)
+  await nextTick()
+
+  /* 排障用：数据里如果压根没有这些 id（被筛选掉/不在当前页），高亮必然不出现 */
+  try {
+    const hit = (pagedRows.value || []).filter((r) =>
+      idsOfRow(r).some((id) => hitIds.value.has(id))
+    ).length
+    if (!hit) {
+      console.warn('[FeeList] 目标费用不在当前列表，ids=', ids.join(','), '当前行数=', (pagedRows.value || []).length)
+    }
+  } catch (e) { /* 忽略 */ }
+
+  /* 等表格渲染完再滚（stripe + 虚拟高度会有半帧延迟） */
+  setTimeout(() => {
+    const el = document.querySelector('.custom-table .row-hit')
+    if (el && el.scrollIntoView) {
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }
+  }, 320)
+
+  if (hitTimer) clearTimeout(hitTimer)
+  hitTimer = setTimeout(() => { hitIds.value = new Set() }, 8000)
+}
 
 /* 费用审批 / 付款记录 是否开启 —— 决定状态枚举和可用按钮 */
 const auditOn = computed(() => approvalOn.value)
@@ -837,7 +913,18 @@ function handleReset() {
   load()
 }
 
-onMounted(load)
+onMounted(async () => {
+  await load()
+  /* 数据到位后再高亮，否则 .row-hit 找不到 */
+  highlightFromQuery()
+})
+
+/* ⚠️ 监听 fullPath 而不是 query.ids：
+   已在费用页时助手会带 _t 时间戳重推同一路径，ids 可能一字不差，
+   只监听 ids 的话第二次点「去审批」不会触发。 */
+watch(() => route.fullPath, () => {
+  if (route.query.ids) highlightFromQuery()
+})
 </script>
 
 <style scoped>
@@ -847,6 +934,9 @@ onMounted(load)
   gap: 12px; padding: 16px 18px;
   box-sizing: border-box;
 }
+
+/* AI 助手「去审批」跳转过来的目标行高亮样式写在文件末尾的全局 style 里
+   （scoped + :deep 对 el-table 内部 tr 不稳定，改用全局选择器） */
 
 /* 状态标签 */
 .fl-tabs { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 2px; }
@@ -1121,5 +1211,20 @@ onMounted(load)
 /* 遮罩淡一点：设计稿里左边的列表还能看清 */
 .el-overlay:has(.fee-detail-drawer) {
   background-color: rgba(15, 23, 42, .14);
+}
+
+/* ===== AI 助手「去审批」跳转过来的目标行：闪 3 下，然后停在淡红底 =====
+   放在全局 style 里（scoped + :deep 对 el-table 内部的 tr 稳定不了）。
+   animation 播完后回到下面声明的静态底色，8 秒后 hitIds 清空才彻底还原。 */
+.custom-table .el-table__row.row-hit > td.el-table__cell {
+  background-color: #fdf0f2;
+  animation: feeRowHit 0.9s ease-in-out 3;
+}
+.custom-table .el-table__row.row-hit > td.el-table__cell:first-child {
+  box-shadow: inset 3px 0 0 #c8102e;
+}
+@keyframes feeRowHit {
+  0%, 100% { background-color: #fdf0f2; }
+  45% { background-color: #f8b9c4; }
 }
 </style>

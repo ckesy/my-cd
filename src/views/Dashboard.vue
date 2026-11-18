@@ -90,7 +90,9 @@
           </template>
           <!-- ⭐ 费用管理 -->
           <template v-else-if="route.path === '/fee/list'">
-            <FeeList />
+            <ErrorBoundary>
+              <FeeList />
+            </ErrorBoundary>
           </template>
           <template v-else-if="route.path === '/fee/stats'">
             <FeeStats />
@@ -204,6 +206,13 @@
     <div v-if="showGoodbye" class="goodbye-overlay">
       <h1 class="goodbye-text">感谢使用</h1>
     </div>
+
+    <!-- ========== AI 助手（浮球 + 右侧抽屉） ==========
+         ⚠️ 大屏路由下不挂载：大屏是纯展示，不需要助手，而且浮球会压住右下指标
+         ⚠️ 外面必须包 ErrorBoundary：助手崩了不能把整个后台带走 -->
+    <ErrorBoundary v-if="!isScreenRoute">
+      <AiAssistant />
+    </ErrorBoundary>
   </el-container>
 </template>
 
@@ -215,6 +224,8 @@ import { Setting, Bell } from '@element-plus/icons-vue'
 import { permHit } from '@/config/permissions'
 import SidebarMenu from '../components/SidebarMenu.vue'
 import PersonalSettings from '../components/PersonalSettings.vue'
+import AiAssistant from '../components/AiAssistant/AiAssistant.vue'
+import ErrorBoundary from '../components/ErrorBoundary.vue'
 import ClientHome from '../views/ClientHome.vue'
 import FullMap from '../views/FullMap.vue'
 import FleetScreen from '@/views/screen/FleetScreen.vue'

@@ -451,6 +451,18 @@ const handleLogin = async () => {
     localStorage.setItem('currentUser', JSON.stringify(account))
     localStorage.setItem('originalUser', JSON.stringify(account))
 
+    /* ⭐ AI 助手会话令牌（2026-11-18）
+       必须在服务端再校验一次账号密码后签发 —— Web 登录是前端校验的，
+       localStorage 里的 account 可被篡改，直接拿它当身份会让 A 客户查到 B 客户。
+       ⚠️ 失败绝不阻断登录：AI 助手是增强功能，网关挂了不能让人进不来。 */
+    try {
+      const { ensureAiToken } = await import('@/utils/aiClient')
+      const r = await ensureAiToken(account.account, password.value)
+      if (!r.ok) console.warn('[AI] 会话令牌未签发：', r.message)
+    } catch (e) {
+      console.warn('[AI] 会话令牌签发异常：', e && e.message)
+    }
+
     /* ⭐ 换账号 → 立刻切到该账号自己的皮肤（同设备多账号互不影响） */
     try {
       /* ⚠️ 动态 import 必须把用到的成员全部解构出来。

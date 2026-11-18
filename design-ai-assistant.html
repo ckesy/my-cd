@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 助手 UI 方案 · 东风车队管理系统</title>
+<style>
+:root{
+  --red:#C8102E; --red-2:#A50D25; --red-soft:#FDF0F2; --red-line:#F5D4D9;
+  --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8; --ink4:#CBD5E1;
+  --line:#EDF0F4; --line2:#E3E8EF; --bg:#F5F7FA; --card:#fff; --thead:#F7F9FC;
+  --blue:#2563EB; --green:#0E9F6E; --amber:#D97706;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;
+  background:#F1F3F6; color:var(--ink); font-size:13px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px 80px}
+
+/* ---------- 文档头 ---------- */
+.doc-head{padding:48px 0 28px}
+.doc-head h1{font-size:24px;font-weight:600;letter-spacing:-.2px}
+.doc-head .sub{color:var(--ink3);font-size:13px;margin-top:8px}
+.doc-head .meta{display:flex;gap:24px;margin-top:18px;flex-wrap:wrap}
+.doc-head .meta div{font-size:12px;color:var(--ink2)}
+.doc-head .meta b{display:block;font-size:11px;color:var(--ink3);font-weight:400;margin-bottom:2px;letter-spacing:.3px}
+
+.toc{
+  position:sticky;top:0;z-index:50;display:flex;gap:6px;flex-wrap:wrap;
+  padding:12px 0;background:rgba(241,243,246,.94);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line2);margin-bottom:32px;
+}
+.toc a{
+  font-size:12px;color:var(--ink2);text-decoration:none;padding:5px 11px;
+  border-radius:6px;border:1px solid transparent;
+}
+.toc a:hover{background:#fff;border-color:var(--line2);color:var(--ink)}
+
+/* ---------- 方案块 ---------- */
+section{margin-bottom:56px;scroll-margin-top:64px}
+.plan{margin-bottom:44px}
+.plan-head{display:flex;align-items:baseline;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.tag{
+  display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:5px;
+  background:var(--red);color:#fff;font-size:11px;font-weight:600;letter-spacing:.4px;
+}
+.tag.gray{background:#E7EAEF;color:var(--ink2)}
+.plan-head h3{font-size:15px;font-weight:600}
+.plan-head .desc{font-size:12px;color:var(--ink3)}
+h2.sec{font-size:17px;font-weight:600;margin-bottom:6px}
+p.sec-sub{font-size:12.5px;color:var(--ink3);margin-bottom:24px}
+
+/* ---------- 浏览器/手机画框 ---------- */
+.frame{
+  border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--bg);
+  box-shadow:0 1px 2px rgba(15,23,42,.04), 0 8px 24px -12px rgba(15,23,42,.10);
+}
+.app{display:flex;height:640px;position:relative;overflow:hidden}
+
+/* 侧栏 */
+.side{width:176px;flex:0 0 176px;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column}
+.side .logo{height:52px;display:flex;align-items:center;gap:8px;padding:0 14px;border-bottom:1px solid var(--line)}
+.logo .dot{width:18px;height:18px;border-radius:5px;background:var(--red);position:relative}
+.logo .dot::after{content:"";position:absolute;inset:5px;border:1.5px solid #fff;border-radius:50%}
+.logo span{font-size:12.5px;font-weight:600}
+.side .grp{padding:12px 14px 4px;font-size:10.5px;color:var(--ink4);letter-spacing:.5px}
+.side .nav{display:flex;align-items:center;gap:8px;height:32px;margin:1px 8px;padding:0 8px;border-radius:6px;font-size:12.5px;color:var(--ink2)}
+.side .nav i{width:12px;height:12px;border-radius:3px;background:#E2E7EE;flex:0 0 12px}
+.side .nav.on{background:var(--red-soft);color:var(--red);font-weight:600}
+.side .nav.on i{background:var(--red);opacity:.55}
+
+/* 主区 */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;transition:margin .28s ease}
+.top{height:52px;flex:0 0 52px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 18px;gap:12px}
+.top .crumb{font-size:12.5px;color:var(--ink3)}
+.top .crumb b{color:var(--ink);font-weight:600}
+.top .spacer{flex:1}
+.top .btn{height:28px;padding:0 11px;border-radius:6px;border:1px solid var(--line2);background:#fff;font-size:12px;color:var(--ink2);display:inline-flex;align-items:center}
+.top .btn.pri{background:var(--red);border-color:var(--red);color:#fff;font-weight:500}
+
+.body{flex:1;padding:16px 18px;overflow:hidden;display:flex;flex-direction:column;gap:12px;min-height:0}
+.pgtitle{display:flex;align-items:center;gap:8px}
+.pgtitle b{font-size:15px;font-weight:600}
+.pgtitle .bar{width:3px;height:14px;border-radius:2px;background:var(--red)}
+.pgtitle .cnt{font-size:12px;color:var(--ink3);margin-left:2px}
+
+.filters{display:flex;gap:8px}
+.f{height:32px;border-radius:8px;border:1px solid var(--line2);background:#fff;padding:0 11px;display:flex;align-items:center;font-size:12px;color:var(--ink3);min-width:120px}
+.f.wide{min-width:160px}
+.f.mini{min-width:auto;padding:0 10px}
+.f.pri{background:var(--red);border-color:var(--red);color:#fff;font-weight:500;min-width:auto}
+
+.card{flex:1;background:#fff;border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.thead{display:flex;height:38px;align-items:center;background:var(--thead);border-bottom:1px solid var(--line);font-size:12px;color:var(--ink2);font-weight:700}
+.thead div,.trow div{padding:0 12px}
+.c1{flex:0 0 108px}.c2{flex:1}.c3{flex:0 0 96px}.c4{flex:0 0 88px}.c5{flex:0 0 100px}
+.trow{display:flex;height:40px;align-items:center;border-bottom:1px solid #F4F6F9;font-size:12.5px;color:var(--ink)}
+.trow .sk{height:8px;border-radius:4px;background:#EDF0F4}
+.trow .sk.w1{width:78%}.trow .sk.w2{width:56%}.trow .sk.w3{width:64%}
+.st{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600}
+.st i{width:5px;height:5px;border-radius:50%;display:inline-block}
+.st.ok{color:var(--green)}.st.ok i{background:var(--green)}
+.st.wait{color:var(--amber)}.st.wait i{background:var(--amber)}
+.st.blue{color:var(--blue)}.st.blue i{background:var(--blue)}
+
+/* 浮球 */
+.ball{
+  position:absolute;right:24px;bottom:24px;width:52px;height:52px;border-radius:50%;
+  background:var(--red);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 6px 18px -4px rgba(200,16,46,.45), 0 2px 6px rgba(200,16,46,.2);
+  z-index:8;
+}
+.ball svg{width:24px;height:24px}
+.ball::after{
+  content:"";position:absolute;inset:-6px;border-radius:50%;
+  border:1.5px solid var(--red);opacity:.18;
+}
+
+/* AI 面板 · 通用 */
+.panel{
+  position:absolute;right:0;top:0;bottom:0;width:412px;background:#fff;
+  border-left:1px solid var(--line2);display:flex;flex-direction:column;z-index:10;
+  box-shadow:-12px 0 32px -18px rgba(15,23,42,.22);
+}
+.p-head{height:54px;flex:0 0 54px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line)}
+.p-head .t{font-size:13px;font-weight:600}
+.p-head .s{font-size:11px;color:var(--green);display:flex;align-items:center;gap:4px}
+.p-head .s i{width:5px;height:5px;border-radius:50%;background:var(--green)}
+.p-head .spacer{flex:1}
+.icobtn{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--ink3);border:1px solid transparent}
+.icobtn:hover{background:#F4F6F9;border-color:var(--line2)}
+
+.p-body{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:16px;min-height:0;background:#FCFCFD}
+.p-foot{flex:0 0 auto;padding:10px 12px 12px;border-top:1px solid var(--line);background:#fff}
+
+/* 消息 */
+.msg{display:flex;gap:8px;align-items:flex-start}
+.msg.me{flex-direction:row-reverse}
+.msg .col{max-width:calc(100% - 40px);display:flex;flex-direction:column;gap:6px}
+.msg.me .col{align-items:flex-end}
+.bub{background:#fff;border:1px solid var(--line2);border-radius:12px;border-top-left-radius:4px;padding:9px 12px;font-size:12.5px;color:var(--ink);line-height:1.65}
+.msg.me .bub{background:var(--red);border-color:var(--red);color:#fff;border-radius:12px;border-top-right-radius:4px;border-top-left-radius:12px}
+.meta-time{font-size:10.5px;color:var(--ink4)}
+
+/* 卡片 */
+.mcard{border:1px solid var(--line2);border-radius:10px;overflow:hidden;background:#fff;width:100%}
+.mcard .ch{height:30px;display:flex;align-items:center;padding:0 10px;background:var(--thead);border-bottom:1px solid var(--line);font-size:11px;color:var(--ink2);font-weight:600;gap:6px}
+.mcard .ch .n{margin-left:auto;color:var(--ink3);font-weight:400}
+.mtable{width:100%;border-collapse:collapse;font-size:11.5px}
+.mtable th{text-align:left;padding:6px 10px;color:var(--ink3);font-weight:600;font-size:10.5px;border-bottom:1px solid #F4F6F9}
+.mtable td{padding:7px 10px;border-bottom:1px solid #F7F9FC;font-variant-numeric:tabular-nums}
+.mtable tr:last-child td{border-bottom:0}
+.mtable .num{text-align:right;font-weight:600}
+.mtable .bad{color:var(--red)}
+
+.todo{display:flex;align-items:center;gap:10px;padding:9px 10px;border-bottom:1px solid #F4F6F9}
+.todo:last-child{border-bottom:0}
+.todo .info{flex:1;min-width:0}
+.todo .t1{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.todo .t2{font-size:10.5px;color:var(--ink3);margin-top:1px}
+.todo .go{height:24px;padding:0 9px;border-radius:5px;border:1px solid var(--red-line);color:var(--red);background:var(--red-soft);font-size:11px;font-weight:600;display:inline-flex;align-items:center}
+
+.note{font-size:10.5px;color:var(--ink3);padding:6px 10px;border-top:1px solid #F7F9FC;background:#FCFCFD}
+
+/* 输入区 */
+.chips{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.chip{height:24px;padding:0 9px;border-radius:12px;border:1px solid var(--line2);background:#fff;font-size:11px;color:var(--ink2);display:inline-flex;align-items:center}
+.inputbox{border:1px solid var(--line2);border-radius:10px;background:#fff;display:flex;align-items:flex-end;gap:6px;padding:7px 8px 7px 11px}
+.inputbox .ph{flex:1;font-size:12.5px;color:var(--ink4);padding:4px 0;line-height:1.4}
+.ibtn{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--ink3);flex:0 0 26px}
+.ibtn:hover{background:#F4F6F9}
+.ibtn.send{background:var(--red);color:#fff}
+.p-tip{font-size:10.5px;color:var(--ink4);text-align:center;margin-top:7px}
+
+/* 方案 B 浮动卡 */
+.floatcard{
+  position:absolute;right:22px;bottom:22px;width:396px;height:552px;background:#fff;border-radius:14px;
+  box-shadow:0 24px 56px -16px rgba(15,23,42,.28), 0 4px 12px rgba(15,23,42,.08);
+  display:flex;flex-direction:column;overflow:hidden;z-index:10;border:1px solid var(--line2);
+}
+.floatcard .bar{height:3px;background:linear-gradient(90deg,var(--red),#E8536B);flex:0 0 3px}
+
+/* 方案 C 底栏 */
+.cmdbar{
+  position:absolute;left:198px;right:24px;bottom:20px;height:46px;background:#fff;
+  border:1px solid var(--line2);border-radius:10px;display:flex;align-items:center;gap:10px;padding:0 12px;
+  box-shadow:0 8px 24px -14px rgba(15,23,42,.24);z-index:9;
+}
+.cmdbar .k{height:20px;min-width:20px;padding:0 5px;border-radius:4px;border:1px solid var(--line2);font-size:10.5px;color:var(--ink3);display:flex;align-items:center;justify-content:center}
+.cmdbar .ph{flex:1;font-size:12.5px;color:var(--ink4)}
+.cmdpanel{
+  position:absolute;left:198px;right:24px;bottom:76px;height:420px;background:#fff;border-radius:12px;
+  border:1px solid var(--line2);box-shadow:0 24px 56px -20px rgba(15,23,42,.26);
+  display:flex;flex-direction:column;overflow:hidden;z-index:9;
+}
+
+/* 方案 D 命令面板 */
+.cmdfull{
+  position:absolute;left:50%;top:96px;transform:translateX(-50%);width:560px;background:#fff;border-radius:12px;
+  border:1px solid var(--line2);box-shadow:0 28px 64px -20px rgba(15,23,42,.32);overflow:hidden;z-index:10;
+}
+.cmdfull .head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.cmdfull .head .ph{flex:1;font-size:13px;color:var(--ink)}
+.cmdfull .head .cur{width:1.5px;height:15px;background:var(--red);animation:blink 1.1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+.results{padding:6px}
+.rgroup{padding:7px 10px 4px;font-size:10.5px;color:var(--ink4);letter-spacing:.4px}
+.res{display:flex;align-items:center;gap:10px;height:38px;padding:0 10px;border-radius:7px}
+.res.on{background:var(--red-soft)}
+.res .ic{width:22px;height:22px;border-radius:6px;background:#F1F4F8;display:flex;align-items:center;justify-content:center;flex:0 0 22px;color:var(--ink2)}
+.res.on .ic{background:#fff;color:var(--red)}
+.res .tx{font-size:12.5px}
+.res .tx em{font-style:normal;color:var(--red);font-weight:600}
+.res .rt{margin-left:auto;font-size:10.5px;color:var(--ink4)}
+.cmdfoot{padding:9px 14px;border-top:1px solid var(--line);display:flex;gap:14px;font-size:10.5px;color:var(--ink4);background:#FCFCFD}
+
+/* ---------- 手机框 ---------- */
+.phones{display:flex;gap:40px;flex-wrap:wrap}
+.phone{
+  width:344px;height:700px;border-radius:34px;border:1px solid var(--line2);background:#fff;
+  overflow:hidden;position:relative;box-shadow:0 10px 30px -14px rgba(15,23,42,.18);
+  display:flex;flex-direction:column;
+}
+.statusbar{height:40px;flex:0 0 40px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:11px;color:var(--ink);font-weight:600}
+.statusbar .right{display:flex;gap:4px;align-items:center}
+.statusbar .right i{width:14px;height:8px;border:.5px solid var(--ink);border-radius:2px;display:block}
+.mp-top{height:46px;flex:0 0 46px;display:flex;align-items:center;padding:0 16px;gap:10px;border-bottom:1px solid var(--line)}
+.mp-top .t{font-size:14.5px;font-weight:600}
+.mp-top .spacer{flex:1}
+.mp-body{flex:1;overflow:hidden;background:#FBFBFC;padding:14px;display:flex;flex-direction:column;gap:14px;min-height:0}
+.mp-foot{flex:0 0 auto;border-top:1px solid var(--line);padding:9px 12px 14px;background:#fff}
+.tabbar{height:56px;flex:0 0 56px;border-top:1px solid var(--line);display:flex;background:#fff}
+.tabitem{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;color:var(--ink3)}
+.tabitem i{width:18px;height:18px;border-radius:5px;background:#E7EAEF;display:block}
+.tabitem.on{color:var(--red);font-weight:600}
+.tabitem.on i{background:var(--red);opacity:.85}
+
+.mp-bub{background:#fff;border:1px solid var(--line2);border-radius:12px;border-top-left-radius:4px;padding:10px 12px;font-size:12.5px;line-height:1.6}
+.mp-me{background:var(--red);color:#fff;border-radius:12px;border-top-right-radius:4px;padding:9px 12px;font-size:12.5px;align-self:flex-end;max-width:86%}
+
+/* bottom sheet */
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;height:74%;background:#fff;border-radius:18px 18px 0 0;
+  box-shadow:0 -14px 40px -16px rgba(15,23,42,.28);display:flex;flex-direction:column;z-index:10;
+}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:#E3E8EF;margin:8px auto 4px;flex:0 0 4px}
+.scrim{position:absolute;inset:0;background:rgba(15,23,42,.16);z-index:9}
+
+/* 微信客服会话 */
+.wx{background:#EDEDED;flex:1;overflow:hidden;padding:12px 0;display:flex;flex-direction:column;gap:0;min-height:0}
+.wx-msg{display:flex;gap:8px;padding:0 10px;margin-bottom:12px;align-items:flex-start}
+.wx-msg.me{flex-direction:row-reverse}
+.wx-av{width:30px;height:30px;border-radius:4px;background:var(--red);flex:0 0 30px;display:flex;align-items:center;justify-content:center}
+.wx-bub{background:#fff;border-radius:5px;padding:8px 10px;font-size:12px;line-height:1.55;color:#1A1A1A;max-width:calc(100% - 46px);word-break:break-word}
+.wx-bub.me{background:#95EC69}
+.wx-bub .who{font-size:10px;color:#8A8A8A;margin-bottom:3px}
+.wx-bar{height:50px;flex:0 0 50px;background:#F7F7F7;border-top:1px solid #DDD;display:flex;align-items:center;gap:8px;padding:0 10px}
+.wx-in{flex:1;height:32px;background:#fff;border-radius:4px;display:flex;align-items:center;padding:0 10px;font-size:12px;color:#B2B2B2}
+.wx-ico{width:24px;height:24px;border-radius:50%;border:1.4px solid #7A7A7A;flex:0 0 24px;display:flex;align-items:center;justify-content:center;color:#7A7A7A;font-size:15px}
+.wx-card{background:#fff;border-radius:6px;padding:9px;display:flex;gap:9px;align-items:center;margin-top:6px}
+.wx-card .tx{font-size:12px;line-height:1.4}
+.wx-card .tx b{display:block;font-size:12.5px;margin-bottom:2px}
+.wx-card .tx span{font-size:10.5px;color:#8A8A8A}
+.wx-thumb{width:38px;height:38px;border-radius:4px;background:var(--red-soft);display:flex;align-items:center;justify-content:center;flex:0 0 38px}
+
+/* ---------- 头像专区 ---------- */
+.av-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.av-card{background:#fff;border:1px solid var(--line2);border-radius:12px;padding:16px}
+.av-card h4{font-size:13px;font-weight:600;margin-bottom:2px}
+.av-card .d{font-size:11.5px;color:var(--ink3);margin-bottom:14px;min-height:34px}
+.av-row{display:flex;align-items:flex-end;gap:14px;padding:12px 0;border-top:1px solid var(--line)}
+.av-row .lbl{font-size:10.5px;color:var(--ink4);width:44px;flex:0 0 44px}
+.av-mid{display:flex;align-items:center;gap:12px}
+
+.av{display:flex;align-items:center;justify-content:center;flex:0 0 auto;position:relative}
+.av svg{display:block}
+
+/* 各头像方向 */
+.av-a{border-radius:11px;background:var(--red)}
+.av-a.s48{width:44px;height:44px;border-radius:12px}
+.av-a.s32{width:32px;height:32px;border-radius:9px}
+.av-a.s24{width:24px;height:24px;border-radius:7px}
+.av-a.s16{width:16px;height:16px;border-radius:4px}
+
+.av-b{border-radius:50%;background:var(--red)}
+.av-b.s48{width:44px;height:44px}.av-b.s32{width:32px;height:32px}
+.av-b.s24{width:24px;height:24px}.av-b.s16{width:16px;height:16px}
+
+.av-c{border-radius:50%;background:var(--ink)}
+.av-c.s48{width:44px;height:44px}.av-c.s32{width:32px;height:32px}
+.av-c.s24{width:24px;height:24px}.av-c.s16{width:16px;height:16px}
+
+.av-d{border-radius:12px;background:#fff;border:1.5px solid var(--red)}
+.av-d.s48{width:44px;height:44px}.av-d.s32{width:32px;height:32px}
+.av-d.s24{width:24px;height:24px;border-radius:8px}.av-d.s16{width:16px;height:16px;border-radius:5px}
+
+.av-e{border-radius:50%;background:#fff;border:1.5px solid var(--line2)}
+.av-e.s48{width:44px;height:44px}.av-e.s32{width:32px;height:32px}
+.av-e.s24{width:24px;height:24px}.av-e.s16{width:16px;height:16px}
+
+.av-f{border-radius:50%;background:var(--ink);position:relative;overflow:hidden}
+.av-f.s48{width:44px;height:44px}.av-f.s32{width:32px;height:32px}
+.av-f.s24{width:24px;height:24px}.av-f.s16{width:16px;height:16px}
+
+.av-g{border-radius:11px;background:var(--red);font-size:15px;color:#fff;font-weight:700;letter-spacing:-.5px}
+.av-g.s48{width:44px;height:44px}.av-g.s32{width:32px;height:32px;font-size:13px;border-radius:8px}
+.av-g.s24{width:24px;height:24px;font-size:10px;border-radius:7px}
+.av-g.s16{width:16px;height:16px;font-size:8px;border-radius:4px}
+
+/* 用户头像 */
+.av-u{border-radius:50%;background:#E7EAEF;color:var(--ink2);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.av-u.s32{width:32px;height:32px}.av-u.s24{width:24px;height:24px;font-size:9.5px}
+
+/* thinking 三点 */
+.dots{display:inline-flex;gap:3px;align-items:center;height:14px}
+.dots i{width:4px;height:4px;border-radius:50%;background:var(--ink3);animation:bnc 1.2s infinite ease-in-out}
+.dots i:nth-child(2){animation-delay:.15s}
+.dots i:nth-child(3){animation-delay:.3s}
+@keyframes bnc{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-3px);opacity:1}}
+
+.ring::after{
+  content:"";position:absolute;inset:-3px;border-radius:inherit;
+  border:1.5px solid var(--red);opacity:0;
+  animation:ringp 1.8s infinite ease-out;
+}
+@keyframes ringp{0%{opacity:.5;transform:scale(.94)}70%{opacity:0;transform:scale(1.08)}100%{opacity:0}}
+
+/* ---------- 表格 ---------- */
+table.cmp{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line2);border-radius:12px;overflow:hidden;font-size:12.5px}
+table.cmp th{background:var(--thead);text-align:left;padding:11px 14px;font-size:11.5px;color:var(--ink2);font-weight:700;border-bottom:1px solid var(--line2)}
+table.cmp td{padding:11px 14px;border-bottom:1px solid #F4F6F9;color:var(--ink)}
+table.cmp tr:last-child td{border-bottom:0}
+table.cmp td.k{font-weight:600}
+.yes{color:var(--green);font-weight:600}
+.no{color:var(--ink3)}
+.mid{color:var(--amber);font-weight:600}
+
+/* 浮球与待办气泡 */
+.ball-demo{
+  position:relative;width:52px;height:52px;border-radius:50%;background:var(--red);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 16px;
+  box-shadow:0 6px 18px -4px rgba(200,16,46,.45), 0 2px 6px rgba(200,16,46,.2);
+}
+.ball-demo svg{width:24px;height:24px}
+.ball-demo.hover{transform:scale(1.06);box-shadow:0 10px 26px -6px rgba(200,16,46,.56), 0 3px 8px rgba(200,16,46,.24)}
+.ball-demo .halo{position:absolute;inset:-6px;border-radius:50%;border:1.5px solid var(--red);opacity:.18}
+.bubble{
+  position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;border-radius:9px;
+  background:#fff;border:1.5px solid var(--red);color:var(--red);
+  font-size:10.5px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;
+  padding:0 4px;font-variant-numeric:tabular-nums;
+}
+.bubble.pill{padding:0 5px}
+.demo-lbl{font-size:11.5px;color:var(--ink3);text-align:center;line-height:1.5}
+.demo-lbl b{display:block;color:var(--ink);font-size:12px;font-weight:600;margin-bottom:2px}
+
+/* 规格标注 */
+.spec{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:var(--ink3)}
+.spec b{color:var(--ink2);font-weight:600}
+.note-box{background:#fff;border:1px solid var(--line2);border-left:3px solid var(--red);border-radius:8px;padding:13px 15px;font-size:12px;color:var(--ink2);margin-top:14px}
+.note-box b{color:var(--ink)}
+.foot{padding:28px 0;border-top:1px solid var(--line2);font-size:11.5px;color:var(--ink4);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="doc-head">
+    <h1>AI 助手 UI 方案</h1>
+    <div class="sub">东风车队管理系统 · Web 端 4 版 + 小程序客服会话（一阶段）+ 6 个 AI 客服形象</div>
+    <div class="meta">
+      <div><b>版本</b>v1.0 / 2026-11-18</div>
+      <div><b>风格基准</b>f 云白（线上原样）· 品牌红 #C8102E</div>
+      <div><b>正文规格</b>13px / 次要 12px / 表头 12px #475569</div>
+      <div><b>待定</b>Web 主形态 · 小程序形态 · 头像方向</div>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <a href="#web">Web 四版</a>
+    <a href="#webA">A 右侧抽屉</a>
+    <a href="#webB">B 浮动卡</a>
+    <a href="#webC">C 底部输入条</a>
+    <a href="#webD">D 命令面板</a>
+    <a href="#mp">小程序客服</a>
+    <a href="#avatar">客服形象</a>
+    <a href="#ball">浮球与气泡</a>
+    <a href="#msg">消息形态</a>
+    <a href="#cmp">对比与推荐</a>
+  </nav>
+
+  <!-- ========== WEB ========== -->
+  <section id="web">
+    <h2 class="sec">Web 端 · 四版方案</h2>
+    <p class="sec-sub">四版共用同一套面板内容（消息流 + 卡片 + 输入区），差异在「入口形态」和「是否遮挡主内容」。</p>
+
+    <!-- A -->
+    <div class="plan" id="webA">
+      <div class="plan-head">
+        <span class="tag">方案 A</span>
+        <h3>右侧全高抽屉</h3>
+        <span class="desc">最像专业后台，内容区向左收窄，不遮挡</span>
+      </div>
+      <div class="frame">
+        <div class="app">
+          <div class="side">
+            <div class="logo"><div class="dot"></div><span>东风车队</span></div>
+            <div class="grp">运营</div>
+            <div class="nav"><i></i>运营总览</div>
+            <div class="nav on"><i></i>费用列表</div>
+            <div class="nav"><i></i>运单管理</div>
+            <div class="nav"><i></i>车辆监控</div>
+            <div class="grp">档案</div>
+            <div class="nav"><i></i>车辆档案</div>
+            <div class="nav"><i></i>司机档案</div>
+          </div>
+          <div class="main" style="margin-right:412px">
+            <div class="top">
+              <div class="crumb">运营 / <b>费用列表</b></div>
+              <div class="spacer"></div>
+              <div class="btn">导出</div>
+              <div class="btn pri">新建费用</div>
+            </div>
+            <div class="body">
+              <div class="pgtitle"><span class="bar"></span><b>费用列表</b><span class="cnt">共 128 条</span></div>
+              <div class="filters">
+                <div class="f wide">按车牌 / 单号搜索</div>
+                <div class="f">费用类型</div>
+                <div class="f">费用状态</div>
+                <div class="f mini">重置</div>
+                <div class="f pri">查询</div>
+              </div>
+              <div class="card">
+                <div class="thead"><div class="c1">车牌</div><div class="c2">费用类型</div><div class="c3">金额</div><div class="c4">状态</div><div class="c5">上报时间</div></div>
+                <div class="trow"><div class="c1">苏A12345</div><div class="c2"><span class="sk w2"></span></div><div class="c3">¥1,280.00</div><div class="c4"><span class="st wait"><i></i>待审核</span></div><div class="c5">11-17 09:20</div></div>
+                <div class="trow"><div class="c1">苏A66821</div><div class="c2"><span class="sk w1"></span></div><div class="c3">¥860.00</div><div class="c4"><span class="st ok"><i></i>已通过</span></div><div class="c5">11-17 08:44</div></div>
+                <div class="trow"><div class="c1">苏A30219</div><div class="c2"><span class="sk w3"></span></div><div class="c3">¥2,140.00</div><div class="c4"><span class="st blue"><i></i>待打款</span></div><div class="c5">11-16 17:05</div></div>
+                <div class="trow"><div class="c1">苏A91002</div><div class="c2"><span class="sk w2"></span></div><div class="c3">¥430.00</div><div class="c4"><span class="st wait"><i></i>待审核</span></div><div class="c5">11-16 14:30</div></div>
+                <div class="trow"><div class="c1">苏A12345</div><div class="c2"><span class="sk w1"></span></div><div class="c3">¥1,980.00</div><div class="c4"><span class="st ok"><i></i>已通过</span></div><div class="c5">11-15 11:12</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="p-head">
+              <div class="av av-a s32">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/>
+                  <circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/>
+                  <path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <div class="t">车队助手</div>
+                <div class="s"><i></i>在线</div>
+              </div>
+              <div class="spacer"></div>
+              <div class="icobtn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/></svg>
+              </div>
+              <div class="icobtn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+
+            <div class="p-body">
+              <div class="msg me">
+                <div class="av av-u s32">王</div>
+                <div class="col">
+                  <div class="bub">上个月电耗最差的三个车是哪些</div>
+                  <div class="meta-time">18:02</div>
+                </div>
+              </div>
+
+              <div class="msg">
+                <div class="av av-a s32">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/>
+                    <circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/>
+                    <path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div class="col">
+                  <div class="bub">
+                    <div class="mcard">
+                      <div class="ch">10 月 · 百公里电耗<span class="n">按车</span></div>
+                      <table class="mtable">
+                        <tr><th>车牌</th><th class="num">里程</th><th class="num">电耗</th></tr>
+                        <tr><td>苏A30219</td><td class="num">4,820 km</td><td class="num bad">68.2</td></tr>
+                        <tr><td>苏A91002</td><td class="num">3,104 km</td><td class="num bad">66.7</td></tr>
+                        <tr><td>苏A66821</td><td class="num">5,240 km</td><td class="num bad">65.1</td></tr>
+                      </table>
+                      <div class="note">数据截至 11-16 · 百公里电耗 = 耗电量 ÷ 里程 × 100</div>
+                    </div>
+                  </div>
+                  <div class="bub">这三台都在 65 度以上，比车队均值高约 20%，建议查一下空调和胎压。</div>
+                  <div class="meta-time">18:02</div>
+                </div>
+              </div>
+
+              <div class="msg me">
+                <div class="av av-u s32">王</div>
+                <div class="col">
+                  <div class="bub">有哪些费用等我审批</div>
+                  <div class="meta-time">18:03</div>
+                </div>
+              </div>
+
+              <div class="msg">
+                <div class="av av-a s32">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/>
+                    <circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/>
+                    <path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div class="col">
+                  <div class="bub">
+                    <div class="mcard">
+                      <div class="ch">待我审批<span class="n">3 笔 · ¥3,320</span></div>
+                      <div class="todo">
+                        <div class="info"><div class="t1">苏A12345 · 过路过桥费</div><div class="t2">11-17 09:20 · 张师傅</div></div>
+                        <div style="font-weight:600;font-variant-numeric:tabular-nums">¥1,280</div>
+                        <div class="go">去审批</div>
+                      </div>
+                      <div class="todo">
+                        <div class="info"><div class="t1">苏A91002 · 加油费</div><div class="t2">11-16 14:30 · 李师傅</div></div>
+                        <div style="font-weight:600;font-variant-numeric:tabular-nums">¥430</div>
+                        <div class="go">去审批</div>
+                      </div>
+                      <div class="todo">
+                        <div class="info"><div class="t1">苏A66821 · 停车费</div><div class="t2">11-15 11:12 · 张师傅</div></div>
+                        <div style="font-weight:600;font-variant-numeric:tabular-nums">¥1,610</div>
+                        <div class="go">去审批</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="bub">点「去审批」会跳到费用列表并自动选中这三笔。审批动作还是要在页面上确认。</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-foot">
+              <div class="chips">
+                <div class="chip">这个月过路费多少</div>
+                <div class="chip">明天派单车</div>
+              </div>
+              <div class="inputbox">
+                <div class="ph">问点什么，或按住说话…</div>
+                <div class="ibtn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3" stroke-linecap="round"/></svg>
+                </div>
+                <div class="ibtn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M3 16l5-4 4 3 3-2 6 4" stroke-linecap="round"/></svg>
+                </div>
+                <div class="ibtn send">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h13M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+              <div class="p-tip">数字均由系统计算 · AI 不代签审批</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="spec">
+        <div><b>面板宽</b> 412px</div>
+        <div><b>触发</b> 右下浮球 52px / ⌘J</div>
+        <div><b>内容区</b> 左移收窄，不遮挡</div>
+        <div><b>关闭</b> 点 × 或再按 ⌘J</div>
+      </div>
+    </div>
+
+    <!-- B -->
+    <div class="plan" id="webB">
+      <div class="plan-head">
+        <span class="tag">方案 B</span>
+        <h3>悬浮对话卡</h3>
+        <span class="desc">轻，可拖动，像 ChatGPT 侧栏，但会盖住右下内容</span>
+      </div>
+      <div class="frame">
+        <div class="app">
+          <div class="side">
+            <div class="logo"><div class="dot"></div><span>东风车队</span></div>
+            <div class="grp">运营</div>
+            <div class="nav"><i></i>运营总览</div>
+            <div class="nav on"><i></i>费用列表</div>
+            <div class="nav"><i></i>运单管理</div>
+            <div class="nav"><i></i>车辆监控</div>
+            <div class="grp">档案</div>
+            <div class="nav"><i></i>车辆档案</div>
+            <div class="nav"><i></i>司机档案</div>
+          </div>
+          <div class="main">
+            <div class="top">
+              <div class="crumb">运营 / <b>费用列表</b></div>
+              <div class="spacer"></div>
+              <div class="btn">导出</div>
+              <div class="btn pri">新建费用</div>
+            </div>
+            <div class="body">
+              <div class="pgtitle"><span class="bar"></span><b>费用列表</b><span class="cnt">共 128 条</span></div>
+              <div class="filters">
+                <div class="f wide">按车牌 / 单号搜索</div>
+                <div class="f">费用类型</div>
+                <div class="f">费用状态</div>
+                <div class="f mini">重置</div>
+                <div class="f pri">查询</div>
+              </div>
+              <div class="card">
+                <div class="thead"><div class="c1">车牌</div><div class="c2">费用类型</div><div class="c3">金额</div><div class="c4">状态</div><div class="c5">上报时间</div></div>
+                <div class="trow"><div class="c1">苏A12345</div><div class="c2"><span class="sk w2"></span></div><div class="c3">¥1,280.00</div><div class="c4"><span class="st wait"><i></i>待审核</span></div><div class="c5">11-17 09:20</div></div>
+                <div class="trow"><div class="c1">苏A66821</div><div class="c2"><span class="sk w1"></span></div><div class="c3">¥860.00</div><div class="c4"><span class="st ok"><i></i>已通过</span></div><div class="c5">11-17 08:44</div></div>
+                <div class="trow"><div class="c1">苏A30219</div><div class="c2"><span class="sk w3"></span></div><div class="c3">¥2,140.00</div><div class="c4"><span class="st blue"><i></i>待打款</span></div><div class="c5">11-16 17:05</div></div>
+                <div class="trow"><div class="c1">苏A91002</div><div class="c2"><span class="sk w2"></span></div><div class="c3">¥430.00</div><div class="c4"><span class="st wait"><i></i>待审核</span></div><div class="c5">11-16 14:30</div></div>
+                <div class="trow"><div class="c1">苏A12345</div><div class="c2"><span class="sk w1"></span></div><div class="c3">¥1,980.00</div><div class="c4"><span class="st ok"><i></i>已通过</span></div><div class="c5">11-15 11:12</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="floatcard">
+            <div class="bar"></div>
+            <div class="p-head" style="border-bottom:1px solid var(--line)">
+              <div class="av av-a s32">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/>
+                  <circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/>
+                  <path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <div class="t">车队助手</div>
+                <div class="s"><i></i>在线</div>
+              </div>
+              <div class="spacer"></div>
+              <div class="icobtn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+            <div class="p-body" style="padding-top:14px">
+              <div class="msg">
+                <div class="av av-a s32">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/>
+                    <circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/>
+                    <path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div class="col">
+                  <div class="bub">你好，今天有 <b>3 笔</b>费用等你审批，共 ¥3,320。要现在看吗？</div>
+                </div>
+              </div>
+              <div class="msg me">
+                <div class="av av-u s32">王</div>
+                <div class="col"><div class="bub">这个月过路费花了多少</div></div>
+              </div>
+              <div class="msg">
+                <div class="av av-a s32">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/>
+                    <circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/>
+                    <path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div class="col">
+                  <div class="bub">
+                    <div style="font-size:10.5px;color:var(--ink3)">11 月 · 过路过桥费</div>
+                    <div style="font-size:22px;font-weight:800;letter-spacing:-.5px;margin:2px 0 2px;font-variant-numeric:tabular-nums">¥8,420.00</div>
+                    <div style="font-size:11.5px;color:var(--green)">较上月 ↓ 12.4%</div>
+                  </div>
+                  <div class="bub">共 36 笔，苏A12345 最高（¥1,280）。明细已在费用列表按本月筛选好。</div>
+                </div>
+              </div>
+              <div class="msg">
+                <div class="av av-a s32" style="background:#fff;border:1px solid var(--line2)">
+                  <div class="dots"><i></i><i></i><i></i></div>
+                </div>
+                <div class="col"><div class="bub" style="color:var(--ink3)">正在查 11 月费用明细…</div></div>
+              </div>
+            </div>
+            <div class="p-foot">
+              <div class="inputbox">
+                <div class="ph">问点什么…</div>
+                <div class="ibtn send">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h13M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="spec">
+        <div><b>卡片</b> 396 × 552</div>
+        <div><b>位置</b> 右下 22px，可拖动</div>
+        <div><b>特点</b> 顶部 3px 品牌红细线</div>
+        <div><b>风险</b> 遮挡右下角表格与分页</div>
+      </div>
+    </div>
+
+    <!-- C -->
+    <div class="plan" id="webC">
+      <div class="plan-head">
+        <span class="tag">方案 C</span>
+        <h3>底部常驻输入条</h3>
+        <span class="desc">零点击输入，像 Cursor 的 ⌘K，展开后面板悬浮在内容上方</span>
+      </div>
+      <div class="frame">
+        <div class="app">
+          <div class="side">
+            <div class="logo"><div class="dot"></div><span>东风车队</span></div>
+            <div class="grp">运营</div>
+            <div class="nav"><i></i>运营总览</div>
+            <div class="nav on"><i></i>费用列表</div>
+            <div class="nav"><i></i>运单管理</div>
+            <div class="nav"><i></i>车辆监控</div>
+            <div class="grp">档案</div>
+            <div class="nav"><i></i>车辆档案</div>
+            <div class="nav"><i></i>司机档案</div>
+          </div>
+          <div class="main">
+            <div class="top">
+              <div class="crumb">运营 / <b>费用列表</b></div>
+              <div class="spacer"></div>
+              <div class="btn">导出</div>
+              <div class="btn pri">新建费用</div>
+            </div>
+            <div class="body" style="padding-bottom:80px">
+              <div class="pgtitle"><span class="bar"></span><b>费用列表</b><span class="cnt">共 128 条</span></div>
+              <div class="filters">
+                <div class="f wide">按车牌 / 单号搜索</div>
+                <div class="f">费用类型</div>
+                <div class="f">费用状态</div>
+                <div class="f mini">重置</div>
+                <div class="f pri">查询</div>
+              </div>
+              <div class="card">
+                <div class="thead"><div class="c1">车牌</div><div class="c2">费用类型</div><div class="c3">金额</div><div class="c4">状态</div><div class="c5">上报时间</div></div>
+                <div class="trow"><div class="c1">苏A12345</div><div class="c2"><span class="sk w2"></span></div><div class="c3">¥1,280.00</div><div class="c4"><span class="st wait"><i></i>待审核</span></div><div class="c5">11-17 09:20</div></div>
+                <div class="trow"><div class="c1">苏A66821</div><div class="c2"><span class="sk w1"></span></div><div class="c3">¥860.00</div><div class="c4"><span class="st ok"><i></i>已通过</span></div><div class="c5">11-17 08:44</div></div>
+                <div class="trow"><div class="c1">苏A30219</div><div class="c2"><span class="sk w3"></span></div><div class="c3">¥2,140.00</div><div class="c4"><span class="st blue"><i></i>待打款</span></div><div class="c5">11-16 17:05</div></div>
+                <div class="trow"><div class="c1">苏A91002</div><div class="c2"><span class="sk w2"></span></div><div class="c3">¥430.00</div><div class="c4"><span class="st wait"><i></i>待审核</span></div><div class="c5">11-16 14:30</div></div>
+              </div>
+            </div>
+            <div class="cmdfull" style="bottom:76px;top:auto;left:198px;right:24px;width:auto;transform:none;height:400px">
+              <div class="p-head">
+                <div class="av av-a s32">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/>
+                    <circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/>
+                    <path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div><div class="t">车队助手</div><div class="s"><i></i>在线</div></div>
+                <div class="spacer"></div>
+                <div class="icobtn">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+                </div>
+              </div>
+              <div class="p-body">
+                <div class="msg me">
+                  <div class="av av-u s32">王</div>
+                  <div class="col"><div class="bub">哪些费用等我审批</div></div>
+                </div>
+                <div class="msg">
+                  <div class="av av-a s32">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/>
+                      <circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/>
+                      <path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                  </div>
+                  <div class="col">
+                    <div class="bub">
+                      <div class="mcard">
+                        <div class="ch">待我审批<span class="n">3 笔 · ¥3,320</span></div>
+                        <div class="todo">
+                          <div class="info"><div class="t1">苏A12345 · 过路过桥费</div><div class="t2">11-17 09:20 · 张师傅</div></div>
+                          <div style="font-weight:600">¥1,280</div>
+                          <div class="go">去审批</div>
+                        </div>
+                        <div class="todo">
+                          <div class="info"><div class="t1">苏A91002 · 加油费</div><div class="t2">11-16 14:30 · 李师傅</div></div>
+                          <div style="font-weight:600">¥430</div>
+                          <div class="go">去审批</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="p-foot">
+                <div class="chips">
+                  <div class="chip">昨天跑了多少公里</div>
+                  <div class="chip">本月电耗趋势</div>
+                  <div class="chip">常驻任务怎么建</div>
+                </div>
+              </div>
+            </div>
+            <div class="cmdbar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.8"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" stroke-linejoin="round"/></svg>
+              <div class="ph">问点什么，或按住说话…</div>
+              <div class="k">⌘</div><div class="k">J</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="spec">
+        <div><b>输入条</b> 高 46px，常驻底部</div>
+        <div><b>展开</b> 回车 / ⌘J，面板高 400px</div>
+        <div><b>特点</b> 打开即输入，少一次点击</div>
+        <div><b>代价</b> 永久占 66px 底部空间</div>
+      </div>
+    </div>
+
+    <!-- D -->
+    <div class="plan" id="webD">
+      <div class="plan-head">
+        <span class="tag">方案 D</span>
+        <h3>命令面板（⌘K）</h3>
+        <span class="desc">最快，结果列表式而非对话流，适合导航与待办</span>
+      </div>
+      <div class="frame">
+        <div class="app">
+          <div class="side">
+            <div class="logo"><div class="dot"></div><span>东风车队</span></div>
+            <div class="grp">运营</div>
+            <div class="nav"><i></i>运营总览</div>
+            <div class="nav on"><i></i>费用列表</div>
+            <div class="nav"><i></i>运单管理</div>
+            <div class="nav"><i></i>车辆监控</div>
+            <div class="grp">档案</div>
+            <div class="nav"><i></i>车辆档案</div>
+            <div class="nav"><i></i>司机档案</div>
+          </div>
+          <div class="main">
+            <div class="top">
+              <div class="crumb">运营 / <b>费用列表</b></div>
+              <div class="spacer"></div>
+              <div class="btn">⌘K 唤起助手</div>
+            </div>
+            <div class="body" style="opacity:.4">
+              <div class="pgtitle"><span class="bar"></span><b>费用列表</b><span class="cnt">共 128 条</span></div>
+              <div class="filters">
+                <div class="f wide">按车牌 / 单号搜索</div>
+                <div class="f">费用类型</div>
+                <div class="f">费用状态</div>
+              </div>
+              <div class="card">
+                <div class="thead"><div class="c1">车牌</div><div class="c2">费用类型</div><div class="c3">金额</div><div class="c4">状态</div><div class="c5">上报时间</div></div>
+                <div class="trow"><div class="c1">苏A12345</div><div class="c2"><span class="sk w2"></span></div><div class="c3">¥1,280.00</div><div class="c4"><span class="st wait"><i></i>待审核</span></div><div class="c5">11-17 09:20</div></div>
+                <div class="trow"><div class="c1">苏A66821</div><div class="c2"><span class="sk w1"></span></div><div class="c3">¥860.00</div><div class="c4"><span class="st ok"><i></i>已通过</span></div><div class="c5">11-17 08:44</div></div>
+                <div class="trow"><div class="c1">苏A30219</div><div class="c2"><span class="sk w3"></span></div><div class="c3">¥2,140.00</div><div class="c4"><span class="st blue"><i></i>待打款</span></div><div class="c5">11-16 17:05</div></div>
+              </div>
+            </div>
+            <div class="cmdfull">
+              <div class="head">
+                <div class="av av-a s24">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.9"/>
+                    <circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.7"/>
+                    <path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div class="ph">费用审批</div>
+                <div class="cur"></div>
+                <div class="k" style="height:20px;padding:0 5px;border:1px solid var(--line2);border-radius:4px;font-size:10.5px;color:var(--ink3);display:flex;align-items:center">esc</div>
+              </div>
+              <div class="results">
+                <div class="rgroup">页面</div>
+                <div class="res on">
+                  <div class="ic">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+                  </div>
+                  <div class="tx">费用列表 · <em>审批</em>待办</div>
+                  <div class="rt">⌘1</div>
+                </div>
+                <div class="res">
+                  <div class="ic">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round"/></svg>
+                  </div>
+                  <div class="tx">费用审批流程设置</div>
+                  <div class="rt">系统管理</div>
+                </div>
+                <div class="rgroup">待办</div>
+                <div class="res">
+                  <div class="ic">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2" stroke-linecap="round"/></svg>
+                  </div>
+                  <div class="tx">3 笔<em>费用</em>等我审批 · ¥3,320</div>
+                  <div class="rt">回车查看</div>
+                </div>
+                <div class="rgroup">可以这样问</div>
+                <div class="res">
+                  <div class="ic">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17l5-5 3 3 4-6 4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </div>
+                  <div class="tx">这个月过路费花了多少</div>
+                  <div class="rt">问 AI</div>
+                </div>
+              </div>
+              <div class="cmdfoot">
+                <span>↑↓ 选择</span><span>回车 确认</span><span>esc 关闭</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="spec">
+        <div><b>面板</b> 560px 居中，顶部 96px</div>
+        <div><b>触发</b> ⌘K / Ctrl+K / 顶部按钮</div>
+        <div><b>特点</b> 20ms 本地索引，最快</div>
+        <div><b>缺</b> 对话感弱，不适合多轮追问</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 小程序 ========== -->
+  <section id="mp">
+    <h2 class="sec">小程序端 · 客服会话（一阶段定稿）</h2>
+    <p class="sec-sub">不接服务号，直接用小程序内置客服：<b>零 UI 开发、当天可上线</b>。代价是会话界面由微信提供，样式不可改、也渲染不了表格——所以交互全部做成「文本 + 回数字」。</p>
+
+    <div class="phones">
+
+      <div>
+        <div class="plan-head"><span class="tag">一阶段 · 屏 1</span><h3>小程序内 · 悬浮球入口</h3></div>
+        <div class="phone">
+          <div class="statusbar"><span>9:41</span><div class="right"><span>5G</span><i></i></div></div>
+          <div class="mp-top">
+            <div class="t">运单</div>
+            <div class="spacer"></div>
+            <div style="font-size:12px;color:var(--ink3)">全部</div>
+          </div>
+          <div class="mp-body">
+            <div style="background:#fff;border:1px solid var(--line2);border-radius:10px;padding:11px 12px">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                <span style="font-size:12.5px;font-weight:600">苏A12345</span>
+                <span style="font-size:10.5px;color:var(--amber);font-weight:600;display:flex;align-items:center;gap:3px"><i style="width:4px;height:4px;border-radius:50%;background:var(--amber);display:block"></i>已发车</span>
+                <span style="margin-left:auto;font-size:10.5px;color:var(--ink4)">WO-…0052</span>
+              </div>
+              <div style="font-size:11.5px;color:var(--ink2);line-height:1.7">中储库 · 江北新区<br>→ 江宁厂 · 江宁区</div>
+            </div>
+            <div style="background:#fff;border:1px solid var(--line2);border-radius:10px;padding:11px 12px">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                <span style="font-size:12.5px;font-weight:600">苏A66821</span>
+                <span style="font-size:10.5px;color:var(--blue);font-weight:600;display:flex;align-items:center;gap:3px"><i style="width:4px;height:4px;border-radius:50%;background:var(--blue);display:block"></i>待装车</span>
+              </div>
+              <div style="font-size:11.5px;color:var(--ink2);line-height:1.7">青白江仓库 → 青羊区</div>
+            </div>
+            <div style="background:#fff;border:1px solid var(--line2);border-radius:10px;padding:11px 12px">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                <span style="font-size:12.5px;font-weight:600">苏A30219</span>
+                <span style="font-size:10.5px;color:var(--green);font-weight:600;display:flex;align-items:center;gap:3px"><i style="width:4px;height:4px;border-radius:50%;background:var(--green);display:block"></i>已完成</span>
+              </div>
+              <div style="font-size:11.5px;color:var(--ink2);line-height:1.7">无锡仓 → 常州北</div>
+            </div>
+          </div>
+          <div style="position:absolute;right:16px;bottom:78px;width:54px;height:54px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px -4px rgba(200,16,46,.45),0 2px 6px rgba(200,16,46,.2);z-index:5">
+            <svg width="29" height="29" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.6" r="3.4" stroke="#fff" stroke-width="1.5"/><path d="M5 19.8c0-3.3 3.1-5.4 7-5.4s7 2.1 7 5.4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M6 9.6a6 6 0 0 1 12 0" stroke="#fff" stroke-width="1.2" opacity=".65" stroke-linecap="round"/><circle cx="6" cy="10.2" r="1.05" fill="#fff" opacity=".65"/><circle cx="18" cy="10.2" r="1.05" fill="#fff" opacity=".65"/></svg>
+          </div>
+          <div class="tabbar">
+            <div class="tabitem"><i></i>首页</div>
+            <div class="tabitem on"><i></i>运单</div>
+            <div class="tabitem"><i></i>我的</div>
+          </div>
+        </div>
+        <div class="spec">
+          <div><b>悬浮球</b> 54px，红底人像</div>
+          <div><b>点击</b> 调起微信客服会话</div>
+          <div><b>不占 Tab</b> 底部只留三个</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="plan-head"><span class="tag">一阶段 · 屏 2</span><h3>微信原生客服会话</h3></div>
+        <div class="phone">
+          <div class="statusbar"><span>12:22</span><div class="right"><span>5G</span><i></i></div></div>
+          <div class="mp-top" style="justify-content:flex-start;gap:6px">
+            <span style="font-size:16px;color:#5A5A5A;line-height:1">‹</span>
+            <div class="t" style="font-size:14px">客服</div>
+            <div class="spacer"></div>
+            <span style="font-size:16px;color:#5A5A5A;line-height:1">···</span>
+          </div>
+          <div class="wx">
+            <div class="wx-msg">
+              <div class="wx-av">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.6" r="3.6" stroke="#fff" stroke-width="2"/><path d="M4.6 20.2c0-3.5 3.3-5.7 7.4-5.7s7.4 2.2 7.4 5.7" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+              </div>
+              <div class="wx-bub">你好，我是小东。把上游发的派单信息发给我，文字或截图都行，我来建单。</div>
+            </div>
+
+            <div class="wx-msg me">
+              <div class="wx-av" style="background:#C6CDD5;font-size:11px;color:#fff;font-weight:600">王</div>
+              <div class="wx-bub me" style="font-size:11.5px;line-height:1.65">装车信息：车号：川A89802<br>卸货地址：四川省成都市青羊区<br>装货地址：四川省成都市青白江区<br>司机：康其中 手机号：135****9899<br>装货数量：140</div>
+            </div>
+
+            <div class="wx-msg">
+              <div class="wx-av">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.6" r="3.6" stroke="#fff" stroke-width="2"/><path d="M4.6 20.2c0-3.5 3.3-5.7 7.4-5.7s7.4 2.2 7.4 5.7" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+              </div>
+              <div class="wx-bub">
+                理好了：<br>
+                车辆 <b>苏A89802</b>（原文写的是川A）<br>
+                司机 康其中 · 装载 140<br>
+                装货 青白江区 → 卸货 青羊区<br><br>
+                还差 1 项：装货地没匹配到围栏，是<b>「青白江仓库」</b>吗？<br>
+                回 <b>1</b> 确认，回 <b>2</b> 换一个
+              </div>
+            </div>
+
+            <div class="wx-msg me">
+              <div class="wx-av" style="background:#C6CDD5;font-size:11px;color:#fff;font-weight:600">王</div>
+              <div class="wx-bub me">1</div>
+            </div>
+
+            <div class="wx-msg">
+              <div class="wx-av">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.6" r="3.6" stroke="#fff" stroke-width="2"/><path d="M4.6 20.2c0-3.5 3.3-5.7 7.4-5.7s7.4 2.2 7.4 5.7" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+              </div>
+              <div class="wx-bub">
+                已建单 <b>WO-20261118-0052</b>。点下面卡片可查看运单或上传装车凭证。
+                <div class="wx-card">
+                  <div class="wx-thumb">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.6"><rect x="2" y="6" width="14" height="11" rx="1.6"/><path d="M16 10h3.2l2 3v4H16z"/><circle cx="6.5" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>
+                  </div>
+                  <div class="tx"><b>WO-20261118-0052</b><span>苏A89802 · 11-19 08:00 发车</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="wx-bar">
+            <div class="wx-ico">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3" stroke-linecap="round"/></svg>
+            </div>
+            <div class="wx-in">输入消息…</div>
+            <div class="wx-ico" style="border:none;color:#7A7A7A;font-size:20px">⊙</div>
+          </div>
+        </div>
+        <div class="spec">
+          <div><b>界面</b> 微信提供，不可定制</div>
+          <div><b>左侧头像</b> 是小程序 logo，不是小东</div>
+          <div><b>交互</b> 全文本，回数字</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="plan-head"><span class="tag gray">二期 · 屏 3</span><h3>自建面板（可选演进）</h3></div>
+        <div class="phone">
+          <div class="statusbar"><span>9:41</span><div class="right"><span>5G</span><i></i></div></div>
+          <div class="mp-top">
+            <div style="width:26px;height:26px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;flex:0 0 26px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.6" r="3.6" stroke="#fff" stroke-width="2"/><path d="M4.6 20.2c0-3.5 3.3-5.7 7.4-5.7s7.4 2.2 7.4 5.7" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+            </div>
+            <div class="t" style="font-size:14px">小东</div>
+            <div class="spacer"></div>
+            <div style="font-size:11px;color:var(--ink3)">收起</div>
+          </div>
+          <div class="mp-body">
+            <div style="align-self:flex-end;max-width:86%"><div class="mp-me">明天八点从中储库到江宁厂，苏A12345，派张师傅</div></div>
+            <div style="display:flex;gap:8px;align-items:flex-start">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;flex:0 0 28px">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.4" r="3.6" stroke="#fff" stroke-width="2"/><path d="M4.6 20.2c0-3.5 3.3-5.7 7.4-5.7s7.4 2.2 7.4 5.7" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div class="mp-bub" style="margin-bottom:8px;font-size:12px">还差一步，选一下司机：</div>
+                <div style="background:#fff;border:1px solid var(--line2);border-radius:10px;overflow:hidden">
+                  <div style="height:30px;display:flex;align-items:center;padding:0 10px;background:var(--thead);border-bottom:1px solid var(--line);font-size:10.5px;color:var(--ink3)">运单草稿</div>
+                  <div style="padding:9px 10px;font-size:11.5px;line-height:1.95">
+                    <div style="display:flex"><span style="color:var(--ink3);width:50px;flex:0 0 50px">装货</span><span>中储库</span></div>
+                    <div style="display:flex"><span style="color:var(--ink3);width:50px;flex:0 0 50px">卸货</span><span>江宁厂</span></div>
+                    <div style="display:flex"><span style="color:var(--ink3);width:50px;flex:0 0 50px">车辆</span><span>苏A12345</span></div>
+                    <div style="display:flex"><span style="color:var(--ink3);width:50px;flex:0 0 50px">时间</span><span>11-19 08:00</span></div>
+                  </div>
+                  <div style="border-top:1px solid var(--line);padding:9px 10px">
+                    <div style="font-size:10.5px;color:var(--ink3);margin-bottom:6px">司机 · 原文未指定</div>
+                    <div style="display:flex;flex-direction:column;gap:5px">
+                      <div style="height:30px;border-radius:7px;background:var(--red-soft);border:1px solid var(--red-line);display:flex;align-items:center;padding:0 9px;font-size:11.5px;color:var(--red);font-weight:600">张伟 · 常跑此线 · 空闲</div>
+                      <div style="height:30px;border-radius:7px;background:#fff;border:1px solid var(--line2);display:flex;align-items:center;padding:0 9px;font-size:11.5px">张建军 · 常跑此线</div>
+                      <div style="height:30px;border-radius:7px;background:#fff;border:1px solid var(--line2);display:flex;align-items:center;padding:0 9px;font-size:11.5px">张涛</div>
+                    </div>
+                  </div>
+                  <div style="height:40px;display:flex;align-items:center;justify-content:center;background:var(--red);color:#fff;font-size:12.5px;font-weight:600">确认派单</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="spec">
+          <div><b>何时做</b> 客服会话撑不住时再上</div>
+          <div><b>好处</b> 能出卡片、能就地补字段</div>
+          <div><b>代价</b> 要自己写全套 UI</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="note-box">
+      <b>为什么一阶段用客服会话是合理的</b><br>
+      派单这个流程本质是「补 1–2 个字段 + 确认」，用文本完全能表达：缺什么就说缺什么，让用户回数字选择。这套交互在客服会话里不需要一行前端代码。<br>
+      反过来说，<b>查询类问题不适合客服会话</b>——"上个月电耗最差的三台车"要出表格，客服会话里只能堆成三行文字，很难看。这类问题留在 Web 面板里。
+    </div>
+  </section>
+
+  <!-- ========== 头像 ========== -->
+  <section id="avatar">
+    <h2 class="sec">AI 客服形象 · 六个方向</h2>
+    <p class="sec-sub">一阶段走小程序客服，AI 需要一个<b>人的身份</b>，而不是科技感的工具图标。昵称定为「小东」，按 48 / 36 / 28 / 16px 真实尺寸渲染——判断标准只有一条：<b>16px 时还认不认得出这是个人</b>。</p>
+
+    <div class="av-grid">
+
+      <div class="av-card">
+        <h4>A · 人像 + 耳麦</h4>
+        <div class="d">红底 + 白色线稿人像，头顶一道耳麦弧。最像客服；28px 时耳麦退化成弧线仍可辨，16px 退化为剪影。</div>
+        <div class="av-row"><div class="lbl">48</div><div class="av" style="width:48px;height:48px;border-radius:50%;background:var(--red)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.6" r="3.4" stroke="#fff" stroke-width="1.5"/><path d="M5 19.8c0-3.3 3.1-5.4 7-5.4s7 2.1 7 5.4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M6 9.6a6 6 0 0 1 12 0" stroke="#fff" stroke-width="1.2" opacity=".65" stroke-linecap="round"/><circle cx="6" cy="10.2" r="1.05" fill="#fff" opacity=".65"/><circle cx="18" cy="10.2" r="1.05" fill="#fff" opacity=".65"/></svg>
+        </div></div>
+        <div class="av-row"><div class="lbl">36</div><div class="av" style="width:36px;height:36px;border-radius:50%;background:var(--red)">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.6" r="3.5" stroke="#fff" stroke-width="1.7"/><path d="M4.8 20c0-3.4 3.2-5.5 7.2-5.5s7.2 2.1 7.2 5.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/><path d="M5.9 9.4a6.1 6.1 0 0 1 12.2 0" stroke="#fff" stroke-width="1.4" opacity=".65" stroke-linecap="round"/><circle cx="5.9" cy="10" r="1.2" fill="#fff" opacity=".65"/><circle cx="18.1" cy="10" r="1.2" fill="#fff" opacity=".65"/></svg>
+        </div></div>
+        <div class="av-row"><div class="lbl">28</div><div class="av" style="width:28px;height:28px;border-radius:50%;background:var(--red)">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.4" r="3.6" stroke="#fff" stroke-width="2"/><path d="M4.6 20.2c0-3.5 3.3-5.7 7.4-5.7s7.4 2.2 7.4 5.7" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+        </div></div>
+        <div class="av-row"><div class="lbl">16</div><div class="av" style="width:16px;height:16px;border-radius:50%;background:var(--red)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.4" r="4.6" fill="#fff"/><path d="M4 21.5c0-4 3.6-6.4 8-6.4s8 2.4 8 6.4" fill="#fff"/></svg>
+        </div></div>
+      </div>
+
+      <div class="av-card">
+        <h4>B · 白底红线</h4>
+        <div class="d">白底 + 红色细线人像，最轻。问题跟之前一样：放进白色面板里几乎没有边界，28px 以下容易糊。</div>
+        <div class="av-row"><div class="lbl">48</div><div class="av" style="width:48px;height:48px;border-radius:50%;background:#fff;border:1.5px solid var(--line2)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.6" r="3.4" stroke="var(--red)" stroke-width="1.5"/><path d="M5 19.8c0-3.3 3.1-5.4 7-5.4s7 2.1 7 5.4" stroke="var(--red)" stroke-width="1.5" stroke-linecap="round"/><path d="M6 9.6a6 6 0 0 1 12 0" stroke="var(--red)" stroke-width="1.2" opacity=".5" stroke-linecap="round"/><circle cx="6" cy="10.2" r="1.05" fill="var(--red)" opacity=".5"/><circle cx="18" cy="10.2" r="1.05" fill="var(--red)" opacity=".5"/></svg>
+        </div></div>
+        <div class="av-row"><div class="lbl">36</div><div class="av" style="width:36px;height:36px;border-radius:50%;background:#fff;border:1.5px solid var(--line2)">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.6" r="3.5" stroke="var(--red)" stroke-width="1.7"/><path d="M4.8 20c0-3.4 3.2-5.5 7.2-5.5s7.2 2.1 7.2 5.5" stroke="var(--red)" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div></div>
+        <div class="av-row"><div class="lbl">28</div><div class="av" style="width:28px;height:28px;border-radius:50%;background:#fff;border:1.5px solid var(--line2)">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.4" r="3.6" stroke="var(--red)" stroke-width="2"/><path d="M4.6 20.2c0-3.5 3.3-5.7 7.4-5.7s7.4 2.2 7.4 5.7" stroke="var(--red)" stroke-width="2" stroke-linecap="round"/></svg>
+        </div></div>
+        <div class="av-row"><div class="lbl">16</div><div class="av" style="width:16px;height:16px;border-radius:50%;background:#fff;border:1.5px solid var(--line2)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.4" r="4.4" fill="var(--red)"/><path d="M4 21.5c0-4 3.6-6.4 8-6.4s8 2.4 8 6.4" fill="var(--red)"/></svg>
+        </div></div>
+      </div>
+
+      <div class="av-card">
+        <h4>C · 「小东」字标</h4>
+        <div class="d">红底 + 两字。最像一个真人客服的名字，但 28px 以下两个字挤不下，必须退化成单字。</div>
+        <div class="av-row"><div class="lbl">48</div><div class="av" style="width:48px;height:48px;border-radius:50%;background:var(--red);color:#fff;font-size:15px;font-weight:600;letter-spacing:.5px">小东</div></div>
+        <div class="av-row"><div class="lbl">36</div><div class="av" style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;font-size:12px;font-weight:600;letter-spacing:.3px">小东</div></div>
+        <div class="av-row"><div class="lbl">28</div><div class="av" style="width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;font-size:12px;font-weight:600">东</div></div>
+        <div class="av-row"><div class="lbl">16</div><div class="av" style="width:16px;height:16px;border-radius:50%;background:var(--red);color:#fff;font-size:9px;font-weight:700">东</div></div>
+      </div>
+
+      <div class="av-card">
+        <h4>D · 「东」单字</h4>
+        <div class="d">红底 + 单字，全程不退化。最稳、最朴素，但少了点"客服的温度"。</div>
+        <div class="av-row"><div class="lbl">48</div><div class="av" style="width:48px;height:48px;border-radius:50%;background:var(--red);color:#fff;font-size:21px;font-weight:600">东</div></div>
+        <div class="av-row"><div class="lbl">36</div><div class="av" style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;font-size:16px;font-weight:600">东</div></div>
+        <div class="av-row"><div class="lbl">28</div><div class="av" style="width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;font-size:13px;font-weight:600">东</div></div>
+        <div class="av-row"><div class="lbl">16</div><div class="av" style="width:16px;height:16px;border-radius:50%;background:var(--red);color:#fff;font-size:9px;font-weight:700">东</div></div>
+      </div>
+
+      <div class="av-card">
+        <h4>E · 深墨人像</h4>
+        <div class="d">深墨底 + 白色人像。跟红球区分明显，适合把「助手」和「品牌动作」分开的场景。</div>
+        <div class="av-row"><div class="lbl">48</div><div class="av" style="width:48px;height:48px;border-radius:50%;background:var(--ink)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.6" r="3.4" stroke="#fff" stroke-width="1.5"/><path d="M5 19.8c0-3.3 3.1-5.4 7-5.4s7 2.1 7 5.4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M6 9.6a6 6 0 0 1 12 0" stroke="#fff" stroke-width="1.2" opacity=".55" stroke-linecap="round"/><circle cx="6" cy="10.2" r="1.05" fill="#fff" opacity=".55"/><circle cx="18" cy="10.2" r="1.05" fill="#fff" opacity=".55"/></svg>
+        </div></div>
+        <div class="av-row"><div class="lbl">36</div><div class="av" style="width:36px;height:36px;border-radius:50%;background:var(--ink)">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.6" r="3.5" stroke="#fff" stroke-width="1.7"/><path d="M4.8 20c0-3.4 3.2-5.5 7.2-5.5s7.2 2.1 7.2 5.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div></div>
+        <div class="av-row"><div class="lbl">28</div><div class="av" style="width:28px;height:28px;border-radius:50%;background:var(--ink)">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.4" r="3.6" stroke="#fff" stroke-width="2"/><path d="M4.6 20.2c0-3.5 3.3-5.7 7.4-5.7s7.4 2.2 7.4 5.7" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+        </div></div>
+        <div class="av-row"><div class="lbl">16</div><div class="av" style="width:16px;height:16px;border-radius:50%;background:var(--ink)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9.4" r="4.6" fill="#fff"/><path d="M4 21.5c0-4 3.6-6.4 8-6.4s8 2.4 8 6.4" fill="#fff"/></svg>
+        </div></div>
+      </div>
+
+      <div class="av-card">
+        <h4>F · 方向盘（原方案）</h4>
+        <div class="d">原「业务符号」方案，保留作对照。它不像客服，更像一个工具或功能入口。</div>
+        <div class="av-row"><div class="lbl">48</div><div class="av" style="width:48px;height:48px;border-radius:50%;background:var(--red)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/><path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div></div>
+        <div class="av-row"><div class="lbl">36</div><div class="av" style="width:36px;height:36px;border-radius:50%;background:var(--red)">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/><path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div></div>
+        <div class="av-row"><div class="lbl">28</div><div class="av" style="width:28px;height:28px;border-radius:50%;background:var(--red)">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.9"/><circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.7"/><path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div></div>
+        <div class="av-row"><div class="lbl">16</div><div class="av" style="width:16px;height:16px;border-radius:50%;background:var(--red)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#fff" stroke-width="2.6"/><circle cx="12" cy="12" r="2.6" fill="#fff"/></svg>
+        </div></div>
+      </div>
+
+    </div>
+
+    <div class="note-box">
+      <b>推荐 A（人像 + 耳麦）</b>，昵称「小东」。三个理由：<br>
+      ① 客服场景里用户需要的是"有人管我"，人像比工具符号更快建立这个预期；<br>
+      ② 16px 时退化为剪影，仍是"人头 + 肩膀"的轮廓，比方向盘更像一个人；<br>
+      ③ 跟用户头像（灰底首字母）在形态上不冲突——一个是灰底文字，一个是红底人像。<br>
+      <b>B 不推荐</b>：白底白边放在白色面板里几乎没有边界。<b>C</b> 在 28px 以下必须退化成单字，等于两套资源。
+    </div>
+
+    <div style="display:flex;gap:14px;margin-top:16px;flex-wrap:wrap">
+      <div class="note-box" style="flex:1;min-width:300px;border-left-color:var(--blue)">
+        <b>昵称与开场白</b><br>
+        名字用「小东」——两字，跟"东风"呼应，念着像一个同事的名字。<br>
+        固定开场白：<b>「你好，我是小东。把上游发的派单信息发给我，文字或截图都行，我来建单。」</b><br>
+        这句话决定了用户知不知道该怎么用，不要写成"我是智能助手，可以帮你做很多事"。
+      </div>
+      <div class="note-box" style="flex:1;min-width:300px;border-left-color:var(--amber)">
+        <b>一个必须知道的限制</b><br>
+        进到<b>微信原生客服会话</b>后，左侧头像显示的是<b>小程序自己的头像</b>，AI 形象改不了。所以「小东」这张脸只能出现在：小程序内悬浮球、自建面板、消息卡片的缩略图。想让它出现在会话里，只能改小程序 logo 本身。
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 浮球与气泡 ========== -->
+  <section id="ball">
+    <h2 class="sec">浮球与待办气泡</h2>
+    <p class="sec-sub">气泡用<b>白底红字 + 红描边</b>，不用红底白字——浮球本身是品牌红，红底气泡会跟球黏成一团，远看像一个变形的球。</p>
+
+    <div class="frame" style="padding:38px 32px 32px;background:#FCFCFD">
+      <div style="display:flex;gap:64px;align-items:flex-start;flex-wrap:wrap;justify-content:center">
+
+        <div>
+          <div class="ball-demo">
+            <div class="halo"></div>
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/><path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="demo-lbl"><b>无待办</b>不显示气泡</div>
+        </div>
+
+        <div>
+          <div class="ball-demo">
+            <div class="bubble">3</div>
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/><path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="demo-lbl"><b>1 位数</b>18 × 18 圆形</div>
+        </div>
+
+        <div>
+          <div class="ball-demo">
+            <div class="bubble pill">12</div>
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/><path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="demo-lbl"><b>2 位数</b>自动变胶囊</div>
+        </div>
+
+        <div>
+          <div class="ball-demo">
+            <div class="bubble pill">99+</div>
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/><path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="demo-lbl"><b>超过 99</b>封顶显示 99+</div>
+        </div>
+
+        <div>
+          <div class="ball-demo hover">
+            <div class="bubble">3</div>
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/><path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="demo-lbl"><b>悬停</b>放大 6%，阴影加深</div>
+        </div>
+
+      </div>
+
+      <div class="spec" style="margin-top:32px;padding-top:20px;border-top:1px solid var(--line)">
+        <div><b>位置</b> 浮球右上，偏移 −5px / −5px</div>
+        <div><b>高度</b> 18px，圆角 9px</div>
+        <div><b>描边</b> 1.5px 品牌红</div>
+        <div><b>字重</b> 700 · 10.5px · tabular-nums</div>
+        <div><b>出现</b> 数量 &gt; 0 才渲染</div>
+        <div><b>刷新</b> 登录后 1 次 + 每 5 分钟 + 审批完成立即刷</div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <b>面板打开时浮球隐藏</b>，关闭按钮由面板头部接管——两者同时出现会让右下角出现两个"关闭"语义的圆形，容易点错。<br>
+      <b>数字来源只算「待我处理」</b>：费用待审 + 待打款 + 待指派运单，不含"我提交的还在审"——那个数字对用户没有行动价值。
+    </div>
+  </section>
+
+  <!-- ========== 消息形态 ========== -->
+  <section id="msg">
+    <h2 class="sec">消息形态规格</h2>
+    <p class="sec-sub">同一套规格在 Web 与小程序通用，只换字号与间距。</p>
+
+    <div class="frame" style="padding:22px;background:#FCFCFD">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
+
+        <div>
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:14px;letter-spacing:.4px">正常对话</div>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="msg me">
+              <div class="av av-u s32">王</div>
+              <div class="col"><div class="bub">昨天苏A12345跑了多少公里</div><div class="meta-time">18:02</div></div>
+            </div>
+            <div class="msg">
+              <div class="av av-a s32">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/><path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </div>
+              <div class="col">
+                <div class="bub" style="display:flex;align-items:baseline;gap:8px">
+                  <span style="font-size:21px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.4px">486</span>
+                  <span style="font-size:12px;color:var(--ink3)">公里 · 电耗 58.3 度/百公里</span>
+                </div>
+                <div class="meta-time">18:02</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:14px;letter-spacing:.4px">思考中 / 报错</div>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="msg">
+              <div class="av av-a s32">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="2" stroke="#fff" stroke-width="1.5"/><path d="M12 5.2v4.8M6.2 14.4l3.8-1.3M17.8 14.4l-3.8-1.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </div>
+              <div class="col">
+                <div class="bub" style="display:flex;align-items:center;gap:9px;color:var(--ink2)">
+                  <span class="dots"><i></i><i></i><i></i></span>正在查 10 月运营数据…
+                </div>
+              </div>
+            </div>
+            <div class="msg">
+              <div class="av av-a s32" style="background:#fff;border:1.5px solid var(--red-line)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.8"><path d="M12 8v5M12 16.5v.5" stroke-linecap="round"/><circle cx="12" cy="12" r="8"/></svg>
+              </div>
+              <div class="col">
+                <div class="bub" style="border-color:var(--red-line);background:var(--red-soft)">
+                  没找到「苏A1234 5」这辆车。是要查 <b>苏A12345</b> 吗？
+                </div>
+                <div class="meta-time">18:03</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="spec" style="margin-top:24px;padding-top:18px;border-top:1px solid var(--line)">
+        <div><b>头像</b> 32px（Web）/ 28px（小程序）</div>
+        <div><b>头像-气泡间距</b> 8px</div>
+        <div><b>气泡最大宽</b> 面板宽 − 40px</div>
+        <div><b>圆角</b> 12px，靠头像一侧上角 4px</div>
+        <div><b>内边距</b> 9px 12px</div>
+        <div><b>正文</b> 12.5px / 行高 1.65</div>
+        <div><b>时间戳</b> 10.5px #CBD5E1</div>
+        <div><b>消息间距</b> 16px</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 对比 ========== -->
+  <section id="cmp">
+    <h2 class="sec">四版对比与推荐</h2>
+
+    <table class="cmp">
+      <thead>
+        <tr><th style="width:170px">维度</th><th>A 右侧抽屉</th><th>B 浮动卡</th><th>C 底部输入条</th><th>D 命令面板</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="k">遮挡主内容</td><td class="yes">不遮挡（收窄）</td><td class="no">遮挡右下</td><td class="mid">展开时遮挡</td><td class="mid">遮罩变暗</td></tr>
+        <tr><td class="k">打开成本</td><td>1 次点击</td><td>1 次点击</td><td class="yes">0 次（常驻）</td><td>1 快捷键</td></tr>
+        <tr><td class="k">多轮对话</td><td class="yes">舒服</td><td class="yes">舒服</td><td class="yes">舒服</td><td class="no">不适合</td></tr>
+        <tr><td class="k">看表格同时问</td><td class="yes">最佳</td><td class="no">会盖住</td><td class="mid">可以</td><td class="no">遮罩后看不见</td></tr>
+        <tr><td class="k">导航类问题</td><td class="mid">一般</td><td class="mid">一般</td><td class="mid">一般</td><td class="yes">最快</td></tr>
+        <tr><td class="k">手机/小屏适配</td><td class="no">差（412 太宽）</td><td class="mid">一般</td><td class="yes">好</td><td class="mid">一般</td></tr>
+        <tr><td class="k">实现复杂度</td><td>低</td><td>低</td><td class="mid">中（要调布局）</td><td class="mid">中（要做键盘导航）</td></tr>
+        <tr><td class="k">与现有页面冲突</td><td class="yes">无</td><td class="no">与右下分页/工具条冲突</td><td class="mid">占底部 66px</td><td class="yes">无（浮层）</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note-box" style="margin-top:18px">
+      <b>推荐：A 为主 + D 的快捷键作为补充。</b><br>
+      主体用 A（右侧抽屉）——你系统里全是宽表格，边看边问是最高频场景，只有 A 能做到不遮挡。同时把 <b>⌘J 绑定为唤起 A</b>，想要"手不离键盘"的用户可以直接调。<br>
+      D 不单独做，只借它的快捷键习惯；C 的底部条会永久吃掉 66px，对表格页不划算。<br>
+      <b>小程序</b>：一阶段直接用内置客服会话（见上方小程序章节），零 UI 开发、当天可上线；代价是界面不可定制、出不了表格。等派单流程复杂到客服会话撑不住（要就地补 3 个以上字段、要展示凭证图），再上屏 3 的自建面板。
+    </div>
+
+    <div style="display:flex;gap:14px;margin-top:16px;flex-wrap:wrap">
+      <div class="note-box" style="flex:1;min-width:300px;border-left-color:var(--blue)">
+        <b>不推荐的地方，说清楚</b><br>
+        B 的浮动卡看起来最像 ChatGPT，但它会盖住你页面右下角的分页器和 TableTools 工具条——这两个是高频操作区。遮挡问题在 1280 宽的笔记本上会更严重。
+      </div>
+      <div class="note-box" style="flex:1;min-width:300px;border-left-color:var(--amber)">
+        <b>还没定的两件事</b><br>
+        ① 面板打开时是否记住上次会话（建议记住，24 小时过期）<br>
+        ② 浮球上要不要显示未读待办数（建议显示，数字小气泡，最多 99+）
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">design-ai-assistant.html · v1.0 · 2026-11-18 · 待评审</div>
+</div>
+</body>
+</html>

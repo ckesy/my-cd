@@ -1,0 +1,11 @@
+{
+  "name": "ai-gateway",
+  "version": "1.0.0",
+  "description": "AI 助手网关：鉴权、权限裁剪、工具调用、审计",
+  "main": "index.js",
+  "type": "commonjs",
+  "license": "ISC",
+  "engines": {
+    "node": "18"
+  }
+}

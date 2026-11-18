@@ -1,0 +1,22 @@
+{
+  "envId": "wuxian-token-d0guymjkpadcd1f22",
+  "functionRoot": "./cloudfunctions",
+  "functions": [
+    {
+      "name": "ai-token",
+      "runtime": "Nodejs18.15",
+      "timeout": 10,
+      "memorySize": 256,
+      "installDependency": false,
+      "handler": "index.main"
+    },
+    {
+      "name": "ai-gateway",
+      "runtime": "Nodejs18.15",
+      "timeout": 20,
+      "memorySize": 256,
+      "installDependency": false,
+      "handler": "index.main"
+    }
+  ]
+}
