@@ -17,7 +17,7 @@
  */
 
 const { CODE, TABLE, TOOLS, LIMITS } = require('./constants')
-const { dbSelect, dbInsert, enc, isMissingTable } = require('./db')
+const { dbSelect, dbInsert, dbPatch, enc, isMissingTable } = require('./db')
 const { BizError, validateArgs, sanitize, checkQuota } = require('./guard')
 const { runTool } = require('./tools')
 const { chat, parseArgs, trimMessages } = require('./llm')
@@ -83,6 +83,22 @@ async function resolveSession(token) {
   if (s.expires_at && Date.parse(s.expires_at) < Date.now()) {
     throw new BizError(CODE.ERR_SESSION, '会话已过期，请重新登录')
   }
+
+  /* ⭐ 滑动续期：剩余不足 7 天就顺延到 30 天。
+     没有这一步的话，用户只要 30 天没打开系统就要重新登录；
+     有了它，只要还在用就永远不掉线。
+     放在这里而不是每次请求都写库：只有临期才付出这一次 PATCH 的代价。 */
+  try {
+    const left = s.expires_at ? Date.parse(s.expires_at) - Date.now() : 0
+    if (left < 7 * 86400 * 1000) {
+      const next = new Date(Date.now() + 30 * 86400 * 1000).toISOString()
+      await dbPatch(TABLE.SESSIONS, `token=eq.${enc(token)}`, { expires_at: next })
+    }
+  } catch (e) {
+    /* 续期失败不能影响这次问答 */
+    console.warn('[ai-gateway] 会话续期失败:', e && e.message)
+  }
+
   return String(s.account || '')
 }
 

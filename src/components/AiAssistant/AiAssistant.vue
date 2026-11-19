@@ -54,12 +54,13 @@
       </header>
 
       <div ref="scroller" class="p-body">
-        <!-- 未建立会话：引导重新登录（刷新页面不会签发 token，必须重走登录） -->
+        <!-- 未建立会话：引导重新登录（凭证只在登录成功那一刻签发） -->
         <div v-if="!hasToken" class="setup">
           <div class="setup-card">
             <div class="st-title">还没连上</div>
             <div class="st-desc">
-              助手的会话凭证只在<b>登录那一刻</b>签发。刷新页面不会补发，所以需要重新登录一次。
+              助手需要一张<b>登录时签发</b>的会话凭证，本地没有这张凭证，所以先连不上。
+              重新登录一次即可恢复，<b>之前的对话记录会保留</b>。
             </div>
             <button class="st-btn" @click="relogin">去登录</button>
           </div>
@@ -148,7 +149,7 @@
 import { computed, nextTick, onBeforeUnmount, onErrorCaptured, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { AI_AGENT, AI_STORAGE, AI_SUGGESTIONS } from '@/config/aiConstants'
-import { askAi, getAiToken, clearAiToken } from '@/utils/aiClient'
+import { askAi, getAiToken, setAiToken, setAiDevice, clearAiToken, resumeAiToken } from '@/utils/aiClient'
 import { matchPage, looksLikeNav } from '@/utils/aiPageIndex'
 import AiMessageCard from './AiMessageCard.vue'
 
@@ -359,7 +360,7 @@ async function send(preset) {
   if (!text || sending.value) return
 
   if (!hasToken.value) {
-    push({ role: 'ai', text: '还没连上。助手凭证只在登录时签发，点上面的「去登录」重新登一次就好。', error: true })
+    push({ role: 'ai', text: '还没连上。点上面的「去登录」重登一次即可，对话记录不会丢。', error: true })
     return
   }
 
@@ -448,9 +449,42 @@ onErrorCaptured((err, instance, info) => {
   return false
 })
 
-onMounted(() => {
+/**
+ * 一次性令牌注入：地址栏带 ?ai_token=xxx 时写进本地并立刻抹掉参数。
+ * 用途：本地/应急恢复 —— 不必重新输密码。
+ * ⚠️ 写完必须 replaceState 去掉参数，否则会留在浏览器历史里。
+ */
+function takeTokenFromUrl() {
+  try {
+    const u = new URL(window.location.href)
+    const tk = u.searchParams.get('ai_token')
+    const dk = u.searchParams.get('ai_device')
+    if (!tk || tk.length < 16) return false
+    setAiToken(tk)
+    /* 一并种下设备凭证：之后 token 再丢也能自动续，不用再麻烦用户 */
+    if (dk && dk.length >= 16) setAiDevice(dk)
+    u.searchParams.delete('ai_token')
+    u.searchParams.delete('ai_device')
+    window.history.replaceState({}, '', u.pathname + (u.search || '') + u.hash)
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
+onMounted(async () => {
   window.addEventListener('keydown', onKeydown)
   document.addEventListener('mousedown', onDocDown, true)
+
+  /* ① 地址栏注入 → ② 设备凭证免密续签 → ③ 都没有才引导登录
+     token 被清（换设备、清缓存、浏览器策略）时自动恢复，用户无感。 */
+  takeTokenFromUrl()
+  if (!getAiToken()) {
+    const r = await resumeAiToken()
+    if (!r.ok) console.info('[AI] 免密续签未成功：', r.message)
+  }
+  hasToken.value = !!getAiToken()
+
   /* 先恢复上次的对话，再决定要不要自动展开面板 */
   restore()
   try {
