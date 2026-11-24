@@ -178,7 +178,7 @@ exports.main = async (event) => {
       })
 
       console.log(`[ai-token] 续签成功 account=${u.account} tenant=${tenant} kind=${kind}`)
-      return { code: 0, token, deviceKey: dk, expiresAt, tenant, kind, name: u.name || '' }
+      return { code: 0, token, deviceKey: dk, expiresAt, tenant, kind, account: String(u.account), name: u.name || '' }
     } catch (e) {
       if (isMissingTable(e)) {
         return { code: 5001, message: 'AI 助手尚未初始化，请联系管理员' }

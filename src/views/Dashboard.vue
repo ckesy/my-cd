@@ -305,6 +305,13 @@ const isImpersonatingAdmin = computed(() => {
 const goBackToPortal = async () => {
   if (originalUser) {
     localStorage.setItem('currentUser', JSON.stringify(originalUser))
+    /* ⭐ 身份从客户切回管理员 → 助手令牌同样作废，避免拿客户身份答题 */
+    try {
+      const { clearAiToken, setAiDevice } = await import('@/utils/aiClient')
+      clearAiToken()
+      setAiDevice('')
+      try { localStorage.setItem('ai_last_error', '已切回管理员账号，助手需重新连接') } catch (e) { /* 忽略 */ }
+    } catch (e) { /* 忽略 */ }
     /* ⚠️ 这里**不能**删 originalUser：它记的是"真正的登录者"，
        只有退出登录时才该清。删掉之后，下次再进客户就认不出管理员身份，
        顶栏的「返回入口」按钮会消失（就是"有时候没有"的那个 bug）。 */

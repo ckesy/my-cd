@@ -173,6 +173,17 @@ const enterClient = async () => {
 
   localStorage.setItem('currentUser', JSON.stringify(account))
 
+  /* ⭐⭐ 换账号 = 换身份，AI 助手令牌必须一起作废。
+     助手令牌是登录那一刻按账号签发的，SPA 内切账号不会重新签发；
+     留着它，助手会拿管理员/上一个客户的身份答题（数据串号）。 */
+  try {
+    const { clearAiToken, setAiDevice } = await import('@/utils/aiClient')
+    clearAiToken()
+    setAiDevice('')
+    /* 面板会把这条原因显示出来，用户点「重新连接」输一次密码即可恢复 */
+    try { localStorage.setItem('ai_last_error', '已切换账号，助手需重新连接') } catch (e) { /* 忽略 */ }
+  } catch (e) { /* 助手不可用不影响进客户 */ }
+
   /* ⭐⭐ 换账号了就必须换皮肤。
      这里是 SPA 内 router.push，页面不会重新加载，main.js 里的 applyTheme 不会再跑一遍，
      所以「管理员设置的主题」会一路带到每个客户身上 —— 必须在这里手动切。 */

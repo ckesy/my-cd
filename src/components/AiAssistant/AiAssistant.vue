@@ -122,6 +122,17 @@
       </div>
 
       <footer class="p-foot">
+        <!-- 未连接时给一条明确的出路：先静默重连（设备凭证还在就无感恢复），
+             不行再引导重新登录。只靠输入框的 placeholder 提示，用户无路可走。 -->
+        <div v-if="!hasToken" class="reconnect-bar">
+          <span class="grow">{{ reconnectTip || '助手未连接' }}</span>
+          <button :disabled="reconnecting" @click="tryReconnect">
+            {{ reconnecting ? '连接中…' : '重新连接' }}
+          </button>
+          <button class="primary" @click="relogin">去登录</button>
+        </div>
+        <!-- 自检行：连不上时把关键状态摆出来，排障不用翻控制台 -->
+        <div v-if="!hasToken && diag" class="diag-line">{{ diag }}</div>
         <div class="inputbox">
           <textarea
             ref="inputEl"
@@ -148,8 +159,9 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onErrorCaptured, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
 import { AI_AGENT, AI_STORAGE, AI_SUGGESTIONS } from '@/config/aiConstants'
-import { askAi, getAiToken, setAiToken, setAiDevice, clearAiToken, resumeAiToken } from '@/utils/aiClient'
+import { askAi, getAiToken, setAiToken, setAiDevice, clearAiToken, resumeAiToken, ensureAiToken } from '@/utils/aiClient'
 import { matchPage, looksLikeNav } from '@/utils/aiPageIndex'
 import AiMessageCard from './AiMessageCard.vue'
 
@@ -217,6 +229,7 @@ async function loadTodo() {
 function toggle(v) {
   open.value = v === undefined ? !open.value : !!v
   hasToken.value = !!getAiToken()
+  refreshDiag()
   try { localStorage.setItem(PANEL_KEY, open.value ? '1' : '0') } catch (e) { /* 忽略 */ }
   emit('toggle', open.value)
   if (open.value) {
@@ -238,6 +251,84 @@ function relogin() {
   } catch (e) { /* 忽略 */ }
   open.value = false
   try { router.push('/') } catch (e) { window.location.href = '/' }
+}
+
+/**
+ * 静默重连：凭设备凭证换一张新 token（不需要密码）。
+ * 场景：token 被清 / 被别处的 renew 轮换掉 / 页面放久了 —— 只要设备凭证还在就能自愈。
+ * 设备凭证也没了（登录时签发失败就从没种下过）→ 就地要一次密码补发，
+ * 不让用户为了一个助手跑一整遍退出再登录。
+ */
+const reconnecting = ref(false)
+/* 登录时签发失败的原因（LoginView 写进 ai_last_error），面板直接把原因摆出来，
+   用户不用去翻控制台才知道为什么连不上 */
+const reconnectTip = ref((() => {
+  try { return localStorage.getItem('ai_last_error') || '' } catch (e) { return '' }
+})())
+
+const currentAccount = () => {
+  try {
+    const u = JSON.parse(localStorage.getItem('currentUser') || 'null') || {}
+    return String(u.account || '')
+  } catch (e) { return '' }
+}
+
+const diag = ref('')
+
+function refreshDiag() {
+  try {
+    const t = !!localStorage.getItem('ai_session_token')
+    const d = !!localStorage.getItem('ai_device_key')
+    const a = localStorage.getItem('ai_session_account') || '—'
+    const c = currentAccount() || '—'
+    const e = localStorage.getItem('ai_last_error') || '—'
+    diag.value = `令牌${t ? '有' : '无'} · 设备${d ? '有' : '无'} · 归属${a} · 当前${c} · 上次${e}`
+  } catch (err) { diag.value = '' }
+}
+
+async function tryReconnect() {
+  if (reconnecting.value) return
+  reconnecting.value = true
+  reconnectTip.value = ''
+  try {
+    /* ① 免密续签 */
+    const r = await resumeAiToken()
+    if (r.ok && getAiToken()) { hasToken.value = true; return }
+
+    /* ② 设备凭证不可用 → 就地输一次密码补发 */
+    const acc = currentAccount()
+    if (!acc) {
+      reconnectTip.value = '登录信息已失效，请点「去登录」重新登录'
+      return
+    }
+    let pwd = ''
+    try {
+      const { value } = await ElMessageBox.prompt(
+        `为「${acc}」获取助手会话凭证，输入该账号的登录密码即可，不影响当前登录状态。`,
+        '连接助手',
+        {
+          confirmButtonText: '连接',
+          cancelButtonText: '取消',
+          inputType: 'password',
+          inputPlaceholder: '请输入登录密码',
+          inputValidator: (v) => (String(v || '').trim().length >= 4 ? true : '请输入密码'),
+        }
+      )
+      pwd = String(value || '')
+    } catch (e) {
+      reconnectTip.value = '已取消连接'
+      return
+    }
+
+    const r2 = await ensureAiToken(acc, pwd)
+    hasToken.value = !!getAiToken()
+    if (!r2.ok) reconnectTip.value = r2.message || '凭证获取失败，请确认密码'
+  } catch (e) {
+    reconnectTip.value = '连接异常，请稍后再试'
+  } finally {
+    reconnecting.value = false
+    refreshDiag()
+  }
 }
 
 function onKeydown(e) {
@@ -488,8 +579,7 @@ onMounted(async () => {
     if (!r.ok) console.info('[AI] 免密续签未成功：', r.message)
   }
   hasToken.value = !!getAiToken()
-
-  /* 先恢复上次的对话，再决定要不要自动展开面板 */
+  refreshDiag()
   restore()
   try {
     if (localStorage.getItem(PANEL_KEY) === '1') toggle(true)
@@ -773,6 +863,54 @@ defineExpose({ toggle, open })
   padding: 10px 12px 12px;
   border-top: 1px solid var(--line, #edf0f4);
   background: #fff;
+}
+/* 未连接提示条：贴在输入框上方，给「重新连接 / 去登录」两个动作 */
+.reconnect-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: #fff6f6;
+  border: 1px solid #f5d5d5;
+  font-size: 12px;
+  color: #a13c3c;
+}
+.reconnect-bar .grow {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reconnect-bar button {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #f0c4c4;
+  background: #fff;
+  color: #c0392b;
+  font-size: 12px;
+  cursor: pointer;
+}
+.reconnect-bar button.primary {
+  background: #e03131;
+  border-color: #e03131;
+  color: #fff;
+}
+.reconnect-bar button:disabled {
+  opacity: .6;
+  cursor: default;
+}
+/* 自检行：一排小字，把令牌/设备/归属/当前账号/上次错误摊开 */
+.diag-line {
+  margin: -4px 0 8px;
+  padding: 0 2px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #9aa3af;
+  word-break: break-all;
 }
 .inputbox {
   display: flex;

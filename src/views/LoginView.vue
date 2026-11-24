@@ -456,9 +456,22 @@ const handleLogin = async () => {
        localStorage 里的 account 可被篡改，直接拿它当身份会让 A 客户查到 B 客户。
        ⚠️ 失败绝不阻断登录：AI 助手是增强功能，网关挂了不能让人进不来。 */
     try {
-      const { ensureAiToken } = await import('@/utils/aiClient')
-      const r = await ensureAiToken(account.account, password.value)
-      if (!r.ok) console.warn('[AI] 会话令牌未签发：', r.message)
+      const { ensureAiToken, getAiTokenAccount, clearAiToken, setAiDevice } = await import('@/utils/aiClient')
+      /* ⭐ 换了账号先作废旧令牌：签发失败时不至于留着上一个人的身份继续答题 */
+      const bound = getAiTokenAccount()
+      if (bound && bound !== account.account) { clearAiToken(); setAiDevice('') }
+      /* ⚠️ 密码登录才有凭证可换；验证码登录时 password 为空，签发必然失败 */
+      const pwd = String(password.value || '')
+      const r = pwd ? await ensureAiToken(account.account, pwd) : { ok: false, message: '验证码登录无法签发助手凭证' }
+      if (!r.ok) {
+        /* 签发失败 = 没有可信会话，宁可让助手显示「未连接」，也不能用旧令牌 */
+        clearAiToken()
+        console.warn('[AI] 会话令牌未签发：', r.message)
+        /* 留痕：助手面板的「重新连接」会把这条原因显示出来，不必靠翻控制台 */
+        try { localStorage.setItem('ai_last_error', String(r.message || '')) } catch (e) { /* 忽略 */ }
+      } else {
+        try { localStorage.removeItem('ai_last_error') } catch (e) { /* 忽略 */ }
+      }
     } catch (e) {
       console.warn('[AI] 会话令牌签发异常：', e && e.message)
     }

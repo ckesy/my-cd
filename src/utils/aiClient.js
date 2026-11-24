@@ -28,6 +28,54 @@ export const getAiToken = () => {
   try { return localStorage.getItem(STORAGE_KEY) || '' } catch (e) { return '' }
 }
 
+/* ⭐⭐ 令牌归属账号（令牌签发时一并存下）
+   ------------------------------------------------------------
+   背景：令牌是「登录那一刻」由 ai-token 按账号签发的，之后一直躺在
+        localStorage 里。只要换账号没有重新签发，助手就会拿**上一个人的
+        身份**答题 —— 页面费用列表 0 条，助手却报「你有 10 笔待审批」，
+        典型的串号。存一份归属账号，每次提问前比对即可拦住。 */
+const ACC_KEY = 'ai_session_account'
+
+export const getAiTokenAccount = () => {
+  try { return localStorage.getItem(ACC_KEY) || '' } catch (e) { return '' }
+}
+
+const setAiTokenAccount = (a) => {
+  try {
+    if (a) localStorage.setItem(ACC_KEY, String(a))
+    else localStorage.removeItem(ACC_KEY)
+  } catch (e) { /* 忽略 */ }
+}
+
+/** 当前页面登录的账号（只取 account，不用 masterAccount：
+    子账号的 masterAccount 是租户号，与令牌里的 account 不是一回事） */
+const currentLoginAccount = () => {
+  try {
+    const u = JSON.parse(localStorage.getItem('currentUser') || 'null') || {}
+    return String(u.account || '')
+  } catch (e) { return '' }
+}
+
+/**
+ * 校验「令牌归属账号 == 当前登录账号」，不一致就地清掉。
+ * 返回 { ok:false } 表示令牌已作废，调用方应提示重新登录。
+ * 小程序走 wx 存储，这里读不到 localStorage，直接放行。
+ */
+export const syncAiTokenAccount = () => {
+  if (isMp()) return { ok: true, changed: false }
+  const cur = currentLoginAccount()
+  if (!cur) return { ok: true, changed: false }
+  const bound = getAiTokenAccount()
+  /* 老数据没有归属记录：补写当前账号，不打扰用户（升级前签发的令牌只能这样收口） */
+  if (!bound) { setAiTokenAccount(cur); return { ok: true, changed: false } }
+  if (bound === cur) return { ok: true, changed: false }
+
+  console.warn(`[AI] 令牌归属 ${bound} 与当前账号 ${cur} 不一致，已作废，需重新登录`)
+  clearAiToken()
+  setAiDevice('')
+  return { ok: false, changed: true }
+}
+
 /* 设备凭证：与 token 分开存。token 被清（换设备/清缓存/浏览器策略）时，
    还能凭它免密换一张新的，不用让用户反复输密码。 */
 const DEVICE_KEY = 'ai_device_key'
@@ -47,10 +95,13 @@ export const setAiToken = (t) => {
   try {
     if (t) localStorage.setItem(STORAGE_KEY, t)
     else localStorage.removeItem(STORAGE_KEY)
+    /* 换 token 时归属未知 → 清掉旧记录，避免「新令牌挂着旧账号」被误判。
+       ensureAiToken / resumeAiToken 随后会写回服务端确认的 account。 */
+    setAiTokenAccount('')
   } catch (e) { /* 忽略 */ }
 }
 
-export const clearAiToken = () => setAiToken('')
+export const clearAiToken = () => { setAiToken(''); setAiTokenAccount('') }
 
 /**
  * 登录成功后再调，用相同的账号密码换一个服务端 token。
@@ -72,6 +123,8 @@ export async function ensureAiToken(account, password, attempts = 2) {
       const data = await postJson('/ai-token', { account, password })
       if (data && data.code === 0 && data.token) {
         setAiToken(data.token)
+        /* ⭐ 记下令牌归属：以服务端回填的 account 为准（大小写/空格以库为准） */
+        setAiTokenAccount(data.account || account)
         /* 顺手种下设备凭证：以后 token 再丢也不用重新输密码 */
         if (data.deviceKey) setAiDevice(data.deviceKey)
         return { ok: true }
@@ -105,6 +158,7 @@ export async function resumeAiToken() {
     const data = await postJson('/ai-token', { action: 'renew', deviceKey: dk })
     if (data && data.code === 0 && data.token) {
       setAiToken(data.token)
+      setAiTokenAccount(data.account || '')
       if (data.deviceKey) setAiDevice(data.deviceKey)
       return { ok: true }
     }
@@ -197,6 +251,21 @@ async function askOnce({ text, history = [], sessionId = '', token }) {
  * @returns {Promise<{ok:boolean, answer:string, cards:Array, code:number, message?:string, usage?:object, traceId:string, needLogin?:boolean}>}
  */
 export async function askAi({ text, history = [], sessionId = '' } = {}) {
+  /* ⭐⭐ 先验身份：令牌归属账号必须等于当前登录账号。
+     不做这一步的话，换账号（尤其「进入客户端 / 返回入口」这类 SPA 内切换）
+     后助手仍按上一个人的身份答题 —— 页面查不到的单，助手却能列出来。 */
+  if (!syncAiTokenAccount().ok) {
+    return {
+      ok: false,
+      code: CODE.ERR_SESSION,
+      message: '登录账号已切换，助手需要重新登录后才能使用',
+      answer: '',
+      cards: [],
+      traceId: '',
+      needLogin: true,
+    }
+  }
+
   let token = getAiToken()
 
   /* 没有 token 但设备凭证还在 → 静默补一张，用户完全无感 */
