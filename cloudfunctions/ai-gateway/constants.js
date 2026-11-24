@@ -50,6 +50,12 @@ const TOOLS = {
   q_fee: { perm: 'fee_list', scope: 'any', desc: '费用查询' },
   q_todo: { perm: 'fee_list', scope: 'tenant', desc: '待我处理' },
   q_waybill: { perm: 'waybill', scope: 'any', desc: '运单查询' },
+  /* ⭐ 2026-11-24：补「车辆 / 司机档案」两个查询能力。
+     之前 TABLE 里留了表名却没实现，用户问「我名下有哪些车」只能答「无法查询」。
+     perm 用 Web 档案模块的 key（src/config/permissions.js）；
+     scope='any' —— 司机走 self 分支（只返回自己绑的车），管理员走客户/机构分支。 */
+  q_vehicle: { perm: 'vehicle_archive', scope: 'any', desc: '车辆档案' },
+  q_driver: { perm: 'driver_archive', scope: 'any', desc: '司机档案' },
 }
 
 /** 条数上限（阿里规约：查询必须限制条数） */
@@ -58,6 +64,8 @@ const LIMITS = {
   FEE_ROWS: 100,
   WAYBILL_ROWS: 50,
   TODO_ROWS: 50,
+  VEHICLE_ROWS: 50,
+  DRIVER_ROWS: 50,
   DATE_SPAN_DAYS: 366,      // 单次查询最长跨度
   MAX_TOOL_ROUNDS: 3,       // 最多 3 轮模型往返
   MAX_TOOL_CALLS: 6,        // 一次提问内工具调用总次数上限（防模型反复查同一件事）

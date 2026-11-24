@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 助手「小御」· 架构图</title>
+<style>
+:root{--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#F2F5F9;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  padding:26px 20px 40px;
+  -webkit-font-smoothing:antialiased;
+}
+.sheet{
+  max-width:1240px;margin:0 auto;background:#FFF;border:1px solid #E1E8F1;
+  border-radius:14px;box-shadow:0 2px 10px rgba(15,23,42,.05);padding:10px;
+}
+svg{display:block;width:100%;height:auto}
+@media print{
+  body{background:#FFF;padding:0}
+  .sheet{border:none;box-shadow:none;padding:0}
+}
+</style>
+</head>
+<body>
+<div class="sheet">
+<svg viewBox="0 0 1240 706" xmlns="http://www.w3.org/2000/svg" role="img">
+  <title>AI 助手「小御」架构图</title>
+  <desc>客户端经 HTTPS 调用服务端编排层，编排层与外部模型往返、经工具层访问数据存储。</desc>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9" fill="none" stroke="#8FA0B6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9" fill="none" stroke="#B9A9E8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9" fill="none" stroke="#C08A72" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9" fill="none" stroke="#A8B5A0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- ═══ 标题 ═══ -->
+  <text x="40" y="44" font-size="21" font-weight="600" fill="#0F172A" letter-spacing="-.4">AI 助手「小御」· 架构图</text>
+  <text x="40" y="66" font-size="11" fill="#8A97A8">模型只做「人话 ⇄ 参数」翻译，数据一律由受控工具返回</text>
+  <text x="1200" y="44" font-size="10" fill="#9AA6B8" text-anchor="end">v1.0 · 2026-11-24</text>
+  <text x="1200" y="62" font-size="10" fill="#9AA6B8" text-anchor="end">依据 ai-gateway 实测</text>
+
+  <!-- ═══ A 客户端 ═══ -->
+  <rect x="40" y="92" width="230" height="336" rx="12" fill="#F7FAFE" stroke="#DCE8F5" stroke-width="1"/>
+  <text x="58" y="114" font-size="11.5" font-weight="600" fill="#0C3A63">客户端</text>
+  <text x="252" y="114" font-size="9.5" fill="#8FA6BE" text-anchor="end">3 个入口</text>
+
+  <!-- 卡1 Web -->
+  <rect x="58" y="126" width="194" height="74" rx="9" fill="#FFF" stroke="#CFE0F2" stroke-width="1"/>
+  <rect x="70" y="143" width="34" height="34" rx="8" fill="#E9F2FB"/>
+  <rect x="78" y="151" width="18" height="14" rx="2" fill="none" stroke="#185FA5" stroke-width="1.3"/>
+  <path d="M78 156h18" stroke="#185FA5" stroke-width="1.3"/>
+  <text x="116" y="152" font-size="11.5" font-weight="600" fill="#0F172A">Web 后台</text>
+  <text x="116" y="170" font-size="9.5" fill="#8A97A8">右下浮球 · 440px 抽屉</text>
+
+  <!-- 卡2 小程序 -->
+  <rect x="58" y="210" width="194" height="74" rx="9" fill="#FFF" stroke="#CFE0F2" stroke-width="1"/>
+  <rect x="70" y="227" width="34" height="34" rx="8" fill="#E9F2FB"/>
+  <rect x="80" y="234" width="14" height="20" rx="2.5" fill="none" stroke="#185FA5" stroke-width="1.3"/>
+  <circle cx="87" cy="251" r="1.4" fill="#185FA5"/>
+  <text x="116" y="236" font-size="11.5" font-weight="600" fill="#0F172A">微信小程序</text>
+  <text x="116" y="254" font-size="9.5" fill="#8A97A8">callFunction 通道</text>
+
+  <!-- 卡3 建单页 -->
+  <rect x="58" y="294" width="194" height="74" rx="9" fill="#FFF" stroke="#CFE0F2" stroke-width="1"/>
+  <rect x="70" y="311" width="34" height="34" rx="8" fill="#E9F2FB"/>
+  <rect x="79" y="318" width="16" height="20" rx="2" fill="none" stroke="#185FA5" stroke-width="1.3"/>
+  <path d="M83 323h8M83 328h8M83 333h5" stroke="#185FA5" stroke-width="1.1" stroke-linecap="round"/>
+  <text x="116" y="320" font-size="11.5" font-weight="600" fill="#0F172A">建单页一句话填</text>
+  <text x="116" y="338" font-size="9.5" fill="#8A97A8">自然语言转派单草稿</text>
+
+  <text x="58" y="398" font-size="9.5" fill="#8FA6BE">先过本地页面索引</text>
+  <text x="58" y="414" font-size="9.5" fill="#8FA6BE">导航类问题不上行</text>
+
+  <!-- ═══ 交互说明 ═══ -->
+  <rect x="40" y="448" width="230" height="134" rx="10" fill="#FBFCFE" stroke="#DDE4EE" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="56" y="468" font-size="10.5" font-weight="600" fill="#3A4356">编排层 ↔ 工具层</text>
+  <text x="56" y="488" font-size="9.5" fill="#7A8698">① 第 5 步递工具名 + 参数</text>
+  <text x="56" y="508" font-size="9.5" fill="#7A8698">② 工具注入租户条件查库</text>
+  <text x="56" y="528" font-size="9.5" fill="#7A8698">③ 行集回到第 6 步脱敏</text>
+  <text x="56" y="552" font-size="9" fill="#9AA6B8">参数里没有身份字段</text>
+  <text x="56" y="568" font-size="9" fill="#9AA6B8">身份由编排层从会话取出</text>
+
+  <!-- ═══ B 服务端 ═══ -->
+  <rect x="310" y="92" width="580" height="490" rx="14" fill="#FBFAFE" stroke="#D9D4F5" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="330" y="114" font-size="11.5" font-weight="600" fill="#26215C">服务端 · 云函数 ai-gateway</text>
+  <text x="330" y="130" font-size="9.5" fill="#8A97A8">零 npm 依赖 · 单入口双通道 · 无状态</text>
+
+  <!-- B1 编排层 -->
+  <rect x="330" y="144" width="540" height="112" rx="9" fill="#FFF" stroke="#D5D0F5" stroke-width="1.2"/>
+  <text x="346" y="162" font-size="11" font-weight="600" fill="#534AB7">编排层 · 七步</text>
+  <text x="856" y="162" font-size="9" fill="#9C93D6" text-anchor="end">认人 → 往返 → 收尾</text>
+
+  <g font-size="9.5" fill="#26215C" text-anchor="middle">
+    <rect x="346" y="172" width="66" height="72" rx="7" fill="#FAF9FF" stroke="#D5D0F5" stroke-width="1"/>
+    <text x="379" y="188" font-size="9" font-weight="600" fill="#7A6FD0">01</text>
+    <text x="379" y="208" font-weight="600">校验</text><text x="379" y="222" font-weight="600">令牌</text>
+    <text x="379" y="236" font-size="9" fill="#8A97A8">查会话</text>
+
+    <rect x="418" y="172" width="66" height="72" rx="7" fill="#FAF9FF" stroke="#D5D0F5" stroke-width="1"/>
+    <text x="451" y="188" font-size="9" font-weight="600" fill="#7A6FD0">02</text>
+    <text x="451" y="208" font-weight="600">裁剪</text><text x="451" y="222" font-weight="600">工具</text>
+    <text x="451" y="236" font-size="9" fill="#8A97A8">按权限</text>
+
+    <rect x="490" y="172" width="66" height="72" rx="7" fill="#FAF9FF" stroke="#D5D0F5" stroke-width="1"/>
+    <text x="523" y="188" font-size="9" font-weight="600" fill="#7A6FD0">03</text>
+    <text x="523" y="208" font-weight="600">调</text><text x="523" y="222" font-weight="600">模型</text>
+    <text x="523" y="236" font-size="9" fill="#8A97A8">带工具</text>
+
+    <rect x="562" y="172" width="66" height="72" rx="7" fill="#FAF9FF" stroke="#D5D0F5" stroke-width="1"/>
+    <text x="595" y="188" font-size="9" font-weight="600" fill="#7A6FD0">04</text>
+    <text x="595" y="208" font-weight="600">校验</text><text x="595" y="222" font-weight="600">参数</text>
+    <text x="595" y="236" font-size="9" fill="#8A97A8">白名单</text>
+
+    <rect x="634" y="172" width="66" height="72" rx="7" fill="#F4F1FE" stroke="#B9A9E8" stroke-width="1.4"/>
+    <text x="667" y="188" font-size="9" font-weight="600" fill="#5B4FC4">05</text>
+    <text x="667" y="208" font-weight="600" fill="#3C3489">执行</text><text x="667" y="222" font-weight="600" fill="#3C3489">工具</text>
+    <text x="667" y="236" font-size="9" fill="#7A6FD0">调下层</text>
+
+    <rect x="706" y="172" width="66" height="72" rx="7" fill="#F4F1FE" stroke="#B9A9E8" stroke-width="1.4"/>
+    <text x="739" y="188" font-size="9" font-weight="600" fill="#5B4FC4">06</text>
+    <text x="739" y="208" font-weight="600" fill="#3C3489">结果</text><text x="739" y="222" font-weight="600" fill="#3C3489">回填</text>
+    <text x="739" y="236" font-size="9" fill="#7A6FD0">收下层</text>
+
+    <rect x="778" y="172" width="66" height="72" rx="7" fill="#FAF9FF" stroke="#D5D0F5" stroke-width="1"/>
+    <text x="811" y="188" font-size="9" font-weight="600" fill="#7A6FD0">07</text>
+    <text x="811" y="208" font-weight="600">审计</text><text x="811" y="222" font-weight="600">配额</text>
+    <text x="811" y="236" font-size="9" fill="#8A97A8">写日志</text>
+  </g>
+
+  <g stroke="#B8B0E4" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M412.5 204.5L416.5 208L412.5 211.5"/>
+    <path d="M484.5 204.5L488.5 208L484.5 211.5"/>
+    <path d="M556.5 204.5L560.5 208L556.5 211.5"/>
+    <path d="M628.5 204.5L632.5 208L628.5 211.5"/>
+    <path d="M700.5 204.5L704.5 208L700.5 211.5"/>
+    <path d="M772.5 204.5L776.5 208L772.5 211.5"/>
+  </g>
+
+  <!-- ★ 编排层 ⑤ → 工具层（调用），工具层 → ⑥（返回） -->
+  <path d="M667 258V278" stroke="#8B7FD4" stroke-width="1.8" fill="none" marker-end="url(#ar2)"/>
+  <path d="M739 278V258" stroke="#8B7FD4" stroke-width="1.8" fill="none" marker-end="url(#ar2)"/>
+  <text x="656" y="272" font-size="8.5" fill="#7A6FD0" text-anchor="end">runTool</text>
+  <text x="750" y="272" font-size="8.5" fill="#7A6FD0">行集</text>
+
+  <!-- B2 工具层 -->
+  <rect x="330" y="284" width="540" height="96" rx="9" fill="#FFF" stroke="#EFC5B4" stroke-width="1.2"/>
+  <text x="346" y="302" font-size="11" font-weight="600" fill="#7A2E14">工具层 · 白名单</text>
+  <text x="856" y="302" font-size="9" fill="#C08A72" text-anchor="end">参数进 / 行集出 · 身份由服务端注入</text>
+
+  <g>
+    <rect x="346" y="312" width="124" height="60" rx="7" fill="#FEFAF8" stroke="#EFC5B4" stroke-width="1"/>
+    <text x="358" y="330" font-size="11" font-weight="600" font-family="ui-monospace,Menlo,monospace" fill="#7A2E14">q_energy</text>
+    <text x="358" y="346" font-size="9.5" fill="#8A6B5C">能耗与里程</text>
+    <text x="358" y="362" font-size="9" font-family="ui-monospace,Menlo,monospace" fill="#A67B66">operation_energy</text>
+
+    <rect x="478" y="312" width="124" height="60" rx="7" fill="#FEFAF8" stroke="#EFC5B4" stroke-width="1"/>
+    <text x="490" y="330" font-size="11" font-weight="600" font-family="ui-monospace,Menlo,monospace" fill="#7A2E14">q_fee</text>
+    <text x="490" y="346" font-size="9.5" fill="#8A6B5C">费用查询</text>
+    <text x="490" y="362" font-size="9" font-family="ui-monospace,Menlo,monospace" fill="#A67B66">fee_list</text>
+
+    <rect x="610" y="312" width="124" height="60" rx="7" fill="#FEFAF8" stroke="#EFC5B4" stroke-width="1"/>
+    <text x="622" y="330" font-size="11" font-weight="600" font-family="ui-monospace,Menlo,monospace" fill="#7A2E14">q_todo</text>
+    <text x="622" y="346" font-size="9.5" fill="#8A6B5C">待我处理</text>
+    <text x="622" y="362" font-size="9" font-family="ui-monospace,Menlo,monospace" fill="#A67B66">fee_list</text>
+
+    <rect x="742" y="312" width="124" height="60" rx="7" fill="#FEFAF8" stroke="#EFC5B4" stroke-width="1"/>
+    <text x="754" y="330" font-size="11" font-weight="600" font-family="ui-monospace,Menlo,monospace" fill="#7A2E14">q_waybill</text>
+    <text x="754" y="346" font-size="9.5" fill="#8A6B5C">运单查询</text>
+    <text x="754" y="362" font-size="9" font-family="ui-monospace,Menlo,monospace" fill="#A67B66">waybill</text>
+  </g>
+
+  <!-- ★ 工具层 ↔ 数据访问（双向） -->
+  <path d="M560 382V406" stroke="#C08A72" stroke-width="1.6" fill="none"
+        marker-start="url(#ar5)" marker-end="url(#ar5)"/>
+  <text x="572" y="398" font-size="8.5" fill="#A67B66">查询</text>
+
+  <!-- B3 数据访问 -->
+  <rect x="330" y="408" width="540" height="58" rx="9" fill="#FFF" stroke="#E4E8F0" stroke-width="1"/>
+  <text x="346" y="426" font-size="11" font-weight="600" fill="#3A4356">数据访问</text>
+  <text x="346" y="443" font-size="9.5" fill="#8A97A8">单例连接池 · 字段白名单 · 降级容错</text>
+  <text x="346" y="458" font-size="9.5" fill="#8A97A8">查询强制拼接租户与账号条件</text>
+
+  <!-- B4 横切 -->
+  <rect x="330" y="480" width="540" height="82" rx="9" fill="#FCFDFE" stroke="#E4E8F0" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="346" y="499" font-size="10.5" font-weight="600" fill="#5A6478">横切</text>
+  <g font-size="9.5" fill="#7A8698">
+    <rect x="346" y="508" width="86" height="22" rx="5" fill="#FFF" stroke="#E4E8F0"/><text x="389" y="523" text-anchor="middle">审计日志</text>
+    <rect x="440" y="508" width="86" height="22" rx="5" fill="#FFF" stroke="#E4E8F0"/><text x="483" y="523" text-anchor="middle">配额 60/时</text>
+    <rect x="534" y="508" width="76" height="22" rx="5" fill="#FFF" stroke="#E4E8F0"/><text x="572" y="523" text-anchor="middle">字段脱敏</text>
+    <rect x="618" y="508" width="80" height="22" rx="5" fill="#FFF" stroke="#E4E8F0"/><text x="658" y="523" text-anchor="middle">15 秒超时</text>
+    <rect x="706" y="508" width="96" height="22" rx="5" fill="#FFF" stroke="#E4E8F0"/><text x="754" y="523" text-anchor="middle">最多 3 轮往返</text>
+  </g>
+  <text x="346" y="549" font-size="9" fill="#9AA6B8">3 轮 / 6 次调用 / 10K 输入 token 三个上限共同兜底</text>
+
+  <!-- ═══ C 外部模型 ═══ -->
+  <rect x="930" y="92" width="270" height="150" rx="12" fill="#FDF8F1" stroke="#E7D2A8" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="948" y="114" font-size="11.5" font-weight="600" fill="#6B3305">外部模型</text>
+  <text x="1182" y="114" font-size="9.5" fill="#B99362" text-anchor="end">不接触数据库</text>
+
+  <rect x="948" y="126" width="234" height="100" rx="8" fill="#FFF" stroke="#EDD9B5" stroke-width="1"/>
+  <!-- 云图标 -->
+  <path d="M972 172a11 11 0 0 1 2-21 15 15 0 0 1 28-4 12 12 0 0 1 4 23z" fill="#FBEFDF" stroke="#C9A46A" stroke-width="1.2"/>
+  <text x="1014" y="152" font-size="12" font-weight="600" fill="#6B3305">DeepSeek API</text>
+  <text x="1014" y="170" font-size="9.5" font-family="ui-monospace,Menlo,monospace" fill="#A8845A">deepseek-flash</text>
+  <text x="1014" y="186" font-size="9" fill="#B99362">可切 v4-pro · 改环境变量</text>
+  <text x="1014" y="204" font-size="9" fill="#B99362">温度 0.1 · 非流式 · 800 上限</text>
+
+  <text x="948" y="252" font-size="9" fill="#B99362">拿不到：数据库 / 他租户数据</text>
+  <text x="948" y="268" font-size="9" fill="#B99362">　　　　/ 无权限的工具定义</text>
+
+  <!-- ═══ D 数据存储 ═══ -->
+  <rect x="930" y="290" width="270" height="292" rx="12" fill="#F7F7F4" stroke="#D5D0C2" stroke-width="1"/>
+  <text x="948" y="312" font-size="11.5" font-weight="600" fill="#3A3936">数据存储</text>
+  <text x="1182" y="312" font-size="9.5" fill="#9A957F" text-anchor="end">复用现有表</text>
+
+  <!-- 圆柱1 业务库 -->
+  <path d="M962 350a100 13 0 0 1 200 0v72a100 13 0 0 1-200 0z" fill="#FFF" stroke="#C4BFAE" stroke-width="1.2"/>
+  <ellipse cx="1062" cy="350" rx="100" ry="13" fill="#FCFCF9" stroke="#C4BFAE" stroke-width="1.2"/>
+  <text x="1062" y="382" font-size="11.5" font-weight="600" fill="#3A3936" text-anchor="middle">业务库</text>
+  <text x="1062" y="400" font-size="9" font-family="ui-monospace,Menlo,monospace" fill="#8C8776" text-anchor="middle">vehicle_daily_stats</text>
+  <text x="1062" y="414" font-size="9" font-family="ui-monospace,Menlo,monospace" fill="#8C8776" text-anchor="middle">waybills · reports · vehicles</text>
+
+  <!-- 圆柱2 助手库 -->
+  <path d="M962 476a100 13 0 0 1 200 0v56a100 13 0 0 1-200 0z" fill="#FFF" stroke="#C4BFAE" stroke-width="1.2"/>
+  <ellipse cx="1062" cy="476" rx="100" ry="13" fill="#FCFCF9" stroke="#C4BFAE" stroke-width="1.2"/>
+  <text x="1062" y="508" font-size="11.5" font-weight="600" fill="#3A3936" text-anchor="middle">助手库</text>
+  <text x="1062" y="525" font-size="9" font-family="ui-monospace,Menlo,monospace" fill="#8C8776" text-anchor="middle">ai_sessions · ai_assistant_logs</text>
+
+  <!-- ═══ 连线 ═══ -->
+  <!-- 1 客户端 → 服务端 -->
+  <path d="M270 258h28" stroke="#8FA0B6" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+  <circle cx="284" cy="258" r="9" fill="#FFF" stroke="#8FA0B6" stroke-width="1.2"/>
+  <text x="284" y="261.5" font-size="9" font-weight="600" fill="#5C6B80" text-anchor="middle">1</text>
+
+  <!-- 2 编排 ↔ 模型 -->
+  <path d="M872 200h50" stroke="#B9A9E8" stroke-width="1.6" fill="none" stroke-dasharray="4 3"
+        marker-start="url(#ar2)" marker-end="url(#ar2)"/>
+  <circle cx="897" cy="200" r="9" fill="#FFF" stroke="#B9A9E8" stroke-width="1.2"/>
+  <text x="897" y="203.5" font-size="9" font-weight="600" fill="#7A6FD0" text-anchor="middle">2</text>
+
+  <!-- 3 服务端 ↔ 数据 -->
+  <path d="M872 436h50" stroke="#A8B5A0" stroke-width="1.6" fill="none" marker-start="url(#ar3)" marker-end="url(#ar3)"/>
+  <circle cx="897" cy="436" r="9" fill="#FFF" stroke="#A8B5A0" stroke-width="1.2"/>
+  <text x="897" y="439.5" font-size="9" font-weight="600" fill="#6E7B66" text-anchor="middle">3</text>
+
+  <!-- ═══ 图例 ═══ -->
+  <line x1="40" y1="606" x2="1200" y2="606" stroke="#E4E8F0" stroke-width="1"/>
+  <g font-size="10" fill="#5C6B80">
+    <circle cx="50" cy="632" r="8" fill="#FFF" stroke="#8FA0B6" stroke-width="1.2"/>
+    <text x="50" y="635.5" font-size="8.5" font-weight="600" fill="#5C6B80" text-anchor="middle">1</text>
+    <text x="66" y="636">HTTPS + session token（唯一身份凭证）</text>
+
+    <circle cx="330" cy="632" r="8" fill="#FFF" stroke="#B9A9E8" stroke-width="1.2"/>
+    <text x="330" y="635.5" font-size="8.5" font-weight="600" fill="#7A6FD0" text-anchor="middle">2</text>
+    <text x="346" y="636">messages + tools 往返（最多 3 轮）</text>
+
+    <circle cx="620" cy="632" r="8" fill="#FFF" stroke="#A8B5A0" stroke-width="1.2"/>
+    <text x="620" y="635.5" font-size="8.5" font-weight="600" fill="#6E7B66" text-anchor="middle">3</text>
+    <text x="636" y="636">SQL ⇅ 行集（工具执行）</text>
+  </g>
+  <text x="40" y="666" font-size="9.5" fill="#9AA6B8">关键约束：数字由程序计算并渲染成卡片，模型只写解释文字 · 写操作只到草稿 · 无权限的工具不下发给模型</text>
+
+  <!-- 页脚 -->
+  <text x="40" y="694" font-size="9" fill="#B4BDCB">架构图 v1.0 · 2026-11-24 · 依据 ai-gateway 代码实测</text>
+  <text x="1200" y="694" font-size="9" fill="#B4BDCB" text-anchor="end">配套：AI助手架构图（详版）/ 总览图</text>
+</svg>
+</div>
+</body>
+</html>

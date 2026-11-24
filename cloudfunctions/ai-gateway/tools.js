@@ -15,7 +15,7 @@
 
 const { CODE, TABLE, FEE_PENDING } = require('./constants')
 const { dbSelect, enc, isMissingTable } = require('./db')
-const { BizError, assertTenant, assertScope } = require('./guard')
+const { BizError, assertTenant, assertScope, maskPhone } = require('./guard')
 
 /* ============================================================
    公共
@@ -368,9 +368,164 @@ async function q_waybill(args, ctx) {
 }
 
 /* ============================================================
+   q_vehicle —— 车辆档案
+   ------------------------------------------------------------
+   口径（与 vehicle-list 云函数完全一致，别另造一套）：
+     司机      ：drivers.phone = 本人手机号 → bound_vehicle（逗号/顿号/分号分隔）
+                 → vehicles plate in (...)            ← 白名单即隔离，最强
+     管理员/员工：customers.phone = 主账号 → customer_id=eq.
+                 子账号（users.org_id 非空）再加 org_id=eq. 收口
+   ⚠️ vehicles 表**没有** owner_account，不能用租户键直接过滤。
+   ============================================================ */
+const splitPlates = (s) =>
+  String(s || '')
+    .split(/[,，、;；\s]+/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+
+async function selfPlates(ctx) {
+  const phone = ctx.phone || ctx.account
+  const rows = await dbSelect(
+    TABLE.DRIVERS,
+    `select=driver_name,bound_vehicle&phone=eq.${enc(phone)}&limit=1`
+  )
+  const d = rows[0]
+  if (!d) return { plates: [], driverName: '' }
+  return { plates: splitPlates(d.bound_vehicle), driverName: String(d.driver_name || '') }
+}
+
+async function q_vehicle(args, ctx) {
+  requireTenant(ctx)
+  const cols = 'plate,vin,org,driver,fuel_type,customer_id'
+
+  /* ① 司机：只看自己绑的车 */
+  if (ctx.scope === 'self') {
+    const { plates, driverName } = await selfPlates(ctx)
+    if (!plates.length) {
+      return {
+        ok: true, mine: true, rows: [],
+        summary: { count: 0 }, driver: driverName,
+        note: '你的账号还没有绑定车辆，请联系调度在司机档案里绑定车牌',
+      }
+    }
+    const q =
+      `select=${cols}&plate=in.(${plates.map((p) => `"${p.replace(/"/g, '')}"`).join(',')})` +
+      `&limit=${args.limit}`
+    const rows = (await dbSelect(TABLE.VEHICLES, q).catch((e) => {
+      if (isMissingTable(e)) throw new BizError(CODE.ERR_TOOL_FAIL, '车辆档案表尚未初始化')
+      throw e
+    })) || []
+    /* 白名单二次过滤：即使库里有同名车牌也只认 drivers 里登记过的 */
+    const set = new Set(plates)
+    const mine = rows.filter((r) => set.has(String(r.plate || '')))
+    return {
+      ok: true, mine: true, driver: driverName,
+      rows: mine.map(briefVehicle),
+      summary: { count: mine.length },
+      note: mine.length < plates.length ? `档案里只找到 ${mine.length} / ${plates.length} 台，其余车牌可能未建档` : '',
+    }
+  }
+
+  /* ② 管理员 / 员工：客户（+ 机构）收口 */
+  const scope = ctx.energyScope || {}
+  let q = `select=${cols}&limit=${Math.max(args.limit, 50)}`
+  if (scope.customerId) q += `&customer_id=eq.${enc(scope.customerId)}`
+  else if (Array.isArray(scope.orgNames) && scope.orgNames.length) {
+    q += `&org=in.(${scope.orgNames.map((n) => `"${String(n).replace(/"/g, '')}"`).join(',')})`
+  } else {
+    throw new BizError(CODE.ERR_NO_TENANT, '当前账号未绑定客户档案，暂时无法查询车辆')
+  }
+  /* 子账号只看本机构，主账号（org_id 空）看全部 */
+  if (ctx.orgId) q += `&org_id=eq.${enc(ctx.orgId)}`
+  if (args.keyword) q += `&plate=ilike.*${enc(args.keyword)}*`
+  if (args.org) q += `&org=ilike.*${enc(args.org)}*`
+  q += '&order=updated_at.desc'
+
+  const rows = (await dbSelect(TABLE.VEHICLES, q).catch((e) => {
+    if (isMissingTable(e)) throw new BizError(CODE.ERR_TOOL_FAIL, '车辆档案表尚未初始化')
+    throw e
+  })) || []
+
+  const safe = assertScope(rows, ctx, TABLE.VEHICLES)
+  const list = safe.slice(0, args.limit).map(briefVehicle)
+
+  return {
+    ok: true, mine: false,
+    rows: list,
+    summary: { count: safe.length, truncated: safe.length > args.limit },
+    note: safe.length > args.limit ? `共 ${safe.length} 台，只列前 ${args.limit} 台` : '',
+  }
+}
+
+const briefVehicle = (r) => ({
+  plate: r.plate || '',
+  driver: r.driver || '',
+  org: r.org || '',
+  fuel: r.fuel_type || '',
+})
+
+/* ============================================================
+   q_driver —— 司机档案
+   ------------------------------------------------------------
+   司机本人只返回自己那一行；管理员按 customer_id / 机构收口。
+   `plate` 参数用于反向查「这辆车现在归谁开」。
+   ============================================================ */
+async function q_driver(args, ctx) {
+  requireTenant(ctx)
+  const cols = 'driver_name,phone,org,bound_vehicle,customer_id'
+
+  if (ctx.scope === 'self') {
+    const phone = ctx.phone || ctx.account
+    const rows = await dbSelect(TABLE.DRIVERS, `select=${cols}&phone=eq.${enc(phone)}&limit=1`)
+    const d = rows[0]
+    if (!d) return { ok: true, rows: [], summary: { count: 0 }, note: '司机档案里没有你的手机号记录' }
+    return {
+      ok: true,
+      rows: [{ name: d.driver_name || '', plate: splitPlates(d.bound_vehicle).join('、'), org: d.org || '', phone: maskPhone(d.phone) }],
+      summary: { count: 1 },
+      note: '',
+    }
+  }
+
+  const scope = ctx.energyScope || {}
+  let q = `select=${cols}&limit=${Math.max(args.limit, 50)}`
+  if (scope.customerId) q += `&customer_id=eq.${enc(scope.customerId)}`
+  else if (Array.isArray(scope.orgNames) && scope.orgNames.length) {
+    q += `&org=in.(${scope.orgNames.map((n) => `"${String(n).replace(/"/g, '')}"`).join(',')})`
+  } else {
+    throw new BizError(CODE.ERR_NO_TENANT, '当前账号未绑定客户档案，暂时无法查询司机')
+  }
+  if (ctx.orgId) q += `&org_id=eq.${enc(ctx.orgId)}`
+  if (args.keyword) q += `&driver_name=ilike.*${enc(args.keyword)}*`
+  if (args.org) q += `&org=ilike.*${enc(args.org)}*`
+  if (args.plate) q += `&bound_vehicle=ilike.*${enc(args.plate)}*`
+  q += '&order=updated_at.desc'
+
+  const rows = (await dbSelect(TABLE.DRIVERS, q).catch((e) => {
+    if (isMissingTable(e)) throw new BizError(CODE.ERR_TOOL_FAIL, '司机档案表尚未初始化')
+    throw e
+  })) || []
+
+  const safe = assertScope(rows, ctx, TABLE.DRIVERS)
+  const list = safe.slice(0, args.limit).map((d) => ({
+    name: d.driver_name || '',
+    plate: splitPlates(d.bound_vehicle).join('、'),
+    org: d.org || '',
+    phone: maskPhone(d.phone),
+  }))
+
+  return {
+    ok: true,
+    rows: list,
+    summary: { count: safe.length, truncated: safe.length > args.limit },
+    note: safe.length > args.limit ? `共 ${safe.length} 名，只列前 ${args.limit} 名` : '',
+  }
+}
+
+/* ============================================================
    调度
    ============================================================ */
-const IMPL = { q_energy, q_fee, q_todo, q_waybill }
+const IMPL = { q_energy, q_fee, q_todo, q_waybill, q_vehicle, q_driver }
 
 async function runTool(name, args, ctx) {
   const fn = IMPL[name]

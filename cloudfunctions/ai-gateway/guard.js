@@ -134,6 +134,23 @@ const VALIDATORS = {
       limit: assertInt(a.limit, 1, LIMITS.WAYBILL_ROWS, 'limit', 20),
     }
   },
+  /* ⭐ 2026-11-24 新增：车辆 / 司机档案。
+     两个工具都**没有租户参数** —— 范围只能来自 ctx，模型无从伪造。 */
+  q_vehicle(a) {
+    return {
+      keyword: assertStr(a.keyword, 20, 'keyword'),
+      org: assertStr(a.org, 40, 'org'),
+      limit: assertInt(a.limit, 1, LIMITS.VEHICLE_ROWS, 'limit', 20),
+    }
+  },
+  q_driver(a) {
+    return {
+      keyword: assertStr(a.keyword, 20, 'keyword'),
+      org: assertStr(a.org, 40, 'org'),
+      plate: assertStr(a.plate, 20, 'plate'),
+      limit: assertInt(a.limit, 1, LIMITS.DRIVER_ROWS, 'limit', 20),
+    }
+  },
 }
 
 /**
@@ -168,8 +185,7 @@ function assertScope(rows, ctx, table) {
   const list = rows || []
 
   /* 能耗表：customer_id 命中，或 org 落在本租户机构名列表里 */
-  if (table === TABLE.DAILY_STATS) {
-    const scope = ctx.energyScope || {}
+  if (table === TABLE.DAILY_STATS) {    const scope = ctx.energyScope || {}
     const cid = scope.customerId ? String(scope.customerId) : ''
     const orgSet = new Set((scope.orgNames || []).map((s) => String(s)))
     if (!cid && !orgSet.size) throw new BizError(CODE.ERR_NO_TENANT, '缺少能耗数据范围')
@@ -186,6 +202,30 @@ function assertScope(rows, ctx, table) {
       }
     }
     return list
+  }
+
+  /* ⭐ 车辆 / 司机档案：与能耗表同一套收口（customer_id 或机构名），
+     但这两张表常有脏行（customer_id 为空、org 写成简称），
+     所以**过滤式**断言：越权行剔除并记日志，全被剔除才报错。
+     —— 既不放过越权数据，也不让一行脏数据把整个功能打死。 */
+  if (table === TABLE.VEHICLES || table === TABLE.DRIVERS) {
+    const scope = ctx.energyScope || {}
+    const cid = scope.customerId ? String(scope.customerId) : ''
+    const orgSet = new Set((scope.orgNames || []).map((s) => String(s)))
+    if (!cid && !orgSet.size) throw new BizError(CODE.ERR_NO_TENANT, `缺少数据范围（${table}）`)
+
+    const kept = list.filter(
+      (r) => r && ((cid && String(r.customer_id) === cid) || (orgSet.size && orgSet.has(String(r.org))))
+    )
+    if (kept.length !== list.length) {
+      console.error(
+        `[ai-gateway] ⚠️ ${table} 剔除越权行 ${list.length - kept.length} 条 expect(${cid}/${[...orgSet].join('|')})`
+      )
+    }
+    if (!kept.length && list.length) {
+      throw new BizError(CODE.ERR_INTERNAL, '数据隔离校验未通过', { table })
+    }
+    return kept
   }
 
   /* 其余表：owner_account 必须等于 ctx.tenant */

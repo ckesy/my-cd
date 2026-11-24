@@ -152,10 +152,11 @@ async function buildContext(account) {
 
   /* ⭐ 司机账号：给最窄的一套能力。
      司机能开助手，但**不能看整队数据** —— 见 tools.js 的 scope==='self' 分支：
-     费用按 driver_phone 精确过滤，运单按 driver 姓名过滤。
-     审批/待办（q_todo）和能耗（q_energy）不给司机，那是管理视角的数据。 */
+     费用按 driver_phone 精确过滤，运单按 driver 姓名过滤，
+     车辆走 drivers.bound_vehicle 白名单（只返回自己绑的车）。
+     审批/待办（q_todo）、能耗（q_energy）、司机名单（q_driver）不给司机。 */
   if (kind === 'driver') {
-    perms = ['fee_list', 'waybill']
+    perms = ['fee_list', 'waybill', 'vehicle_archive']
   }
 
   const scope = kind === 'driver' ? 'self' : 'tenant'
@@ -168,6 +169,8 @@ async function buildContext(account) {
     userId: u.id,
     name: u.name || '',
     phone: u.phone || '',
+    /* ⭐ 子账号的机构 id：车辆/司机档案按 org_id 收口时要用（主账号为空=看全部） */
+    orgId: u.org_id !== null && u.org_id !== undefined && u.org_id !== '' ? String(u.org_id) : '',
     kind,
     tenant,
     perms,
@@ -332,6 +335,46 @@ const TOOL_SCHEMAS = {
       },
     },
   },
+  q_vehicle: {
+    type: 'function',
+    function: {
+      name: 'q_vehicle',
+      description:
+        '查询车辆档案：车牌、绑定司机、所属机构、能源类型。'
+        + '不传任何参数即返回「当前账号名下的全部车辆」——'
+        + '用户问「我名下有哪些车 / 我有几台车 / 车队一共多少台车 / 有哪些车」时**必须调用它**，不要再回答无法查询。'
+        + '司机账号只会返回自己绑定的车。',
+      parameters: {
+        type: 'object',
+        properties: {
+          keyword: { type: 'string', description: '车牌关键字，支持部分匹配' },
+          org: { type: 'string', description: '机构名关键字，支持部分匹配' },
+          limit: { type: 'integer', minimum: 1, maximum: 50 },
+        },
+        required: [],
+      },
+    },
+  },
+  q_driver: {
+    type: 'function',
+    function: {
+      name: 'q_driver',
+      description:
+        '查询司机档案：姓名、绑定车牌、所属机构、手机号（脱敏）。'
+        + '用户问「有哪些司机 / 司机名单 / 这辆车是谁在开 / 谁绑了这台车」时用它。'
+        + '司机账号只会返回自己那一条。',
+      parameters: {
+        type: 'object',
+        properties: {
+          keyword: { type: 'string', description: '司机姓名关键字' },
+          org: { type: 'string', description: '机构名关键字' },
+          plate: { type: 'string', description: '按车牌反查：谁绑定了这辆车' },
+          limit: { type: 'integer', minimum: 1, maximum: 50 },
+        },
+        required: [],
+      },
+    },
+  },
 }
 
 /* ============================================================
@@ -410,6 +453,37 @@ function toCards(results) {
           { key: 'plate', label: '车牌', align: 'left' },
           { key: 'status', label: '状态', align: 'left' },
           { key: 'delivery', label: '卸货地', align: 'left' },
+        ],
+        rows: data.rows,
+        note: data.note,
+      })
+    }
+
+    /* ⭐ 车辆档案卡：车牌 / 能源 / 司机（机构放不下，放进 note 更省列宽） */
+    if (name === 'q_vehicle' && data.rows.length) {
+      const orgs = [...new Set(data.rows.map((r) => r.org).filter(Boolean))]
+      cards.push({
+        type: 'table',
+        title: data.mine ? `我名下 ${data.summary.count} 台车` : `车辆 ${data.summary.count} 台`,
+        cols: [
+          { key: 'plate', label: '车牌', align: 'left' },
+          { key: 'fuel', label: '能源', align: 'left' },
+          { key: 'driver', label: '司机', align: 'left' },
+        ],
+        rows: data.rows,
+        note: [orgs.length === 1 ? orgs[0] : '', data.note].filter(Boolean).join(' · '),
+      })
+    }
+
+    /* ⭐ 司机档案卡：姓名 / 绑定车 / 机构 */
+    if (name === 'q_driver' && data.rows.length) {
+      cards.push({
+        type: 'table',
+        title: `司机 ${data.summary.count} 名`,
+        cols: [
+          { key: 'name', label: '姓名', align: 'left' },
+          { key: 'plate', label: '绑定车', align: 'left' },
+          { key: 'phone', label: '电话', align: 'left' },
         ],
         rows: data.rows,
         note: data.note,
@@ -572,6 +646,97 @@ exports.main = async (event) => {
           traceId,
           latencyMs: latency,
           ...(payload._debug ? { debug: { mode: 'direct', from, to, groupBy: 'month' } } : {}),
+        }
+      }
+    }
+
+    /* ⭐⭐ 意图直达：车辆 / 司机档案（2026-11-24 新增）
+       ------------------------------------------------------------
+       为什么也要直达：之前没有这两个工具，模型只能回「无法查询」；
+       现在有工具了，但实测模型对「我名下有哪些车」这种**无参数**提问
+       倾向性很低，容易只回一句话不出卡。这类意图明确、参数可推导的
+       问题直接查库最稳：零模型成本、一定出卡。
+       ⚠️ 必须排除费用/运单/里程等业务词，否则「我这几台车这个月花了多少」
+          会被强行拉去查车辆清单。 */
+    const OTHER_BIZ =
+      /费用|花费|花|支出|报销|借款|违章|补贴|金额|开销|运单|单号|任务|里程|公里|电耗|能耗|加油|加气|审批|待办|打款|轨迹|定位|位置|在哪|在线|几趟|跑了/
+    const ASK_VEHICLE =
+      /(我|自己)(的|名下)?(那台|这辆)?(车|车辆)|名下(的)?(车|车辆)|几台车|多少台车|哪些车|车辆(清单|列表|档案)|车队.{0,4}(几|多少)台?车/
+    const ASK_DRIVER =
+      /有(哪些|几个|多少)(名|个)?司机|司机(名单|列表|档案|有多少|有几个)|谁(开|在开)|谁绑(了|定)|绑定(的)?司机/
+
+    if (!OTHER_BIZ.test(text)) {
+      /* 文本里带了车牌就带上：问「晋K03115D 是谁在开」时不能把全队司机都倒出来 */
+      const plateInText =
+        (String(text).match(/[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼][A-Z][A-Z0-9]{4,6}/) || [])[0] || null
+
+      let archiveTool = ''
+      if (ASK_DRIVER.test(text) && names.includes('q_driver') && (plateInText || !/我/.test(text))) {
+        archiveTool = 'q_driver'
+      } else if (ASK_VEHICLE.test(text) && names.includes('q_vehicle')) {
+        archiveTool = 'q_vehicle'
+      }
+
+      if (archiveTool) {
+        let data = null
+        try {
+          /* ⚠️ keyword 与 plate 不能同时塞车牌：
+             q_driver 的 keyword 过滤的是**司机姓名**，塞车牌会直接查成 0 行；
+             q_vehicle 的 keyword 过滤的才是车牌。 */
+          data = await runTool(archiveTool, {
+            keyword: archiveTool === 'q_vehicle' ? plateInText : null,
+            plate: archiveTool === 'q_driver' ? plateInText : null,
+            org: null,
+            limit: 20,
+          }, ctx)
+        } catch (e) {
+          /* 拿不到范围（如未绑客户档案）时退回模型，让它给出可读解释 */
+          console.error(`[ai-gateway] ${archiveTool} 直达查询失败：`, e && e.message)
+        }
+
+        if (data && Array.isArray(data.rows)) {
+          const n = Number(data.summary && data.summary.count) || 0
+          const plates = data.rows.map((r) => r.plate).filter(Boolean).slice(0, 3)
+          let directAnswer
+          if (archiveTool === 'q_vehicle') {
+            if (!n) directAnswer = data.mine ? '你的账号还没有绑定车辆，请联系调度。' : '没有查到车辆档案。'
+            else if (data.mine) directAnswer = `你名下绑定 ${n} 台车：${plates.join('、')}${n > plates.length ? ' 等' : ''}。`
+            else directAnswer = `你名下共 ${n} 台车${plates.length ? '，例如 ' + plates.join('、') : ''}。明细见下方。`
+          } else {
+            if (!n) directAnswer = plateInText ? `${plateInText} 没有查到绑定司机。` : '没有查到司机档案。'
+            else if (plateInText && n === 1) directAnswer = `${plateInText} 由 ${data.rows[0].name} 在开。`
+            else if (plateInText) directAnswer = `${plateInText} 对应 ${n} 名司机，明细见下方。`
+            else directAnswer = `共 ${n} 名司机，明细见下方。`
+          }
+
+          const latency = Date.now() - t0
+          await writeLog({
+            trace_id: traceId,
+            session_id: String(payload.sessionId || '').slice(0, 60),
+            account_id: ctx.account,
+            owner_account: ctx.tenant,
+            client: String(payload.client || 'web').slice(0, 20),
+            question: sanitize(text).slice(0, 200),
+            intent: `${archiveTool}:direct`,
+            tool_calls: [{ name: archiveTool, ok: true, code: 0, ms: 0 }],
+            rows_returned: data.rows.length,
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            cached_tokens: 0,
+            latency_ms: latency,
+            status: 'ok',
+            error_code: '',
+          })
+
+          return {
+            code: CODE.OK,
+            answer: directAnswer,
+            cards: toCards([{ name: archiveTool, data, ok: true }]),
+            usage: { prompt: 0, completion: 0, cached: 0, total: 0 },
+            traceId,
+            latencyMs: latency,
+            ...(payload._debug ? { debug: { mode: 'direct', tool: archiveTool } } : {}),
+          }
         }
       }
     }

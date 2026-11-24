@@ -219,17 +219,27 @@ export async function askAi({ text, history = [], sessionId = '' } = {}) {
 
   let res = await askOnce({ text, history, sessionId, token })
 
-  /* ⭐ 会话失效先重试一次再清 token。
+  /* ⭐ 会话失效的处理顺序：重试 → 免密续签 → 才清凭证要求重登。
      原来是「一收到 1001 就 clearAiToken()」，一次网关冷启 / 库抖动就能把
      用户永久打到「未连接」，只能重新登录 —— 这正是「有时候还是连不上」。
-     现在：重试能自愈的就自愈；两次都 1001 才认定确实失效，清掉并要求重登。 */
+     现在：偶发抖动靠重试自愈；token 真过期了靠设备凭证换新的；都不行才算真失效。 */
   if (!res.ok && res.code === CODE.ERR_SESSION) {
     await new Promise((r) => setTimeout(r, 400))
     res = await askOnce({ text, history, sessionId, token })
-    if (!res.ok && res.code === CODE.ERR_SESSION) {
-      clearAiToken()
-      return { ...res, needLogin: true }
+  }
+
+  /* token 确认不可用（过期 / 被清）→ 用设备凭证换一张再试一次。
+     少了这一步，设备凭证只在「页面加载时」起作用，
+     页面开着跨过有效期就要重登。 */
+  if (!res.ok && res.code === CODE.ERR_SESSION) {
+    const r = await resumeAiToken()
+    if (r.ok) {
+      const fresh = getAiToken()
+      if (fresh) res = await askOnce({ text, history, sessionId, token: fresh })
+      if (res.ok) return res
     }
+    clearAiToken()
+    return { ...res, needLogin: true }
   }
 
   return res

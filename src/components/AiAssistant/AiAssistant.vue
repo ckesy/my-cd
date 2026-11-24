@@ -396,6 +396,10 @@ async function send(preset) {
       error: !res.ok,
     }
   }
+  /* 凭证真的失效（重试 + 免密续签都没救回来）→ 同步把状态打到「未连接」，
+     让输入框禁用、红卡出现，而不是只弹一条错误气泡却仍显示「在线」 */
+  if (res.needLogin) hasToken.value = false
+
   sending.value = false
   persist()
   scrollBottom()

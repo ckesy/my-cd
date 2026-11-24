@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>东风车队管理系统 · 整体架构全景图</title>
+<style>
+:root{
+  --bg:#F5F7FA; --card:#FFFFFF; --line:#E4E8EF; --line-soft:#EEF2F7;
+  --ink:#0F172A; --ink-2:#475569; --ink-3:#94A3B8;
+  --brand:#C8102E;
+  --c-blue-f:#E6F1FB; --c-blue-s:#185FA5; --c-blue-k:#042C53;
+  --c-teal-f:#E1F5EE; --c-teal-s:#0F6E56; --c-teal-k:#04342C;
+  --c-purple-f:#EEEDFE; --c-purple-s:#534AB7; --c-purple-k:#26215C;
+  --c-amber-f:#FAEEDA; --c-amber-s:#854F0B; --c-amber-k:#412402;
+  --c-coral-f:#FAECE7; --c-coral-s:#993C1D; --c-coral-k:#4A1B0C;
+  --c-pink-f:#FBEAF0; --c-pink-s:#993556; --c-pink-k:#4B1528;
+  --c-gray-f:#F1EFE8; --c-gray-s:#5F5E5A; --c-gray-k:#2C2C2A;
+  --r:12px; --r-sm:8px;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:14px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+code{font-family:var(--mono);font-size:.88em;background:#F1F3F6;padding:1px 5px;border-radius:4px;color:#334155}
+
+/* ---------- 侧导航 ---------- */
+.sidenav{
+  position:fixed;left:0;top:0;bottom:0;width:216px;padding:32px 0 24px;
+  background:#FFF;border-right:1px solid var(--line);z-index:20;overflow-y:auto;
+}
+.sidenav .brand{padding:0 24px 20px;border-bottom:1px solid var(--line-soft);margin-bottom:16px}
+.sidenav .brand b{display:block;font-size:14px;font-weight:600;letter-spacing:.2px}
+.sidenav .brand span{display:block;font-size:11.5px;color:var(--ink-3);margin-top:3px}
+.sidenav a{
+  display:flex;align-items:center;gap:9px;padding:8px 24px;font-size:13px;
+  color:var(--ink-2);text-decoration:none;border-left:2px solid transparent;transition:.15s;
+}
+.sidenav a:hover{background:#FAFBFC;color:var(--ink)}
+.sidenav a.on{color:var(--brand);border-left-color:var(--brand);background:#FEF2F3;font-weight:500}
+.sidenav a i{
+  font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--ink-3);
+  width:18px;flex:0 0 18px;
+}
+.sidenav a.on i{color:var(--brand)}
+
+/* ---------- 主体 ---------- */
+main{margin-left:216px;padding:0 48px 96px;max-width:1320px}
+.hero{padding:64px 0 40px;border-bottom:1px solid var(--line)}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:500;
+  color:var(--brand);background:#FEF2F3;border:1px solid #FADDE2;
+  padding:4px 11px;border-radius:99px;margin-bottom:18px;letter-spacing:.3px;
+}
+.eyebrow::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--brand)}
+h1{font-size:30px;font-weight:600;letter-spacing:-.4px;line-height:1.3}
+.hero .sub{font-size:14.5px;color:var(--ink-2);margin-top:12px;max-width:760px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:22px;font-size:12.5px;color:var(--ink-3)}
+.meta b{color:var(--ink-2);font-weight:500}
+
+/* ---------- 章节 ---------- */
+section{padding-top:56px;scroll-margin-top:24px}
+.sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
+.sec-head h2{font-size:20px;font-weight:600;letter-spacing:-.2px}
+.sec-head .idx{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.sec-desc{font-size:13.5px;color:var(--ink-2);margin-bottom:26px;max-width:840px}
+
+/* ---------- 指标卡 ---------- */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px}
+.metric{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+.metric .v{font-size:26px;font-weight:600;letter-spacing:-.6px;font-variant-numeric:tabular-nums;line-height:1.15}
+.metric .v small{font-size:12.5px;font-weight:500;color:var(--ink-3);margin-left:3px;letter-spacing:0}
+.metric .k{font-size:12px;color:var(--ink-3);margin-top:5px}
+
+/* ---------- 分层 ---------- */
+.stack{display:flex;flex-direction:column;gap:0}
+.layer{
+  background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:var(--r);padding:0;overflow:hidden;transition:.18s;
+}
+.layer:hover{border-color:var(--line);box-shadow:0 2px 12px rgba(15,23,42,.055)}
+.layer[data-accent="blue"]{--accent:var(--c-blue-s);--accent-bg:var(--c-blue-f);--accent-k:var(--c-blue-k)}
+.layer[data-accent="teal"]{--accent:var(--c-teal-s);--accent-bg:var(--c-teal-f);--accent-k:var(--c-teal-k)}
+.layer[data-accent="purple"]{--accent:var(--c-purple-s);--accent-bg:var(--c-purple-f);--accent-k:var(--c-purple-k)}
+.layer[data-accent="coral"]{--accent:var(--c-coral-s);--accent-bg:var(--c-coral-f);--accent-k:var(--c-coral-k)}
+.layer[data-accent="amber"]{--accent:var(--c-amber-s);--accent-bg:var(--c-amber-f);--accent-k:var(--c-amber-k)}
+.layer[data-accent="pink"]{--accent:var(--c-pink-s);--accent-bg:var(--c-pink-f);--accent-k:var(--c-pink-k)}
+.layer[data-accent="gray"]{--accent:var(--c-gray-s);--accent-bg:var(--c-gray-f);--accent-k:var(--c-gray-k)}
+
+.layer-head{
+  display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;
+  user-select:none;background:linear-gradient(90deg,var(--accent-bg) 0%,rgba(255,255,255,0) 42%);
+}
+.layer-no{
+  font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent);
+  background:#FFF;border:1px solid var(--accent);border-radius:6px;
+  padding:2px 7px;flex:0 0 auto;letter-spacing:.3px;
+}
+.layer-head h3{font-size:15px;font-weight:600;color:var(--accent-k);letter-spacing:-.1px}
+.layer-head .duty{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+.layer-head .cnt{
+  margin-left:auto;font-size:11.5px;color:var(--accent);background:#FFF;
+  border:1px solid var(--line);border-radius:99px;padding:3px 10px;flex:0 0 auto;
+}
+.layer-head .chev{color:var(--ink-3);font-size:11px;transition:.2s;flex:0 0 auto;margin-left:4px}
+.layer.closed .chev{transform:rotate(-90deg)}
+
+.layer-body{padding:0 20px 20px;display:flex;flex-direction:column;gap:14px}
+.layer.closed .layer-body{display:none}
+
+.nodes{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:9px}
+.node{background:#FCFDFE;border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:11px 13px}
+.node strong{display:block;font-size:13px;font-weight:600;color:var(--ink);letter-spacing:-.1px}
+.node span{display:block;font-size:11.5px;color:var(--ink-3);margin-top:3px;line-height:1.5}
+.node .tag{
+  display:inline-block;font-size:10.5px;color:var(--accent);background:var(--accent-bg);
+  border-radius:4px;padding:0 5px;margin-left:5px;font-weight:500;vertical-align:1px;
+}
+
+.note{
+  font-size:12.5px;color:var(--ink-2);background:#FAFBFC;
+  border-left:2px solid var(--accent);border-radius:0 6px 6px 0;padding:9px 14px;
+}
+.note b{color:var(--accent-k);font-weight:600}
+
+.arrow{
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  height:34px;color:var(--ink-3);font-size:11.5px;
+}
+.arrow::before{content:"";width:1px;height:16px;background:var(--line);position:absolute;display:none}
+.arrow .ln{width:1.5px;height:13px;background:linear-gradient(180deg,#CBD5E1,#94A3B8);border-radius:2px}
+.arrow .tx{font-size:11px;color:var(--ink-3);letter-spacing:.2px}
+
+/* ---------- 数据流 ---------- */
+.flows{display:flex;flex-direction:column;gap:12px}
+.flow{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+.flow h4{font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.flow h4 .badge{
+  font-size:10.5px;font-weight:500;padding:2px 7px;border-radius:4px;
+  background:var(--bg);color:var(--ink-2);border:1px solid var(--line);
+}
+.flow .why{font-size:12px;color:var(--ink-3);margin-bottom:14px}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.step{
+  display:inline-flex;flex-direction:column;gap:1px;background:#FCFDFE;
+  border:1px solid var(--line);border-radius:var(--r-sm);padding:7px 11px;min-width:0;
+}
+.step b{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap}
+.step i{font-size:10.5px;font-style:normal;color:var(--ink-3);font-family:var(--mono)}
+.chain .sep{color:#CBD5E1;font-size:12px;flex:0 0 auto}
+
+/* ---------- 表格 ---------- */
+.tbl-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead th{
+  background:#F7F9FC;font-size:12px;font-weight:600;color:var(--ink-2);
+  text-align:left;padding:11px 16px;border-bottom:1px solid var(--line);white-space:nowrap;
+}
+tbody td{font-size:12.5px;padding:11px 16px;border-bottom:1px solid var(--line-soft);vertical-align:top;color:var(--ink-2)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#FBFCFD}
+tbody td:first-child{color:var(--ink);font-weight:500}
+.tag-warn{color:#A32D2D;background:#FCEBEB;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:500;white-space:nowrap}
+.tag-ok{color:#3B6D11;background:#EAF3DE;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:500;white-space:nowrap}
+.tag-mid{color:#854F0B;background:#FAEEDA;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:500;white-space:nowrap}
+
+/* ---------- 尾部 ---------- */
+footer{margin-top:72px;padding-top:24px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:8px 24px}
+
+@media (max-width:1100px){
+  .sidenav{display:none}
+  main{margin-left:0;padding:0 24px 72px}
+  h1{font-size:24px}
+}
+@media print{
+  .sidenav{display:none}
+  main{margin:0;padding:0;max-width:none}
+  .layer,.flow,.tbl-wrap,.metric{break-inside:avoid}
+  section{padding-top:32px}
+  body{background:#FFF}
+}
+</style>
+</head>
+<body>
+
+<nav class="sidenav">
+  <div class="brand">
+    <b>东风车队管理系统</b>
+    <span>整体架构 · Web 端 v1.0</span>
+  </div>
+  <a href="#overview" class="on"><i>01</i>规模总览</a>
+  <a href="#layers"><i>02</i>分层架构</a>
+  <a href="#flows"><i>03</i>核心数据流</a>
+  <a href="#constraints"><i>04</i>关键约束</a>
+  <a href="#migration"><i>05</i>迁移影响</a>
+</nav>
+
+<main>
+
+<header class="hero">
+  <div class="eyebrow">架构文档</div>
+  <h1>车队运输管理系统 · 整体架构全景图</h1>
+  <p class="sub">
+    面向车辆运输、运单调度、费用结算与车队资产的 SaaS 系统，现运行于腾讯云 CloudBase（Serverless 形态）。
+    本文按七层结构拆解真实代码，逐层说明职责、组件与技术栈，并标注跨云迁移的影响面。
+  </p>
+  <div class="meta">
+    <span>版本 <b>v1.0</b></span>
+    <span>日期 <b>2026-11-24</b></span>
+    <span>代码基线 <b>my-cd 主分支</b></span>
+    <span>运行形态 <b>Serverless（CloudBase）</b></span>
+    <span>规模基线 <b>2,000 台车 / 20 客户</b></span>
+  </div>
+</header>
+
+<section id="overview">
+  <div class="sec-head"><span class="idx">01</span><h2>规模总览</h2></div>
+  <p class="sec-desc">以下数字均来自代码实测，非估算。</p>
+  <div class="metrics">
+    <div class="metric"><div class="v">34<small>个</small></div><div class="k">Web 页面</div></div>
+    <div class="metric"><div class="v">46<small>条</small></div><div class="k">前端路由</div></div>
+    <div class="metric"><div class="v">20<small>个</small></div><div class="k">公共组件</div></div>
+    <div class="metric"><div class="v">30<small>个</small></div><div class="k">云函数</div></div>
+    <div class="metric"><div class="v">30<small>张</small></div><div class="k">业务表</div></div>
+    <div class="metric"><div class="v">6<small>套</small></div><div class="k">界面皮肤</div></div>
+    <div class="metric"><div class="v">2<small>个</small></div><div class="k">定时任务</div></div>
+    <div class="metric"><div class="v">9<small>个</small></div><div class="k">业务领域</div></div>
+  </div>
+</section>
+
+<section id="layers">
+  <div class="sec-head"><span class="idx">02</span><h2>分层架构</h2></div>
+  <p class="sec-desc">
+    自上而下七层。点击层标题可折叠。箭头标注的是层与层之间的实际调用协议，不是概念示意。
+  </p>
+
+  <div class="stack">
+
+    <!-- L1 -->
+    <article class="layer" data-accent="blue">
+      <div class="layer-head">
+        <span class="layer-no">L1</span>
+        <div>
+          <h3>客户端层</h3>
+          <div class="duty">用户直接接触的界面，负责交互与呈现</div>
+        </div>
+        <span class="cnt">3 类终端</span>
+        <span class="chev">▼</span>
+      </div>
+      <div class="layer-body">
+        <div class="nodes">
+          <div class="node"><strong>Web 管理后台</strong><span>Vue 3 + Vite + Element Plus<br>34 页面 / 46 路由 / 20 组件</span></div>
+          <div class="node"><strong>微信小程序</strong><span>司机端接单、打卡、费用上报<br>独立仓库，通过 callFunction 调用</span></div>
+          <div class="node"><strong>数据大屏</strong><span>1920×1080 固定画布<br>scale 自适配，地图主导布局</span></div>
+        </div>
+        <div class="note">
+          <b>渲染分工：</b>地图与围栏用高德 JS API 2.0 渲染；图表一律用自研 <code>svgCharts.js</code>（禁止引入 echarts）；Excel 导入导出用 exceljs / xlsx 在前端完成，不占服务端资源。
+        </div>
+      </div>
+    </article>
+
+    <div class="arrow"><span class="ln"></span><span class="tx">HTTPS</span><span class="ln"></span></div>
+
+    <!-- L2 -->
+    <article class="layer" data-accent="teal">
+      <div class="layer-head">
+        <span class="layer-no">L2</span>
+        <div>
+          <h3>接入层</h3>
+          <div class="duty">流量入口、静态资源分发、请求路由</div>
+        </div>
+        <span class="cnt">2 条通道</span>
+        <span class="chev">▼</span>
+      </div>
+      <div class="layer-body">
+        <div class="nodes">
+          <div class="node"><strong>静态托管</strong><span>CloudBase 托管 <code>dist/</code><br>带 CDN，gzip 后约 1.5MB</span></div>
+          <div class="node"><strong>HTTP 网关</strong><span><code>*.ap-shanghai.app.tcloudbase.com</code><br>Web 端调用云函数的唯一入口</span></div>
+          <div class="node"><strong>微信云通道</strong><span><code>wx.cloud.callFunction</code><br>小程序专用，走微信内网</span></div>
+        </div>
+        <div class="note">
+          <b>硬约束：</b>Web 端<b>禁止使用</b> <code>app.callFunction</code> —— 匿名登录态会触发 <code>EXCEED_AUTHORITY</code>。因此 Web 与小程序走两条不同通道，同一个云函数需兼容两种入参格式。
+        </div>
+      </div>
+    </article>
+
+    <div class="arrow"><span class="ln"></span><span class="tx">HTTP / 云调用</span><span class="ln"></span></div>
+
+    <!-- L3 -->
+    <article class="layer" data-accent="purple">
+      <div class="layer-head">
+        <span class="layer-no">L3</span>
+        <div>
+          <h3>认证 · 租户 · 权限层</h3>
+          <div class="duty">横切能力：身份、数据隔离、功能授权</div>
+        </div>
+        <span class="cnt">横切</span>
+        <span class="chev">▼</span>
+      </div>
+      <div class="layer-body">
+        <div class="nodes">
+          <div class="node"><strong>云开发匿名登录</strong><span><code>signInAnonymously()</code><br>Web 启动即执行，失败则全站不可用</span></div>
+          <div class="node"><strong>业务账号体系</strong><span><code>login-by-account</code><br>账号密码 → <code>user_sessions</code> 会话</span></div>
+          <div class="node"><strong>会话守护</strong><span><code>session-guard</code><br>校验会话有效性、踢下线</span></div>
+          <div class="node"><strong>多租户</strong><span><code>organizations</code> / <code>customers</code><br><code>tenant_modules</code> 双层开关</span></div>
+          <div class="node"><strong>功能权限</strong><span><code>config/permissions.js</code><br>唯一来源，与侧边栏一一对应</span></div>
+          <div class="node"><strong>数据隔离</strong><span><code>owner_account</code> 贯穿全表<br>租户间互不可见</span></div>
+        </div>
+        <div class="note">
+          <b>双层授权模型：</b><code>tenant_modules.granted</code>（运营授权，仅服务商可置 true）与 <code>enabled</code>（客户开关）分离 —— 客户只能改 <code>enabled</code>，且要求 <code>granted = true</code>。
+          <br><b>权限判定铁律：</b>给菜单加条件渲染必须写 <code>isMaster || hasPerm(key)</code>，只写 <code>hasPerm</code> 会让主账号看到空壳分组。
+        </div>
+      </div>
+    </article>
+
+    <div class="arrow"><span class="ln"></span><span class="tx">携带账号 / 会话令牌</span><span class="ln"></span></div>
+
+    <!-- L4 -->
+    <article class="layer" data-accent="coral">
+      <div class="layer-head">
+        <span class="layer-no">L4</span>
+        <div>
+          <h3>应用服务层</h3>
+          <div class="duty">30 个云函数，按 9 个业务领域归组</div>
+        </div>
+        <span class="cnt">30 个函数</span>
+        <span class="chev">▼</span>
+      </div>
+      <div class="layer-body">
+        <div class="nodes">
+          <div class="node"><strong>运单域<span class="tag">4</span></strong><span>waybill-list / detail<br>waybill-action / admin</span></div>
+          <div class="node"><strong>费用域<span class="tag">2</span></strong><span>report-action（上报/审批）<br>report-ocr（凭证识别）</span></div>
+          <div class="node"><strong>车辆域<span class="tag">6</span></strong><span>vehicle-list / mileage / affair<br>inspection / maintenance / 证照定时</span></div>
+          <div class="node"><strong>车联网域<span class="tag">4</span></strong><span>dongfeng-lostlocation / track<br>overspeed-check / stay-check</span></div>
+          <div class="node"><strong>地理围栏域<span class="tag">3</span></strong><span>amap-geofence<br>-list / -update</span></div>
+          <div class="node"><strong>组织认证域<span class="tag">4</span></strong><span>login-by-account / session-guard<br>org-view / pick-list</span></div>
+          <div class="node"><strong>统计域<span class="tag">2</span></strong><span>behaviorStatsSync<br>opStatsSync</span></div>
+          <div class="node"><strong>AI 域<span class="tag">2</span></strong><span>ai-gateway / ai-token<br>双入口（Web + 小程序）</span></div>
+          <div class="node"><strong>文件通知域<span class="tag">2</span></strong><span>upload-photo（COS 签名）<br>wx-notify（订阅消息）</span></div>
+        </div>
+        <div class="note">
+          <b>调用关系实测：</b>30 个函数之间<b>几乎不存在互相调用</b> —— 全部 <code>callFunction</code> 命中都是注释里的示例，真实跨函数调用仅 1 处（<code>vehicle-list</code> → HTTP → <code>dongfeng-lostlocation</code>）。
+          它们共享的是<b>数据库</b>，不是彼此的 API。
+          <br><b>运单动作链的唯一权威在云端</b>：<code>actions[]</code> 与 <code>next_action</code> 由云函数计算，前端只渲染，不自行推断。
+        </div>
+      </div>
+    </article>
+
+    <div class="arrow"><span class="ln"></span><span class="tx">SDK / SQL</span><span class="ln"></span></div>
+
+    <!-- L5 -->
+    <article class="layer" data-accent="amber">
+      <div class="layer-head">
+        <span class="layer-no">L5</span>
+        <div>
+          <h3>数据访问层</h3>
+          <div class="duty">查询构造、连接管理、字段容错、文件签名</div>
+        </div>
+        <span class="cnt">3 种通道</span>
+        <span class="chev">▼</span>
+      </div>
+      <div class="layer-body">
+        <div class="nodes">
+          <div class="node"><strong>前端直连（PostgREST）</strong><span><code>app.rdb()</code> → <code>supabase.js</code><br>匿名 key，HTTP 层发 SQL</span></div>
+          <div class="node"><strong>云函数访问</strong><span><code>@cloudbase/node-sdk</code><br>仅 5 个函数使用</span></div>
+          <div class="node"><strong>COS 签名通道</strong><span><code>upload-photo</code> 签发<br><code>signPut</code> / <code>signGet</code>（50min 缓存）</span></div>
+          <div class="node"><strong>降级容错</strong><span>列不存在时剥字段重试<br><code>stripRecurringFields</code> 等</span></div>
+          <div class="node"><strong>报表聚合</strong><span><code>dongfengReport.js</code><br><code>svgCharts.js</code> 渲染</span></div>
+          <div class="node"><strong>地理编码</strong><span><code>geoAddress.js</code><br>围栏名反查 → 高德编码</span></div>
+        </div>
+        <div class="note">
+          <b>为什么前端能直连数据库：</b>CloudBase PostgreSQL 环境提供 PostgREST 兼容层，<code>app.rdb()</code> 本质是 HTTP 客户端。这也是本次跨云迁移中<b>最重的一块</b> —— 阿里云 RDS 没有这层，必须补一层自建 API。
+          <br><b>字段容错是刚需：</b><code>waybills</code> 有 74 列且无 <code>update_time</code>，历史脚本加错列会整页 42703，因此新字段写入一律走白名单 + 剥离重试。
+        </div>
+      </div>
+    </article>
+
+    <div class="arrow"><span class="ln"></span><span class="tx">TCP / HTTPS</span><span class="ln"></span></div>
+
+    <!-- L6 -->
+    <article class="layer" data-accent="gray">
+      <div class="layer-head">
+        <span class="layer-no">L6</span>
+        <div>
+          <h3>数据层</h3>
+          <div class="duty">结构化数据、对象存储、视图与统计表</div>
+        </div>
+        <span class="cnt">30 表 + 1 视图</span>
+        <span class="chev">▼</span>
+      </div>
+      <div class="layer-body">
+        <div class="nodes">
+          <div class="node"><strong>组织与人员<span class="tag">8</span></strong><span>organizations / customers / admins<br>users / roles / user_sessions<br>tenant_modules / fleets</span></div>
+          <div class="node"><strong>车辆资产<span class="tag">7</span></strong><span>vehicles / vehicle_certs<br>vehicle_affair_settings<br>vehicle_behavior_daily<br>vehicle_daily_stats / inspections<br>maintenance_records</span></div>
+          <div class="node"><strong>运单运输<span class="tag">4</span></strong><span>waybills（74 列） / routes<br>ele_fences / ele_fence_alerts</span></div>
+          <div class="node"><strong>费用结算<span class="tag">4</span></strong><span>reports / report_approval_logs<br>fee_approval_configs<br>energy_report_tasks</span></div>
+          <div class="node"><strong>档案<span class="tag">4</span></strong><span>customer_archives / customer_contacts<br>cargo_archives / cargo_rules</span></div>
+          <div class="node"><strong>宽表视图<span class="tag">1</span></strong><span><code>v_vehicle_export</code><br>40 列含证件，导出专用</span></div>
+        </div>
+        <div class="note">
+          <b>类型约定：</b><code>organizations.id</code> 与 <code>customers.id</code> 是<b>整数</b>，新表引用一律用 <code>text</code> 并在写入前 <code>String()</code>。
+          <br><b>新表必带授权段：</b><code>GRANT ... TO anon, authenticated</code> + <code>pg_notify('pgrst','reload schema')</code>，否则现象是"查询返回 0 条、写入被拒"。
+          <br><b>对象存储：</b>凭证图存 COS 桶 <code>wuxian-fleet-*</code>，业务表只存 <code>{key, name, size}</code>，不存 URL —— 这是迁移时最省事的一处。
+        </div>
+      </div>
+    </article>
+
+    <div class="arrow"><span class="ln"></span><span class="tx">HTTPS 出网</span><span class="ln"></span></div>
+
+    <!-- L7 -->
+    <article class="layer" data-accent="pink">
+      <div class="layer-head">
+        <span class="layer-no">L7</span>
+        <div>
+          <h3>外部集成层</h3>
+          <div class="duty">第三方服务对接，与云厂商无关</div>
+        </div>
+        <span class="cnt">4 类接口</span>
+        <span class="chev">▼</span>
+      </div>
+      <div class="layer-body">
+        <div class="nodes">
+          <div class="node"><strong>高德地图</strong><span>地图渲染 / 地理编码<br>电子围栏绘制与检索</span></div>
+          <div class="node"><strong>东风车联网</strong><span><code>locationData</code> 实时位置<br><code>track/history</code> 轨迹<br><code>tripAnalysisOil</code> 能耗</span></div>
+          <div class="node"><strong>AI 模型</strong><span><code>ai-gateway</code> 代理<br>令牌由 <code>ai-token</code> 签发</span></div>
+          <div class="node"><strong>微信开放能力</strong><span>订阅消息 <code>subscribeMessage</code><br><code>access_token</code> 自维护</span></div>
+        </div>
+        <div class="note">
+          <b>接口特性（影响设计）：</b>实时位置接口参数是 <b>VIN 后 8 位</b>，<b>一次只能查一台车</b>，单次超时 8s 且无数据时会向前回退最多 3 次请求；
+          能耗接口<b>只能 POST 且参数必须放 query</b>，进 body 恒返 <code>2101</code>；能耗数据有 <b>1 天延迟</b>，当天只能返回空。
+        </div>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<section id="flows">
+  <div class="sec-head"><span class="idx">03</span><h2>核心数据流</h2></div>
+  <p class="sec-desc">四条最典型的链路，展示各层之间实际的协议与跳数。</p>
+
+  <div class="flows">
+
+    <div class="flow">
+      <h4>Web 查询列表 <span class="badge">2 跳 · 最快</span></h4>
+      <p class="why">绝大多数列表页走这条，不经过云函数</p>
+      <div class="chain">
+        <span class="step"><b>浏览器</b><i>Vue 页面</i></span><span class="sep">→</span>
+        <span class="step"><b>app.rdb()</b><i>supabase.js</i></span><span class="sep">→</span>
+        <span class="step"><b>PostgREST</b><i>HTTP + anon key</i></span><span class="sep">→</span>
+        <span class="step"><b>PostgreSQL</b><i>SQL 执行</i></span>
+      </div>
+    </div>
+
+    <div class="flow">
+      <h4>Web 执行运单动作 <span class="badge">3 跳</span></h4>
+      <p class="why">涉及状态机推进，必须由云端计算动作链</p>
+      <div class="chain">
+        <span class="step"><b>浏览器</b><i>运单详情</i></span><span class="sep">→</span>
+        <span class="step"><b>HTTP 网关</b><i>tcloudbase.com</i></span><span class="sep">→</span>
+        <span class="step"><b>waybill-action</b><i>云函数</i></span><span class="sep">→</span>
+        <span class="step"><b>node-sdk</b><i>写库 + 留痕</i></span><span class="sep">→</span>
+        <span class="step"><b>PostgreSQL</b><i>waybills</i></span>
+      </div>
+    </div>
+
+    <div class="flow">
+      <h4>小程序司机登录 <span class="badge">3 跳 · 内网</span></h4>
+      <p class="why">走微信内网通道，不经过公网，首包更快</p>
+      <div class="chain">
+        <span class="step"><b>小程序</b><i>账号密码</i></span><span class="sep">→</span>
+        <span class="step"><b>callFunction</b><i>微信内网</i></span><span class="sep">→</span>
+        <span class="step"><b>login-by-account</b><i>校验 + 签发</i></span><span class="sep">→</span>
+        <span class="step"><b>user_sessions</b><i>会话落库</i></span>
+      </div>
+    </div>
+
+    <div class="flow">
+      <h4>全图监控展示车辆位置 <span class="badge">4 跳 · 最慢</span></h4>
+      <p class="why">每条链路都要过东风接口，因此做了 25s 轨迹缓存</p>
+      <div class="chain">
+        <span class="step"><b>FullMap</b><i>地图页面</i></span><span class="sep">→</span>
+        <span class="step"><b>dongfeng-lostlocation</b><i>云函数</i></span><span class="sep">→</span>
+        <span class="step"><b>东风开放平台</b><i>8s 超时</i></span><span class="sep">→</span>
+        <span class="step"><b>逆地理编码</b><i>地址缓存</i></span><span class="sep">→</span>
+        <span class="step"><b>高德渲染</b><i>marker</i></span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section id="constraints">
+  <div class="sec-head"><span class="idx">04</span><h2>关键约束</h2></div>
+  <p class="sec-desc">这些不是风格偏好，是踩过坑之后形成的硬规则。迁移时若忽略，会以"查询返回空""数据静默错误"的形式复现。</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th style="width:23%">约束</th><th style="width:33%">内容</th><th>忽略后的现象</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Web 禁 callFunction</td>
+          <td>前端一律走 HTTP 网关，不走 <code>app.callFunction</code></td>
+          <td><span class="tag-warn">EXCEED_AUTHORITY</span> 匿名登录态无调用权限</td>
+        </tr>
+        <tr>
+          <td>新表必须带授权段</td>
+          <td><code>GRANT</code> 给 anon / authenticated + <code>pg_notify</code> 重载</td>
+          <td><span class="tag-warn">能查但 0 条，写入直接被拒</span></td>
+        </tr>
+        <tr>
+          <td>整数主键</td>
+          <td><code>organizations.id</code> / <code>customers.id</code> 是 int，引用表用 text</td>
+          <td>关联查询类型不匹配，静默返回空</td>
+        </tr>
+        <tr>
+          <td>字段白名单</td>
+          <td>写 <code>vehicles</code> 前按 <code>VEHICLE_COLUMNS</code> 挑字段</td>
+          <td><span class="tag-warn">42703 整页报错</span>（74 列的 waybills 尤甚）</td>
+        </tr>
+        <tr>
+          <td>权限双写</td>
+          <td>菜单条件渲染必须 <code>isMaster || hasPerm(key)</code></td>
+          <td>主账号看到空壳分组，误以为功能丢了</td>
+        </tr>
+        <tr>
+          <td>动作链唯一权威</td>
+          <td>状态推进由云函数 <code>actions[]</code> 决定，前端不推断</td>
+          <td>前后端状态不一致，运单卡在中间态</td>
+        </tr>
+        <tr>
+          <td>常驻任务是一单</td>
+          <td>一个组号只占一行，第 N 趟只能由司机端"接一趟"产生</td>
+          <td>重复计数、费用按趟重复合计</td>
+        </tr>
+        <tr>
+          <td>时区显式声明</td>
+          <td>定时任务与"当天"统计必须按 Asia/Shanghai</td>
+          <td><span class="tag-warn">统计口径偏 8 小时，且不报错</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="migration">
+  <div class="sec-head"><span class="idx">05</span><h2>迁移影响面</h2></div>
+  <p class="sec-desc">按层评估迁往标准云架构（ECS + RDS + OSS）的改造性质。结论：真正的重活在 L5 数据访问层，不在 L4 业务逻辑。</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th style="width:8%">层</th><th style="width:20%">现状</th><th style="width:26%">目标形态</th><th style="width:14%">改造性质</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>L1</td><td>Vue SPA 静态包</td><td>不变</td>
+          <td><span class="tag-ok">零改动</span></td>
+          <td>构建产物直接由 Nginx 托管；可顺带删掉 199KB 的 CloudBase SDK</td>
+        </tr>
+        <tr>
+          <td>L2</td><td>CloudBase 托管 + HTTP 网关</td><td>Nginx + CDN + 自建 API 域名</td>
+          <td><span class="tag-mid">配置重做</span></td>
+          <td>需重新接入备案、签发证书；小程序须改合法域名并重新提审</td>
+        </tr>
+        <tr>
+          <td>L3</td><td>匿名登录 + 业务会话</td><td>自建 JWT + 会话表</td>
+          <td><span class="tag-warn">结构变更</span></td>
+          <td>匿名登录无替代品；这是全站地基，改错则白屏。建议与 P0 改造合并</td>
+        </tr>
+        <tr>
+          <td>L4</td><td>30 个云函数</td><td>单 Node 服务 30 个路由</td>
+          <td><span class="tag-mid">容器适配</span></td>
+          <td>业务逻辑不动，改入口签名与 event 解析；顺便消灭 4 份重复的运单查询条件</td>
+        </tr>
+        <tr>
+          <td>L5</td><td>前端直连 PostgREST</td><td>统一 API + pg 连接池</td>
+          <td><span class="tag-warn">重写</span></td>
+          <td><b>最大工作量。</b>全站数十处 <code>supabase.from()</code> 改为 HTTP；连接池需单例</td>
+        </tr>
+        <tr>
+          <td>L6</td><td>CloudBase PG 共享版</td><td>RDS for PostgreSQL</td>
+          <td><span class="tag-ok">数据直搬</span></td>
+          <td><code>pg_dump</code> 直导；注意序列 setval 与授权段重写。别按"业务/位置"分两个库</td>
+        </tr>
+        <tr>
+          <td>L7</td><td>高德 / 东风 / AI / 微信</td><td>不变</td>
+          <td><span class="tag-ok">零改动</span></td>
+          <td>第三方接口与云厂商无关，仅需确认出网 IP 白名单</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note" style="margin-top:16px;--accent:var(--brand)">
+    <b>一句话总结：</b>这套系统的业务价值集中在 L1（界面）与 L4（业务规则），而这两层迁云几乎不用改；
+    真正的成本在 L5 那薄薄一层「前端直接连数据库」——它现在是优势（少写一套 API），迁移时是负债（必须补一套）。
+    <br><b>推荐部署形态：</b>单台 ECS 4C8G 全包（Nginx + Node API + 采集器 + 定时任务）+ RDS 2C4G + OSS + CDN，月成本约 1,000–1,450 元。
+  </div>
+</section>
+
+<footer>
+  <span>文档版本 v1.0</span>
+  <span>生成日期 2026-11-24</span>
+  <span>数据来源：my-cd 代码实测</span>
+  <span>配套文档：天翼云资源申请清单_2026-11-19.md</span>
+</footer>
+
+</main>
+
+<script>
+document.querySelectorAll('.layer-head').forEach(function(h){
+  h.addEventListener('click', function(){
+    h.parentElement.classList.toggle('closed');
+  });
+});
+
+var links = Array.prototype.slice.call(document.querySelectorAll('.sidenav a'));
+var secs = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+
+function sync(){
+  var y = window.scrollY + 120;
+  var cur = 0;
+  secs.forEach(function(s, i){ if (s && s.offsetTop <= y) cur = i; });
+  links.forEach(function(a, i){ a.classList.toggle('on', i === cur); });
+}
+window.addEventListener('scroll', sync, { passive: true });
+sync();
+</script>
+</body>
+</html>

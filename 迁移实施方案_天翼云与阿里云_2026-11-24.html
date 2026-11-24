@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>跨云迁移实施方案 · 天翼云与阿里云</title>
+<style>
+:root{
+  --bg:#F5F7FA; --card:#FFFFFF; --line:#E3E8F0; --line-2:#EEF2F8;
+  --ink:#0F172A; --ink-2:#475569; --ink-3:#8A97A8;
+  --brand:#C8102E; --brand-bg:#FEF2F3; --brand-line:#F8DDE1;
+  --telecom:#185FA5; --telecom-bg:#E9F2FB; --telecom-k:#0C3A63;
+  --ali:#B8590B; --ali-bg:#FBEFDF; --ali-k:#6B3305;
+  --ok:#3B6D11; --ok-bg:#EAF3DE;
+  --mid:#854F0B; --mid-bg:#FAEEDA;
+  --no:#A32D2D; --no-bg:#FCEBEB;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:14.5px; line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+code{font-family:var(--mono);font-size:.86em;background:#F2F5F9;padding:1.5px 6px;border-radius:4px;color:#334155}
+pre{font-family:var(--mono);font-size:12px;line-height:1.75;background:#FBFCFE;border:1px solid var(--line-2);
+    border-radius:9px;padding:14px 16px;overflow-x:auto;color:#2B3648}
+pre .c{color:#94A3B8}
+pre .k{color:#993C1D;font-weight:600}
+pre .d{color:#3B6D11}
+
+/* ══════ 侧导航 ══════ */
+.nav{
+  position:fixed;left:0;top:0;bottom:0;width:212px;background:#FFF;
+  border-right:1px solid var(--line);padding:30px 0 20px;overflow-y:auto;z-index:30;
+}
+.nav .nb{padding:0 22px 18px;border-bottom:1px solid var(--line-2);margin-bottom:14px}
+.nav .nb b{display:block;font-size:13.5px;font-weight:600}
+.nav .nb span{display:block;font-size:11px;color:var(--ink-3);margin-top:3px;line-height:1.5}
+.nav a{
+  display:flex;align-items:center;gap:9px;padding:7px 22px;font-size:12.5px;
+  color:var(--ink-2);text-decoration:none;border-left:2px solid transparent;transition:.15s;
+}
+.nav a:hover{background:#FAFBFC;color:var(--ink)}
+.nav a.on{color:var(--brand);border-left-color:var(--brand);background:var(--brand-bg);font-weight:500}
+.nav a i{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--ink-3);width:16px;flex:0 0 16px}
+.nav a.on i{color:var(--brand)}
+
+/* ══════ 主体 ══════ */
+main{margin-left:212px;padding:0 46px 100px;max-width:1300px}
+
+.hero{padding:56px 0 36px;border-bottom:1px solid var(--line)}
+.eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:500;
+  color:var(--brand);background:var(--brand-bg);border:1px solid var(--brand-line);
+  padding:4px 11px;border-radius:99px;letter-spacing:.4px}
+.eyebrow::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--brand)}
+h1{font-size:31px;font-weight:600;letter-spacing:-.6px;line-height:1.28;margin-top:15px}
+.hero .lead{font-size:15px;color:var(--ink-2);margin-top:13px;max-width:820px;line-height:1.75}
+.hero .lead b{color:var(--ink);font-weight:600}
+.hmeta{display:flex;flex-wrap:wrap;gap:7px 22px;margin-top:20px;font-size:12px;color:var(--ink-3)}
+.hmeta b{color:var(--ink-2);font-weight:500}
+
+/* ══════ 章节 ══════ */
+section{padding-top:52px;scroll-margin-top:20px}
+.sh{display:flex;align-items:center;gap:12px;margin-bottom:7px}
+.sh .n{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--brand);
+  background:var(--brand-bg);border:1px solid var(--brand-line);border-radius:5px;padding:2px 7px}
+.sh h2{font-size:20px;font-weight:600;letter-spacing:-.2px}
+.sd{font-size:13.5px;color:var(--ink-2);margin-bottom:24px;max-width:880px}
+
+/* ══════ 结论卡 ══════ */
+.tldr{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:12px}
+.tc{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:17px 19px;
+  border-top:2.5px solid var(--acc,var(--line))}
+.tc .t{font-size:11px;font-weight:600;color:var(--acc,var(--ink-3));letter-spacing:.7px;margin-bottom:8px}
+.tc .v{font-size:15.5px;font-weight:600;line-height:1.5;letter-spacing:-.2px}
+.tc .d{font-size:12px;color:var(--ink-3);margin-top:7px;line-height:1.6}
+
+/* ══════ 方案卡 ══════ */
+.plan{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden;margin-bottom:16px}
+.plan-h{display:flex;align-items:center;gap:14px;padding:18px 22px;
+  background:linear-gradient(90deg,var(--pbg) 0%,rgba(255,255,255,0) 55%);
+  border-left:3px solid var(--pc)}
+.plan-h .badge{font-family:var(--mono);font-size:10.5px;font-weight:600;color:#FFF;
+  background:var(--pc);border-radius:5px;padding:2px 8px;letter-spacing:.5px;flex:0 0 auto}
+.plan-h h3{font-size:16.5px;font-weight:600;color:var(--pk);letter-spacing:-.2px}
+.plan-h .sub{font-size:12px;color:var(--ink-3);margin-top:1px}
+.plan-h .fit{margin-left:auto;font-size:11.5px;font-weight:500;color:var(--pc);
+  background:#FFF;border:1px solid var(--line);border-radius:99px;padding:3px 11px;flex:0 0 auto}
+.plan-b{padding:18px 22px 22px;display:flex;flex-direction:column;gap:16px}
+
+.blk-t{font-size:11.5px;font-weight:600;color:var(--pc);letter-spacing:.7px;
+  display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.blk-t::before{content:"";width:13px;height:1.5px;background:var(--pc);border-radius:1px;flex:0 0 13px}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{background:#FBFCFE;border:1px solid var(--line-2);border-radius:7px;padding:6px 10px;
+  display:inline-flex;align-items:baseline;gap:6px}
+.chip b{font-size:12.5px;font-weight:600;color:var(--ink)}
+.chip i{font-size:11px;font-style:normal;color:var(--ink-3);font-family:var(--mono)}
+
+.callout{background:#FCFDFE;border:1px solid var(--line-2);border-left:2px solid var(--pc);
+  border-radius:0 8px 8px 0;padding:12px 15px;font-size:13px;color:var(--ink-2);line-height:1.72}
+.callout b{color:var(--ink);font-weight:600}
+.callout + .callout{margin-top:8px}
+
+/* ══════ 表格 ══════ */
+.tw{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead th{background:#F7F9FC;font-size:11.5px;font-weight:600;color:var(--ink-2);letter-spacing:.3px;
+  text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody td{font-size:12.5px;padding:11px 14px;border-bottom:1px solid var(--line-2);
+  color:var(--ink-2);vertical-align:top;line-height:1.6}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#FBFCFE}
+tbody td:first-child{color:var(--ink);font-weight:600}
+td.rec,th.rec{background:#FEF9FA}
+.tg{display:inline-block;font-size:11px;font-weight:500;border-radius:4px;padding:1px 7px;white-space:nowrap}
+.tg-y{color:var(--ok);background:var(--ok-bg)}
+.tg-m{color:var(--mid);background:var(--mid-bg)}
+.tg-n{color:var(--no);background:var(--no-bg)}
+
+/* ══════ 阶段 ══════ */
+.phases{display:flex;flex-direction:column;gap:0;position:relative}
+.phase{position:relative;padding-left:78px;padding-bottom:20px}
+.phase:last-child{padding-bottom:0}
+.phase::before{content:"";position:absolute;left:26px;top:6px;bottom:-6px;width:2px;background:#D6DEEA;border-radius:1px}
+.phase:last-child::before{display:none}
+.pn{position:absolute;left:0;top:2px;width:52px;height:26px;border-radius:6px;background:#FFF;
+  border:1.5px solid var(--brand);color:var(--brand);font-family:var(--mono);font-size:11px;
+  font-weight:600;display:flex;align-items:center;justify-content:center}
+.phase h4{font-size:14.5px;font-weight:600;margin-bottom:5px}
+.phase .pi{font-size:12.5px;color:var(--ink-3);line-height:1.7}
+.phase .pi b{color:var(--ink-2);font-weight:600}
+.phase .dur{display:inline-block;font-size:11px;color:var(--brand);background:var(--brand-bg);
+  border-radius:4px;padding:1px 7px;margin-left:7px;vertical-align:1px;font-weight:500}
+
+/* ══════ 目录树 ══════ */
+.tree{font-family:var(--mono);font-size:12px;line-height:1.95;background:#FBFCFE;
+  border:1px solid var(--line-2);border-radius:10px;padding:16px 18px;color:#2B3648;
+  overflow-x:auto;white-space:pre;tab-size:2}
+.tree .dir{color:#185FA5;font-weight:600}
+.tree .cm{color:#94A3B8}
+
+
+/* ══════ 前后链路对比 ══════ */
+.cmp-wrap{background:#FFF;border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.cc-row{display:flex;align-items:stretch;gap:12px;padding:12px 13px;border-radius:9px}
+.cc-now{background:#FDF6F6;border:1px solid #F3E0E0}
+.cc-after{background:#F4F9F1;border:1px solid #DFEDD4}
+.cc-lab{flex:0 0 46px;display:flex;align-items:center;font-size:11.5px;font-weight:600;letter-spacing:.5px}
+.cc-now .cc-lab{color:#A32D2D}
+.cc-after .cc-lab{color:#3B6D11}
+.cc-track{flex:1;display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0}
+.cc-node{background:#FFF;border:1px solid var(--line);border-radius:7px;padding:6px 10px;font-size:12px;
+  color:var(--ink);line-height:1.45;min-width:0}
+.cc-node em{display:block;font-style:normal;font-size:10.5px;margin-top:1px;color:var(--ink-3)}
+.cc-node.bad{border-color:#EDC7C7;color:#7A2020}
+.cc-node.bad em{color:#B45454;font-weight:500}
+.cc-node.good{border-color:#C8DDB6;color:#2F5510}
+.cc-node.good em{color:#5B8A36;font-weight:500}
+.cc-ar{flex:0 0 auto;color:#B6C0CE;font-size:13px;line-height:1}
+@media print{.cc-row{break-inside:avoid}}
+
+/* ══════ 页脚 ══════ */
+footer{margin-top:66px;padding-top:22px;border-top:1px solid var(--line);
+  font-size:12px;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:7px 24px}
+
+@media (max-width:1100px){
+  .nav{display:none}
+  main{margin-left:0;padding:0 22px 80px}
+  h1{font-size:24px}
+  .hero{padding-top:40px}
+}
+@media print{
+  .nav{display:none}
+  main{margin:0;padding:0;max-width:none}
+  body{background:#FFF}
+  section{padding-top:28px}
+  .plan,.tw,.tc,.phase{break-inside:avoid}
+  pre{background:#FFF}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nb">
+    <b>迁移实施方案</b>
+    <span>天翼云 / 阿里云 · v1.0</span>
+  </div>
+  <a href="#tldr" class="on"><i>00</i>决策摘要</a>
+  <a href="#cmp"><i>01</i>云厂商对比</a>
+  <a href="#telecom"><i>02</i>方案 A · 天翼云</a>
+  <a href="#ali"><i>03</i>方案 B · 阿里云</a>
+  <a href="#ecsfc"><i>04</i>ECS 与 FC 对比</a>
+  <a href="#target"><i>05</i>推荐架构</a>
+  <a href="#micro"><i>06</i>服务拆分与组织</a>
+  <a href="#plan"><i>07</i>实施计划</a>
+  <a href="#risk"><i>08</i>风险与应对</a>
+</nav>
+
+<main>
+
+<header class="hero">
+  <div class="eyebrow">实施方案</div>
+  <h1>跨云迁移实施方案</h1>
+  <p class="lead">
+    将现有运行于腾讯云 CloudBase 的车队运输管理系统，迁移至标准云架构。
+    本文给出<b>天翼云</b>与<b>阿里云</b>两套并行方案，对比其技术能力与落地差异，
+    并就该场景下<b>计算形态选型</b>与<b>服务拆分方式</b>给出明确结论。
+  </p>
+  <div class="hmeta">
+    <span>版本 <b>v1.0</b></span>
+    <span>日期 <b>2026-11-24</b></span>
+    <span>规模基线 <b>2,000 台车 / 20 客户</b></span>
+    <span>迁移对象 <b>Web 后台 + 30 个云函数 + 30 张表</b></span>
+  </div>
+</header>
+
+<!-- ══════ 00 摘要 ══════ -->
+<section id="tldr">
+  <div class="sh"><span class="n">00</span><h2>决策摘要</h2></div>
+  <p class="sd">四句话讲完这次迁移的判断。</p>
+
+  <div class="tldr">
+    <div class="tc" style="--acc:var(--brand)">
+      <div class="t">结论一</div>
+      <div class="v">两家云厂商的改造清单 90% 相同</div>
+      <div class="d">只在产品名称、对象存储签名方式、备案入口上不同。因此架构应按「云厂商中立」设计，把差异收敛到一个适配层。</div>
+    </div>
+    <div class="tc" style="--acc:var(--telecom)">
+      <div class="t">结论二</div>
+      <div class="v">天翼云只能用 ECS，阿里云可 ECS 也可 FC</div>
+      <div class="d">天翼云未见对等的托管函数计算产品，形态上没有选择；阿里云两条路都通，但本场景应选 ECS。</div>
+    </div>
+    <div class="tc" style="--acc:var(--ok)">
+      <div class="t">结论三</div>
+      <div class="v">采用 ECS + RDS 形态</div>
+      <div class="d">单台 4C8G 承载 Web 服务、采集器与定时任务，数据库用托管 PostgreSQL。理由见第 04 节。</div>
+    </div>
+    <div class="tc" style="--acc:var(--mid)">
+      <div class="t">结论四</div>
+      <div class="v">先做模块化单体，不做微服务</div>
+      <div class="d">30 个云函数重组为 9 个业务模块，跑在同一进程内；按运行特征拆 3 类进程，保留将来拆服务的边界。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ 01 厂商对比 ══════ -->
+<section id="cmp">
+  <div class="sh"><span class="n">01</span><h2>云厂商对比</h2></div>
+  <p class="sd">只对比与本次迁移相关的维度。业务代码、第三方接口（高德、车联网、AI）与云厂商无关，不在对比范围内。</p>
+
+  <div class="tw">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:16%">维度</th>
+          <th style="width:28%">天翼云</th>
+          <th style="width:28%">阿里云</th>
+          <th>对迁移的影响</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>云服务器</td>
+          <td>弹性云主机 <b>ECS</b></td>
+          <td>云服务器 <b>ECS</b></td>
+          <td>同名同物，迁移代码零差异</td>
+        </tr>
+        <tr>
+          <td>函数计算</td>
+          <td><span class="tg tg-n">无对等产品</span></td>
+          <td>函数计算 <b>FC</b></td>
+          <td>天翼云形态上没有选择，只能 ECS</td>
+        </tr>
+        <tr>
+          <td>关系数据库</td>
+          <td>关系数据库 PostgreSQL 版</td>
+          <td>RDS for PostgreSQL<br>PolarDB for PostgreSQL</td>
+          <td>均为托管 PG，<code>pg_dump</code> 直导</td>
+        </tr>
+        <tr>
+          <td>对象存储</td>
+          <td>对象存储 <b>ZOS</b></td>
+          <td>对象存储 <b>OSS</b></td>
+          <td>签名算法不同，需重写签发函数</td>
+        </tr>
+        <tr>
+          <td>负载均衡</td>
+          <td>弹性负载均衡 ELB</td>
+          <td>负载均衡 SLB / ALB</td>
+          <td>一期单机不需要，二期再加</td>
+        </tr>
+        <tr>
+          <td>合规资质</td>
+          <td><span class="tg tg-y">国资背景，常见于信创与央企采购清单</span></td>
+          <td><span class="tg tg-m">满足数据境内与等保，通常不入信创清单</span></td>
+          <td>若客户方有信创口径，天翼云更稳</td>
+        </tr>
+        <tr>
+          <td>备案</td>
+          <td>需在该云做接入备案</td>
+          <td>需在该云做接入备案</td>
+          <td>两家都要重做，7–20 工作日</td>
+        </tr>
+        <tr>
+          <td>一期月成本</td>
+          <td>约 900 – 1,050 元</td>
+          <td>约 1,000 – 1,450 元</td>
+          <td>同规格下天翼云略低，需正式报价核定</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout" style="--pc:var(--brand);margin-top:14px">
+    <b>选型判断：</b>两家在技术上都能承接，差异主要在<b>合规资质</b>与<b>报价</b>。
+    因此建议——<b>架构只做一套，云厂商作为一个可替换的配置项</b>。
+    具体做法是把「对象存储签名」「数据库连接」「域名与证书」三处抽成适配层，
+    切换厂商时只改配置文件，不动业务代码。
+  </div>
+</section>
+
+<!-- ══════ 02 天翼云 ══════ -->
+<section id="telecom">
+  <div class="sh"><span class="n">02</span><h2>方案 A · 天翼云</h2></div>
+  <p class="sd">形态上唯一的选择：ECS 承载全部计算，数据库用托管 PostgreSQL 或单机自建。</p>
+
+  <div class="plan" style="--pc:var(--telecom);--pbg:var(--telecom-bg);--pk:var(--telecom-k)">
+    <div class="plan-h">
+      <span class="badge">方案 A</span>
+      <div>
+        <h3>天翼云 · ECS + 关系数据库 PostgreSQL</h3>
+        <div class="sub">标准 IaaS 架构，无 Serverless 组件</div>
+      </div>
+      <span class="fit">适配度 高</span>
+    </div>
+    <div class="plan-b">
+
+      <div>
+        <div class="blk-t">资源构成（一期 2,000 台车）</div>
+        <div class="chips">
+          <span class="chip"><b>弹性云主机</b><i>4C8G × 1</i></span>
+          <span class="chip"><b>云硬盘</b><i>40G + 200G</i></span>
+          <span class="chip"><b>PostgreSQL</b><i>2C4G / 100G</i></span>
+          <span class="chip"><b>对象存储 ZOS</b><i>50G</i></span>
+          <span class="chip"><b>弹性 IP</b><i>5M 带宽</i></span>
+          <span class="chip"><b>VPC + 安全组</b><i>数据库不对公网</i></span>
+          <span class="chip"><b>SSL 证书</b><i>DV 单域名</i></span>
+        </div>
+      </div>
+
+      <div>
+        <div class="blk-t">架构要点</div>
+        <div class="callout">
+          <b>一台机器承担三类负载</b>：Nginx（托管前端静态包 + 反向代理）、Node API（4 进程，吃满 4 核）、位置采集器（单进程常驻）。
+          定时任务跑在独立进程中，避免多进程重复触发。
+        </div>
+        <div class="callout">
+          <b>数据库建议单库不分库</b>。PostgreSQL 原生不支持跨库 JOIN，若把业务与位置拆成两个库，
+          「运单 + 车辆最新位置」这类关联查询将无法直接完成。位置数据单独建表即可，67 次/秒的写入对单库无压力。
+        </div>
+      </div>
+
+      <div>
+        <div class="blk-t">成本构成</div>
+        <div class="tw" style="border:none">
+          <table>
+            <tbody>
+              <tr><td>弹性云主机 4C8G</td><td>约 313 元/月</td><td style="color:var(--ink-3)">包年 8.5 折后约 3,193 元/年</td></tr>
+              <tr><td>云硬盘 40G + 200G</td><td>约 120 元/月</td><td style="color:var(--ink-3)">系统盘 + 数据盘</td></tr>
+              <tr><td>弹性 IP + 5M 带宽</td><td>约 100 元/月</td><td style="color:var(--ink-3)">地图瓦片走高德，不占此带宽</td></tr>
+              <tr><td>关系数据库 2C4G</td><td>待询价</td><td style="color:var(--ink-3)">参考 350–600 元/月</td></tr>
+              <tr><td>对象存储 50G</td><td>待询价</td><td style="color:var(--ink-3)">参考 10–20 元/月</td></tr>
+              <tr><td><b>合计</b></td><td><b>约 900 – 1,050 元/月</b></td><td style="color:var(--ink-3)">年约 1.0 – 1.2 万元</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div class="blk-t">省钱备选</div>
+        <div class="callout">
+          <b>不买托管数据库，在主机上自建 PostgreSQL</b>：月成本可压到 450–500 元。
+          但需注意——PostgreSQL 吃内存，自建时<b>主机必须升到 8C16G</b>，4C8G 会不够用。
+          升配后省下的钱抵回去一部分，且失去自动备份与主备切换。
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════ 03 阿里云 ══════ -->
+<section id="ali">
+  <div class="sh"><span class="n">03</span><h2>方案 B · 阿里云</h2></div>
+  <p class="sd">两条路都可走，本文两个都列出，并在第 04 节给出取舍依据。</p>
+
+  <div class="plan" style="--pc:var(--ali);--pbg:var(--ali-bg);--pk:var(--ali-k)">
+    <div class="plan-h">
+      <span class="badge">方案 B1</span>
+      <div>
+        <h3>阿里云 · ECS + RDS for PostgreSQL</h3>
+        <div class="sub">与方案 A 形态一致，仅产品名与存储接口不同</div>
+      </div>
+      <span class="fit">推荐</span>
+    </div>
+    <div class="plan-b">
+      <div>
+        <div class="blk-t">资源构成（一期 2,000 台车）</div>
+        <div class="chips">
+          <span class="chip"><b>ECS</b><i>4C8G × 1</i></span>
+          <span class="chip"><b>ESSD 云盘</b><i>40G + 200G</i></span>
+          <span class="chip"><b>RDS PostgreSQL</b><i>2C4G / 100G</i></span>
+          <span class="chip"><b>对象存储 OSS</b><i>50G</i></span>
+          <span class="chip"><b>CDN</b><i>静态资源必配</i></span>
+          <span class="chip"><b>SLB</b><i>二期再加</i></span>
+        </div>
+      </div>
+      <div>
+        <div class="blk-t">与方案 A 的唯一差异</div>
+        <div class="callout">
+          <b>对象存储签名算法不同</b>（OSS 与 ZOS 各自的鉴权机制），需重写签发函数。这是唯一需要改代码的地方。
+          业务表只存键名与大小、不存访问地址，因此<b>历史数据无需回填</b>。
+        </div>
+        <div class="callout">
+          <b>CDN 必须配</b>。前端首屏 gzip 后约 625KB，5M 带宽约 625KB/s，
+          十余人同时打开首页就会打满。静态资源走 CDN 后，带宽只承载 API 请求。
+        </div>
+      </div>
+      <div>
+        <div class="blk-t">成本构成</div>
+        <div class="tw" style="border:none">
+          <table>
+            <tbody>
+              <tr><td>ECS 4C8G</td><td>300 – 400 元/月</td><td style="color:var(--ink-3)">包年更优</td></tr>
+              <tr><td>ESSD 云盘</td><td>120 – 150 元/月</td><td style="color:var(--ink-3)">40G + 200G</td></tr>
+              <tr><td>RDS PostgreSQL 2C4G</td><td>450 – 700 元/月</td><td style="color:var(--ink-3)">建议主备</td></tr>
+              <tr><td>OSS 50G</td><td>10 – 15 元/月</td><td style="color:var(--ink-3)">标准存储</td></tr>
+              <tr><td>带宽 5M + CDN</td><td>120 – 200 元/月</td><td style="color:var(--ink-3)">CDN 按量</td></tr>
+              <tr><td><b>合计</b></td><td><b>约 1,000 – 1,450 元/月</b></td><td style="color:var(--ink-3)">以正式报价为准</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="plan" style="--pc:var(--ali);--pbg:var(--ali-bg);--pk:var(--ali-k)">
+    <div class="plan-h">
+      <span class="badge">方案 B2</span>
+      <div>
+        <h3>阿里云 · 函数计算 FC + RDS + OSS</h3>
+        <div class="sub">保留现有 Serverless 形态，30 个函数分别迁到 FC</div>
+      </div>
+      <span class="fit">不推荐</span>
+    </div>
+    <div class="plan-b">
+      <div>
+        <div class="blk-t">做法</div>
+        <div class="callout">
+          30 个云函数逐个迁到 FC：改入口函数名、改事件参数结构、把数据库客户端换成 <code>pg</code> 连接池，
+          再配置 HTTP 触发器和定时触发器。业务逻辑基本不动。
+        </div>
+      </div>
+      <div>
+        <div class="blk-t">为什么最终没选它</div>
+        <div class="callout">
+          <b>连接数不可控</b>是决定性因素。FC 的实例数由流量自动伸缩，
+          每个实例各持一条数据库连接——并发一涨，连接数就成倍增长，托管数据库的连接上限容易被瞬间打满，
+          且难以提前预估容量。<b>而 ECS 的进程数完全由自己决定，连接总数可以精确控制。</b>
+        </div>
+        <div class="callout">
+          <b>位置采集是常驻轮询任务</b>，需要进程长期存活。函数计算的单次执行有时长上限，无法承担这类任务，
+          无论如何都要额外准备一台主机——既然主机已经在，不如把业务接口一并放上去。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ 04 ECS vs FC ══════ -->
+<section id="ecsfc">
+  <div class="sh"><span class="n">04</span><h2>ECS 与函数计算 FC 对比</h2></div>
+  <p class="sd">两张都是计算服务，但运维模型、计费模型、连接模型完全不同。下表按对本系统的影响排序。</p>
+
+  <div class="tw">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:15%">维度</th>
+          <th style="width:26%" class="rec">ECS 常驻服务（推荐）</th>
+          <th style="width:26%">函数计算 FC</th>
+          <th>说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>数据库连接</td>
+          <td class="rec"><span class="tg tg-y">进程数 × 池上限，可精确控制</span></td>
+          <td><span class="tg tg-n">实例数 × 1，随流量放大</span></td>
+          <td>本系统最关键的差异，直接决定容量是否可预估</td>
+        </tr>
+        <tr>
+          <td>部署单元</td>
+          <td class="rec">1 个服务（4 进程）</td>
+          <td>30 个函数，各自打包上线</td>
+          <td>改一处逻辑只部署一次，而不是三十次</td>
+        </tr>
+        <tr>
+          <td>本地调试</td>
+          <td class="rec">与线上完全一致</td>
+          <td>依赖云端日志与模拟器</td>
+          <td>线上问题能否在本地复现，直接影响排查效率</td>
+        </tr>
+        <tr>
+          <td>冷启动</td>
+          <td class="rec"><span class="tg tg-y">无</span></td>
+          <td><span class="tg tg-m">有，依赖包越大越慢</span></td>
+          <td>本系统有单个函数的依赖包达 42MB</td>
+        </tr>
+        <tr>
+          <td>长任务 / 常驻</td>
+          <td class="rec"><span class="tg tg-y">支持</span></td>
+          <td><span class="tg tg-n">单次执行有时长上限</span></td>
+          <td>位置采集是常驻轮询，FC 无法承担</td>
+        </tr>
+        <tr>
+          <td>闲置成本</td>
+          <td class="rec"><span class="tg tg-m">固定（约 300–400 元/月）</span></td>
+          <td><span class="tg tg-y">零（无调用不计费）</span></td>
+          <td>本系统是稳定持续负载，非突发型，FC 的优势用不上</td>
+        </tr>
+        <tr>
+          <td>水平扩展</td>
+          <td class="rec">手动升配或加机器</td>
+          <td><span class="tg tg-y">自动扩实例</span></td>
+          <td>二期 2 万台时可再评估</td>
+        </tr>
+        <tr>
+          <td>运维负担</td>
+          <td class="rec"><span class="tg tg-m">需管系统、进程、日志</span></td>
+          <td><span class="tg tg-y">平台托管</span></td>
+          <td>用容器化可大幅抵消这部分负担</td>
+        </tr>
+        <tr>
+          <td>厂商绑定</td>
+          <td class="rec"><span class="tg tg-y">弱，换云只换机器</span></td>
+          <td><span class="tg tg-n">强，FC 为专有形态</span></td>
+          <td>本次迁移由合规驱动，未来可能再迁一次</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout" style="--pc:var(--brand);margin-top:14px">
+    <b>结论：选 ECS。</b>
+    三个理由按权重排序——<b>连接数可精确控制</b>（容量可预估）、<b>能跑常驻采集任务</b>（FC 硬性做不到）、
+    <b>不被单一厂商锁定</b>（下次换云只换机器、不改代码）。
+    至于闲置成本，本系统是稳定持续负载，函数的按量优势发挥不出来。
+  </div>
+</section>
+
+<!-- ══════ 05 推荐架构 ══════ -->
+<section id="target">
+  <div class="sh"><span class="n">05</span><h2>推荐架构：ECS + RDS</h2></div>
+  <p class="sd">一期单机全包，二期再上负载均衡与多节点。以下是最终落地形态。</p>
+
+  <div class="plan" style="--pc:var(--brand);--pbg:var(--brand-bg);--pk:#7A0A1D">
+    <div class="plan-h">
+      <span class="badge">目标</span>
+      <div>
+        <h3>单台 ECS 4C8G 全包 + RDS PostgreSQL + 对象存储 + CDN</h3>
+        <div class="sub">计算与存储分离，静态资源走 CDN，数据库独立托管</div>
+      </div>
+      <span class="fit">一期</span>
+    </div>
+    <div class="plan-b">
+
+      <div>
+        <div class="blk-t">机器上的进程划分</div>
+        <div class="tw" style="border:none">
+          <table>
+            <thead>
+              <tr><th style="width:20%">进程</th><th style="width:12%">实例数</th><th style="width:20%">连接数</th><th>职责</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Nginx</td><td>1</td><td>0</td><td>托管前端静态包、反向代理、HTTPS 卸载</td></tr>
+              <tr><td>Node API</td><td>4</td><td>4 × 15 = 60</td><td>承载 9 个业务模块的全部接口</td></tr>
+              <tr><td>位置采集器</td><td>1</td><td>5</td><td>定时拉取车辆位置，批量入库</td></tr>
+              <tr><td>定时任务</td><td>1</td><td>5</td><td>证照巡检、行为统计等周期任务</td></tr>
+              <tr><td><b>合计</b></td><td>—</td><td><b>约 70</b></td><td style="color:var(--ink-3)">托管数据库连接上限为数百量级，余量充足</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div class="blk-t">三条必须守住的实现约束</div>
+        <div class="callout">
+          <b>连接池必须单例。</b>30 个模块共用同一个池，由 <code>db.js</code> 统一导出。
+          若每个模块各自建池，4 进程 × 30 个池 × 默认上限，连接数会瞬间击穿数据库。
+        </div>
+        <div class="callout">
+          <b>定时任务不能写在 API 的启动逻辑里。</b>多进程模式下，每个进程都会执行一次初始化，
+          导致采集重复、统计重复、通知重复发送。必须单独起进程，或指定仅 0 号实例启用。
+        </div>
+        <div class="callout">
+          <b>时区必须显式声明。</b>容器与部分运行环境默认为 UTC，
+          而统计口径依赖「当天」。差 8 小时不会报错，只会让报表数字悄悄错掉。
+        </div>
+      </div>
+
+      <div>
+        <div class="blk-t">部署方式演进</div>
+        <div class="chips">
+          <span class="chip"><b>一期</b><i>裸机 + 进程管理器</i></span>
+          <span class="chip"><b>二期</b><i>容器化 + 负载均衡</i></span>
+          <span class="chip"><b>三期</b><i>按需拆分独立服务</i></span>
+        </div>
+        <div class="callout" style="margin-top:9px">
+          <b>建议容器化与本次迁移合并做。</b>迁移本身就要重写部署方式，此时把镜像一并写好不额外增加工期；
+          而容器镜像不依赖云厂商，<b>下次换云只需拉镜像、启动、切域名</b>，迁云成本从两天降到半小时。
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════ 06 微服务 ══════ -->
+<section id="micro">
+  <div class="sh"><span class="n">06</span><h2>服务拆分与组织</h2></div>
+  <p class="sd">
+    这一节分两步讲：<b>现在的问题具体在哪</b>（有数据可查的位置，不是笼统说"耦合"），
+    以及<b>改成什么样、怎么拆</b>。结论先说——不拆微服务，但结构必须理顺。
+  </p>
+
+  <!-- ── 6.1 ── -->
+  <div class="plan" style="--pc:#A32D2D;--pbg:#FDF3F3;--pk:#7A2020">
+    <div class="plan-h">
+      <span class="badge">6.1</span>
+      <div>
+        <h3>现状：四个具体病灶</h3>
+        <div class="sub">每条都能在代码里指出位置</div>
+      </div>
+    </div>
+    <div class="plan-b">
+      <div class="tw" style="border:none">
+        <table>
+          <thead>
+            <tr><th style="width:15%">病灶</th><th style="width:40%">实测证据</th><th>带来的代价</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>巨型文件</td>
+              <td>30 个函数共 15,003 行；运单动作<b>单文件 1,942 行</b>，里面塞了 9 类动作、23 处分支判断</td>
+              <td>改一个动作要在两千行里找位置，也没法单独测试</td>
+            </tr>
+            <tr>
+              <td>逻辑重复</td>
+              <td>同一个校验函数 <code>assertModule</code> <b>在校验逻辑完全相同地被复制了 5 份</b>；租户过滤条件在运单 4 个函数里出现 <b>100 次</b></td>
+              <td>修一个权限漏洞要改 5 处，漏掉任何一处就是安全缺口</td>
+            </tr>
+            <tr>
+              <td>无共享层</td>
+              <td>函数目录下<b>没有公共目录</b>，任何复用只能复制粘贴</td>
+              <td>重复是结构性的，不是疏忽——想复用也没有地方放</td>
+            </tr>
+            <tr>
+              <td>部署碎片化</td>
+              <td>30 个独立部署单元，各自打包、各自配环境变量</td>
+              <td>改一处跨函数逻辑要部署多次，容易漏</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <b>把四个病灶串起来看：</b>30 个函数形式上已经是微服务——独立部署、独立进程、跨函数走 HTTP，
+        但它们<b>共享同一套表结构</b>。这属于「分布式单体」：<b>承担了分布式的全部复杂度，却没得到微服务的好处</b>
+        （独立发布的价值只对多团队成立，而这里只有一两个人）。
+      </div>
+      <div class="callout">
+        <b>顺带发现一个隐患：</b>那份复制了五遍的校验函数，开头写的是 <code>if (!account) return true</code>——
+        没传账号时直接放行。收口到共享层后可以顺手收紧为默认拒绝，<b>因为那时只有一处需要改</b>。
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6.2 ── -->
+  <div class="plan" style="--pc:#3B6D11;--pbg:#F4F9F1;--pk:#2F5510">
+    <div class="plan-h">
+      <span class="badge">6.2</span>
+      <div>
+        <h3>改善：一次请求的前后对比</h3>
+        <div class="sub">功能完全不变，变的是链路怎么走</div>
+      </div>
+    </div>
+    <div class="plan-b">
+      <div class="cmp-wrap">
+        <div class="cc-row cc-now">
+          <div class="cc-lab">现状</div>
+          <div class="cc-track">
+            <div class="cc-node">4 个独立入口<em>列表 / 详情 / 动作 / 管理</em></div>
+            <span class="cc-ar">&rarr;</span>
+            <div class="cc-node bad">各自校验<em>同一份逻辑 &times; 5 份副本</em></div>
+            <span class="cc-ar">&rarr;</span>
+            <div class="cc-node bad">各自拼查询<em>租户条件散落 100 处</em></div>
+            <span class="cc-ar">&rarr;</span>
+            <div class="cc-node">同一个运单表</div>
+          </div>
+        </div>
+        <div class="cc-row cc-after">
+          <div class="cc-lab">改造后</div>
+          <div class="cc-track">
+            <div class="cc-node">1 个服务入口<em>统一路由</em></div>
+            <span class="cc-ar">&rarr;</span>
+            <div class="cc-node good">中间件校验<em>唯一一份，默认拒绝</em></div>
+            <span class="cc-ar">&rarr;</span>
+            <div class="cc-node good">模块 service<em>租户条件集中一处</em></div>
+            <span class="cc-ar">&rarr;</span>
+            <div class="cc-node good">仓储层<em>表访问的唯一出口</em></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <b>改善的实质不是"拆"，是"收"。</b>把重复的部分收上来（校验、租户条件、字段白名单），
+        把散落的入口归位（30 个入口 → 1 个服务 + 9 组路由）。
+        <b>这条链路上每多一个重复，将来就多一处漏改的风险。</b>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6.3 ── -->
+  <div class="plan" style="--pc:var(--telecom);--pbg:var(--telecom-bg);--pk:var(--telecom-k)">
+    <div class="plan-h">
+      <span class="badge">6.3</span>
+      <div>
+        <h3>30 个函数归入 9 个模块</h3>
+        <div class="sub">归组的依据是「共享同一批表」，不是为了分得细</div>
+      </div>
+    </div>
+    <div class="plan-b">
+      <div class="tw" style="border:none">
+        <table>
+          <thead>
+            <tr><th style="width:14%">模块</th><th style="width:36%">并入的函数</th><th style="width:20%">涉及的表</th><th>收敛掉了什么</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>运单</td><td>waybill-list / detail / action / admin</td><td>waybills、routes、<br>ele_fence_alerts</td><td>一套租户过滤、一套状态机</td></tr>
+            <tr><td>费用</td><td>report-action / report-ocr</td><td>reports、report_approval_logs</td><td>一套审批链判断</td></tr>
+            <tr><td>车辆</td><td>vehicle-list / mileage / affair / inspection / maintenance / 证照定时</td><td>vehicles、vehicle_certs、<br>maintenance_records</td><td>一套证件到期计算</td></tr>
+            <tr><td>车联网</td><td>dongfeng-lostlocation / track / overspeed-check / stay-check</td><td>无表，纯代理外部接口</td><td>一套超时与重试策略</td></tr>
+            <tr><td>地理围栏</td><td>amap-geofence / -list / -update</td><td>ele_fences</td><td>一套几何包含判断</td></tr>
+            <tr><td>组织认证</td><td>login-by-account / session-guard / org-view / pick-list</td><td>admins、users、customers、<br>organizations</td><td>一套会话校验</td></tr>
+            <tr><td>统计</td><td>behaviorStatsSync / opStatsSync</td><td>vehicle_behavior_daily、<br>op_stats_sync_log</td><td>一套统计口径</td></tr>
+            <tr><td>AI</td><td>ai-gateway / ai-token</td><td>无表</td><td>一套令牌管理</td></tr>
+            <tr><td>文件通知</td><td>upload-photo / wx-notify</td><td>无表，走对象存储与微信接口</td><td>一套签名与分批</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <b>归组看的是「谁和谁用同一批表」，不是「谁和谁业务相关」。</b>
+        运单的四个函数都读写 <code>waybills</code>，所以必须同组；车联网的四个函数都不碰表、只调外部接口，
+        所以同组。这样的分组结果，将来若要拆服务，<b>拆开的位置天然就在表与表之间</b>。
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6.4 ── -->
+  <div class="plan" style="--pc:var(--telecom);--pbg:var(--telecom-bg);--pk:var(--telecom-k)">
+    <div class="plan-h">
+      <span class="badge">6.4</span>
+      <div>
+        <h3>巨型文件怎么拆：以运单动作为例</h3>
+        <div class="sub">1,942 行 → 6 个文件，每个约 300 行</div>
+      </div>
+    </div>
+    <div class="plan-b">
+      <div class="tw" style="border:none">
+        <table>
+          <thead>
+            <tr><th style="width:30%">现有动作</th><th style="width:26%">拆到</th><th>为什么这样归</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>accept</code> / <code>reject</code></td><td>handlers/assign.js</td><td>接单与驳回是一对相反操作，校验规则共用</td></tr>
+            <tr><td><code>setVehicle</code> / <code>setPlanTime</code></td><td>handlers/plan.js</td><td>都是运输计划调整，不影响状态机推进</td></tr>
+            <tr><td><code>confirmLoad</code></td><td>handlers/load.js</td><td>装车节点，含围栏打卡校验</td></tr>
+            <tr><td><code>confirmDepart</code></td><td>handlers/depart.js</td><td>发车节点，触发里程与时间基准</td></tr>
+            <tr><td><code>finish</code></td><td>handlers/complete.js</td><td>完成节点，触发费用待办生成</td></tr>
+            <tr><td><code>claim</code> / <code>claimRecurring</code></td><td>handlers/recurring.js</td><td>常驻任务的接趟，含次数闸门判断</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <b>拆的是文件，不是服务。</b>六段代码仍跑在同一个进程、共用同一个连接池、可以放进同一个数据库事务里。
+        这一步只解决「找不到位置」和「改不动」，不引入任何新的运维成本。
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6.5 ── -->
+  <div class="plan" style="--pc:var(--telecom);--pbg:var(--telecom-bg);--pk:var(--telecom-k)">
+    <div class="plan-h">
+      <span class="badge">6.5</span>
+      <div>
+        <h3>目录结构</h3>
+        <div class="sub">进程按运行特征拆，代码按业务领域分</div>
+      </div>
+    </div>
+    <div class="plan-b">
+      <div class="tree">
+<span class="dir">src/</span>
+├── <span class="dir">modules/</span>              <span class="cm">← 解决「巨型文件」：一个领域一个目录</span>
+│   ├── <span class="dir">waybill/</span>          <span class="cm">运单：状态机、列表、详情、动作</span>
+│   │   ├── service.js      <span class="cm">对外唯一入口，别的模块只能调这个</span>
+│   │   ├── repo.js         <span class="cm">本模块的表访问，不外泄</span>
+│   │   ├── handlers/       <span class="cm">← 6.4 拆出来的六个动作文件</span>
+│   │   └── router.js       <span class="cm">HTTP 路由，只做参数解析</span>
+│   ├── <span class="dir">fee/</span>              <span class="cm">费用：上报、审批、打款</span>
+│   ├── <span class="dir">vehicle/</span>          <span class="cm">车辆：档案、里程、车务</span>
+│   ├── <span class="dir">dongfeng/</span>         <span class="cm">车联网：位置、轨迹、能耗</span>
+│   ├── <span class="dir">geofence/</span>         <span class="cm">电子围栏</span>
+│   ├── <span class="dir">org/</span>              <span class="cm">组织、账号、会话、权限</span>
+│   ├── <span class="dir">stats/</span>            <span class="cm">统计与报表</span>
+│   ├── <span class="dir">ai/</span>               <span class="cm">AI 网关</span>
+│   └── <span class="dir">file/</span>             <span class="cm">文件签名、消息通知</span>
+├── <span class="dir">shared/</span>               <span class="cm">← 解决「无共享层」：原来复制五遍的都放这里</span>
+│   ├── db.js               <span class="cm">单例连接池（全项目唯一）</span>
+│   ├── auth.js             <span class="cm">assertModule 的唯一一份，默认拒绝</span>
+│   ├── tenant.js           <span class="cm">← 租户过滤条件，替代散落的 100 处</span>
+│   ├── fields.js           <span class="cm">字段白名单，防止写不存在的列</span>
+│   ├── storage.js          <span class="cm">对象存储适配层（换云只改这里）</span>
+│   └── logger.js
+├── <span class="dir">apps/</span>                 <span class="cm">← 解决「部署碎片化」：30 个入口收成 3 个</span>
+│   ├── api.js              <span class="cm">HTTP 服务，4 进程</span>
+│   ├── collector.js        <span class="cm">位置采集，1 进程</span>
+│   └── cron.js             <span class="cm">定时任务，1 进程</span>
+└── <span class="dir">config/</span>               <span class="cm">环境配置，按云厂商切换</span>
+      └── cloud.js          <span class="cm">云厂商差异的唯一入口</span>
+      </div>
+
+      <div class="callout">
+        <b>树里每一处都对应上面某个病灶</b>：模块目录治巨型文件、<code>shared/</code> 治重复、
+        <code>apps/</code> 治部署碎片化。不是先画一棵好看的树，再往里塞代码。
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6.6 ── -->
+  <div class="plan" style="--pc:var(--telecom);--pbg:var(--telecom-bg);--pk:var(--telecom-k)">
+    <div class="plan-h">
+      <span class="badge">6.6</span>
+      <div>
+        <h3>三条依赖规则</h3>
+        <div class="sub">守住这三条，将来拆微服务只是替换传输层</div>
+      </div>
+    </div>
+    <div class="plan-b">
+      <div class="callout">
+        <b>① 模块之间只能调用对方的 <code>service.js</code></b>，禁止直接查对方的表。
+        比如费用模块要知道运单状态，就调 <code>waybill.getStatus(id)</code>，不写 <code>select from waybills</code>。
+      </div>
+      <div class="callout">
+        <b>② 模块内部结构不对外暴露。</b><code>repo.js</code>、<code>handlers/</code>、<code>router.js</code>
+        都是模块私有，其他模块不可引用。
+      </div>
+      <div class="callout">
+        <b>③ 需要跨模块感知状态变化时，发内部事件</b>，而不是直接读取对方数据。
+        这是低成本预留的关键——在单体内用进程内事件把「运单状态变更」广播出去，费用模块订阅事件；
+        将来真要拆分，<b>把进程内事件换成消息队列即可，业务代码不用动</b>。
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6.7 ── -->
+  <div class="plan" style="--pc:var(--telecom);--pbg:var(--telecom-bg);--pk:var(--telecom-k)">
+    <div class="plan-h">
+      <span class="badge">6.7</span>
+      <div>
+        <h3>什么时候才轮到微服务</h3>
+        <div class="sub">分四步走，每步有明确门槛</div>
+      </div>
+    </div>
+    <div class="plan-b">
+      <div class="tw" style="border:none">
+        <table>
+          <thead>
+            <tr><th style="width:8%">阶段</th><th style="width:34%">做什么</th><th style="width:26%">进入条件</th><th>成本</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><b>0</b></td><td>模块化单体：1 个 API + 采集器 + 定时任务，模块间只调 service</td><td>本次迁移同步完成</td><td>已含在工期中</td></tr>
+            <tr><td><b>1</b></td><td>模块间改用内部事件解耦，替代直接读取</td><td>阶段 0 稳定运行后</td><td>约 1 周</td></tr>
+            <tr><td><b>2</b></td><td>把确有独立需求的部分拆出去（采集器、AI 网关）</td><td>出现独立扩缩容或资源隔离需求</td><td>1–2 周</td></tr>
+            <tr><td><b>3</b></td><td>完整微服务 + 容器编排</td><td><span class="tg tg-m">团队 5 人以上，或单服务并发过千</span></td><td>2–3 个月</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <b>真正的门槛不在技术，在数据库。</b>微服务的铁律是「每个服务独占自己的库」，
+        而本系统中运单、费用、车辆是<b>高度交叉查询</b>的：运单列表要显示车辆档案与费用合计，
+        费用审批要判断运单状态，里程统计要读运单的行驶记录。拆开之后这些 JOIN 全部消失，
+        只能改成多次接口调用再组合、或做数据冗余、或引入补偿事务——<b>这一步没有取巧办法</b>。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ 07 实施计划 ══════ -->
+<section id="plan">
+  <div class="sh"><span class="n">07</span><h2>实施计划</h2></div>
+  <p class="sd">按依赖顺序排列。阶段一与阶段二可并行，阶段三必须在阶段二完成后启动。</p>
+
+  <div class="callout" style="--pc:var(--mid);margin-bottom:22px">
+    <b>总工期约 3 周（纯开发）</b>，不含备案等待（7–20 工作日）与小程序审核（1–7 天）。
+    建议把「令牌鉴权改造」与「上云改造」合并为一次，避免同一批代码改两遍。
+  </div>
+
+  <div class="phases">
+    <div class="phase">
+      <div class="pn">P1</div>
+      <h4>资源与合规准备<span class="dur">并行 · 5–20 工作日</span></h4>
+      <div class="pi">
+        开通云主机、托管数据库、对象存储、带宽、证书；<b>在目标云完成接入备案</b>（原备案不能平移，备案期间旧环境不能停）；
+        小程序后台配置新的服务器域名（需 HTTPS 且已备案）。
+      </div>
+    </div>
+    <div class="phase">
+      <div class="pn">P2</div>
+      <h4>代码改造<span class="dur">1.5–2 周</span></h4>
+      <div class="pi">
+        <b>数据访问层重写</b>（工作量最大）：前端数十处直连数据库的调用改为走自建接口，引入单例连接池。<br>
+        <b>令牌鉴权</b>：替换云开发的匿名登录机制，建立自建令牌与会话表。<br>
+        <b>云函数合并</b>：30 个函数重组为 9 个模块，入口改为路由，业务逻辑不动。<br>
+        <b>对象存储适配</b>：重写签名函数，按目标云切换。
+      </div>
+    </div>
+    <div class="phase">
+      <div class="pn">P3</div>
+      <h4>数据迁移与验证<span class="dur">0.5–1 天</span></h4>
+      <div class="pi">
+        用 <code>pg_dump</code> 完整导出（含结构与序列状态），导入目标库。<br>
+        <b>导完立即验证两件事</b>：序列当前值是否正确（否则新插入会撞主键）、授权语句是否需按目标库重写。
+        另需核对行数与关键表的抽样数据。
+      </div>
+    </div>
+    <div class="phase">
+      <div class="pn">P4</div>
+      <h4>并行运行与灰度切换<span class="dur">3–5 天</span></h4>
+      <div class="pi">
+        新旧环境并行，用真实账号验收主要链路：登录、运单列表、运单动作、费用上报与审批、全图位置、报表导出。<br>
+        切换时先改域名解析，观察错误率与响应时间，确认稳定后再停旧环境。
+      </div>
+    </div>
+    <div class="phase">
+      <div class="pn">P5</div>
+      <h4>收尾与观测<span class="dur">持续</span></h4>
+      <div class="pi">
+        配置监控告警（进程存活、接口错误率、数据库连接数、磁盘）；建立每日数据库备份并<b>定期验证可恢复</b>；
+        旧环境保留一个月作为回退通道。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ 08 风险 ══════ -->
+<section id="risk">
+  <div class="sh"><span class="n">08</span><h2>风险与应对</h2></div>
+  <p class="sd">按发生概率与影响排序。前三条属于「不提前处理就会出事故」的级别。</p>
+
+  <div class="tw">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:19%">风险</th>
+          <th style="width:9%">概率</th>
+          <th style="width:9%">影响</th>
+          <th>应对</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>备案窗口期</td>
+          <td><span class="tg tg-n">高</span></td>
+          <td><span class="tg tg-n">高</span></td>
+          <td>接入备案需 7–20 工作日，期间旧环境必须保持可用。提前启动，不要等到开发完成才提交。</td>
+        </tr>
+        <tr>
+          <td>小程序提审</td>
+          <td><span class="tg tg-n">高</span></td>
+          <td><span class="tg tg-m">中</span></td>
+          <td>更换合法域名后须重新提交审核，审核期不能发布。安排在业务低峰期，且准备回滚方案。</td>
+        </tr>
+        <tr>
+          <td>连接数击穿</td>
+          <td><span class="tg tg-m">中</span></td>
+          <td><span class="tg tg-n">高</span></td>
+          <td>连接池必须单例；按「进程数 × 池上限」计算总量并留余量；上线前压测峰值并发。</td>
+        </tr>
+        <tr>
+          <td>时区错位</td>
+          <td><span class="tg tg-m">中</span></td>
+          <td><span class="tg tg-m">中</span></td>
+          <td>显式声明时区，上线后实测一次定时任务触发时间与一条统计结果。<b>该问题不报错，只让数字错</b>。</td>
+        </tr>
+        <tr>
+          <td>定时任务重复执行</td>
+          <td><span class="tg tg-m">中</span></td>
+          <td><span class="tg tg-m">中</span></td>
+          <td>多进程模式下若定时逻辑写在启动代码里，会按进程数重复执行。单独起进程或限定单实例启用。</td>
+        </tr>
+        <tr>
+          <td>数据迁移遗漏</td>
+          <td><span class="tg tg-y">低</span></td>
+          <td><span class="tg tg-n">高</span></td>
+          <td>完整导出（结构 + 数据 + 序列）；导入后核对行数与序列当前值；保留导出文件至少一个月。</td>
+        </tr>
+        <tr>
+          <td>成本预期偏差</td>
+          <td><span class="tg tg-m">中</span></td>
+          <td><span class="tg tg-m">中</span></td>
+          <td>当前为托管型按量形态，迁至独立资源后成本上升约 50 倍属形态差异，<b>需在提报时主动说明</b>，避免上线后产生质疑。</td>
+        </tr>
+        <tr>
+          <td>第三方接口白名单</td>
+          <td><span class="tg tg-y">低</span></td>
+          <td><span class="tg tg-m">中</span></td>
+          <td>车联网与 AI 接口若限制来源 IP，需提前把新环境的出口 IP 报备给对方。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <span>迁移实施方案 v1.0</span>
+  <span>2026-11-24</span>
+  <span>配套文档：系统架构流程图_汇报版 / 系统架构全景图</span>
+  <span>数据来源：代码实测与既有资源申请清单</span>
+</footer>
+
+</main>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav a'));
+  var secs  = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+
+  function sync(){
+    var y = window.scrollY + 140, cur = 0;
+    secs.forEach(function(s, i){ if (s && s.offsetTop <= y) cur = i; });
+    links.forEach(function(a, i){ a.classList.toggle('on', i === cur); });
+  }
+  window.addEventListener('scroll', sync, { passive: true });
+  sync();
+})();
+</script>
+</body>
+</html>
