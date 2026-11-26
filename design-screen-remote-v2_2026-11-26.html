@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小程序遥控大屏 · 交互设计稿 v2</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#0A0F18;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #stage{width:1920px;height:1080px;transform-origin:center center;position:relative}
+
+  .doc{display:flex;align-items:flex-end;justify-content:space-between;padding:26px 6px 6px 4px}
+  .doc h1{font-size:20px;font-weight:600;color:#E8F1FA;letter-spacing:.3px}
+  .doc p{font-size:13px;color:#6E8299;margin-top:6px}
+  .doc .tag{display:inline-block;margin-left:10px;font-size:11px;color:#7FD8FF;border:1px solid rgba(51,214,255,.35);
+    border-radius:20px;padding:2px 9px;vertical-align:2px}
+  .sim{display:flex;align-items:center;gap:7px;font-size:12px;color:#6E8299;cursor:pointer;user-select:none;
+    border:1px solid #1C3348;border-radius:6px;padding:6px 11px;background:#0D1520}
+  .sim input{accent-color:#33D6FF}
+
+  .wrap{display:flex;gap:44px;align-items:center;justify-content:center;padding:6px 0 0}
+
+  /* ============ 大屏 ============ */
+  .screen{width:1300px;height:731px;background:#050B14;border:1px solid #16304A;border-radius:10px;
+    position:relative;overflow:hidden;display:flex;flex-direction:column;
+    box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  .screen::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 80% at 50% 0%,rgba(23,84,140,.20),transparent 60%)}
+
+  .hd{height:54px;flex:0 0 54px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 16px;border-bottom:1px solid rgba(70,130,180,.16);position:relative;z-index:3}
+  .hd-l,.hd-r{display:flex;align-items:center;gap:10px}
+  .clock{font-size:19px;font-weight:600;color:#EAF4FF;letter-spacing:1px;font-variant-numeric:tabular-nums}
+  .clock small{font-size:10px;color:#5E7691;margin-left:8px;font-weight:400;letter-spacing:0}
+  .chip{display:flex;align-items:center;gap:6px;font-size:11px;color:#8FA6BC;
+    border:1px solid rgba(70,130,180,.22);border-radius:20px;padding:4px 10px;background:rgba(10,26,42,.6)}
+  .dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+  .dot.gn{background:#3DDC97;box-shadow:0 0 6px rgba(61,220,151,.7)}
+  .dot.cy{background:#33D6FF;box-shadow:0 0 6px rgba(51,214,255,.7)}
+  .hd-c{position:absolute;left:50%;transform:translateX(-50%);text-align:center}
+  .hd-c h1{font-size:18px;font-weight:600;color:#F2F8FF;letter-spacing:3px}
+  .hd-c p{font-size:8px;color:#3E6688;letter-spacing:2.6px;margin-top:1px}
+
+  .pair{display:flex;align-items:center;gap:8px;padding:4px 11px;border-radius:6px;min-width:112px;
+    justify-content:center;border:1px solid rgba(51,214,255,.3);background:rgba(9,32,50,.75);
+    transition:border-color .3s,background .3s}
+  .pair span{font-size:10px;color:#6E8CA8}
+  .pair b{font-size:13px;letter-spacing:2px;color:#7FD8FF;font-variant-numeric:tabular-nums}
+  .pair i{width:5px;height:5px;border-radius:50%;background:#33D6FF;animation:pulse 2.4s ease-in-out infinite}
+  .pair.live{border-color:rgba(51,214,255,.7);background:rgba(11,48,72,.9)}
+  .pair .rm{display:none;font-size:10.5px;color:#9FE1CB;letter-spacing:.3px}
+  .pair.live .rm{display:inline}
+  .pair.live .pm,.pair.live .pc{display:none}
+  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+
+  .tabs{display:flex;align-items:center;gap:1px}
+  .tabs b{font-size:11px;font-weight:500;color:#5E7691;padding:5px 10px;border-radius:4px;
+    position:relative;letter-spacing:.3px}
+  .tabs b.cur{color:#EAF6FF;background:rgba(51,214,255,.12)}
+  .tabs b.cur::after{content:"";position:absolute;left:10px;right:10px;bottom:0;height:1.5px;background:#33D6FF}
+
+  .sid{display:flex;align-items:center;gap:7px;padding:4px 10px;border-radius:6px;
+    border:1px solid rgba(70,130,180,.22);background:rgba(10,26,42,.6);transition:.3s}
+  .sid span{font-size:10.5px;color:#9FB6CC}
+  .sid em{font-size:10px;color:#7FD8FF;font-style:normal;display:none;padding-left:7px;
+    border-left:1px solid rgba(51,214,255,.3)}
+  .sid.live{border-color:rgba(51,214,255,.55);background:rgba(11,48,72,.85)}
+  .sid.live em{display:inline}
+
+  .cost{position:absolute;inset:0;background:#071019;display:none;padding:14px 16px;
+    flex-direction:column;gap:12px;z-index:5}
+  .cost.on{display:flex}
+  .cost-h{display:flex;align-items:baseline;gap:9px}
+  .cost-h b{font-size:13px;color:#EAF6FF;font-weight:600}
+  .cost-h em{font-size:9px;color:#3E6688;font-style:normal;letter-spacing:1px}
+  .cost-h i{margin-left:auto;font-size:10px;color:#5E7691;font-style:normal}
+  .ck4{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+  .ck{background:rgba(11,26,42,.9);border:1px solid rgba(60,120,170,.18);border-radius:6px;
+    padding:9px 11px;position:relative}
+  .ck::after{content:"";position:absolute;left:0;top:0;width:2px;height:12px;background:#33D6FF;opacity:.7}
+  .ck span{display:block;font-size:9px;color:#5E7691}
+  .ck b{display:block;font-size:16px;color:#EAF6FF;font-variant-numeric:tabular-nums;margin-top:3px}
+  .ck em{font-size:9px;color:#3DDC97;font-style:normal;margin-top:1px;display:block}
+  .ck em.dn{color:#FF7A8A}
+  .clist{flex:1;display:flex;flex-direction:column;gap:9px;margin-top:2px;min-height:0;
+    justify-content:space-between}
+  .cl{display:flex;align-items:center;gap:9px;font-size:10px;color:#93A9BE}
+  .cl i{flex:0 0 74px;color:#7E96AC;font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cl .cb{flex:1;height:8px;background:rgba(51,214,255,.08);border-radius:2px;overflow:hidden}
+  .cl .cb b{display:block;height:100%;background:linear-gradient(90deg,rgba(51,214,255,.45),#33D6FF);border-radius:2px}
+  .cl em{flex:0 0 66px;text-align:right;color:#D8E8F6;font-style:normal;font-variant-numeric:tabular-nums}
+  .ctrend{flex:0 0 92px;display:flex;align-items:flex-end;gap:10px;padding-top:10px;
+    border-top:1px solid rgba(60,120,170,.14);margin-top:6px}
+  .ctrend > div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+    gap:5px;height:100%}
+  .ctrend i{align-self:center;width:58%;max-width:40px;
+    background:linear-gradient(180deg,rgba(51,214,255,.7),rgba(51,214,255,.12));
+    border-radius:2px 2px 0 0}
+  .ctrend span{font-size:9px;color:#5E7691}
+
+  .body.page-fleet .only-fee{display:none!important}
+  .body.page-fee .only-fleet{display:none!important}
+
+  .exit{font-size:11px;color:#9FB6CC;background:transparent;border:1px solid rgba(70,130,180,.28);
+    border-radius:5px;padding:5px 11px;cursor:pointer}
+  .exit:hover{border-color:rgba(51,214,255,.5);color:#7FD8FF}
+
+  .body{flex:1;display:grid;grid-template-columns:180px 1fr 180px;gap:10px;padding:10px;min-height:0;position:relative;z-index:2}
+  .col{display:flex;flex-direction:column;gap:10px;min-height:0}
+  .p{background:linear-gradient(180deg,rgba(11,26,42,.92),rgba(7,17,28,.92));
+    border:1px solid rgba(60,120,170,.18);border-radius:6px;padding:10px;position:relative;overflow:hidden}
+  .p::after{content:"";position:absolute;left:0;top:0;width:2px;height:14px;background:#33D6FF;opacity:.75}
+  .p-h{display:flex;align-items:baseline;gap:6px;margin-bottom:9px}
+  .p-h b{font-size:12px;color:#D8E8F6;font-weight:600}
+  .p-h em{font-size:8px;color:#3E6688;font-style:normal;letter-spacing:1px}
+
+  .ring{width:82px;height:82px;border-radius:50%;margin:2px auto 8px;position:relative;
+    background:conic-gradient(#33D6FF 0deg 316deg,rgba(51,214,255,.1) 316deg 360deg)}
+  .ring::before{content:"";position:absolute;inset:6px;border-radius:50%;background:#08131F}
+  .ring .rv{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .rv b{font-size:20px;color:#EAF6FF;font-variant-numeric:tabular-nums}
+  .ring .rv span{font-size:9px;color:#5E7691;margin-top:1px}
+
+  .kv3{display:flex;justify-content:space-between;text-align:center;padding:0 2px}
+  .kv3 div b{display:block;font-size:15px;color:#EAF6FF;font-variant-numeric:tabular-nums}
+  .kv3 div span{font-size:9px;color:#5E7691}
+  .kv3 .cy{color:#33D6FF!important}
+  .kv3 .dm{color:#8899A9!important}
+
+  .big{font-size:30px;color:#F2FAFF;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .big .unit{font-size:11px;color:#5E7691;margin-left:5px;font-weight:400}
+  .sub{font-size:9px;color:#5E7691;margin-top:3px}
+
+  .rows{margin-top:10px;display:flex;flex-direction:column;gap:7px}
+  .row{display:flex;align-items:center;gap:7px;font-size:10px;color:#93A9BE}
+  .row .bar{flex:1;height:3px;background:rgba(51,214,255,.1);border-radius:2px;overflow:hidden}
+  .row .bar i{display:block;height:100%;border-radius:2px}
+  .row b{font-size:10px;color:#D8E8F6;width:26px;text-align:right;font-variant-numeric:tabular-nums}
+
+  .mapbox{position:relative;border:1px solid rgba(60,120,170,.18);border-radius:6px;overflow:hidden;
+    background:#071019;min-height:0}
+  .mapbox svg{width:100%;height:100%;display:block}
+  #mapLayer{transition:transform .85s cubic-bezier(.22,.61,.36,1);transform-origin:0 0}
+  .car .lbl{opacity:0;transition:opacity .35s}
+  .car.on .lbl{opacity:1}
+  .car.dim{opacity:.22}
+  .selring{opacity:0;transition:opacity .4s}
+  .selring.on{opacity:1;animation:breathe 2.6s ease-out 1}
+  @keyframes breathe{0%{stroke-opacity:.9}55%{stroke-opacity:.28}100%{stroke-opacity:.55}}
+
+  .legend{position:absolute;left:10px;bottom:9px;display:flex;gap:12px;font-size:9px;color:#6E8CA8;
+    background:rgba(5,12,20,.72);padding:5px 9px;border-radius:4px;border:1px solid rgba(60,120,170,.16)}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .legend i{width:5px;height:5px;border-radius:50%;display:inline-block}
+
+  .toast{position:absolute;left:50%;top:62px;transform:translate(-50%,-12px);z-index:9;
+    display:flex;align-items:center;gap:9px;padding:8px 15px;border-radius:6px;
+    background:rgba(9,32,50,.94);border:1px solid rgba(51,214,255,.42);
+    box-shadow:0 10px 30px rgba(0,0,0,.5);opacity:0;pointer-events:none;
+    transition:opacity .3s, transform .3s}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+  .toast i{width:6px;height:6px;border-radius:50%;background:#33D6FF;box-shadow:0 0 8px rgba(51,214,255,.9)}
+  .toast span{font-size:11px;color:#B9D3E8}
+  .toast b{color:#7FD8FF;font-weight:600}
+
+  .vinfo{position:absolute;left:52%;top:34%;width:206px;padding:11px 12px;border-radius:6px;z-index:6;
+    background:rgba(8,20,33,.97);border:1px solid rgba(51,214,255,.42);
+    box-shadow:0 16px 40px rgba(0,0,0,.6);opacity:0;transform:translateY(6px);
+    transition:opacity .35s,transform .35s;pointer-events:none}
+  .vinfo.on{opacity:1;transform:translateY(0)}
+  .vinfo::after{content:"";position:absolute;left:50%;bottom:-6px;width:10px;height:10px;margin-left:-5px;
+    background:rgba(8,20,33,.97);border-right:1px solid rgba(51,214,255,.42);
+    border-bottom:1px solid rgba(51,214,255,.42);transform:rotate(45deg)}
+  .vi-hd{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;
+    border-bottom:1px solid rgba(60,120,170,.2);margin-bottom:7px}
+  .vi-hd b{font-size:14px;color:#F2FAFF;letter-spacing:.5px}
+  .vi-st{font-size:9px;color:#3DDC97;border:1px solid rgba(61,220,151,.35);border-radius:3px;padding:1px 5px}
+  .vi-row{display:flex;justify-content:space-between;gap:8px;font-size:10px;line-height:1.9}
+  .vi-row span{color:#5E7691;flex:0 0 auto}
+  .vi-row b{color:#D8E8F6;font-weight:500;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .vi-ft{margin-top:7px;padding-top:6px;border-top:1px solid rgba(60,120,170,.16);
+    font-size:9px;color:#4E6A84;letter-spacing:.2px}
+
+  /* ============ 手机 ============ */
+  .phone{width:330px;height:674px;background:#fff;border-radius:34px;position:relative;
+    display:flex;flex-direction:column;overflow:hidden;
+    box-shadow:0 26px 60px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.06)}
+  .notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:88px;height:19px;
+    background:#111;border-radius:12px;z-index:20}
+  .p-top{flex:0 0 60px;display:flex;align-items:center;gap:9px;padding:22px 16px 0;
+    border-bottom:1px solid #EEF2F7;background:#fff;z-index:10}
+  .ava{width:30px;height:30px;border-radius:50%;background:#C8102E;color:#fff;font-size:13px;
+    display:flex;align-items:center;justify-content:center;font-weight:600;flex:0 0 30px}
+  .p-top b{display:block;font-size:13px;color:#0F172A;font-weight:600}
+  .p-top small{font-size:10px;color:#94A3B8}
+  .p-stat{margin-left:auto;font-size:10px;color:#94A3B8;padding:2px 7px;border-radius:9px;background:#F1F5F9;
+    transition:.25s}
+  .p-stat.on{color:#C8102E;background:#FEF2F4}
+
+  .ctrl{display:flex;align-items:center;gap:10px;margin:9px 12px 0;padding:0 12px;height:48px;
+    border-radius:11px;border:1px solid #E8EEF5;background:#fff;cursor:pointer;text-align:left;
+    transition:background .25s,border-color .25s,box-shadow .25s;flex:0 0 48px;font-family:inherit}
+  .ctrl .cb-dot{width:8px;height:8px;border-radius:50%;background:#CBD5E1;flex:0 0 8px;transition:.25s}
+  .ctrl .cb-txt{flex:1;min-width:0}
+  .ctrl .cb-txt b{display:block;font-size:12.5px;color:#0F172A;font-weight:600}
+  .ctrl .cb-txt small{display:block;font-size:10px;color:#94A3B8;margin-top:1px;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .ctrl .cb-end{font-size:11px;color:#A8B6C6;flex:0 0 auto}
+  .ctrl.on{background:#FEF2F4;border-color:#F3C3CB;box-shadow:0 0 0 3px rgba(200,16,46,.06)}
+  .ctrl.on .cb-dot{background:#C8102E;animation:softpulse 2.4s ease-in-out infinite}
+  .ctrl.on .cb-txt b{color:#C8102E}
+  .ctrl.on .cb-txt small{color:#D98E9B}
+  .ctrl.on .cb-end{color:#C8102E;border:1px solid #F3C3CB;border-radius:9px;padding:2px 8px;background:#fff}
+  .ctrl.fail{background:#FAFBFC}
+  .ctrl.fail .cb-dot{background:#C8102E;opacity:.45}
+  .ctrl.fail .cb-txt b{color:#C8102E}
+  @keyframes softpulse{0%,100%{opacity:.35}50%{opacity:1}}
+
+  .p-body{flex:1;overflow-y:auto;min-height:0;padding:12px 14px 6px;display:flex;flex-direction:column;gap:9px;background:#F8FAFC}
+  .p-body > *{flex:0 0 auto}
+  .msg{max-width:88%;font-size:12px;line-height:1.65;padding:9px 12px;border-radius:11px;animation:in .28s ease-out}
+  @keyframes in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .msg.ai{background:#fff;color:#334155;border:1px solid #E8EEF5;border-bottom-left-radius:3px;align-self:flex-start}
+  .msg.me{background:#EEF2F7;color:#0F172A;border-bottom-right-radius:3px;align-self:flex-end}
+  .sys{align-self:center;font-size:10px;color:#64748B;background:#EEF2F7;padding:3px 11px;border-radius:10px;
+    animation:in .28s ease-out;text-align:center;line-height:1.5}
+  .sys.warn{color:#C8102E;background:#FEF2F4}
+
+  .card{align-self:flex-start;max-width:92%;background:#fff;border:1px solid #E8EEF5;border-radius:11px;
+    padding:11px 12px;animation:in .28s ease-out}
+  .card .ch{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+  .card .ch b{font-size:12px;color:#0F172A;font-weight:600}
+  .card .ok{margin-left:auto;font-size:10px;color:#0E9F6E}
+  .card .crow{display:flex;justify-content:space-between;font-size:11px;line-height:1.85;color:#64748B}
+  .card .crow b{color:#0F172A;font-weight:600}
+  .card.wait .ok{color:#94A3B8}
+  .card.fail .ok{color:#C8102E}
+
+  .p-quick{flex:0 0 auto;padding:7px 12px 3px;display:none;grid-template-columns:1fr 1fr;gap:6px;
+    background:#fff;border-top:1px solid #EEF2F7}
+  .p-quick.show{display:grid}
+  .p-quick button{font-size:11px;color:#475569;background:#F5F7FA;border:1px solid #E8EEF5;
+    border-radius:14px;padding:6px 4px;cursor:pointer;transition:.15s;white-space:nowrap;font-family:inherit}
+  .p-quick button:hover{background:#fff;border-color:#C8102E;color:#C8102E}
+
+  .p-input{flex:0 0 50px;display:flex;align-items:center;gap:8px;padding:0 12px 6px;background:#fff}
+  .p-input .fake{flex:1;height:32px;border-radius:16px;background:#F5F7FA;border:1px solid #E8EEF5;
+    display:flex;align-items:center;padding:0 12px;font-size:11px;color:#A8B6C6;transition:.25s;
+    overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .p-input .fake.on{background:#FEF2F4;border-color:#F3C3CB;color:#C8102E}
+  .p-input .send{width:32px;height:32px;border-radius:50%;background:#C8102E;color:#fff;font-size:11px;
+    display:flex;align-items:center;justify-content:center}
+  .footbar{width:88px;height:4px;border-radius:2px;background:#E2E8F0;margin:0 auto 6px}
+  .shot *{animation:none!important;transition:none!important}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <div class="doc">
+    <div>
+      <h1>小程序遥控大屏 · 交互设计稿 v2<span class="tag">可点击</span></h1>
+      <p>点「我要操作大屏」接管，按钮持续高亮；再点一次交还，大屏回到总览</p>
+    </div>
+    <label class="sim"><input type="checkbox" id="simOff"> 模拟大屏离线（演示失败态）</label>
+  </div>
+
+  <div class="wrap">
+
+    <div class="screen">
+      <header class="hd">
+        <div class="hd-l">
+          <div class="clock">20:17:49<small>2026-11-26 周四</small></div>
+          <div class="chip"><i class="dot gn"></i>数据链路正常</div>
+        </div>
+        <div class="hd-c">
+          <h1>车队运行监控中心</h1>
+          <p>VEHICLE OPERATION MONITOR</p>
+        </div>
+        <div class="hd-r">
+          <div class="tabs" id="tabs">
+            <b class="cur" data-tab="fleet">车辆运行</b>
+            <b data-tab="fee">运单费用</b>
+          </div>
+          <div class="sid" id="sidChip">
+            <i class="dot gn" id="sidDot"></i>
+            <span>会议室大屏</span>
+            <em id="sidState">遥控中 · 张伟</em>
+          </div>
+          <button class="exit">退出大屏</button>
+        </div>
+      </header>
+
+      <div class="body page-fleet">
+        <div class="col">
+          <section class="p only-fleet" style="flex:0 0 196px">
+            <div class="p-h"><b>车辆总览</b><em>OVERVIEW</em></div>
+            <div class="ring"><div class="rv"><b>87.7%</b><span>在线率</span></div></div>
+            <div class="kv3">
+              <div><b>212</b><span>总数</span></div>
+              <div><b class="cy">186</b><span>在线</span></div>
+              <div><b class="dm">9</b><span>停更</span></div>
+            </div>
+          </section>
+
+          <section class="p only-fleet" style="flex:1">
+            <div class="p-h"><b>今日运行</b><em>TODAY</em></div>
+            <div class="big">18,642<span class="unit">km</span></div>
+            <div class="sub">轨迹实算 · 168 辆有数据</div>
+            <div class="rows">
+              <div class="row"><span>行驶</span><b>142</b><div class="bar"><i style="width:76%;background:#3DDC97"></i></div></div>
+              <div class="row"><span>静止</span><b>44</b><div class="bar"><i style="width:24%;background:#FFB020"></i></div></div>
+              <div class="row"><span>离线</span><b>26</b><div class="bar"><i style="width:14%;background:#5E7691"></i></div></div>
+            </div>
+          </section>
+
+          <section class="p only-fee" style="flex:0 0 196px">
+            <div class="p-h"><b>费用构成</b><em>COMPOSITION</em></div>
+            <div class="big" style="font-size:24px">128.5<span class="unit">万元</span></div>
+            <div class="sub">本月累计 · 环比 +6.2%</div>
+            <div class="rows">
+              <div class="row"><span>燃油电费</span><b>46%</b><div class="bar"><i style="width:46%;background:#33D6FF"></i></div></div>
+              <div class="row"><span>路桥费</span><b>28%</b><div class="bar"><i style="width:28%;background:#3DDC97"></i></div></div>
+              <div class="row"><span>人工</span><b>18%</b><div class="bar"><i style="width:18%;background:#FFB020"></i></div></div>
+              <div class="row"><span>其他</span><b>8%</b><div class="bar"><i style="width:8%;background:#5E7691"></i></div></div>
+            </div>
+          </section>
+
+          <section class="p only-fee" style="flex:1">
+            <div class="p-h"><b>运单量</b><em>VOLUME</em></div>
+            <div class="big">2,148<span class="unit">单</span></div>
+            <div class="sub">本月累计 · 日均 82 单</div>
+            <div class="rows">
+              <div class="row"><span>已完成</span><b>1986</b><div class="bar"><i style="width:92%;background:#3DDC97"></i></div></div>
+              <div class="row"><span>进行中</span><b>162</b><div class="bar"><i style="width:8%;background:#FFB020"></i></div></div>
+              <div class="row"><span>已取消</span><b>14</b><div class="bar"><i style="width:2%;background:#5E7691"></i></div></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="mapbox">
+          <svg viewBox="0 0 600 480" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M40 0 L0 0 0 40" fill="none" stroke="#1B3348" stroke-width=".4" opacity=".5"/>
+              </pattern>
+            </defs>
+            <rect width="600" height="480" fill="#071019"/>
+            <rect width="600" height="480" fill="url(#grid)"/>
+
+            <g id="mapLayer">
+              <path d="M-20 60 C 120 90, 180 40, 300 78 C 420 116, 500 70, 620 96" fill="none" stroke="#2C4A66" stroke-width="2.2" opacity=".55"/>
+              <path d="M-20 300 C 140 286, 220 330, 340 306 C 460 282, 530 320, 620 300" fill="none" stroke="#2C4A66" stroke-width="1.8" opacity=".45"/>
+              <path d="M232 -20 C 240 120, 210 240, 250 500" fill="none" stroke="#28425C" stroke-width="1.6" opacity=".5"/>
+              <path d="M420 -20 C 412 140, 446 260, 424 500" fill="none" stroke="#28425C" stroke-width="1.4" opacity=".4"/>
+              <path d="M60 500 C 80 380, 40 250, 70 120" fill="none" stroke="#20384E" stroke-width="1" opacity=".4"/>
+              <path d="M0 168 C 160 158, 300 196, 600 172" fill="none" stroke="#20384E" stroke-width="1" opacity=".35"/>
+              <path d="M470 340 C 500 300, 470 260, 512 232 C 548 208, 560 180, 596 172 L 600 250 L 600 480 L 470 480 Z"
+                fill="#0A1B2A" stroke="#17364F" stroke-width=".8" opacity=".95"/>
+
+              <text x="112" y="404" fill="#2D4B66" font-size="11" letter-spacing="2">成都</text>
+              <text x="330" y="120" fill="#2D4B66" font-size="10" letter-spacing="2">德阳</text>
+              <text x="452" y="424" fill="#2D4B66" font-size="10" letter-spacing="2">眉山</text>
+
+              <g class="car" data-plate="苏A12345">
+                <circle class="selring" cx="340" cy="252" r="15" fill="none" stroke="#33D6FF" stroke-width="1" stroke-dasharray="3 4"/>
+                <circle cx="340" cy="252" r="9" fill="none" stroke="#33D6FF" stroke-width="1"/>
+                <circle cx="340" cy="252" r="4.5" fill="#EAF6FF"/>
+                <text class="lbl" x="340" y="280" text-anchor="middle" fill="#7FD8FF" font-size="10"
+                  font-family="system-ui" letter-spacing=".5">苏A12345</text>
+              </g>
+              <g class="car" data-plate="苏A5566">
+                <circle cx="178" cy="150" r="7" fill="none" stroke="#3DDC97" stroke-width=".9"/>
+                <circle cx="178" cy="150" r="3.4" fill="#3DDC97"/>
+                <text class="lbl" x="178" y="132" text-anchor="middle" fill="#3DDC97" font-size="9">苏A5566</text>
+              </g>
+              <g class="car" data-plate="川A8899">
+                <circle cx="430" cy="342" r="7" fill="none" stroke="#3DDC97" stroke-width=".9"/>
+                <circle cx="430" cy="342" r="3.4" fill="#3DDC97"/>
+                <text class="lbl" x="430" y="324" text-anchor="middle" fill="#3DDC97" font-size="9">川A8899</text>
+              </g>
+              <g class="car" data-plate="苏A30018">
+                <circle cx="122" cy="300" r="7" fill="none" stroke="#3DDC97" stroke-width=".9"/>
+                <circle cx="122" cy="300" r="3.4" fill="#3DDC97"/>
+                <text class="lbl" x="122" y="282" text-anchor="middle" fill="#3DDC97" font-size="9">苏A30018</text>
+              </g>
+              <g class="car" data-plate="川A77210">
+                <circle cx="468" cy="122" r="6.5" fill="none" stroke="#FFB020" stroke-width=".9"/>
+                <circle cx="468" cy="122" r="3" fill="#FFB020"/>
+              </g>
+              <g class="car" data-plate="苏A20001">
+                <circle cx="248" cy="382" r="6.5" fill="none" stroke="#5E7691" stroke-width=".9"/>
+                <circle cx="248" cy="382" r="3" fill="#5E7691"/>
+              </g>
+              <g class="car" data-plate="川A66504">
+                <circle cx="526" cy="252" r="6.5" fill="none" stroke="#5E7691" stroke-width=".9"/>
+                <circle cx="526" cy="252" r="3" fill="#5E7691"/>
+              </g>
+              <g class="car" data-plate="苏A90021">
+                <circle cx="300" cy="92" r="6.5" fill="none" stroke="#3DDC97" stroke-width=".9"/>
+                <circle cx="300" cy="92" r="3" fill="#3DDC97"/>
+              </g>
+              <g class="car" data-plate="川A11002">
+                <circle cx="372" cy="420" r="6.5" fill="none" stroke="#3DDC97" stroke-width=".9"/>
+                <circle cx="372" cy="420" r="3" fill="#3DDC97"/>
+              </g>
+            </g>
+          </svg>
+
+          <div class="legend">
+            <span><i style="background:#3DDC97"></i>行驶</span>
+            <span><i style="background:#FFB020"></i>静止</span>
+            <span><i style="background:#5E7691"></i>离线</span>
+            <span><i style="background:#33D6FF"></i>当前选中</span>
+          </div>
+
+          <div class="vinfo" id="vinfo">
+            <div class="vi-hd"><b>苏A12345</b><span class="vi-st">行驶中</span></div>
+            <div class="vi-row"><span>速度</span><b>62 km/h</b></div>
+            <div class="vi-row"><span>位置</span><b>成都市青羊区西月城街</b></div>
+            <div class="vi-row"><span>司机</span><b>张伟</b></div>
+            <div class="vi-row"><span>机构</span><b>成都仓</b></div>
+            <div class="vi-row"><span>车型</span><b>冷藏车 · 电动</b></div>
+            <div class="vi-ft">VIN LDP4…**21 · 上报 20:16:12</div>
+          </div>
+
+          <div class="cost" id="costPanel">
+            <div class="cost-h"><b>运单费用分析</b><em>FREIGHT COST</em><i>2026-11 至今 · 已审核口径</i></div>
+            <div class="ck4">
+              <div class="ck"><span>本月运费</span><b>¥1,284,600</b><em>环比 +6.2%</em></div>
+              <div class="ck"><span>已结算</span><b>¥926,400</b><em>占比 72.1%</em></div>
+              <div class="ck"><span>待审核</span><b>¥218,700</b><em class="dn">37 笔待处理</em></div>
+              <div class="ck"><span>单车成本</span><b>¥6,058</b><em class="dn">环比 +3.1%</em></div>
+            </div>
+            <div class="clist">
+              <div class="cl"><i>成都 → 重庆</i><span class="cb"><b style="width:88%"></b></span><em>¥286,400</em></div>
+              <div class="cl"><i>成都 → 西安</i><span class="cb"><b style="width:71%"></b></span><em>¥231,900</em></div>
+              <div class="cl"><i>成都 → 昆明</i><span class="cb"><b style="width:59%"></b></span><em>¥192,300</em></div>
+              <div class="cl"><i>重庆 → 贵阳</i><span class="cb"><b style="width:42%"></b></span><em>¥136,800</em></div>
+              <div class="cl"><i>成都 → 兰州</i><span class="cb"><b style="width:33%"></b></span><em>¥107,600</em></div>
+              <div class="cl"><i>昆明 → 南宁</i><span class="cb"><b style="width:27%"></b></span><em>¥88,200</em></div>
+              <div class="cl"><i>西安 → 郑州</i><span class="cb"><b style="width:21%"></b></span><em>¥69,400</em></div>
+              <div class="cl" style="margin-top:2px;color:#4E6A84;font-size:9px">
+                <i style="flex:1;color:#4E6A84">TOP 7 线路 · 按运费降序 · 覆盖本月 86% 运量</i><em style="color:#4E6A84">合计 ¥1.11M</em>
+              </div>
+            </div>
+            <div class="ctrend">
+              <div><i style="height:34px"></i><span>11-20</span></div>
+              <div><i style="height:46px"></i><span>11-21</span></div>
+              <div><i style="height:39px"></i><span>11-22</span></div>
+              <div><i style="height:52px"></i><span>11-23</span></div>
+              <div><i style="height:44px"></i><span>11-24</span></div>
+              <div><i style="height:58px"></i><span>11-25</span></div>
+              <div><i style="height:50px"></i><span>11-26</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col">
+          <section class="p only-fleet" style="flex:0 0 150px">
+            <div class="p-h"><b>状态分布</b><em>STATUS</em></div>
+            <div class="rows" style="margin-top:2px">
+              <div class="row"><span>行驶中</span><b>142</b><div class="bar"><i style="width:80%;background:#3DDC97"></i></div></div>
+              <div class="row"><span>静止</span><b>44</b><div class="bar"><i style="width:26%;background:#FFB020"></i></div></div>
+              <div class="row"><span>离线</span><b>26</b><div class="bar"><i style="width:16%;background:#5E7691"></i></div></div>
+            </div>
+          </section>
+
+          <section class="p only-fleet" style="flex:1">
+            <div class="p-h"><b>最近告警</b><em>ALERTS</em></div>
+            <div class="rows" style="gap:9px">
+              <div class="row" style="align-items:flex-start"><i class="dot" style="background:#FF4D66;margin-top:4px"></i>
+                <div style="flex:1"><div style="color:#C9DCEB">苏A77210 超速 82km/h</div><div style="font-size:9px;color:#4E6A84">20:04 · 成绵高速</div></div></div>
+              <div class="row" style="align-items:flex-start"><i class="dot" style="background:#FFB020;margin-top:4px"></i>
+                <div style="flex:1"><div style="color:#C9DCEB">川A66504 停留 48 分钟</div><div style="font-size:9px;color:#4E6A84">19:35 · 双流服务区</div></div></div>
+              <div class="row" style="align-items:flex-start"><i class="dot" style="background:#FFB020;margin-top:4px"></i>
+                <div style="flex:1"><div style="color:#C9DCEB">苏A20001 定位停更</div><div style="font-size:9px;color:#4E6A84">19:19 · 37 分钟</div></div></div>
+            </div>
+          </section>
+
+          <section class="p only-fee" style="flex:0 0 150px">
+            <div class="p-h"><b>付款状态</b><em>PAYMENT</em></div>
+            <div class="rows" style="margin-top:2px">
+              <div class="row"><span>已付款</span><b style="width:46px">92.6万</b><div class="bar"><i style="width:72%;background:#3DDC97"></i></div></div>
+              <div class="row"><span>待审核</span><b style="width:46px">21.8万</b><div class="bar"><i style="width:17%;background:#FFB020"></i></div></div>
+              <div class="row"><span>已驳回</span><b style="width:46px">1.2万</b><div class="bar"><i style="width:2%;background:#FF7A8A"></i></div></div>
+            </div>
+          </section>
+
+          <section class="p only-fee" style="flex:1">
+            <div class="p-h"><b>待审核明细</b><em>PENDING</em></div>
+            <div class="rows" style="gap:9px">
+              <div class="row" style="align-items:flex-start"><i class="dot" style="background:#FFB020;margin-top:4px"></i>
+                <div style="flex:1"><div style="color:#C9DCEB">YD202611260018 · ¥8,240</div><div style="font-size:9px;color:#4E6A84">成都 → 重庆 · 张伟</div></div></div>
+              <div class="row" style="align-items:flex-start"><i class="dot" style="background:#FFB020;margin-top:4px"></i>
+                <div style="flex:1"><div style="color:#C9DCEB">YD202611260023 · ¥12,600</div><div style="font-size:9px;color:#4E6A84">成都 → 西安 · 李强</div></div></div>
+              <div class="row" style="align-items:flex-start"><i class="dot" style="background:#FFB020;margin-top:4px"></i>
+                <div style="flex:1"><div style="color:#C9DCEB">YD202611250047 · ¥6,180</div><div style="font-size:9px;color:#4E6A84">重庆 → 贵阳 · 王磊</div></div></div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="toast" id="toast">
+        <i></i><span>来自 <b>张伟</b> 的小程序 · 查看 <b id="toastPlate">苏A12345</b></span>
+      </div>
+    </div>
+
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="p-top">
+        <div class="ava">御</div>
+        <div><b>小御</b><small>AI 智能助理</small></div>
+        <div class="p-stat" id="pStat">未接管</div>
+      </div>
+
+      <button class="ctrl" id="ctrlBtn">
+        <span class="cb-dot"></span>
+        <span class="cb-txt"><b id="cbTitle">我要操作大屏</b><small id="cbSub">自动接管会议室大屏，直接说要看什么</small></span>
+        <span class="cb-end" id="cbEnd">连接</span>
+      </button>
+
+      <div class="p-body" id="chat">
+        <div class="msg ai">查数据直接问我就行。想把画面投到会议室那块大屏，点上面的按钮接管。</div>
+      </div>
+
+      <div class="p-quick" id="quick">
+        <button data-act="focus">看苏A12345</button>
+        <button data-act="top3">电耗最差三台</button>
+        <button data-act="switch">切到运单费用</button>
+        <button data-act="reset">复位</button>
+      </div>
+
+      <div class="p-input">
+        <div class="fake" id="fakeInput">说点什么…</div>
+        <div class="send">发送</div>
+      </div>
+      <div class="footbar"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const stage = document.getElementById('stage')
+function fit(){
+  const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080)
+  stage.style.transform = 'scale(' + s + ')'
+}
+window.addEventListener('resize', fit); fit()
+
+const mapLayer = document.getElementById('mapLayer')
+const vinfo = document.getElementById('vinfo')
+const toast = document.getElementById('toast')
+const toastPlate = document.getElementById('toastPlate')
+const chat = document.getElementById('chat')
+const ctrlBtn = document.getElementById('ctrlBtn')
+const cbTitle = document.getElementById('cbTitle')
+const cbSub = document.getElementById('cbSub')
+const cbEnd = document.getElementById('cbEnd')
+const quick = document.getElementById('quick')
+const fakeInput = document.getElementById('fakeInput')
+const pStat = document.getElementById('pStat')
+const sidChip = document.getElementById('sidChip')
+const sidDot = document.getElementById('sidDot')
+const costPanel = document.getElementById('costPanel')
+const simOff = document.getElementById('simOff')
+const svgEl = document.querySelector('.mapbox svg')
+const boxEl = document.querySelector('.mapbox')
+
+let ctrl = false
+let busy = false
+let curPage = 'fleet'
+let toastTimer = null
+
+function zoomTo(cx, cy, k){
+  const tx = 300 - cx * k, ty = 240 - cy * k
+  mapLayer.style.transform = `translate(${tx}px, ${ty}px) scale(${k})`
+}
+function placeCard(cx, cy){
+  const pt = svgEl.createSVGPoint(); pt.x = cx; pt.y = cy
+  const m = mapLayer.getScreenCTM()
+  if (!m) return
+  const sp = pt.matrixTransform(m)
+  const bb = boxEl.getBoundingClientRect()
+  const k = bb.width / boxEl.offsetWidth || 1
+  const x = (sp.x - bb.left) / k
+  const y = (sp.y - bb.top) / k
+  const w = 206, h = 176
+  vinfo.style.left = Math.max(6, Math.min(boxEl.offsetWidth - w - 8, x - w / 2)) + 'px'
+  vinfo.style.top  = Math.max(6, Math.min(boxEl.offsetHeight - h - 8, y - h - 20)) + 'px'
+}
+
+function resetMap(){
+  mapLayer.style.transform = 'translate(0,0) scale(1)'
+  document.querySelectorAll('.car').forEach(g => {
+    g.classList.remove('on','dim')
+    const r = g.querySelector('.selring'); if (r) r.classList.remove('on')
+  })
+  vinfo.classList.remove('on')
+  toast.classList.remove('on')
+}
+function focusCar(plate){
+  const g = document.querySelector(`.car[data-plate="${plate}"]`)
+  if (!g) return
+  const c = g.querySelectorAll('circle')
+  const cx = +c[0].getAttribute('cx'), cy = +c[0].getAttribute('cy')
+  zoomTo(cx, cy, 1.55)
+  document.querySelectorAll('.car').forEach(x => { if (x !== g) x.classList.add('dim') })
+  g.classList.add('on')
+  const ring = g.querySelector('.selring')
+  if (ring){ ring.classList.remove('on'); void ring.getBoundingClientRect(); ring.classList.add('on') }
+  vinfo.classList.remove('on')
+  setTimeout(() => { placeCard(cx, cy); vinfo.classList.add('on') }, 820)
+  showToast(plate)
+}
+function highlight(plates){
+  document.querySelectorAll('.car').forEach(g => {
+    const p = g.dataset.plate
+    g.classList.toggle('on', plates.includes(p))
+    g.classList.toggle('dim', !plates.includes(p))
+    const r = g.querySelector('.selring'); if (r) r.classList.remove('on')
+  })
+  mapLayer.style.transform = 'translate(-40px,-30px) scale(1.12)'
+  vinfo.classList.remove('on')
+  showToast(plates.join(' / '))
+}
+function showToast(plate){
+  toastPlate.textContent = plate
+  toast.classList.add('on')
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => toast.classList.remove('on'), 3200)
+}
+
+function addMsg(text){
+  const d = document.createElement('div'); d.className = 'msg me'; d.textContent = text
+  chat.appendChild(d); chat.scrollTop = chat.scrollHeight
+}
+function addAi(text){
+  const d = document.createElement('div'); d.className = 'msg ai'; d.textContent = text
+  chat.appendChild(d); chat.scrollTop = chat.scrollHeight
+}
+function addSys(text, warn){
+  const d = document.createElement('div'); d.className = 'sys' + (warn ? ' warn' : ''); d.textContent = text
+  chat.appendChild(d); chat.scrollTop = chat.scrollHeight
+}
+function addCard(status, lines){
+  const okText = status === 'ok' ? '已投屏 ✓' : (status === 'wait' ? '发送中…' : '大屏未响应')
+  const card = document.createElement('div')
+  card.className = 'card' + (status === 'wait' ? ' wait' : (status === 'fail' ? ' fail' : ''))
+  card.innerHTML = `<div class="ch"><b>${lines.title}</b><span class="ok">${okText}</span></div>`
+    + lines.rows.map(r => `<div class="crow"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('')
+  chat.appendChild(card); chat.scrollTop = chat.scrollHeight
+  return card
+}
+
+function pageName(p){ return p === 'fee' ? '运单费用' : '车辆运行' }
+function switchTab(page){
+  curPage = page
+  document.querySelectorAll('#tabs b').forEach(b => b.classList.toggle('cur', b.dataset.tab === page))
+  costPanel.classList.toggle('on', page === 'fee')
+  document.querySelector('.body').className = 'body page-' + page
+  document.querySelector('.hd-c h1').textContent = page === 'fee' ? '运单费用分析中心' : '车队运行监控中心'
+  document.querySelector('.hd-c p').textContent = page === 'fee' ? 'FREIGHT COST ANALYTICS' : 'VEHICLE OPERATION MONITOR'
+  vinfo.classList.remove('on')
+  const sb = document.querySelector('[data-act="switch"]')
+  if (sb) sb.textContent = page === 'fee' ? '切到车辆运行' : '切到运单费用'
+  if (ctrl) cbSub.textContent = '大屏当前在：' + pageName(page)
+}
+
+function setCtrlUI(on){
+  ctrlBtn.classList.toggle('on', on)
+  ctrlBtn.classList.remove('fail')
+  quick.classList.toggle('show', on)
+  fakeInput.classList.toggle('on', on)
+  fakeInput.textContent = on ? '说车牌，直接投到大屏' : '说点什么…'
+  sidChip.classList.toggle('live', on)
+  sidDot.className = 'dot ' + (on ? 'cy' : 'gn')
+  pStat.classList.toggle('on', on)
+  pStat.textContent = on ? '遥控中' : '未接管'
+  if (on){
+    cbTitle.textContent = '遥控中 · 会议室大屏'
+    cbSub.textContent = '大屏当前在：' + pageName(curPage)
+    cbEnd.textContent = '退出'
+  } else {
+    cbTitle.textContent = '我要操作大屏'
+    cbSub.textContent = '自动接管会议室大屏，直接说要看什么'
+    cbEnd.textContent = '连接'
+  }
+}
+
+ctrlBtn.addEventListener('click', () => {
+  if (busy) return
+  if (ctrl){
+    ctrl = false
+    setCtrlUI(false)
+    resetMap()
+    addSys('已退出遥控 · 大屏回到总览')
+    return
+  }
+  busy = true
+  cbTitle.textContent = '正在连接会议室大屏…'
+  cbSub.textContent = '检查大屏是否在线'
+  cbEnd.textContent = '请稍候'
+  setTimeout(() => {
+    busy = false
+    if (simOff.checked){
+      ctrlBtn.classList.add('fail')
+      cbTitle.textContent = '未找到在线的大屏'
+      cbSub.textContent = '最后心跳 3 分钟前 · 点此重试'
+      cbEnd.textContent = '重试'
+      addSys('没找到在线的数据大屏。请确认大屏已打开、浏览器没被最小化。', true)
+      return
+    }
+    ctrl = true
+    setCtrlUI(true)
+    addSys('已自动连接「会议室大屏」· 0.4 秒')
+    addAi('大屏已交给你，当前停在哪一页我随时显示在按钮下面。直接说车牌、机构或片区。')
+  }, 720)
+})
+
+document.querySelectorAll('.p-quick button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!ctrl) return
+    const act = btn.dataset.act
+    if (act === 'focus'){
+      addMsg('看苏A12345')
+      const card = addCard('wait', { title:'发送到大屏', rows:[['目标','会议室大屏'],['动作','定位单台车']] })
+      setTimeout(() => {
+        card.querySelector('.ok').textContent = '已投屏 ✓'
+        card.classList.remove('wait')
+        card.querySelectorAll('.crow')[1].lastElementChild.textContent = '定位 + 弹出详情'
+        focusCar('苏A12345')
+      }, 650)
+    }
+    if (act === 'top3'){
+      addMsg('电耗最差的三台调出来')
+      addCard('ok', { title:'高亮 3 台车辆', rows:[['车辆','苏A5566 / 川A8899 / 苏A30018'],['动作','高亮 · 其余压暗']] })
+      highlight(['苏A5566','川A8899','苏A30018'])
+    }
+    if (act === 'switch'){
+      const to = curPage === 'fleet' ? 'fee' : 'fleet'
+      addMsg(to === 'fee' ? '切到运单费用' : '切回车辆运行')
+      switchTab(to)
+      addCard('ok', { title:'切换大屏页面', rows:[['当前页', pageName(to)],['小程序状态','已跟随']] })
+    }
+    if (act === 'reset'){
+      addMsg('复位')
+      addCard('ok', { title:'视图复位', rows:[['动作','回到车辆运行总览']] })
+      resetMap()
+      switchTab('fleet')
+    }
+  })
+})
+
+if (location.hash === '#on'){
+  document.body.classList.add('shot')
+  setTimeout(() => {
+    ctrl = true; setCtrlUI(true)
+    addSys('已自动连接「会议室大屏」· 0.4 秒')
+    addAi('大屏已交给你，当前停在哪一页我随时显示在按钮下面。直接说车牌、机构或片区。')
+  }, 300)
+}
+if (location.hash === '#focus'){
+  document.body.classList.add('shot')
+  setTimeout(() => {
+    ctrl = true; setCtrlUI(true)
+    addSys('已自动连接「会议室大屏」· 0.4 秒')
+    addAi('大屏已交给你，当前停在哪一页我随时显示在按钮下面。直接说车牌、机构或片区。')
+    addMsg('看苏A12345')
+    addCard('ok', { title:'发送到大屏', rows:[['目标','会议室大屏'],['动作','定位 + 弹出详情']] })
+    zoomTo(340, 252, 1.55)
+    document.querySelectorAll('.car').forEach(x => { if (x.dataset.plate !== '苏A12345') x.classList.add('dim') })
+    document.querySelector('.car[data-plate="苏A12345"]').classList.add('on')
+    placeCard(340, 252)
+    vinfo.classList.add('on')
+    showToast('苏A12345')
+  }, 300)
+}
+if (location.hash === '#fee'){
+  document.body.classList.add('shot')
+  setTimeout(() => {
+    ctrl = true; setCtrlUI(true); switchTab('fee')
+    addSys('已自动连接「会议室大屏」· 0.4 秒')
+    addMsg('切到运单费用')
+    addCard('ok', { title:'切换大屏页面', rows:[['当前页','运单费用'],['小程序状态','已跟随']] })
+  }, 300)
+}
+if (location.hash === '#fail'){
+  document.body.classList.add('shot')
+  setTimeout(() => { simOff.checked = true; ctrlBtn.click() }, 300)
+}
+</script>
+</body>
+</html>

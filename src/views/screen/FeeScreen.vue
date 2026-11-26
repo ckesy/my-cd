@@ -22,10 +22,18 @@
         <div class="hd-r">
           <div class="chip"><i class="cy"></i>今日运单 {{ wb.todayCount }}</div>
           <div class="chip" v-if="vis.canAudit"><i class="rd"></i>待审 {{ feeStatus('待审核').count }}</div>
+          <div v-if="remote.by" class="chip live"><i class="cy"></i>遥控中 · {{ remote.by }}</div>
           <ScreenTabs active="fee" />
           <button class="exit" @click="back">退出大屏</button>
         </div>
       </header>
+
+      <!-- 有人从小程序下发指令时，让屋里的人知道画面为什么在动 -->
+      <transition name="rfade">
+        <div v-if="remote.show" class="remote-toast">
+          <i></i><span>来自 <b>{{ remote.by }}</b> 的小程序 · {{ remote.label }}</span>
+        </div>
+      </transition>
 
       <div class="body">
         <!-- ===== 左栏：运单 ===== -->
@@ -297,6 +305,7 @@ import {
   screenScope, loadScreenVehicles, pullRealtime,
   loadWaybills, groupWaybillStatus, routableWaybills, feeVisibility, loadFeeSummary,
 } from '@/utils/screenData'
+import { useScreenControl } from '@/composables/useScreenControl'
 
 const AMAP_KEY = String(import.meta.env.VITE_AMAP_KEY || '').trim()
 const router = useRouter()
@@ -319,6 +328,71 @@ const rootRef = ref(null)
 const tip = useScreenTip()
 
 const view = ref('v1')
+
+/* ============================================================
+   遥控（小程序 → 大屏）
+   ------------------------------------------------------------
+   ⭐ 费用页只认「切页 / 复位 / 切视图」；车辆类指令一律如实回报不支持。
+      绝不静默忽略 —— 否则用户在小程序看到「已投屏 ✓」，大屏却毫无反应。
+   ============================================================ */
+const remote = reactive({ by: '', label: '', show: false })
+let remoteTimer = null
+
+const REMOTE_LABEL = {
+  switch_tab: (p) => (p.tab === 'fleet' ? '切到车辆运行' : '切到运单费用'),
+  open_kpi: () => '切换视图',
+  reset: () => '复位视图',
+}
+
+function onRemoteCommand(info) {
+  remote.by = info.by || '同事'
+  const f = REMOTE_LABEL[info.action]
+  remote.label = typeof f === 'function' ? f(info.payload || {}) : '远程操作'
+  remote.show = true
+  if (remoteTimer) clearTimeout(remoteTimer)
+  remoteTimer = setTimeout(() => { remote.show = false }, 4000)
+}
+
+const notHere = (name) => async () => ({
+  ok: false,
+  error: `大屏当前在运单费用页，${name}请在车辆运行页操作`,
+})
+
+async function hSwitchTab(p) {
+  const tab = p && p.tab === 'fee' ? 'fee' : 'fleet'
+  if (tab === 'fee') return { ok: true }
+  router.push('/screen/fleet')
+  return { ok: true }
+}
+
+async function hResetView() {
+  view.value = 'v1'
+  return { ok: true }
+}
+
+async function hOpenKpi(p) {
+  const k = String((p && p.key) || '')
+  if (k === 'flow' || k === 'waybill') { view.value = 'v3'; return { ok: true, result: { view: 'v3' } } }
+  if (k === 'route') { view.value = 'v2'; return { ok: true, result: { view: 'v2' } } }
+  view.value = 'v1'
+  return { ok: true, result: { view: 'v1' } }
+}
+
+useScreenControl({
+  page: 'fee',
+  enabled: () => allowed.value,
+  onRemote: onRemoteCommand,
+  handlers: {
+    switch_tab: hSwitchTab,
+    reset: hResetView,
+    open_kpi: hOpenKpi,
+    focus_vehicle: notHere('查看单台车'),
+    highlight_vehicles: notHere('高亮车辆'),
+    filter_vehicle: notHere('按条件筛车'),
+    focus_area: notHere('查看片区'),
+  },
+})
+
 const mapReady = ref(false)
 const views = [
   { key: 'v1', name: '车辆定位' },
@@ -1361,9 +1435,12 @@ onBeforeUnmount(() => {
 .mkpi>div.on{border-color:rgba(255,45,75,.75);background:rgba(40,18,26,.9)}
 .mkpi>div.on::after{content:'展开中';color:#FF3355}
 
-.detail{position:absolute;z-index:8;top:72px;right:0;bottom:0;width:640px;display:flex;
+.detail{position:absolute;z-index:8;top:72px;right:0;width:640px;display:flex;
   flex-direction:column;background:linear-gradient(160deg,rgba(9,18,32,.97),rgba(5,10,18,.97));
-  border-left:1px solid rgba(255,45,75,.38);box-shadow:-28px 0 64px rgba(0,0,0,.6)}
+  border-left:1px solid rgba(255,45,75,.38);box-shadow:-28px 0 64px rgba(0,0,0,.6);
+  /* ⭐ 高度随行数自适应：去掉 bottom:0，改成 max-height。
+     行少时面板就矮，行多时到上限后在内部滚动，不再永远撑满半屏留一大片空白。 */
+  max-height:calc(100% - 72px)}
 .d-hd{flex:0 0 46px;display:flex;align-items:center;gap:9px;padding:0 14px;
   border-bottom:1px solid rgba(255,45,75,.22);background:rgba(255,45,75,.06)}
 .d-bar{width:3px;height:15px;background:linear-gradient(180deg,#FF6B81,#FF1F3D)}
@@ -1419,4 +1496,18 @@ onBeforeUnmount(() => {
 .deny-box p{font-size:14.5px;color:#7E97B4;margin:0 0 20px}
 .deny-box button{padding:8px 22px;border-radius:6px;border:1px solid rgba(255,255,255,.18);
   background:transparent;color:#DCE9F9;cursor:pointer;font-family:inherit}
+/* ============================================================
+   遥控（小程序下发指令）—— 与车辆运行大屏同一套观感
+   ============================================================ */
+.remote-toast{position:absolute;left:50%;top:96px;transform:translateX(-50%);z-index:60;
+  display:flex;align-items:center;gap:10px;padding:10px 18px;border-radius:4px;
+  background:rgba(9,32,50,.95);border:1px solid rgba(51,214,255,.45);
+  box-shadow:0 12px 34px rgba(0,0,0,.55);font-size:14px;color:#B9D3E8;pointer-events:none}
+.remote-toast i{width:7px;height:7px;border-radius:50%;background:#33D6FF;
+  box-shadow:0 0 9px rgba(51,214,255,.9);flex:0 0 7px}
+.remote-toast b{color:#7FD8FF;font-weight:600}
+.rfade-enter-active,.rfade-leave-active{transition:opacity .3s,transform .3s}
+.rfade-enter-from,.rfade-leave-to{opacity:0;transform:translate(-50%,-10px)}
+
+.hd-r .chip.live{border-color:rgba(51,214,255,.55);background:rgba(11,48,72,.8);color:#9FE1CB}
 </style>

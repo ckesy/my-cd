@@ -63,6 +63,15 @@ const assertStr = (v, maxLen, field) => {
   return s
 }
 
+/** 允许小数的数值（数量、里程类）。整数请用 assertInt */
+const assertNum = (v, min, max, field) => {
+  if (v == null || v === '') return null
+  const n = Number(v)
+  if (!Number.isFinite(n)) bad(field, '必须是数字')
+  if (n < min || n > max) bad(field, `范围 ${min}~${max}`)
+  return n
+}
+
 /** 日期跨度检查：防止「查三年」把库拖死 */
 const assertSpan = (from, to) => {
   const a = Date.parse(from + 'T00:00:00Z')
@@ -150,6 +159,78 @@ const VALIDATORS = {
       plate: assertStr(a.plate, 20, 'plate'),
       limit: assertInt(a.limit, 1, LIMITS.DRIVER_ROWS, 'limit', 20),
     }
+  },
+  /* ⭐ 2026-11-26 派单：resolve_entity 只认「类型 + 一段文字」，
+     同样**没有租户参数**，范围只能来自 ctx。 */
+  resolve_entity(a) {
+    return {
+      kind: assertEnum(a.kind, ['vehicle', 'driver', 'fence', 'customer', 'cargo', 'route'], 'kind'),
+      text: assertStr(a.text, 40, 'text'),
+    }
+  },
+  /* 草稿：装了 11 个可填字段，全部可选 —— 用户只说「派个单」也要能出一张全待补的卡，
+     缺失由 draft_waybill 分级，不在这里用必填把人挡在门外。 */
+  draft_waybill(a) {
+    return {
+      pickup: assertStr(a.pickup, 60, 'pickup'),
+      delivery: assertStr(a.delivery, 60, 'delivery'),
+      customerName: assertStr(a.customerName, 60, 'customerName'),
+      vehiclePlate: assertStr(a.vehiclePlate, 20, 'vehiclePlate'),
+      driverName: assertStr(a.driverName, 20, 'driverName'),
+      routeName: assertStr(a.routeName, 60, 'routeName'),
+      cargoName: assertStr(a.cargoName, 60, 'cargoName'),
+      quantity: assertNum(a.quantity, 0, 100000, 'quantity'),
+      unit: assertStr(a.unit, 8, 'unit'),
+      /* 计划装货 / 计划到达（2026-11-26 拆分）；planTime 为旧键，按到达时间处理 */
+      pickupTime: assertStr(a.pickupTime, 40, 'pickupTime'),
+      deliveryTime: assertStr(a.deliveryTime, 40, 'deliveryTime'),
+      planTime: assertStr(a.planTime, 40, 'planTime'),
+      transportMode: assertEnum(a.transportMode, ['极简', '详细'], 'transportMode'),
+    }
+  },
+  /* 图表：**没有数值字段**。模型只能选「画哪种图」和「用哪份结果」，
+     这一点是结构性防幻觉，不要为了灵活加 data / series 参数。 */
+  render_chart(a) {
+    return {
+      chartType: assertEnum(a.chartType, ['trend', 'rank', 'share', 'compare'], 'chartType'),
+      source: assertEnum(a.source, ['q_energy', 'q_fee', 'q_waybill', 'q_vehicle'], 'source'),
+      metric: assertEnum(a.metric, ['km', 'energy', 'rate', 'amount', 'count'], 'metric'),
+      title: assertStr(a.title, 40, 'title'),
+      limit: assertInt(a.limit, 3, LIMITS.CHART_POINTS, 'limit', 8),
+    }
+  },
+  /* 大屏遥控：动作是枚举，车牌数组限 20 个且只收字符串/数字。
+     ⚠️ 这里**没有 tenant / account / 任何身份字段** —— 模型塞进来也会被丢掉，
+        身份只来自 ctx（与 ai-gateway 的安全铁律一致）。 */
+  screen_dispatch(a) {
+    const action = assertEnum(a.action, [
+      'focus_vehicle', 'highlight_vehicles', 'filter_vehicle',
+      'switch_tab', 'focus_area', 'open_kpi', 'reset',
+    ], 'action')
+    if (!action) bad('action', '必填')
+
+    const plates = Array.isArray(a.plates)
+      ? a.plates
+        .slice(0, LIMITS.SCREEN_PLATES_MAX)
+        .filter((x) => typeof x === 'string' || typeof x === 'number')
+        .map((x) => String(x).trim().slice(0, 20))
+        .filter(Boolean)
+      : []
+
+    return {
+      action,
+      plate: assertStr(a.plate, 20, 'plate'),
+      plates,
+      org: assertStr(a.org, 30, 'org'),
+      status: assertEnum(a.status, ['行驶', '静止', '离线'], 'status'),
+      tab: assertEnum(a.tab, ['fleet', 'fee'], 'tab'),
+      area: assertStr(a.area, 30, 'area'),
+      key: assertEnum(a.key, ['mileage', 'running', 'speed', 'alerts', 'flow', 'route'], 'key'),
+      screenId: assertStr(a.screenId, 48, 'screenId'),
+    }
+  },
+  q_screen() {
+    return {}
   },
 }
 
@@ -325,7 +406,11 @@ async function checkQuota(ctx) {
 }
 
 /* ============================================================
-   五、evidence 硬校验（派单场景用）
+   五、evidence 硬校验（⚠️ 预留，当前未接线）
+   ------------------------------------------------------------
+   用途：IM 抽槽场景（方案 §13.4）—— 模型抽出的每个字段必须能追溯到原文子串。
+   现状：**Web 链路不经过此函数**（用户在对话框里自己说的话就是原文，无需回溯）。
+        不要误以为它已经生效；接入 IM 前它只由 test/guard.test.js 覆盖。
    ============================================================ */
 /**
  * 模型抽出的每个字段必须能追溯到原文子串，否则丢弃。

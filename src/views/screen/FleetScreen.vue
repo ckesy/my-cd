@@ -22,10 +22,18 @@
         <div class="hd-r">
           <div class="chip"><i class="cy"></i>在线 {{ sum.online }} / {{ sum.total }}</div>
           <div class="chip"><i class="rd"></i>故障 —</div>
+          <div v-if="remote.by" class="chip live"><i class="cy"></i>遥控中 · {{ remote.by }}</div>
           <ScreenTabs active="fleet" />
           <button class="exit" @click="back">退出大屏</button>
         </div>
       </header>
+
+      <!-- 有人从小程序下发指令时，让屋里的人知道画面为什么在动 -->
+      <transition name="rfade">
+        <div v-if="remote.show" class="remote-toast" :class="{ err: remote.error }">
+          <i></i><span>来自 <b>{{ remote.by }}</b> 的小程序 · {{ remote.label }}</span>
+        </div>
+      </transition>
 
       <div class="body">
         <!-- ===== 左栏 ===== -->
@@ -113,19 +121,19 @@
             <div v-if="!mapReady" class="map-mask"><span>地图加载中</span></div>
 
             <div class="mkpi">
-              <div data-kpi="running" :class="{ on: openKey === 'running' }" @click="toggleDetail('running')"
+              <div data-kpi="running" :class="{ on: openKey === 'running' }" @click="openDetail('running')"
                 v-on="tip.hot(tipKpi('running'))">
                 <b class="gn">{{ sum.running }}</b><span>行驶中</span>
               </div>
-              <div data-kpi="mileage" :class="{ on: openKey === 'mileage' }" @click="toggleDetail('mileage')"
+              <div data-kpi="mileage" :class="{ on: openKey === 'mileage' }" @click="openDetail('mileage')"
                 v-on="tip.hot(tipKpi('mileage'))">
                 <b>{{ fmt(mile.total) }}</b><span>今日里程 km</span>
               </div>
-              <div data-kpi="speed" :class="{ on: openKey === 'speed' }" @click="toggleDetail('speed')"
+              <div data-kpi="speed" :class="{ on: openKey === 'speed' }" @click="openDetail('speed')"
                 v-on="tip.hot(tipKpi('speed'))">
                 <b>{{ avgSpeed }}</b><span>平均车速 km/h</span>
               </div>
-              <div data-kpi="fault" :class="{ on: openKey === 'fault' }" @click="toggleDetail('fault')"
+              <div data-kpi="fault" :class="{ on: openKey === 'fault' }" @click="openDetail('fault')"
                 v-on="tip.hot(tipKpi('fault'))">
                 <b class="rd">—</b><span>故障车辆</span>
               </div>
@@ -160,6 +168,28 @@
                 <div class="d-ft">{{ detail.foot }}</div>
               </div>
             </transition>
+
+            <!-- 车辆卡：由 Vue 渲染，不用 AMap InfoWindow。
+                 ⚠️ InfoWindow 的锚点在祖先 transform:scale() 下算不准（试过 3 次都对不上），
+                    自己用 lngLatToContainer 算像素、absolute 定位才可控。 -->
+            <div
+              v-if="card.show"
+              class="v-info map-card"
+              :class="{ below: card.below, left: card.side === 'left', right: card.side === 'right' }"
+              :style="{ left: card.x + 'px', top: card.y + 'px' }"
+            >
+              <div class="vi-hd">
+                <span class="vi-plate">{{ card.plate }}</span>
+                <span class="vi-st" :style="{ color: card.color }">{{ card.status }}</span>
+              </div>
+              <div class="vi-row"><span class="vi-k">速度</span><span class="vi-v">{{ card.speed }}</span></div>
+              <div class="vi-row"><span class="vi-k">位置</span><span class="vi-v">{{ card.loc }}</span></div>
+              <div class="vi-row"><span class="vi-k">司机</span><span class="vi-v">{{ card.driver }}</span></div>
+              <div class="vi-row"><span class="vi-k">机构</span><span class="vi-v">{{ card.org }}</span></div>
+              <div class="vi-row"><span class="vi-k">车型</span><span class="vi-v">{{ card.type }}</span></div>
+              <div class="vi-row"><span class="vi-k">上报</span><span class="vi-v">{{ card.report }}</span></div>
+              <div class="vi-ft"><span>VIN {{ card.vin }}</span></div>
+            </div>
 
             <div class="mlegend">
               <span><i style="background:#34D399"></i>行驶</span>
@@ -295,6 +325,7 @@ import {
   pullTodayMileage, loadDayStats, latestStatDate, loadAffairSummary, loadBehaviorDaily,
 } from '@/utils/screenData'
 import { reverseGeocode, isLngLatText } from '@/utils/geoAddress'
+import { useScreenControl } from '@/composables/useScreenControl'
 
 const AMAP_KEY = String(import.meta.env.VITE_AMAP_KEY || '').trim()
 const router = useRouter()
@@ -449,6 +480,15 @@ async function initMap() {
       features: ['bg', 'road', 'building'],
       showLabel: true,
     })
+    /* ⭐ 卡片是 Vue 渲染的绝对定位元素，地图一动就得重算车点像素 */
+    map.on('mapmove', () => { if (card.show && openPlate) placeCard(openPlate) })
+    map.on('zoomchange', () => { if (card.show && openPlate) placeCard(openPlate) })
+    /* 点地图空白收起卡片；点车点后 300ms 内不算（避免刚开就被关） */
+    map.on('click', () => {
+      if (Date.now() - lastMarkerClick < 300) return
+      if (card.show) closeVehicleCard()
+    })
+
     map.on('complete', () => {
       flushMarkers()
       /* ★ 底图就绪时有两种情况：定位已回来 → 直接按车贴合；还没回来 → 先铺全国 */
@@ -466,9 +506,42 @@ async function initMap() {
 
 const STATUS_COLOR = { 行驶: '#34D399', 静止: '#F59E0B', 离线: '#6B7F94' }
 
-function markerContent(rt) {
+/** 遥控高亮态：focus = 目标车（加光圈），dim = 其余（压暗） */
+let focusPlate = ''
+let highlightPlates = new Set()
+
+function modeOf(plate) {
+  if (highlightPlates.size) return highlightPlates.has(plate) ? 'focus' : 'dim'
+  if (focusPlate) return plate === focusPlate ? 'focus' : 'dim'
+  return ''
+}
+
+function markerContent(rt, mode) {
   const c = STATUS_COLOR[rt.status] || '#6B7F94'
+  /* ⚠️ 这三种样式写在 src/style.css 全局里：
+     AMap Marker 的内容渲染在 Vue scoped 之外，写在 scoped 里不生效。 */
+  if (mode === 'focus') {
+    return `<div class="vp-ring" style="--c:${c}"><div class="vp-dot" style="--c:${c}"></div></div>`
+  }
+  if (mode === 'dim') return `<div class="vp-dot dim" style="--c:${c}"></div>`
   return `<div class="vp-dot" style="--c:${c}"></div>`
+}
+
+/** 重刷所有点位的视觉状态（30s 刷新时 upsertMarker 也会带上，这里用于指令即时生效） */
+function applyMarkerStyles() {
+  markerByPlate.forEach((m, plate) => {
+    const rt = rtMap.get(plate)
+    if (!rt) return
+    const mode = modeOf(plate)
+    try {
+      m.setContent(markerContent(rt, mode))
+      /* ⭐ 光圈比圆点大一圈，offset 必须跟着改，否则选中车会偏右下 */
+      if (AMapRef && typeof m.setOffset === 'function') {
+        const o = mode === 'focus' ? -22 : -11
+        m.setOffset(new AMapRef.Pixel(o, o))
+      }
+    } catch (e) { /* 忽略单点失败 */ }
+  })
 }
 
 /** 把 Map 里还没挂上地图的点补挂（地图没就绪时先攒着） */
@@ -493,20 +566,23 @@ function upsertMarker(plate, rt) {
   if (!m) {
     m = new AMapRef.Marker({
       position: [lng, lat],
-      content: markerContent(rt),
+      content: markerContent(rt, modeOf(plate)),
       offset: new AMapRef.Pixel(-11, -11),
       title,
       zIndex: z,
     })
     /* 点击时再取最新一帧，避免闭包里拿到旧速度/旧状态 */
-    m.on('click', () => openVehicleInfo(vehByPlate.get(plate) || { plate }, rtMap.get(plate) || rt))
+    m.on('click', () => {
+      lastMarkerClick = Date.now()
+      openVehicleInfo(vehByPlate.get(plate) || { plate }, rtMap.get(plate) || rt)
+    })
     /* 悬停直接出数据卡（不用点） */
     m.on('mouseover', (e) => markerTip(plate, e))
     m.on('mouseout', () => tip.hide())
     markerByPlate.set(plate, m)
   } else {
     m.setPosition([lng, lat])
-    m.setContent(markerContent(rt))
+    m.setContent(markerContent(rt, modeOf(plate)))
     m.setTitle(title)
     if (typeof m.setzIndex === 'function') m.setzIndex(z)
   }
@@ -541,6 +617,8 @@ function syncMarkers() {
     addedSet.delete(m)
   })
   rtMap.forEach((rt, plate) => { if (rt && vehByPlate.has(plate)) upsertMarker(plate, rt) })
+  /* 刷新后重新套一遍筛选：upsertMarker 会把所有车都挂回地图 */
+  applyFilter()
 }
 
 /** ★ 全览车辆：点左下角「全览」随时可手动贴合；首屏定位到齐后也会自动调一次 */
@@ -558,57 +636,361 @@ function fitToMarkers() {
   return true
 }
 
-let infoWin = null
 let openPlate = ''
+/** 最近一次点车点的时间：区分「点车」和「点地图空白」 */
+let lastMarkerClick = 0
 
-/** 车辆详情卡 HTML（地址加载完成后会用它就地重刷） */
-function vehicleInfoHtml(v, rt) {
-  const c = STATUS_COLOR[rt.status] || '#6B7F94'
+/* ============================================================
+   车辆详情卡（Vue 渲染）
+   ------------------------------------------------------------
+   ⚠️ 为什么不用 AMap InfoWindow（2026-11-27 试了三次）：
+      ① 固定 offset + autoMove 会在车点靠近顶部时被裁，地图还被挪走；
+      ② 窗口已打开时再 open(新坐标) 不重定位，卡片停在上一台车；
+      ③ offset 是像素级的，大屏外层 transform:scale() 会把它带偏，
+         而卡片宽度又由内容撑开，偏移量根本算不出来。
+   现在：坐标自己用 lngLatToContainer 算，卡片用 absolute 定位在地图容器里，
+        地图一移动就重算，位置永远跟着车点。
+   ============================================================ */
+const card = reactive({
+  show: false, plate: '', status: '', color: '#6B7F94', speed: '--', loc: '--',
+  driver: '--', org: '--', type: '--', report: '--', vin: '--',
+  x: 0, y: 0, below: false, side: '',
+})
+/** 卡片估算高度：只用来判断「上方放不下就翻下去」 */
+const CARD_H = 200
+const CARD_W = 330
+
+/** 按车点重算卡片坐标（地图移动/缩放、30s 刷新时都要调） */
+function placeCard(plate) {
+  const rt = rtMap.get(plate)
+  if (!rt || !map) return
+  const lng = Number(rt.lng)
+  const lat = Number(rt.lat)
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return
+  try {
+    const px = map.lngLatToContainer([lng, lat])
+    const size = map.getSize()
+    if (!px) return
+    card.x = px.x
+    card.y = px.y
+    /* 顶部 80px 被 KPI 条占着，卡片往上开会被压住，索性翻下去 */
+    card.below = px.y - CARD_H - 16 < 80
+    const half = CARD_W / 2
+    card.side = size && size.width
+      ? (px.x < half + 8 ? 'left' : (px.x > size.width - half - 8 ? 'right' : ''))
+      : ''
+  } catch (e) { /* 地图未就绪时保持原位 */ }
+}
+
+/** 打开某台车的卡片 */
+function openVehicleInfo(v, rt) {
+  if (!rt) return
   const plate = v.plate || ''
   const ago = rt.reportAt ? Math.max(0, Math.round((Date.now() - rt.reportAt) / 60000)) : null
-  return `
-    <div class="v-info">
-      <div class="vi-hd">
-        <span class="vi-plate">${plate || '--'}</span>
-        <span class="vi-st" style="color:${c}">${rt.status || '--'}</span>
-      </div>
-      <div class="vi-row"><span class="vi-k">速度</span><span class="vi-v">${Math.round(rt.speed || 0)} km/h</span></div>
-      <div class="vi-row"><span class="vi-k">位置</span><span class="vi-v">${locText(plate, rt)}</span></div>
-      <div class="vi-row"><span class="vi-k">司机</span><span class="vi-v">${v.driver || '未绑定'}</span></div>
-      <div class="vi-row"><span class="vi-k">机构</span><span class="vi-v">${v.org || '--'}</span></div>
-      <div class="vi-row"><span class="vi-k">车型</span><span class="vi-v">${v.vehicle_type || '--'}${v.fuel_type ? ' · ' + v.fuel_type : ''}</span></div>
-      <div class="vi-row"><span class="vi-k">上报</span><span class="vi-v">${rt.reportTime ? dayjs(rt.reportTime).format('MM-DD HH:mm:ss') : '--'}${ago != null ? '（' + ago + ' 分钟前）' : ''}</span></div>
-      <div class="vi-ft"><span>VIN ${v.vin || '未配置'}</span></div>
-    </div>`
+  openPlate = plate
+  card.plate = plate || '--'
+  card.status = rt.status || '--'
+  card.color = STATUS_COLOR[rt.status] || '#6B7F94'
+  card.speed = Math.round(rt.speed || 0) + ' km/h'
+  card.loc = locText(plate, rt)
+  card.driver = v.driver || '未绑定'
+  card.org = v.org || '--'
+  card.type = (v.vehicle_type || '--') + (v.fuel_type ? ' · ' + v.fuel_type : '')
+  card.report = (rt.reportTime ? dayjs(rt.reportTime).format('MM-DD HH:mm:ss') : '--')
+    + (ago != null ? `（${ago} 分钟前）` : '')
+  card.vin = v.vin || '未配置'
+  placeCard(plate)
+  card.show = true
+  enrichAddr(plate, rt)
 }
 
-/** 点击车辆 → 详情卡（跟着地图走，用 AMap InfoWindow） */
-function openVehicleInfo(v, rt) {
-  if (!AMapRef || !map || !rt) return
-  openPlate = v.plate || ''
-  if (!infoWin) {
-    infoWin = new AMapRef.InfoWindow({
-      isCustom: true,
-      offset: new AMapRef.Pixel(0, -18),
-      closeWhenClickMap: true,
-      autoMove: true,
-    })
-  }
-  infoWin.setContent(vehicleInfoHtml(v, rt))
-  infoWin.open(map, [rt.lng, rt.lat])
-  enrichAddr(openPlate, rt)      /* 经纬度 → 真实地址（查回来再刷一次内容） */
-}
-
-/** 地址查回来后，若详情卡正开着同一台车，就地刷新 */
+/** 地址查回来 / 定位刷新后更新卡片内容（卡片开着才更新） */
 function refreshInfoIfOpen(plate) {
-  if (!infoWin || !openPlate || openPlate !== plate) return
+  if (!card.show || !openPlate || openPlate !== plate) return
   const rt = rtMap.get(plate)
   if (!rt) return
-  let open = true
-  try { open = typeof infoWin.getIsOpen === 'function' ? !!infoWin.getIsOpen() : true } catch (e) { open = true }
-  if (!open) return
-  infoWin.setContent(vehicleInfoHtml(vehByPlate.get(plate) || { plate }, rt))
+  card.loc = locText(plate, rt)
+  card.speed = Math.round(rt.speed || 0) + ' km/h'
+  const ago = rt.reportAt ? Math.max(0, Math.round((Date.now() - rt.reportAt) / 60000)) : null
+  card.report = (rt.reportTime ? dayjs(rt.reportTime).format('MM-DD HH:mm:ss') : '--')
+    + (ago != null ? `（${ago} 分钟前）` : '')
+  placeCard(plate)
 }
+
+function closeVehicleCard() {
+  card.show = false
+  openPlate = ''
+}
+
+/* ============================================================
+   遥控（小程序 → 大屏）
+   ------------------------------------------------------------
+   ⭐ 指令由 screen-hub 长轮询送来，这里只负责「执行 + 回执」。
+   ⭐ 每个 handler 返回 { ok, error? }：ok:false 会让小程序看到「失败」。
+      绝不对做不到的事假装成功（车不在地图上就如实说没找到）。
+   ============================================================ */
+const remote = reactive({ by: '', label: '', show: false, error: false })
+const vehFilter = reactive({ org: '', status: '', plates: [] })
+let remoteTimer = null
+
+const REMOTE_LABEL = {
+  focus_vehicle: (p) => '查看 ' + (p.plate || '车辆'),
+  highlight_vehicles: (p) => '高亮 ' + ((p.plates || []).length || '多') + ' 台车',
+  filter_vehicle: (p) => '筛选 ' + (p.org || p.status || '车辆'),
+  switch_tab: (p) => (p.tab === 'fee' ? '切到运单费用' : '切到车辆运行'),
+  focus_area: (p) => '看 ' + (p.city || p.area || '片区'),
+  open_kpi: () => '打开明细',
+  reset: () => '复位视图',
+}
+
+function onRemoteCommand(info) {
+  remote.error = false
+  remote.by = info.by || '同事'
+  const f = REMOTE_LABEL[info.action]
+  remote.label = typeof f === 'function' ? f(info.payload || {}) : '远程操作'
+  remote.show = true
+  if (remoteTimer) clearTimeout(remoteTimer)
+  remoteTimer = setTimeout(() => { remote.show = false }, 4000)
+}
+
+/**
+ * 遥控执行失败时，在大屏上直接说原因
+ * ------------------------------------------------------------
+ * ⭐ 以前后面什么都不发生，现场的人只会以为「坏了」。
+ *    现在弹一条红条：某某车没有定位 / 不在可见范围 —— 一眼知道为什么不跳。
+ */
+function showRemoteError(msg) {
+  remote.error = true
+  remote.by = ''
+  remote.label = msg
+  remote.show = true
+  if (remoteTimer) clearTimeout(remoteTimer)
+  remoteTimer = setTimeout(() => { remote.show = false }, 5000)
+}
+
+/** 按 org / status / plates 隐藏不匹配的点位；条件为空 = 全部显示 */
+function applyFilter() {
+  const active = !!(vehFilter.org || vehFilter.status || vehFilter.plates.length)
+  markerByPlate.forEach((m, plate) => {
+    const v = vehByPlate.get(plate) || {}
+    const rt = rtMap.get(plate)
+    let show = !!rt
+    if (active) {
+      if (vehFilter.org && String(v.org || '') !== vehFilter.org) show = false
+      if (vehFilter.status && String((rt && rt.status) || '') !== vehFilter.status) show = false
+      if (vehFilter.plates.length && !vehFilter.plates.includes(plate)) show = false
+    }
+    if (!map) return
+    if (show && !addedSet.has(m)) { map.add(m); addedSet.add(m) }
+    if (!show && addedSet.has(m)) { map.remove(m); addedSet.delete(m) }
+  })
+}
+
+function clearFilter() {
+  vehFilter.org = ''
+  vehFilter.status = ''
+  vehFilter.plates = []
+}
+
+/**
+ * 遥控接管画面时先收起右侧明细面板和车辆卡
+ * ------------------------------------------------------------
+ * ⭐ 用户明确要求（2026-11-27）：AI 一动手，面板就让开，把地图完整露出来。
+ *    手动点 KPI 卡打开的面板不受影响 —— 那是人自己要看，不该被夺走。
+ */
+function closePanelsForRemote() {
+  openKey.value = ''
+  closeVehicleCard()
+}
+
+/** 定位单台车：地图居中 → 弹详情卡 → 其余压暗 */
+async function hFocusVehicle(p) {
+  const plate = String((p && p.plate) || '').trim()
+  if (!plate) return { ok: false, error: '没给车牌' }
+
+  closePanelsForRemote()
+
+  const v = vehByPlate.get(plate)
+  if (!v) {
+    showRemoteError(`${plate} 不在当前可见范围`)
+    return { ok: false, error: '这台车不在当前数据范围内' }
+  }
+  const rt = rtMap.get(plate)
+  if (!rt || !Number.isFinite(Number(rt.lng)) || !Number.isFinite(Number(rt.lat))) {
+    /* 最常见的一种：车离线 / 东风还没回定位，地图上根本没有这个点 */
+    showRemoteError(`${plate} 当前没有定位（可能已离线）`)
+    return { ok: false, error: '这台车当前没有定位，无法在地图上显示' }
+  }
+
+  clearFilter()
+  focusPlate = plate
+  highlightPlates = new Set()
+  applyMarkerStyles()
+  syncMarkersVisible()
+
+  if (map && AMapRef) {
+    try {
+      /* ⚠️ 不要用第三个参数 immediately（试过 true，AMap 2.0 下地图压根不动）。
+         用「动画 + 等它走完」：动画结束后再开卡片，lngLatToContainer 才是终态坐标。 */
+      map.setZoomAndCenter(15, [Number(rt.lng), Number(rt.lat)], false, 300)
+      await new Promise((r) => setTimeout(r, 340))
+    } catch (e) {
+      console.warn('[大屏] 定位跳转失败：', e && e.message)
+    }
+  } else {
+    console.warn('[大屏] 地图未就绪，无法跳转')
+  }
+  /* 卡片出错不要拖累「定位」本身：跳转成功就算成功，卡片失败只记日志 */
+  try {
+    openVehicleInfo(v, rt)
+  } catch (e) {
+    console.error('[大屏] 打开车辆卡失败：', e && (e.stack || e.message))
+    return { ok: true, result: { plate, card: false } }
+  }
+  return { ok: true, result: { plate, card: true } }
+}
+
+/** 高亮一组车：这批加光圈，其余压暗，视野包住它们 */
+async function hHighlightVehicles(p) {
+  const plates = Array.isArray(p && p.plates) ? p.plates.map((x) => String(x || '').trim()).filter(Boolean) : []
+  if (!plates.length) return { ok: false, error: '没给车牌' }
+
+  closePanelsForRemote()
+
+  const hit = plates.filter((x) => markerByPlate.has(x))
+  if (!hit.length) {
+    showRemoteError('这些车当前都没有定位')
+    return { ok: false, error: '这些车都不在图上' }
+  }
+
+  focusPlate = ''
+  highlightPlates = new Set(hit)
+  applyMarkerStyles()
+
+  const arr = hit.map((x) => markerByPlate.get(x)).filter(Boolean)
+  if (map && arr.length) {
+    try { map.setFitView(arr, false, [100, 80, 100, 80], 14) } catch (e) { /* 忽略 */ }
+  }
+  return { ok: true, result: { count: hit.length, missing: plates.length - hit.length } }
+}
+
+/** 按机构 / 状态 / 指定车牌筛选 */
+async function hFilterVehicle(p) {
+  const org = String((p && p.org) || '').trim()
+  const status = String((p && p.status) || '').trim()
+  const plates = Array.isArray(p && p.plates) ? p.plates.map((x) => String(x || '').trim()).filter(Boolean) : []
+  if (!org && !status && !plates.length) return { ok: false, error: '没给筛选条件' }
+
+  closePanelsForRemote()
+
+  vehFilter.org = org
+  vehFilter.status = status
+  vehFilter.plates = plates
+  focusPlate = ''
+  highlightPlates = new Set()
+  applyMarkerStyles()
+  applyFilter()
+
+  const left = [...markerByPlate.keys()].filter((plate) => {
+    const m = markerByPlate.get(plate)
+    return m && addedSet.has(m)
+  })
+  if (!left.length) {
+    clearFilter()
+    applyFilter()
+    return { ok: false, error: '没有符合条件的车辆' }
+  }
+  if (map) {
+    const arr = left.map((x) => markerByPlate.get(x)).filter(Boolean)
+    try { map.setFitView(arr, false, [100, 80, 100, 80], 13) } catch (e) { /* 忽略 */ }
+  }
+  return { ok: true, result: { count: left.length } }
+}
+
+/** 看某个片区：优先用 AI 给的 bounds，否则按机构名 / 地址关键字圈车 */
+async function hFocusArea(p) {
+  const kw = String((p && (p.city || p.area)) || '').trim()
+  const b = p && Array.isArray(p.bounds) ? p.bounds.map(Number) : null
+
+  if (!kw && !(b && b.length === 4)) return { ok: false, error: '没说要看的片区' }
+
+  closePanelsForRemote()
+
+  if (b && b.length === 4 && b.every((n) => Number.isFinite(n)) && map && AMapRef) {
+    try {
+      map.setBounds(new AMapRef.Bounds([b[0], b[1]], [b[2], b[3]]), false, [60, 60, 60, 60])
+      return { ok: true, result: { by: 'bounds' } }
+    } catch (e) { /* 落到关键字匹配 */ }
+  }
+
+  if (!kw) return { ok: false, error: '没说要看的片区' }
+
+  const arr = []
+  markerByPlate.forEach((m, plate) => {
+    const v = vehByPlate.get(plate) || {}
+    const addr = String(addrMap[plate] || '')
+    if (String(v.org || '').includes(kw) || addr.includes(kw)) arr.push(m)
+  })
+  if (!arr.length) return { ok: false, error: `没有找到属于「${kw}」的车辆` }
+  if (map) {
+    try { map.setFitView(arr, false, [100, 80, 100, 80], 13) } catch (e) { /* 忽略 */ }
+  }
+  return { ok: true, result: { count: arr.length, by: 'keyword' } }
+}
+
+/** 切到运单费用大屏（本页随之卸载，由 FeeScreen 接着管这条屏） */
+async function hSwitchTab(p) {
+  const tab = p && p.tab === 'fee' ? 'fee' : 'fleet'
+  if (tab === 'fleet') return { ok: true }
+  router.push('/screen/fee')
+  return { ok: true }
+}
+
+/** 打开右侧明细面板（复用现有 KPI 卡逻辑） */
+async function hOpenKpi(p) {
+  const mapKey = { todayMile: 'mileage', mileage: 'mileage', running: 'running', speed: 'speed', alerts: 'fault', fault: 'fault' }
+  const k = mapKey[String((p && p.key) || '')] || 'mileage'
+  openDetail(k)
+  return { ok: true, result: { panel: k } }
+}
+
+/** 复位：清高亮、关详情、回到全览 */
+async function hResetView() {
+  focusPlate = ''
+  highlightPlates = new Set()
+  clearFilter()
+  applyMarkerStyles()
+  applyFilter()
+  closeVehicleCard()
+  openKey.value = ''
+  fitToMarkers()
+  return { ok: true }
+}
+
+/** 让「当前可见集合」与筛选条件一致（复位/定位后调用） */
+function syncMarkersVisible() {
+  if (!map) return
+  markerByPlate.forEach((m, plate) => {
+    const show = !!rtMap.get(plate)
+    if (show && !addedSet.has(m)) { map.add(m); addedSet.add(m) }
+    if (!show && addedSet.has(m)) { map.remove(m); addedSet.delete(m) }
+  })
+}
+
+const screenCtl = useScreenControl({
+  page: 'fleet',
+  enabled: () => allowed.value,
+  onRemote: onRemoteCommand,
+  handlers: {
+    focus_vehicle: hFocusVehicle,
+    highlight_vehicles: hHighlightVehicles,
+    filter_vehicle: hFilterVehicle,
+    focus_area: hFocusArea,
+    switch_tab: hSwitchTab,
+    open_kpi: hOpenKpi,
+    reset: hResetView,
+  },
+})
 
 /* ============================================================
    取数
@@ -1246,9 +1628,16 @@ function colStyle(c) {
   return { width: c.w, flex: '0 0 auto' }
 }
 
-function toggleDetail(k) {
-  openKey.value = openKey.value === k ? '' : k
-  if (!openKey.value) return
+/**
+ * 打开明细面板（不再「再点一次关闭」）
+ * ------------------------------------------------------------
+ * ⚠️ 原来是 toggle：点同一张 KPI 卡第二次就收起。
+ *    大屏是触摸/鼠标混用，用户点开面板后紧接着点地图或再点一次同一张卡，
+ *    面板就莫名消失了 —— 现场看起来像「自动关闭」。
+ *    现在只有右上角 × 和遥控复位会关，点卡片永远是「切到这一项」。
+ */
+function openDetail(k) {
+  openKey.value = k
   /* 面板一打开就把在途车的地址批量反查（命中缓存的不重复请求，上限 40 台防限流） */
   let n = 0
   rtMap.forEach((rt, plate) => {
@@ -1453,9 +1842,11 @@ onBeforeUnmount(() => {
 .mtime b{color:#33D6FF}
 
 /* 明细 */
-.detail{position:absolute;z-index:6;top:72px;right:0;bottom:0;width:624px;display:flex;
+.detail{position:absolute;z-index:6;top:72px;right:0;width:624px;display:flex;
   flex-direction:column;background:linear-gradient(160deg,rgba(9,18,32,.97),rgba(5,10,18,.97));
-  border-left:1px solid rgba(255,45,75,.38);box-shadow:-28px 0 64px rgba(0,0,0,.6)}
+  border-left:1px solid rgba(255,45,75,.38);box-shadow:-28px 0 64px rgba(0,0,0,.6);
+  /* ⭐ 高度随行数自适应（不写 bottom:0），行多时到上限内部滚动 */
+  max-height:calc(100% - 72px)}
 .detail.full{top:0;width:100%;border-left:none}
 .d-hd{flex:0 0 46px;display:flex;align-items:center;gap:9px;padding:0 14px;
   border-bottom:1px solid rgba(255,45,75,.22);background:rgba(255,45,75,.06)}
@@ -1538,4 +1929,26 @@ onBeforeUnmount(() => {
 .deny-box p{font-size:14.5px;color:#7E97B4;margin:0 0 20px}
 .deny-box button{padding:8px 22px;border-radius:6px;border:1px solid rgba(255,255,255,.18);
   background:transparent;color:#DCE9F9;cursor:pointer;font-family:inherit}
+/* ============================================================
+   遥控（小程序下发指令）
+   ------------------------------------------------------------
+   ⭐ 提示条不是给操作者看的（他在手机上有回执），是给屋里其他人看的：
+      画面自己动起来，必须有个交代。
+   ============================================================ */
+.remote-toast{position:absolute;left:50%;top:96px;transform:translateX(-50%);z-index:60;
+  display:flex;align-items:center;gap:10px;padding:10px 18px;border-radius:4px;
+  background:rgba(9,32,50,.95);border:1px solid rgba(51,214,255,.45);
+  box-shadow:0 12px 34px rgba(0,0,0,.55);font-size:14px;color:#B9D3E8;pointer-events:none}
+.remote-toast i{width:7px;height:7px;border-radius:50%;background:#33D6FF;
+  box-shadow:0 0 9px rgba(51,214,255,.9);flex:0 0 7px}
+.remote-toast b{color:#7FD8FF;font-weight:600}
+.rfade-enter-active,.rfade-leave-active{transition:opacity .3s,transform .3s}
+.rfade-enter-from,.rfade-leave-to{opacity:0;transform:translate(-50%,-10px)}
+
+.hd-r .chip.live{border-color:rgba(51,214,255,.55);background:rgba(11,48,72,.8);color:#9FE1CB}
+
+/* 遥控失败：红条说明「为什么没动」，别让人以为坏了 */
+.remote-toast.err{border-color:rgba(255,51,85,.55);background:rgba(48,10,18,.96)}
+.remote-toast.err i{background:#FF3355;box-shadow:0 0 9px rgba(255,51,85,.85)}
+.remote-toast.err span{color:#F2C6CD}
 </style>

@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>小御 · 增强设计稿（语音 / 截图 / 图表合并 / 成本）</title>
+<style>
+  :root{
+    --red:#C8102E; --red-soft:#FDF0F2; --red-line:#F5D4D9;
+    --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8; --ink4:#C3CCD9;
+    --line:#E3E8EF; --line-soft:#EDF0F4; --bg:#F1F3F6;
+    --blue:#2563EB; --green:#0E9F6E; --amber:#D97706;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0 0 56px; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;
+    font-size:13px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:26px 24px 0}
+
+  .hd{display:flex; align-items:flex-end; gap:16px; padding-bottom:14px; border-bottom:1px solid var(--line)}
+  .hd h1{margin:0; font-size:20px; font-weight:800}
+  .hd .sub{color:var(--ink3); font-size:12px; padding-bottom:2px}
+  .hd .toc{margin-left:auto; display:flex; gap:6px; flex-wrap:wrap}
+  .hd .toc a{
+    font-size:11.5px; color:var(--ink2); text-decoration:none; background:#fff;
+    border:1px solid var(--line); border-radius:6px; padding:3px 9px;
+  }
+  .hd .toc a:hover{border-color:var(--red-line); color:var(--red)}
+
+  .sec{margin-top:30px}
+  .sec-h{display:flex; align-items:center; gap:9px; margin-bottom:5px}
+  .sec-h .n{
+    width:21px; height:21px; border-radius:6px; background:var(--red); color:#fff;
+    font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;
+  }
+  .sec-h h2{margin:0; font-size:16px; font-weight:800}
+  .sec-h .tag{
+    font-size:10.5px; font-weight:700; color:var(--amber); background:#FFF8ED;
+    border:1px solid #F5E0BE; border-radius:4px; padding:1px 7px;
+  }
+  .sec-sub{color:var(--ink2); font-size:12.5px; margin:0 0 14px; max-width:880px}
+
+  .stage{display:flex; gap:20px; align-items:flex-start}
+  .demo{flex:none}
+  .aside{flex:1; min-width:0; display:flex; flex-direction:column; gap:9px}
+  .box{background:#fff; border:1px solid var(--line); border-radius:9px; padding:11px 13px}
+  .box h4{margin:0 0 6px; font-size:11.5px; font-weight:800; display:flex; align-items:center; gap:6px}
+  .box h4 .k{
+    width:15px; height:15px; border-radius:4px; background:#EEF2F7; color:var(--ink2);
+    font-size:9px; display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .box ul{margin:0; padding-left:14px}
+  .box li{margin:2px 0; color:var(--ink2); font-size:11.5px}
+  .box li b{color:var(--ink)}
+  .box p{margin:0; color:var(--ink2); font-size:11.5px}
+  code{
+    font-family:"SF Mono",Menlo,Consolas,monospace; font-size:10.5px;
+    background:#F6F8FB; border:1px solid var(--line-soft); border-radius:3px; padding:0 4px;
+  }
+  .note-min{font-size:10px; color:var(--ink3); margin-top:5px; text-align:center}
+
+  /* 412 面板 */
+  .p412{
+    width:412px; background:#FCFDFE; border:1px solid var(--line); border-radius:12px;
+    overflow:hidden; box-shadow:0 14px 40px -30px rgba(15,23,42,.6);
+  }
+  .p412 .head{
+    display:flex; align-items:center; gap:7px; padding:9px 12px;
+    border-bottom:1px solid var(--line-soft); background:#fff;
+  }
+  .p412 .head .av{
+    width:25px; height:25px; border-radius:50%; background:var(--red); color:#fff;
+    font-size:10.5px; font-weight:700; display:flex; align-items:center; justify-content:center;
+  }
+  .p412 .head .nm{font-size:11.5px; font-weight:800}
+  .p412 .head .st{font-size:9.5px; color:var(--green); display:flex; align-items:center; gap:4px}
+  .p412 .head .st i{width:5px; height:5px; border-radius:50%; background:var(--green); display:block}
+  .p412 .head .x{margin-left:auto; color:var(--ink4); font-size:13px}
+  .p412 .body{padding:11px; display:flex; flex-direction:column; gap:9px; background:#FCFDFE}
+
+  .bub{border-radius:9px; padding:7px 10px; font-size:11.5px; line-height:1.6; max-width:88%}
+  .bub.ai{background:#fff; border:1px solid var(--line-soft); color:var(--ink2)}
+  .bub.me{background:var(--red-soft); border:1px solid var(--red-line); margin-left:auto}
+
+  .inputbar{
+    display:flex; align-items:center; gap:7px; padding:9px 10px;
+    border-top:1px solid var(--line-soft); background:#fff;
+  }
+  .inputbar .ph{
+    flex:1; height:30px; border:1px solid var(--line); border-radius:8px;
+    display:flex; align-items:center; padding:0 10px; font-size:11px; color:var(--ink4);
+  }
+  .iconbtn{
+    width:30px; height:30px; border-radius:8px; border:1px solid var(--line);
+    background:#fff; display:flex; align-items:center; justify-content:center;
+    font-size:12px; color:var(--ink2); flex:none;
+  }
+  .iconbtn.rec{background:var(--red); border-color:var(--red); color:#fff}
+  .send{
+    height:30px; padding:0 13px; border-radius:8px; background:var(--red); color:#fff;
+    border:0; font-size:11.5px; font-weight:700; flex:none;
+  }
+
+  /* 录音态 */
+  .recwrap{padding:11px 12px; background:#fff; border-top:1px solid var(--line-soft)}
+  .recwrap .wave{display:flex; align-items:center; gap:3px; height:30px; margin-bottom:7px}
+  .recwrap .wave s{width:3px; border-radius:2px; background:var(--red); opacity:.7; display:block}
+  .recwrap .rt{display:flex; align-items:center; gap:7px; font-size:11px; color:var(--ink2)}
+  .recwrap .rt .dot{width:6px; height:6px; border-radius:50%; background:var(--red)}
+  .recwrap .rt .tm{margin-left:auto; font-variant-numeric:tabular-nums; font-weight:800; color:var(--ink)}
+  .recwrap .hint{font-size:10px; color:var(--ink3); margin-top:5px}
+
+  /* 转写确认 */
+  .trans{padding:9px 12px 11px; background:#fff; border-top:1px solid var(--line-soft)}
+  .trans .tl{font-size:10px; color:var(--ink3); margin-bottom:5px; display:flex; gap:6px; align-items:center}
+  .trans .tx{
+    border:1px solid var(--line); border-radius:8px; padding:8px 10px;
+    font-size:12px; line-height:1.7; color:var(--ink); background:#FCFDFE;
+  }
+  .trans .tx em{font-style:normal; background:#FEF4E6; border-bottom:1px dashed #E9CE9E; color:#9A6B14}
+  .trans .tx u{text-decoration:none; background:#EFF4FF; border-bottom:1px dashed #BFD3FA; color:#1D4ED8}
+  .trans .ops{display:flex; gap:7px; margin-top:7px; align-items:center}
+  .trans .ops .ghost{
+    height:26px; padding:0 11px; border-radius:7px; border:1px solid var(--line);
+    background:#fff; font-size:11px; color:var(--ink2); display:flex; align-items:center;
+  }
+  .trans .ops .pri{
+    height:26px; padding:0 11px; border-radius:7px; border:0; background:var(--red);
+    color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center;
+  }
+  .trans .ops .sv{margin-left:auto; font-size:10px; color:var(--ink3)}
+
+  /* 截图卡 */
+  .shot{border:1px solid var(--line); border-radius:9px; overflow:hidden; background:#fff}
+  .shot .sh{
+    display:flex; align-items:center; gap:6px; padding:6px 9px;
+    background:#F7F9FC; border-bottom:1px solid var(--line-soft); font-size:10px; color:var(--ink2);
+  }
+  .shot .sh .tp{font-weight:700; color:var(--ink)}
+  .shot .sb{padding:8px 9px; display:flex; gap:9px}
+  .shot .img{
+    width:74px; height:72px; flex:none; border:1px solid var(--line); border-radius:6px;
+    background:repeating-linear-gradient(0deg,#F4F7FB 0 1px,transparent 1px 9px),
+               repeating-linear-gradient(90deg,#F4F7FB 0 1px,transparent 1px 9px),#FBFCFE;
+    display:flex; align-items:center; justify-content:center; font-size:9px; color:var(--ink4);
+  }
+  .kv{display:flex; flex-direction:column; gap:3px; font-size:10.5px; min-width:0; flex:1}
+  .kv .r{display:flex; gap:6px; align-items:baseline}
+  .kv .k{width:48px; flex:none; color:var(--ink3); font-size:10px}
+  .kv .v{color:var(--ink); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .kv .v.ph{color:var(--ink3); font-weight:400}
+  .conf{
+    font-size:9px; font-weight:700; padding:0 5px; border-radius:3px; flex:none;
+    background:#EDF9F4; color:#0B7F58; border:1px solid #D3EEE2;
+  }
+  .conf.low{background:#FFF8ED; color:#9A6B14; border-color:#F5E0BE}
+  .skel{height:8px; border-radius:4px; background:#EEF2F7; margin:5px 0}
+
+  /* 图表卡 */
+  .chartcard{border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#fff}
+  .chartcard .ch-h{display:flex; align-items:center; gap:7px; padding:8px 11px; border-bottom:1px solid var(--line-soft)}
+  .chartcard .ch-h .t{font-size:11.5px; font-weight:800}
+  .chartcard .ch-h .tg{
+    margin-left:auto; font-size:9.5px; font-weight:700; color:var(--ink2);
+    border:1px solid var(--line); border-radius:4px; padding:1px 6px; background:#FCFDFE;
+  }
+  .chartcard .ch-b{padding:9px 11px 11px}
+  .kpi{display:flex; align-items:baseline; gap:6px; margin-bottom:9px}
+  .kpi b{font-size:21px; font-weight:800; letter-spacing:-.4px}
+  .kpi s{text-decoration:none; font-size:10.5px; color:var(--ink3)}
+  .kpi .d{margin-left:auto; font-size:11px; font-weight:700; color:var(--green)}
+  .bars{display:flex; align-items:flex-end; gap:5px; height:78px}
+  .bars .c{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0}
+  .bars .v{font-size:9px; color:var(--ink3)}
+  .bars .t{width:100%; height:54px; display:flex; align-items:flex-end}
+  .bars .t i{display:block; width:72%; margin:0 auto; border-radius:4px 4px 0 0; background:#CBD5E1}
+  .bars .t i.last{background:var(--red)}
+  .bars .l{font-size:9px; color:var(--ink3); white-space:nowrap}
+  .fold{
+    display:flex; align-items:center; gap:6px; padding:7px 11px;
+    border-top:1px solid var(--line-soft); background:#FCFDFE; font-size:10px; color:var(--ink2);
+  }
+  .fold .ar{margin-left:auto; color:var(--ink4)}
+  .minitable .tr{display:flex; padding:5px 11px; font-size:10px; color:var(--ink2); border-bottom:1px solid #F7F9FC}
+  .minitable .tr.h{background:#F7F9FC; color:var(--ink3); font-size:9.5px; font-weight:700}
+  .minitable .tr span:nth-child(1){flex:1.2}
+  .minitable .tr span:nth-child(2),
+  .minitable .tr span:nth-child(3){flex:1; text-align:right}
+  .minitable .tr:last-child{border-bottom:0}
+
+  /* 成本卡 */
+  .cost{border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#fff}
+  .cost .ch{padding:8px 11px; border-bottom:1px solid var(--line-soft); font-size:11.5px; font-weight:800; display:flex; align-items:center; gap:6px}
+  .cost .ch .m{margin-left:auto; font-size:9.5px; color:var(--ink3); font-weight:400}
+  .cost .cb{padding:10px 11px}
+  .rowbar{display:flex; align-items:center; gap:8px; margin-bottom:7px}
+  .rowbar .lb{width:52px; flex:none; font-size:10px; color:var(--ink3)}
+  .rowbar .tr2{flex:1; height:11px; border-radius:6px; background:#F1F5F9; overflow:hidden}
+  .rowbar .tr2 i{display:block; height:100%; border-radius:6px}
+  .rowbar .n{width:56px; flex:none; text-align:right; font-size:10.5px; font-weight:700; font-variant-numeric:tabular-nums}
+  .alert{
+    display:flex; align-items:flex-start; gap:7px; margin-top:3px;
+    background:#FFF8ED; border:1px solid #F5E0BE; border-radius:7px; padding:7px 9px;
+    font-size:10.5px; color:#8A5A12; line-height:1.6;
+  }
+  .alert .b{width:2px; align-self:stretch; border-radius:2px; background:var(--amber); flex:none}
+  .alert b{font-weight:800}
+
+  .opt{width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:10px; overflow:hidden}
+  .opt th,.opt td{padding:8px 11px; text-align:left; font-size:11.5px; border-bottom:1px solid var(--line-soft)}
+  .opt th{background:#F7F9FC; font-size:11px; color:var(--ink2); font-weight:700}
+  .opt tr:last-child td{border-bottom:0}
+  .opt td:nth-child(1){font-weight:800; width:120px}
+  .opt td:nth-child(4){width:80px; text-align:right; font-weight:800; color:var(--ink2)}
+  .foot{margin-top:32px; padding-top:13px; border-top:1px solid var(--line); color:var(--ink3); font-size:11.5px}
+  .foot b{color:var(--ink2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hd">
+    <div>
+      <h1>小御 · 增强设计稿</h1>
+      <div class="sub">语音输入 / 截图识别 / 图表与明细合并 / 成本与配额　·　2026-11-27　·　面板布局保持覆盖式不变</div>
+    </div>
+    <div class="toc">
+      <a href="#voice">01 语音</a>
+      <a href="#ocr">02 截图识别</a>
+      <a href="#merge">03 图表合并</a>
+      <a href="#cost">04 成本配额</a>
+    </div>
+  </div>
+
+  <!-- ================= 01 语音 ================= -->
+  <section class="sec" id="voice">
+    <div class="sec-h"><span class="n">01</span><h2>语音输入</h2><span class="tag">司机场景最高频</span></div>
+    <p class="sec-sub">
+      司机在车上、调度手上拿着单子，打字是最慢的一环。三态：<b>空闲 → 录音中 → 转写确认</b>。
+      关键约束：<b>转写结果必须落在可编辑的输入框里</b>，不能识别完直接发出去 —— 地名和数字识别错一次，后面全错。
+    </p>
+
+    <div class="stage">
+      <div class="demo">
+        <div class="p412">
+          <div class="head"><span class="av">御</span><span class="nm">小御</span><span class="st"><i></i>在线</span><span class="x">✕</span></div>
+          <div class="body">
+            <div class="bub ai">晚上好，要派单、查能耗，还是看今天有哪些待办？</div>
+          </div>
+
+          <!-- 态 1 -->
+          <div class="inputbar">
+            <div class="iconbtn">🎤</div>
+            <div class="iconbtn">⌗</div>
+            <div class="ph">按住说话，或输入…</div>
+            <button class="send">发送</button>
+          </div>
+
+          <div style="padding:0 12px 6px; font-size:10px; color:var(--ink3)">态 1 · 空闲：麦克风在左，截图（⌗）在旁</div>
+
+          <!-- 态 2 -->
+          <div class="recwrap">
+            <div class="wave">
+              <s style="height:8px"></s><s style="height:16px"></s><s style="height:24px"></s>
+              <s style="height:12px"></s><s style="height:20px"></s><s style="height:28px"></s>
+              <s style="height:14px"></s><s style="height:22px"></s><s style="height:10px"></s>
+              <s style="height:18px"></s><s style="height:26px"></s><s style="height:12px"></s>
+              <s style="height:8px"></s><s style="height:16px"></s><s style="height:22px"></s>
+              <s style="height:10px"></s><s style="height:18px"></s><s style="height:12px"></s>
+            </div>
+            <div class="rt"><span class="dot"></span>正在听…　再点一下结束<span class="tm">00:03</span></div>
+            <div class="hint">最长 60 秒 · 识别完可以改，不会直接发送</div>
+          </div>
+
+          <div style="padding:0 12px 6px; font-size:10px; color:var(--ink3); background:#fff">态 2 · 录音中：细柱波形（不做扫描光条）</div>
+
+          <!-- 态 3 -->
+          <div class="trans">
+            <div class="tl"><span>识别结果 · 可以改</span><span class="conf">置信 0.93</span></div>
+            <div class="tx">
+              明天八点从<u>新晋府</u>装货，晚上七点到<u>天麟时代</u>，<em>25 吨</em>螺纹钢，派<u>晋K03313D</u>
+            </div>
+            <div class="ops">
+              <div class="ghost">↺ 重录</div>
+              <div class="pri">发送</div>
+              <span class="sv">高亮 = 识别到的实体，点一下可改</span>
+            </div>
+          </div>
+
+          <div style="padding:0 12px 10px; font-size:10px; color:var(--ink3); background:#fff">态 3 · 转写确认</div>
+        </div>
+      </div>
+
+      <div class="aside">
+        <div class="box">
+          <h4><span class="k">A</span>交互为什么这么定</h4>
+          <ul>
+            <li><b>点一下开始 / 再点结束</b>，不用按住——司机单手、戴手套按住容易滑</li>
+            <li>不做「上滑取消」（会被页面滚动吃掉），改成明确的「↺ 重录」</li>
+            <li>波形只用 3px 细柱 + 低透明度，符合整体「细实线 + 不闪」的调性</li>
+            <li>识别到的<b>地名 / 车牌 / 数量</b>加底色高亮，让用户知道「这几处最容易错」</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="k">B</span>ASR 选型（要花钱，先定）</h4>
+          <ul>
+            <li><b>腾讯云一句话识别</b>：和现有云资源同厂，按次计费，1 分钟内短句最合适</li>
+            <li><b>微信同声传译插件</b>：小程序端零密钥、免费额度，但只能在小程序用</li>
+            <li>建议：<b>小程序用同声传译、Web 用腾讯云</b>，两条通道各自最省</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="k">C</span>实现要点</h4>
+          <ul>
+            <li>新增云函数 <code>ai-asr</code>（Web 端中转，藏住 SecretKey）；小程序直连插件不经过它</li>
+            <li>录音用 <code>RecorderManager</code>，采样 16k / 单声道 / mp3，控制在 200KB 内</li>
+            <li>识别失败要能退：给「还是打字吧」的出口，不要卡在录音态</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 02 截图识别 ================= -->
+  <section class="sec" id="ocr">
+    <div class="sec-h"><span class="n">02</span><h2>截图 / 单据识别</h2><span class="tag">复用现有 OCR</span></div>
+    <p class="sec-sub">
+      调度手上常有别人发来的派单截图、纸质单据。现在只能自己照着敲一遍。
+      目标是「贴一张图 → 认成草稿字段 → 缺的再问」。
+    </p>
+
+    <div class="stage">
+      <div class="demo">
+        <div class="p412">
+          <div class="head"><span class="av">御</span><span class="nm">小御</span><span class="st"><i></i>在线</span><span class="x">✕</span></div>
+          <div class="body">
+            <div class="bub me">（截图）</div>
+
+            <div class="shot">
+              <div class="sh"><span class="tp">已识别</span><span>派单截图 · 2 个字段不确定</span><span style="margin-left:auto;color:var(--ink4)">✕</span></div>
+              <div class="sb">
+                <div class="img">单据图</div>
+                <div class="kv">
+                  <div class="r"><span class="k">装货</span><span class="v">青白江仓库</span><span class="conf">0.96</span></div>
+                  <div class="r"><span class="k">卸货</span><span class="v">青羊工业园</span><span class="conf low">0.61</span></div>
+                  <div class="r"><span class="k">货物</span><span class="v">螺纹钢</span><span class="conf">0.94</span></div>
+                  <div class="r"><span class="k">数量</span><span class="v">25 吨</span><span class="conf">0.92</span></div>
+                  <div class="r"><span class="k">电话</span><span class="v ph">未识别</span><span class="conf low">—</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bub ai">认出来 4 项，已填进草稿。「卸货地」置信度偏低（可能是「青羊工业园」或「青羊工业港」），要确认一下吗？</div>
+            <div class="bub me">是青羊工业园</div>
+          </div>
+
+          <div class="inputbar">
+            <div class="iconbtn">🎤</div>
+            <div class="iconbtn rec">⌗</div>
+            <div class="ph">也可以直接粘贴截图（⌘V）…</div>
+            <button class="send">发送</button>
+          </div>
+        </div>
+        <div class="note-min">★ 只填空白项：已经确认过的字段不会被覆盖</div>
+      </div>
+
+      <div class="aside">
+        <div class="box">
+          <h4><span class="k">A</span>三种入口，优先级从高到低</h4>
+          <ul>
+            <li><b>直接粘贴</b>（⌘V / Ctrl+V）：最快，调度本来就在截别人的图</li>
+            <li><b>拖拽进面板</b>：拖到助手面板任意位置即可</li>
+            <li><b>点 ⌗ 选文件</b>：兜底，文件选择器</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="k">B</span>识别结果的三个规矩</h4>
+          <ul>
+            <li><b>只填空白项</b>：已确认字段绝不覆盖，避免「手改过的被机器改回去」</li>
+            <li><b>低置信度要点名</b>：置信 &lt;0.7 的字段标琥珀色，并在回答里说明「可能是 A 或 B」</li>
+            <li><b>图片本身不存库</b>：只留识别出的文本，原图当天丢弃（涉及客户单号隐私）</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="k">C</span>用哪个 OCR</h4>
+          <ul>
+            <li>现成有 <code>report-ocr</code>（费用票据专用，输出金额/日期/发票号），字段对不上</li>
+            <li>建议新写 <code>ai-ocr</code> 走<b>通用文字识别 + 结构化抽取</b>：OCR 出文本，模型只做「字段映射」，数值仍由程序校验</li>
+            <li>小程序端调 <code>chooseMedia</code> 拿图 → 传云函数 → 同一条链路</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 03 图表合并 ================= -->
+  <section class="sec" id="merge">
+    <div class="sec-h"><span class="n">03</span><h2>图表与明细合成一张卡</h2><span class="tag">改动最小 · 立竿见影</span></div>
+    <p class="sec-sub">
+      现在问「这个月能耗怎么样」会出两张卡：一张明细表、一张图，手机上要滑两屏才能看完。
+      后端本来就同时给了 <code>chart</code> 和 <code>table</code>，前端合成一张即可，<b>不用改接口</b>。
+    </p>
+
+    <div class="stage">
+      <div class="demo">
+        <div class="p412" style="padding:11px; background:#FCFDFE">
+          <div class="chartcard">
+            <div class="ch-h">
+              <span class="t">每日百公里能耗</span>
+              <span class="tg">明细 6 行 ▾</span>
+            </div>
+            <div class="ch-b">
+              <div class="kpi"><b>58.4</b><s>度 / 百公里</s><span class="d">↓ 4.2%</span></div>
+              <div class="bars">
+                <div class="c"><span class="v">58.5</span><span class="t"><i style="height:52%"></i></span><span class="l">11-20</span></div>
+                <div class="c"><span class="v">62.1</span><span class="t"><i style="height:78%"></i></span><span class="l">11-21</span></div>
+                <div class="c"><span class="v">59.8</span><span class="t"><i style="height:62%"></i></span><span class="l">11-22</span></div>
+                <div class="c"><span class="v">66.4</span><span class="t"><i style="height:100%"></i></span><span class="l">11-23</span></div>
+                <div class="c"><span class="v">61.2</span><span class="t"><i style="height:72%"></i></span><span class="l">11-24</span></div>
+                <div class="c"><span class="v">58.4</span><span class="t"><i class="last" style="height:50%"></i></span><span class="l">11-25</span></div>
+              </div>
+            </div>
+            <div class="fold">明细表<span class="ar">▾</span></div>
+          </div>
+
+          <div style="height:10px"></div>
+
+          <div class="chartcard">
+            <div class="ch-h"><span class="t">百公里能耗排行</span><span class="tg">明细 8 行 ▴</span></div>
+            <div class="minitable">
+              <div class="tr h"><span>车牌</span><span>百公里</span><span>里程</span></div>
+              <div class="tr"><span>晋K02347D</span><span>320.86</span><span>4,922</span></div>
+              <div class="tr"><span>晋K03313D</span><span>340.07</span><span>4,561</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="note-min">上：默认收起明细　下：点开后展开</div>
+      </div>
+
+      <div class="aside">
+        <div class="box">
+          <h4><span class="k">A</span>为什么合并</h4>
+          <ul>
+            <li>图给结论、表给核对，本来就是<b>同一件事的两个视图</b>，拆成两张卡反而像两条回答</li>
+            <li>手机上省一屏；Web 端也少了「滚下去再看表」</li>
+            <li>明细默认<b>折叠</b>，需要核对时点开，不占版面</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="k">B</span>实现</h4>
+          <ul>
+            <li>后端不动：<code>render_chart</code> 已经把 <code>table</code> 一并下发</li>
+            <li>前端：chart 卡内部渲染 <code>card.table</code>，折叠态用 <code>max-height:0 + overflow:hidden</code></li>
+            <li>同时<b>不再单独推 table 卡</b>（后端 <code>toCards</code> 里判断：同一轮有 chart 就跳过对应 table）</li>
+            <li>柱高按 <b>min~max 映射</b>（不是 0 基线）—— 58.5 和 66.4 差 13%，从 0 起画会变成六根等高柱，趋势就没了</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 04 成本配额 ================= -->
+  <section class="sec" id="cost">
+    <div class="sec-h"><span class="n">04</span><h2>成本与配额可见</h2><span class="tag">运营侧 · 防超支</span></div>
+    <p class="sec-sub">
+      现在配额是 60 次/时、800 次/日，但用户和运营都看不到用了多少，超了只会在下一次提问时被拒。
+      目标：<b>用之前知道还剩多少，接近上限提前说</b>。
+    </p>
+
+    <div class="stage">
+      <div class="demo">
+        <div class="p412">
+          <div class="head"><span class="av">御</span><span class="nm">小御</span><span class="st"><i></i>在线</span><span class="x">✕</span></div>
+          <div class="body">
+            <div class="cost">
+              <div class="ch">本月用量<span class="m">山西卡友 · 12 人</span></div>
+              <div class="cb">
+                <div class="rowbar">
+                  <span class="lb">今日</span>
+                  <span class="tr2"><i style="width:18%;background:#2563EB"></i></span>
+                  <span class="n">142 / 800</span>
+                </div>
+                <div class="rowbar">
+                  <span class="lb">本月 token</span>
+                  <span class="tr2"><i style="width:64%;background:#D97706"></i></span>
+                  <span class="n">2.4M</span>
+                </div>
+                <div class="rowbar" style="margin-bottom:0">
+                  <span class="lb">平均耗时</span>
+                  <span class="tr2"><i style="width:40%;background:#0E9F6E"></i></span>
+                  <span class="n">1.8 s</span>
+                </div>
+                <div class="alert">
+                  <span class="b"></span>
+                  <span><b>今日已用 68%</b>，按现在节奏 16:00 前后会触顶。高频的是「运单查询」（占 61%），可以让同事先看列表页。</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="bub ai">今天已经问得比较多了（142 次，上限 800）。要不要我把常见问题做成快捷问句，点一下就出结果，省一半额度？</div>
+          </div>
+          <div class="inputbar">
+            <div class="iconbtn">🎤</div>
+            <div class="iconbtn">⌗</div>
+            <div class="ph">问小御点什么…</div>
+            <button class="send">发送</button>
+          </div>
+        </div>
+        <div class="note-min">放在「我的 → 小御用量」里，不占主对话区</div>
+      </div>
+
+      <div class="aside">
+        <div class="box">
+          <h4><span class="k">A</span>三个层级</h4>
+          <ul>
+            <li><b>个人</b>：今日已用 / 剩余（面板底部小字，不打扰）</li>
+            <li><b>租户</b>：「我的」页一张卡：今日、本月 token、平均耗时、Top 3 提问类型</li>
+            <li><b>运营</b>：每周一自动汇总一封（站内 + 订阅消息），列出各租户用量与异常账号</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="k">B</span>数据从哪来</h4>
+          <ul>
+            <li><code>ai_assistant_logs</code> 已在写：account / tenant / intent / tokens / latency / 是否命中缓存</li>
+            <li>按天聚合即可，不需要新表；周报用定时触发器（已有 <code>vehicleReminderCron</code> 那套）</li>
+            <li>⚠️ 日志里<b>不存提问原文和手机号</b>，只存 intent 与工具名</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="k">C</span>先做哪一半</h4>
+          <p>建议先做<b>个人 + 租户</b>（读日志即可，0.5 天），周报可以后补 —— 没有可视化之前，周报没人看。</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <table class="opt">
+        <thead><tr><th>项</th><th>解决什么</th><th>依赖</th><th>工时</th></tr></thead>
+        <tbody>
+          <tr><td>01 语音输入</td><td>司机/调度不想打字</td><td>腾讯云 ASR 或微信同声传译插件（需开通）</td><td>1.1 d</td></tr>
+          <tr><td>02 截图识别</td><td>照着别人的单子重敲</td><td>新建 ai-ocr（通用 OCR + 字段映射）</td><td>1.0 d</td></tr>
+          <tr><td>03 图表合并</td><td>一轮回答两张卡</td><td>无，纯前端 + toCards 去重</td><td>0.3 d</td></tr>
+          <tr><td>04 用量可见</td><td>超配额才知道</td><td>读 ai_assistant_logs，无需 DDL</td><td>0.5 d</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="foot">
+    <b>建议顺序</b>：03（改一行判断就能看到效果）→ 04（读日志即可）→ 01（要开 ASR 服务）→ 02（最重，且要设计图片隐私边界）。<br>
+    前三项都是加法，不动现有链路；02 会引入「上传图片」这条新路径，建议单独一轮做，并先定「图片存不存、存多久」。
+  </div>
+
+</div>
+</body>
+</html>

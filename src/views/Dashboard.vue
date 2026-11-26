@@ -41,6 +41,15 @@
 
       <!-- 主内容区 -->
       <el-main class="main-content" :class="{ 'screen-main': isScreenRoute }">
+        <!-- AI 助手跳转过来的轻提示（Teleport：避开 content-wrapper 的 transform） -->
+        <Teleport to="body">
+          <transition name="ai-back-fade">
+            <div v-if="aiBackTip" class="ai-back-float">
+              <span>建档完成后，回到助手点「刷新草稿」即可自动对齐</span>
+              <button type="button" @click="aiBackTip = false">知道了</button>
+            </div>
+          </transition>
+        </Teleport>
         <div v-if="!isPermitted" class="no-permission">
           <div class="no-permission-icon">🔒</div>
           <h2>暂无访问权限</h2>
@@ -277,6 +286,36 @@ import { moduleFlags, moduleHidden, ensureModuleFlags, approvalOn, ensureApprova
 const route = useRoute()
 const router = useRouter()
 const waybillCreateRef = ref(null)
+
+/* ============================================================
+   AI 助手「去建档」回来的轻提示
+   ------------------------------------------------------------
+   助手卡片点「新建」会在新标签打开档案页（带 ?from=ai）。
+   这里在容器层统一提示一句「建完回助手点刷新」——
+   一处改动覆盖 6 个档案/围栏/路线页，不必每页各写一遍。
+   ⚠️ 必须 Teleport 到 body：.content-wrapper 有 transform，
+      fixed 会相对它定位，提示条就会跟着页面滚。
+   ============================================================ */
+const AI_BACK_PATHS = [
+  '/ele-fence/setting',
+  '/route/manage',
+  '/archive/vehicle',
+  '/archive/driver',
+  '/archive/customer',
+  '/archive/cargo',
+]
+const aiBackTip = ref(false)
+let aiBackTimer = null
+
+function syncAiBackTip() {
+  const isAi = String((route.query && route.query.from) || '') === 'ai'
+  aiBackTip.value = isAi && AI_BACK_PATHS.includes(route.path)
+  if (aiBackTimer) { clearTimeout(aiBackTimer); aiBackTimer = null }
+  if (aiBackTip.value) {
+    aiBackTimer = setTimeout(() => { aiBackTip.value = false; aiBackTimer = null }, 8000)
+  }
+}
+watch(() => route.fullPath, syncAiBackTip, { immediate: true })
 
 const activeMenu = ref(route.path)
 
@@ -1498,4 +1537,42 @@ h2 {
   font-weight: 400;
   margin-left: auto;
 }
+
+/* ===== AI 助手「去建档」返回提示 =====
+   Teleport 到 body 渲染，所以必须放**全局**样式（scoped 会因脱离组件树失效）。
+   不进文档流：是一条浮层，不会挤压 6 个档案页原有的高度布局。 */
+.ai-back-fade-enter-active,
+.ai-back-fade-leave-active { transition: opacity .18s ease, transform .18s ease; }
+.ai-back-fade-enter-from,
+.ai-back-fade-leave-to { opacity: 0; transform: translate(-50%, -6px); }
+
+.ai-back-float {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 14px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, .92);
+  color: #fff;
+  font-size: 12.5px;
+  line-height: 1.5;
+  box-shadow: 0 12px 30px -14px rgba(15, 23, 42, .6);
+}
+.ai-back-float button {
+  border: 0;
+  background: rgba(255, 255, 255, .14);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 5px;
+  cursor: pointer;
+  flex: none;
+}
+.ai-back-float button:hover { background: rgba(255, 255, 255, .24); }
 </style>

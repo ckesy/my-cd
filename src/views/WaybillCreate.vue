@@ -6,6 +6,15 @@
       <el-button type="danger" plain size="small" @click="router.push('/waybill')">返回列表</el-button>
     </div>
 
+    <!-- ⭐ 来自 AI 助手草稿：说明哪来的，并提示仍需人工核对发布
+         ⚠️ 只有 state.fromAi 为真才显示 ——「再来一单」也走 cloneData，
+            靠数据形态猜会误判。 -->
+    <div v-if="fromAi" class="ai-draft-tip">
+      <span class="ai-draft-ic">✦</span>
+      <span>已按 AI 助手草稿填充，请核对后点「发布」。不确定的项可先建单、之后在费用页补。</span>
+      <button type="button" class="ai-draft-close" @click="fromAi = false">知道了</button>
+    </div>
+
     <el-form label-width="0" label-position="left" size="default">
       <!-- ⭐ 运输节点：决定司机端要上报几步 -->
       <div class="checkin-row">
@@ -35,10 +44,17 @@
 
       <!-- 任务列表 -->
       <transition-group name="task-list" tag="div">
-        <div v-for="(task, tIndex) in tasks" :key="task.id" class="task-card" :style="{ backgroundColor: task.color }">
+        <div v-for="(task, tIndex) in tasks" :key="task.id" class="task-card"
+          :class="{
+            'flash-hit': tIndex === 0 && flashTask,
+            'stay-hit': tIndex === 0 && stayTask,
+          }"
+          :style="{ backgroundColor: tIndex === 0 && stayTask ? '#ffeef0' : task.color }">
           <!-- ⭐ 任务头：标签 + 输入框 + 路线按钮 紧贴，删除任务单独右对齐 -->
           <div class="task-header">
             <div class="task-name-wrapper">
+              <!-- 缺项感叹号：任一子项没填就显示，填完自动消失 -->
+              <span v-if="tIndex === 0 && stayAny" class="miss-dot">!</span>
               <span class="task-label">任务{{ tIndex + 1 }}</span>
               <!-- ⭐ 常驻任务续建：上一趟的计划时间 +1 天，一键填充 -->
               <el-button
@@ -97,6 +113,20 @@
                 </button>
               </div>
 
+              <!-- ⭐ 客户名称：放在路线之后。可直接手填，不必从档案选；不填也能建单 -->
+              <div class="task-cust-field" :class="{ 'flash-hit': flashCustomer, 'stay-hit': stayCustomer }">
+                <span v-if="stayCustomer" class="miss-dot">!</span>
+                <span class="badge-circle cust">客</span>
+                <el-input
+                  v-model="task.pickupCustomerName"
+                  placeholder="可直接填写"
+                  clearable
+                  size="small"
+                  class="cust-input"
+                  @input="onCustomerNameInput(task)"
+                />
+              </div>
+
             </div>
 
             <!-- ⭐ 右侧操作区：从客户档案填充（右对齐）+ 删除任务 -->
@@ -135,7 +165,7 @@
           </div>
 
           <!-- 起 -->
-          <div class="row-wrapper">
+          <div class="row-wrapper" :class="{ 'flash-hit': flashTask }">
             <span class="badge-circle">起</span>
             <div class="field-group">
               <div class="field-item">
@@ -282,7 +312,10 @@
 
       <transition-group name="task-list" tag="div">
         <div v-for="(item, index) in form.cargoList" :key="item.id" class="cargo-row"
-          :style="{ backgroundColor: getTaskColor(item.taskId) }">
+          :class="{ 'flash-hit': index === 0 && flashCargo, 'stay-hit': index === 0 && stayCargo }"
+          :style="{ backgroundColor: index === 0 && stayCargo ? '#ffeef0' : getTaskColor(item.taskId) }">
+          <!-- 缺项标记：贴在行左上角（行内 absolute，不会被任务卡裁掉） -->
+          <span v-if="index === 0 && stayCargo" class="row-mark">!</span>
           <el-row :gutter="12" align="middle" style="flex-wrap: nowrap;">
             <el-col :span="cargoSpans.name" style="white-space: nowrap;">
               <el-form-item :label="`*货物${index + 1}`" label-width="80px">
@@ -372,7 +405,9 @@
 
           <div class="assign-items">
             <transition-group name="task-list" tag="div">
-              <div v-for="(item, iIndex) in assign.items" :key="item.id" class="assign-item">
+              <div v-for="(item, iIndex) in assign.items" :key="item.id" class="assign-item"
+                :class="{ 'flash-hit': iIndex === 0 && flashAssign, 'stay-hit': iIndex === 0 && stayAssign }">
+                <span v-if="iIndex === 0 && stayAssign" class="row-mark">!</span>
                 <el-row :gutter="12" align="middle" style="flex-wrap: nowrap;">
                   <el-col :span="5" style="white-space: nowrap;">
                     <el-form-item :label="getItemLabel(assign.assignMethod, iIndex + 1)" label-width="80px">
@@ -908,6 +943,7 @@ import {
 import AMapLoader from '@amap/amap-jsapi-loader'
 import { parseLngLat } from '@/utils/waybillProgress'
 import AddEleFenceDialog from '@/components/AddEleFenceDialog.vue'
+import { deriveMissing, normalizeMissing, onAiDraft, HIGHLIGHT_KEYS } from '@/utils/aiDraftMissing'
 
 /* 高德 JS API Key（与 FullMap / RouteFormDialog 一致） */
 const AMAP_KEY = String(import.meta.env.VITE_AMAP_KEY || '').trim()
@@ -1632,6 +1668,7 @@ const isUniqueContact = (contact) => rolesArray(contact?.roles).includes('唯一
 
 const customerNameOf = (id) => archiveCustomers.value.find(c => c.id === id)?.name || ''
 
+
 /* ---------- 「从客户档案填充」弹窗 ---------- */
 const customerFillVisible = ref(false)
 const customerFillTaskId = ref(null)
@@ -1939,8 +1976,104 @@ const getTaskColor = (taskId) => {
 const isDirty = ref(false)
 const markDirty = () => { isDirty.value = true }
 let isInitializing = true
+/* 页内接收 AI 草稿的注销函数（挂载时注册，卸载时调） */
+let offAiDraft = null
 
-const applyCloneData = (cloneData) => {
+/* 是否由 AI 助手草稿预填进来（决定顶部提示条显不显示）。
+   ⚠️ 不能靠 cloneData 的非空判断 —— 「再来一单」也走 cloneData，
+      那种场景不该出现「AI 已填充」。 */
+const fromAi = ref(false)
+
+/* ============================================================
+   AI 草稿：未填项闪烁提示
+   ------------------------------------------------------------
+   与费用列表「去审批」同一套：animation 播 3 次 + 落底色，3 秒后自动清。
+   字段 → 区块映射：
+     pickup / delivery / planTime → 任务卡
+     customer                     → 客户名称那一行
+     cargo / quantity             → 货物行
+     vehicle / driver             → 指派行
+   ============================================================ */
+const missSet = ref(new Set())
+const hasMiss = (keys) => keys.some((k) => missSet.value.has(k))
+/** 感叹号提示用：不随闪烁清空，填上对应项才消失 */
+const markSet = ref(new Set())
+
+const isEmptyVal = (v) => v === null || v === undefined || String(v).trim() === ''
+
+/** 这个字段现在是不是还空着（实时读表单） */
+function isStillMissing(k) {
+  const t = tasks.value[0]
+  if (!t) return false
+  const c = form.cargoList[0]
+  const items = assignList.value.flatMap((a) => a.items || [])
+  switch (k) {
+    case 'pickup': return isEmptyVal(t.pickupLocation)
+    case 'delivery': return isEmptyVal(t.deliveryLocation)
+    case 'pickupTime': return isEmptyVal(t.pickupTime)
+    case 'deliveryTime':
+    case 'planTime': return isEmptyVal(t.deliveryTime)
+    case 'customer': return isEmptyVal(t.pickupCustomerName)
+    case 'cargo': return !c || isEmptyVal(c.name)
+    case 'quantity': return !c || c.quantity == null || Number(c.quantity) <= 0
+    case 'vehicle':
+    case 'driver': return !items.some((i) => !isEmptyVal(i.target))
+    default: return false
+  }
+}
+
+/** 这个区块还有没有没填的项（只要有一项空着就保持高亮 + 感叹号） */
+const markOf = (keys) => keys.some((k) => markSet.value.has(k) && isStillMissing(k))
+
+const stayTask = computed(() => markOf(['pickup', 'delivery', 'planTime']))
+const stayCustomer = computed(() => markOf(['customer']))
+const stayCargo = computed(() => markOf(['cargo', 'quantity']))
+const stayAssign = computed(() => markOf(['vehicle', 'driver']))
+/* 卡片上那一个感叹号：任一子项没填就亮，具体缺哪块靠各区块高亮指示 */
+const stayAny = computed(() =>
+  markOf(['pickup', 'delivery', 'planTime', 'cargo', 'quantity', 'vehicle', 'driver'])
+)
+
+const flashTask = computed(() => hasMiss(['pickup', 'delivery', 'planTime']))
+const flashCustomer = computed(() => missSet.value.has('customer'))
+const flashCargo = computed(() => hasMiss(['cargo', 'quantity']))
+const flashAssign = computed(() => hasMiss(['vehicle', 'driver']))
+
+/**
+ * 标红缺项：先闪三次，之后保持高亮 + 感叹号，填上对应项后自动消失。
+ * 调用前表单必须是「已填充」状态，否则 isStillMissing 一律为真，会全部标红。
+ * @param {object} cloneData 草稿
+ * @param {string[]} stated 云函数给出的缺项（可为空，空则按草稿结构现算）
+ */
+function armMissingMarks(cloneData, stated) {
+  if (!cloneData) return
+  const base = (Array.isArray(stated) && stated.length) ? stated : deriveMissing(cloneData)
+  /* 只标「挡住建单」的项：时间/运费/路线可后补，跟着闪会满屏红 */
+  const list = base.filter((k) => HIGHLIGHT_KEYS.includes(k)).filter((k) => isStillMissing(k))
+  if (!list.length) return
+  missSet.value = new Set(list)       // 只负责闪三次
+  markSet.value = new Set(list)       // 负责保持高亮 + 感叹号，填完才消失
+  setTimeout(() => { missSet.value = new Set() }, 3200)
+}
+
+/** 手改客户名 → 不再对应原档案，清掉 id 与联系人，避免名字和 id 打架 */
+const onCustomerNameInput = (task) => {
+  if (!task) return
+  const id = task.pickupCustomerId
+  if (id && task.pickupCustomerName !== customerNameOf(id)) {
+    task.pickupCustomerId = ''
+    task.pickupContactId = ''
+    task.pickupContactName = ''
+  }
+  markDirty()
+}
+
+/**
+ * @param {object} cloneData 克隆数据
+ * @param {{silent?: boolean}} [opts] silent=true 时不弹「已自动填充相同数据」
+ *        （AI 草稿场景文案不对，由调用方自己给提示）
+ */
+const applyCloneData = (cloneData, opts = {}) => {
   if (!cloneData) return false
   try {
     nextTaskId = 1
@@ -2010,7 +2143,7 @@ const applyCloneData = (cloneData) => {
     }
 
     markDirty()
-    ElMessage.success('已自动填充相同数据')
+    if (!opts.silent) ElMessage.success('已自动填充相同数据')
     nextTick(() => { distributeTotals() })
     return true
   } catch (err) {
@@ -2032,9 +2165,54 @@ onMounted(async () => {
   await loadDriverList()
   await loadArchiveData()
 
-  const cloneData = history.state?.cloneData
+  /* ⭐ 草稿数据两条通道（AI 助手「去建单页」用）：
+     ① history.state —— 首选
+     ② sessionStorage.ai_clone_data —— 兜底。实测只靠 state 会出现
+        「点了按钮、页面全空」，所以助手两条都写，这里两条都读。
+     用完即焚：读到就删，避免下次普通建单又冒出上一单的数据。 */
+  let seed = null
+  /* sessionStorage 里的 ai_clone_data 只有 AI 助手会写 → 命中就一定是 AI 草稿。
+     这是 fromAi 的第三条判据，比 state 可靠（state 实测偶尔读不到）。 */
+  let seedFromAi = false
+  const st = history.state
+  if (st && st.cloneData) {
+    seed = { cloneData: st.cloneData, fromAi: !!st.fromAi }
+  }
+  try {
+    const raw = sessionStorage.getItem('ai_clone_data')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (!seed && parsed && parsed.cloneData) {
+        seed = parsed
+        seedFromAi = true
+      }
+      sessionStorage.removeItem('ai_clone_data')
+    }
+  } catch (e) { /* 忽略：解析失败就当没有 */ }
+
+  const cloneData = seed && seed.cloneData
+  /* ⭐ 三条判据任一成立即认 AI 草稿：
+     ① state.fromAi　② 草稿自带 _fromAi（助手写进 payload，随数据走）
+     ③ 来自 sessionStorage.ai_clone_data（只有助手会写这个 key） */
+  fromAi.value = !!(seed && (seed.fromAi || seedFromAi || (cloneData && cloneData._fromAi)))
+
+  /* AI 草稿没填的项 → 先闪三次，之后保持高亮 + 感叹号直到填上。
+     候选来源：① cloneData._missing　② sessionStorage 兜底　③ 按草稿结构现算。
+     三条合并后，再按「现在到底还空不空」过滤一遍（用户可能已在草稿里填过）。 */
+  let statedMiss = normalizeMissing(cloneData && cloneData._missing)
+  try {
+    const rawMiss = sessionStorage.getItem('ai_missing_fields')
+    if (rawMiss) {
+      const arr = JSON.parse(rawMiss)
+      if (!statedMiss.length) statedMiss = normalizeMissing(arr)
+      sessionStorage.removeItem('ai_missing_fields')
+    }
+  } catch (e) { /* 忽略：解析失败当没有 */ }
+
   if (cloneData) {
-    applyCloneData(cloneData)
+    /* AI 草稿不弹「已自动填充相同数据」——那是一句让人误会的话；
+       提示条本身已经说明来源，缺项也有红标。 */
+    applyCloneData(cloneData, { silent: fromAi.value })
     const hasVehicle = assignList.value.some(a => a.assignMethod === 'vehicle')
     const hasTeam = assignList.value.some(a => a.assignMethod === 'team')
     if (hasVehicle) await loadVehicleList()
@@ -2042,11 +2220,30 @@ onMounted(async () => {
   } else {
     nextTick(() => { distributeTotals() })
   }
+
+  /* ⭐ 真正的判定放在 applyCloneData 之后：此时表单已经是「填充后的样子」，
+     isStillMissing() 读到的是真实状态，不会把已填的项算成缺项。
+     只在「确认来自 AI 草稿」时标红 —— 「再来一单」也有 cloneData，不该闪。 */
+  if (cloneData && fromAi.value) {
+    armMissingMarks(cloneData, statedMiss)
+  }
+
+  /* ⭐ 页内直达：用户已经在本页时，助手再点「去建单页确认」不会触发重新挂载。
+     注册一个处理器接住草稿 —— 就地填充 + 标红，不再整页重载。 */
+  offAiDraft = onAiDraft((payload) => {
+    const data = payload && payload.cloneData
+    if (!data) return
+    fromAi.value = true
+    applyCloneData(data, { silent: true })
+    armMissingMarks(data, payload.statedMiss)
+    ElMessage.success('已按 AI 草稿更新本页内容')
+  })
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
   if (distributeTimer) clearTimeout(distributeTimer)
+  if (typeof offAiDraft === 'function') offAiDraft()
 })
 const handleBeforeUnload = (e) => {
   if (isDirty.value) {
@@ -2561,6 +2758,156 @@ defineExpose({ isDirty })
   background: var(--surface-page);
 }
 
+/* AI 草稿未填项闪烁：整块底色 + 内描边一起闪，比只描光圈显眼。
+   3 次 × 0.75s ≈ 2.25s，之后自动回落原底色（任务卡的内联色不受影响）。 */
+@keyframes aiFieldHit {
+  0%, 100% {
+    background-color: rgba(255, 255, 255, 0);
+    box-shadow: inset 0 0 0 0 rgba(200, 16, 46, 0);
+  }
+  45% {
+    background-color: #ffe1e6;
+    box-shadow: inset 0 0 0 2px #c8102e;
+  }
+}
+.flash-hit {
+  animation: aiFieldHit 0.75s ease-in-out 3;
+  border-radius: 8px;
+}
+
+/* 任务名后面的客户名称（可手填，不强制走档案） */
+.task-cust-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+/* 与「起 / 终」同款的圆形徽标，蓝色区分 */
+.badge-circle.cust {
+  background-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  margin-top: 0;
+}
+
+/* ===== 缺项：闪三下 → 保持高亮 → 填完恢复 =====
+   flash-hit 只负责动画（3 次后由 missSet 清空移除），
+   stay-hit 负责动画结束后的静态高亮（markSet 里，填完才移除）。
+   两者终态同色，交接时不会跳。 */
+.stay-hit {
+  /* ⚠️ 底色不能靠 class：任务卡/货物行都有内联 :style="{ backgroundColor: ... }"，
+       内联优先级更高，动画一结束粉色就被盖掉（踩过两次）。
+       现在底色由模板里的三元表达式给（缺项时直接用 #ffeef0），
+       这里的 background 只对没有内联色的区块（指派行）生效。 */
+  background-color: #ffeef0;
+  outline: 1px solid #f0a9b5;
+  outline-offset: -1px;
+  border-radius: 8px;
+}
+
+@keyframes aiFieldHit {
+  0%, 100% {
+    background-color: #ffeef0;
+    outline: 1px solid #f0a9b5;
+    outline-offset: -1px;
+  }
+  45% {
+    background-color: #ffc9d3;
+    outline: 2px solid #c8102e;
+    outline-offset: -2px;
+  }
+}
+.flash-hit {
+  animation: aiFieldHit 0.75s ease-in-out 3;
+  border-radius: 8px;
+}
+
+/* 感叹号：内联跟在标签前，靠 absolute 挂外面会被 .task-card 的 overflow 裁掉 */
+.miss-dot {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #c8102e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.15);
+  animation: markPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes markPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+/* 货物行 / 指派行左上角的缺项标记。
+   行内 absolute：货物区不在任务卡里（没有 overflow:hidden），不会被裁。
+   比只在顶部放一个感叹号更直接 —— 一眼看出是哪一块没填。 */
+.cargo-row,
+.assign-item {
+  position: relative;
+}
+.row-mark {
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  z-index: 5;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #c8102e;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(200, 16, 46, 0.35);
+  animation: markPulse 1.6s ease-in-out infinite;
+}
+.task-cust-field .cust-input {
+  width: 168px;
+}
+
+/* AI 草稿来源提示条 */
+.ai-draft-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #eef7f2;
+  border: 1px solid #cfe8db;
+  font-size: 12.5px;
+  color: #0b7a55;
+}
+.ai-draft-tip .ai-draft-ic {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0e9f6e;
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+}
+.ai-draft-tip > span:nth-child(2) { flex: 1; min-width: 0; }
+.ai-draft-close {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: #0b7a55;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* 页面头部 */
 .page-header {
   display: flex;
@@ -2685,8 +3032,8 @@ defineExpose({ isDirty })
   flex-shrink: 0;
 }
 .task-name-input {
-  width: 260px;
-  max-width: 260px;
+  width: 180px;
+  max-width: 180px;
   flex-shrink: 0;
 }
 .task-name-input :deep(.el-input__inner) {

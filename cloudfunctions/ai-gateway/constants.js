@@ -44,8 +44,7 @@ const WAYBILL_STATUS = [
  *   'any'    两种范围都能用，具体过滤在 tools.js 里按 ctx.scope 收紧
  *   'self'   只允许司机本人（当前没有这类工具）
  * 主账号（master）默认拥有全部权限。
- */
-const TOOLS = {
+ */const TOOLS = {
   q_energy: { perm: 'operation_energy', scope: 'tenant', desc: '能耗与里程' },
   q_fee: { perm: 'fee_list', scope: 'any', desc: '费用查询' },
   q_todo: { perm: 'fee_list', scope: 'tenant', desc: '待我处理' },
@@ -56,6 +55,19 @@ const TOOLS = {
      scope='any' —— 司机走 self 分支（只返回自己绑的车），管理员走客户/机构分支。 */
   q_vehicle: { perm: 'vehicle_archive', scope: 'any', desc: '车辆档案' },
   q_driver: { perm: 'driver_archive', scope: 'any', desc: '司机档案' },
+  /* ⭐ 2026-11-26 派单能力。
+     scope 必须是 'tenant'：司机（self）不能派单，工具根本不下发。
+     perm 用 waybill —— 有建单权限才谈得上派单。 */
+  resolve_entity: { perm: 'waybill', scope: 'tenant', desc: '实体对齐（车牌/司机/围栏/客户/货物/路线）' },
+  draft_waybill: { perm: 'waybill', scope: 'tenant', desc: '派单草稿（不写库）' },
+  /* 图表卡只引用本轮已执行工具的结果，数据已在权限裁剪后，
+     因此不再单独设 perm；scope='any' 让司机也能把自己那条画出来。 */
+  render_chart: { perm: null, scope: 'any', desc: '把已查到的数据画成图' },
+  /* ⭐ 2026-11-27 大屏遥控：把「看某台车」投到会议室大屏。
+     scope='tenant' —— 司机不控屏，工具根本不下发。
+     perm 用大屏模块 key；switch_tab 切到费用页时在实现里再校验 screen_fee。 */
+  screen_dispatch: { perm: 'screen_fleet', scope: 'tenant', desc: '向数据大屏下发查看指令' },
+  q_screen: { perm: 'screen_fleet', scope: 'tenant', desc: '查可投屏的大屏与在线状态' },
 }
 
 /** 条数上限（阿里规约：查询必须限制条数） */
@@ -71,12 +83,22 @@ const LIMITS = {
   MAX_TOOL_CALLS: 6,        // 一次提问内工具调用总次数上限（防模型反复查同一件事）
   INPUT_TOKEN_CAP: 10000,   // 输入上限（超出截断历史）；实测工具结果会把上下文顶到 8k+
   TIMEOUT_MS: 15000,        // 整个请求硬超时
+  CANDIDATE_ROWS: 5,        // 实体对齐最多返回几个候选
+  ENTITY_SCAN_ROWS: 200,    // 实体对齐扫描上限（按关键字粗筛后再打分）
+  CHART_POINTS: 12,         // 图表最多画几个点 / 几根柱
+  DRAFT_LOOKBACK_H: 24,     // 疑似重复单的回看小时数
+  SCREEN_PLATES_MAX: 20,    // 一次最多高亮几台车
+  SCREEN_ONLINE_MS: 30000,  // 大屏心跳超过这个时长视为离线
+  SCREEN_CMD_TTL_MS: 60000, // 指令有效期：超过就不执行（防止早上发的指令晚上才亮）
 }
 
-/** 配额（单账号 / 单租户） */
+/** 配额（单账号 / 单租户）
+ * ⚠️⚠️ 2026-11-27 临时上调（调试大屏遥控用），**测试通过后务必改回 60 / 800**。
+ *    上调只影响费用上限，不影响功能；忘了改回会在客户误用时多花钱。
+ */
 const QUOTA = {
-  PER_ACCOUNT_HOUR: 60,
-  PER_TENANT_DAY: 800,
+  PER_ACCOUNT_HOUR: 150,   // 原值 60
+  PER_TENANT_DAY: 2000,    // 原值 800
 }
 
 /** 脱敏规则 */
@@ -96,9 +118,54 @@ const TABLE = {
   DAILY_STATS: 'vehicle_daily_stats',
   VEHICLES: 'vehicles',
   DRIVERS: 'drivers',
+  /* 2026-11-26 派单：草稿要引用的主数据表 */
+  FENCES: 'ele_fences',
+  CUSTOMER_ARCHIVES: 'customer_archives',
+  CUSTOMER_CONTACTS: 'customer_contacts',
+  CARGO_ARCHIVES: 'cargo_archives',
+  ROUTES: 'routes',
+  /* 2026-11-27 大屏遥控 */
+  SCREEN_DEVICES: 'screen_devices',
+  SCREEN_COMMANDS: 'screen_commands',
+}
+
+/**
+ * 权限别名 —— 与前端 `src/config/permissions.js` 的 PERM_ALIAS **一一对应**
+ * ------------------------------------------------------------
+ * 2026-11-26 线上问题：小程序的「管理员」角色 permissions.client 里只有老 key
+ * `operation`，而 q_energy 要 `operation_energy`，工具裁剪按字面比对 → 直接不下发，
+ * 用户问「这个月能耗怎么样」助手只能答「查不了」。财务角色同理（只有 `fee_stats`，
+ * 没有 `fee_list`，连费用都查不了）。
+ *
+ * ⚠️ 改前端 PERM_ALIAS 必须同步改这里（云函数不能 import 前端文件）。
+ */
+const PERM_ALIAS = {
+  operation_summary: ['operation'],
+  operation_energy: ['operation'],
+  operation_driving: ['operation'],
+  fee_list: ['fee_stats'],
+  waybill_stats: ['waybill'],
+  maintenance_ledger: ['vehicle_affair'],
+  affair_ledger: ['vehicle_affair'],
+  affair_reminders: ['vehicle_affair'],
+  affair_settings: ['vehicle_affair'],
+}
+
+/**
+ * 权限是否命中（与前端 permHit 同口径）
+ * @param {string[]} perms 角色权限数组（含 '*' 视为全量）
+ * @param {string} key 需要的权限 key
+ */
+const permHit = (perms, key) => {
+  const list = Array.isArray(perms) ? perms : []
+  if (list.includes('*')) return true
+  if (list.includes(key)) return true
+  const alias = PERM_ALIAS[key]
+  return !!(alias && alias.some((k) => list.includes(k)))
 }
 
 module.exports = {
   CODE, MONEY_TYPES, FEE_STATUS, FEE_PENDING, WAYBILL_STATUS,
   TOOLS, LIMITS, QUOTA, MASK, TABLE,
+  PERM_ALIAS, permHit,
 }

@@ -190,6 +190,67 @@ async function postJson(path, body, timeoutMs = 20000) {
 }
 
 /* ============================================================
+   轻量请求（不进模型）：刷新草稿 / 查实体候选
+   ------------------------------------------------------------
+   这两个动作在服务端走 action 分支，直接跑工具就返回，
+   不扣 LLM 配额、也没有模型延迟（约 200ms）。
+   ============================================================ */
+async function postAction(payload) {
+  const token = getAiToken()
+  if (!token) {
+    return { code: (CODE && CODE.ERR_SESSION) || 1001, message: '还没连上，请重新登录一次' }
+  }
+  const body = { sessionToken: token, ...payload }
+  try {
+    return isMp()
+      ? ((await wx.cloud.callFunction({ name: 'ai-gateway', data: body })).result || {})
+      : await postJson('/ai-gateway', body, 15000)
+  } catch (e) {
+    const timeout = e && (e.name === 'TimeoutError' || e.name === 'AbortError')
+    return { code: timeout ? 3001 : 5001, message: timeout ? '刷新超时，稍后再试' : '网络不太通' }
+  }
+}
+
+/**
+ * 刷新草稿：拿上一次的原始参数 + 用户补的字段，重算一遍
+ * @param {{draft:object, patch?:object, sessionId?:string}} o
+ */
+export async function redraftDraft(o = {}) {
+  const data = await postAction({
+    action: 'redraft',
+    draft: o.draft && typeof o.draft === 'object' ? o.draft : {},
+    patch: o.patch && typeof o.patch === 'object' ? o.patch : {},
+    sessionId: o.sessionId || '',
+  })
+  const code = Number(data.code)
+  return {
+    ok: code === 0,
+    code,
+    cards: Array.isArray(data.cards) ? data.cards : [],
+    message: data.message || '',
+    traceId: data.traceId || '',
+  }
+}
+
+/**
+ * 查实体候选（草稿卡点「选已有」时用）
+ * @param {{kind:string, text:string}} o
+ */
+export async function resolveEntity(o = {}) {
+  const data = await postAction({ action: 'resolve', kind: o.kind, text: o.text })
+  const code = Number(data.code)
+  return {
+    ok: code === 0,
+    code,
+    exact: !!data.exact,
+    candidates: Array.isArray(data.candidates) ? data.candidates : [],
+    suggestions: Array.isArray(data.suggestions) ? data.suggestions : [],
+    note: data.note || '',
+    message: data.message || '',
+  }
+}
+
+/* ============================================================
    提问
    ============================================================ */
 /**

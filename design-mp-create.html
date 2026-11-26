@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>小程序 · AI 派单复用 + 建单页优化 设计稿</title>
+<style>
+  :root{
+    --red:#C8102E; --red-dark:#A50D25; --red-soft:#FDF0F2; --red-line:#F5D4D9;
+    --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8;
+    --line:#EEF1F5; --bg:#F5F6F8; --blue:#2563EB; --amber:#D97706; --green:#0E9F6E;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{
+    margin:0;padding:26px 28px 40px;background:#EDEFF3;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+  }
+  .head{max-width:1180px;margin:0 auto 20px}
+  .head h1{font-size:18px;margin:0 0 6px;letter-spacing:.2px}
+  .head p{margin:0;font-size:12.5px;color:#64748B;line-height:1.7}
+  .head code{background:#fff;border:1px solid #E3E8EF;border-radius:4px;padding:1px 5px;font-size:11.5px}
+  .row{display:flex;gap:22px;max-width:1180px;margin:0 auto;align-items:flex-start;flex-wrap:wrap}
+
+  /* ---------- 手机外框 ---------- */
+  .phone{
+    width:375px;flex:none;background:#fff;border-radius:26px;overflow:hidden;
+    box-shadow:0 18px 40px -22px rgba(15,23,42,.45),0 0 0 1px #E3E8EF;
+    display:flex;flex-direction:column;height:760px;position:relative;
+  }
+  .stat{height:24px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:10.5px;color:#334155;flex:none}
+  .stat b{font-weight:600}
+  .nav{height:38px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;border-bottom:1px solid var(--line);flex:none;position:relative}
+  .nav .back{position:absolute;left:14px;font-size:15px;color:#64748B}
+  .body{flex:1;min-height:0;overflow:hidden;background:var(--bg);padding:10px 12px;display:flex;flex-direction:column;gap:9px}
+  .cap{font-size:11px;color:#7C8AA0;text-align:center;margin-top:10px;line-height:1.6}
+  .cap b{color:var(--red)}
+
+  /* ---------- 通用卡片 ---------- */
+  .fcard{background:#fff;border-radius:11px;padding:10px 12px;box-shadow:0 2px 8px rgba(15,23,42,.04)}
+  .fh{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:#64748B;margin-bottom:4px}
+  .fh .ln{flex:1;height:1px;background:var(--line)}
+  .fh-r{font-weight:500;color:var(--ink3);font-size:10px}
+
+  /* 字段行 */
+  .field{display:flex;align-items:center;gap:6px;min-height:31px;border-bottom:1px solid #EEF2F7;position:relative;padding-left:9px}
+  .field:last-child{border-bottom:none}
+  .field::before{content:"";position:absolute;left:1px;top:50%;margin-top:-2px;width:4px;height:4px;border-radius:50%;background:#F3B6C2}
+  .lb{width:70px;flex:none;font-size:11.5px;font-weight:600;color:#64748B}
+  .lb.req::after{content:"*";color:var(--red);margin-left:1px}
+  .vl{flex:1;display:flex;align-items:center;gap:5px;font-size:11.5px;min-width:0}
+  .pick{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ph{color:#A8B3C2}
+  .go{color:#C3CCD9;font-size:13px;margin-left:2px}
+  .unit{font-size:10.5px;color:var(--ink3);flex:none}
+
+  /* 缺项强调 */
+  .miss{background:#FFF5F5}
+  .miss .lb{color:var(--red)}
+  .miss .pick,.miss .ph{color:var(--red);font-weight:600}
+  .mark{
+    position:absolute;left:-4px;top:6px;width:15px;height:15px;border-radius:50%;
+    background:var(--red);color:#fff;font-size:10px;font-weight:800;line-height:15px;text-align:center;
+    box-shadow:0 0 0 2px #fff,0 1px 4px rgba(200,16,46,.35);
+  }
+
+  /* ---------- 屏 1：AI 草稿卡 ---------- */
+  .sheet{flex:1;min-height:0;display:flex;flex-direction:column;background:#FCFDFE;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.05)}
+  .sh-head{height:40px;display:flex;align-items:center;gap:7px;padding:0 12px;border-bottom:1px solid var(--line);flex:none}
+  .av{width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .sh-head .nm{font-size:12px;font-weight:700}
+  .sh-head .st{font-size:9.5px;color:var(--green);display:flex;align-items:center;gap:3px}
+  .sh-head .st i{width:4px;height:4px;border-radius:50%;background:var(--green);display:block}
+  .sh-body{flex:1;min-height:0;padding:10px 10px 8px;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+
+  .bub{max-width:82%;font-size:11px;line-height:1.65;padding:6px 9px;border-radius:9px}
+  .bub.me{align-self:flex-end;background:var(--red-soft);border:1px solid var(--red-line);color:#475569}
+  .bub.ai{align-self:flex-start;background:#fff;border:1px solid #EDF0F4;color:#475569}
+
+  .dcard{border:1px solid #E7ECF3;border-radius:10px;background:#fff;overflow:hidden}
+  .dc-h{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--line);background:#F9FBFD}
+  .dc-h .t{font-size:10.5px;font-weight:700;color:#334155}
+  .dc-h .n{font-size:9.5px;font-weight:700;color:var(--amber)}
+  .alert{display:flex;align-items:center;gap:6px;padding:6px 10px;background:#FFF5F5;border-bottom:1px solid #F7DCDC}
+  .alert .ic{width:14px;height:14px;border-radius:50%;background:var(--red);color:#fff;font-size:9.5px;font-weight:800;line-height:14px;text-align:center;flex:none}
+  .alert b{font-size:10.5px;color:#A50D25;display:block}
+  .alert span{font-size:9.5px;color:#B4545F}
+  .rbar{display:flex;align-items:center;gap:6px;padding:5px 9px;background:#FFFDF7;border-bottom:1px solid var(--line);font-size:9.5px;color:#8A6D3B}
+  .rbar i{width:4px;height:4px;border-radius:50%;background:var(--amber);flex:none}
+  .rbar .btn{margin-left:auto;font-size:9.5px;font-weight:700;color:#9A6B14;border:1px solid #F0DDBB;background:#fff;border-radius:4px;padding:2px 6px;white-space:nowrap}
+
+  .drow{display:grid;grid-template-columns:64px 1fr auto;align-items:center;gap:6px;padding:5px 10px;border-bottom:1px solid #F4F7FA;border-left:2px solid transparent}
+  .drow:last-child{border-bottom:none}
+  .drow .k{font-size:10.5px;color:#64748B}
+  .drow .v{font-size:10.5px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .drow .v em{font-style:normal;font-weight:400;color:var(--ink3);margin-left:3px}
+  .drow .r{font-size:9px;color:#94A3B8}
+  .drow.b{border-left-color:var(--red);background:#FFF6F6}
+  .drow.b .k{color:var(--red);font-weight:600}
+  .drow.b .v{color:var(--red)}
+  .drow.d{opacity:.66}
+  .src{font-size:8.5px;padding:1px 4px;border-radius:3px;font-weight:600;white-space:nowrap}
+  .src.f{background:#EAF1FE;color:#2563EB}
+  .src.a{background:#E8F6F0;color:#0E9F6E}
+  .src.m{background:#FEF1E6;color:#B45309}
+  .src.t{background:#F1F5F9;color:#64748B}
+
+  .seg2{display:flex;border-radius:4px;overflow:hidden;flex:none}
+  .seg2 span{font-size:9px;font-weight:600;padding:3px 6px;border:1px solid #E3E8EF;color:#64748B;background:#fff}
+  .seg2 span:first-child{border-radius:4px 0 0 4px}
+  .seg2 span:last-child{border-radius:0 4px 4px 0;border-left:0}
+  .seg2 span.on{background:var(--red);border-color:var(--red);color:#fff}
+
+  .d-foot{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line);background:#FCFDFE}
+  .btn-pri{background:var(--red);color:#fff;font-size:10.5px;font-weight:700;border-radius:5px;padding:6px 11px;border:0;white-space:nowrap}
+  .btn-sec{background:#fff;color:#475569;font-size:10.5px;font-weight:600;border-radius:5px;padding:6px 10px;border:1px solid #E3E8EF;white-space:nowrap}
+  .d-foot .tip{margin-left:auto;font-size:9px;color:var(--red);font-weight:600;text-align:right;line-height:1.4}
+
+  /* ---------- 底部操作条 ---------- */
+  .bar{flex:none;background:#fff;border-top:1px solid var(--line);padding:8px 12px;display:flex;align-items:center;gap:8px}
+  .bar .sum{font-size:9.5px;color:var(--ink3);line-height:1.45}
+  .bar .sum b{color:var(--ink);font-size:11px}
+
+  /* 来源提示 */
+  .tipbar{display:flex;align-items:center;gap:6px;background:#EAF1FE;border:1px solid #D5E2FB;border-radius:9px;padding:6px 9px;font-size:10px;color:#1E4FBF;line-height:1.5}
+  .tipbar .x{margin-left:auto;font-size:9.5px;color:#5B7FD1}
+
+  /* ---------- 屏 3：确认半屏 ---------- */
+  .maskwrap{position:relative;flex:1;min-height:0}
+  .ghost{position:absolute;inset:0;padding:8px 10px;display:flex;flex-direction:column;gap:9px}
+  .dim{position:absolute;inset:0;background:rgba(15,23,42,.34)}
+  .confirm{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:16px 16px 0 0;padding:12px 14px 14px;box-shadow:0 -10px 30px -18px rgba(15,23,42,.5)}
+  .confirm h4{margin:0 0 2px;font-size:12.5px}
+  .confirm .sub{font-size:9.5px;color:var(--ink3);margin-bottom:9px}
+  .kv{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px dashed #EEF1F5;font-size:10.5px}
+  .kv:last-of-type{border-bottom:none}
+  .kv .k{width:56px;flex:none;color:#94A3B8}
+  .kv .v{flex:1;color:var(--ink);font-weight:600;line-height:1.5}
+  .kv .v.bad{color:var(--red)}
+  .kv .v em{font-style:normal;font-weight:400;color:var(--ink3);margin-left:4px}
+  .missline{display:flex;align-items:center;gap:6px;background:#FFF5F5;border:1px solid #F7DCDC;border-radius:7px;padding:6px 8px;margin:8px 0 10px;font-size:10px;color:#A50D25}
+  .missline .ic{width:13px;height:13px;border-radius:50%;background:var(--red);color:#fff;font-size:9px;font-weight:800;line-height:13px;text-align:center;flex:none}
+  .cbar{display:flex;gap:8px}
+  .cbar .btn-pri{flex:1;text-align:center;padding:9px 0;font-size:11.5px;border-radius:7px}
+  .cbar .btn-pri[disabled]{background:#F1D4D9;color:#fff}
+  .cbar .btn-sec{flex:none;padding:9px 14px;border-radius:7px;font-size:11.5px}
+
+  /* ---------- 右侧说明 ---------- */
+  .notes{flex:1 1 100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:4px}
+  .note{background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 2px 10px rgba(15,23,42,.05)}
+  .note h3{margin:0 0 7px;font-size:12px;display:flex;align-items:center;gap:6px}
+  .note h3 .n{width:16px;height:16px;border-radius:5px;background:var(--red);color:#fff;font-size:9.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+  .note ul{margin:0;padding-left:0;list-style:none}
+  .note li{font-size:11.5px;line-height:1.85;color:#475569;padding-left:12px;position:relative}
+  .note li::before{content:"";position:absolute;left:2px;top:8px;width:3px;height:3px;border-radius:50%;background:#C9D3E0}
+  .note li b{color:var(--ink)}
+  .note code{background:#F6F8FB;border:1px solid #E8EDF3;border-radius:3px;padding:0 4px;font-size:10.5px}
+  .note table{width:100%;border-collapse:collapse;font-size:11px}
+  .note th,.note td{text-align:left;padding:5px 6px;border-bottom:1px solid #F1F5F9;vertical-align:top}
+  .note th{color:#94A3B8;font-weight:600;font-size:10.5px}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1>小程序 · AI 派单复用 + 建单页优化</h1>
+  <p>左三屏是改完的样子：<b>①</b> 助手里的原生草稿卡（不再是两列表格）　<b>②</b> 建单页接收草稿后的缺项标红与客户字段　<b>③</b> 提交前的汇总确认。<br>
+  草稿 JSON 与 Web 端同一份（<code>tasks / cargoList / assignList</code>），小程序只是换了一套渲染与落页通道。</p>
+</div>
+
+<div class="row">
+
+  <!-- ==================== 屏 1 ==================== -->
+  <div>
+    <div class="phone">
+      <div class="stat"><b>9:41</b><span>●●● ⌁ ▮</span></div>
+      <div class="nav">小御<span style="position:absolute;right:14px;font-size:13px;color:#94A3B8">✕</span></div>
+      <div class="body" style="padding:8px">
+
+        <div class="sheet">
+          <div class="sh-head">
+            <span class="av">御</span><span class="nm">小御</span>
+            <span class="st"><i></i>在线</span>
+          </div>
+          <div class="sh-body">
+            <div class="bub me">明天八点从新晋府装货，下午三点到天麟时代，拉 25 吨螺纹钢，派晋K03313D</div>
+            <div class="bub ai">草稿好了，货物档案里没有「螺纹钢」，车辆也有点对不上。</div>
+
+            <div class="dcard">
+              <div class="dc-h"><span class="t">派单草稿 · 1 个任务</span><span class="n">待补 2 项</span></div>
+
+              <div class="alert">
+                <span class="ic">!</span>
+                <div><b>还差 2 项才能建单</b><span>货物、车辆</span></div>
+              </div>
+
+              <div class="rbar">
+                <i></i><span>刚去建了档案？点这里重新对齐</span>
+                <button class="btn">↻ 刷新</button>
+              </div>
+
+              <div class="drow"><span class="k">装货地</span><span class="v">新晋府<em>装货围栏</em></span><span class="src f">围栏</span></div>
+              <div class="drow"><span class="k">卸货地</span><span class="v">天麟时代<em>卸货围栏</em></span><span class="src f">围栏</span></div>
+              <div class="drow d"><span class="k">客户</span><span class="v" style="font-weight:400;color:#94A3B8">待补充<em>可后补</em></span><span></span></div>
+              <div class="drow b"><span class="k">货物</span><span class="v">待补充<em>需要补</em></span><span class="src m">待补</span></div>
+              <div class="drow d"><span class="k">数量</span><span class="v" style="font-weight:400;color:#94A3B8">25 吨</span><span class="src t">原文</span></div>
+              <div class="drow b"><span class="k">车辆</span><span class="v">待补充<em>没对上</em></span><span class="src m">待补</span></div>
+              <div class="drow"><span class="k">司机</span><span class="v">李亚楠<em>按车辆带出</em></span><span class="src a">档案</span></div>
+              <div class="drow"><span class="k">计划装货</span><span class="v">11-27 08:00</span><span class="src t">原文</span></div>
+              <div class="drow"><span class="k">计划到达</span><span class="v">11-27 15:00</span><span class="src t">原文</span></div>
+              <div class="drow">
+                <span class="k">运输模式</span>
+                <span class="v" style="font-weight:400;color:#94A3B8">极简 · 接单→完成</span>
+                <span class="seg2"><span class="on">极简</span><span>详细</span></span>
+              </div>
+              <div class="drow d"><span class="k">运费</span><span class="v" style="font-weight:400;color:#94A3B8">未填<em>选填</em></span><span></span></div>
+            </div>
+
+            <div class="d-foot">
+              <button class="btn-pri">去建单页 →</button>
+              <button class="btn-sec">选已有</button>
+              <span class="tip">还差 货物、车辆</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="cap"><b>屏 1</b>　草稿卡原生化<br>缺项红条 + 行级标红 + 模式切换 + 刷新</div>
+  </div>
+
+  <!-- ==================== 屏 2 ==================== -->
+  <div>
+    <div class="phone">
+      <div class="stat"><b>9:41</b><span>●●● ⌁ ▮</span></div>
+      <div class="nav"><span class="back">‹</span>新建运单</div>
+      <div class="body">
+
+        <div class="tipbar">
+          <span>✦</span>
+          <span>已按 AI 草稿填好，缺 2 项已标红</span>
+          <span class="x">知道了</span>
+        </div>
+
+        <div class="fcard" style="padding:8px 12px">
+          <div class="fh" style="margin-bottom:2px">任务<span class="ln"></span><span class="fh-r">1 / 1</span></div>
+          <div class="field">
+            <span class="lb">任务名称</span>
+            <span class="vl"><span class="pick">任务1</span></span>
+          </div>
+          <div class="field">
+            <span class="lb req">客户</span>
+            <span class="vl"><span class="ph">可直接填写，不选档案也能建单</span></span>
+            <span class="go">›</span>
+          </div>
+        </div>
+
+        <div class="fcard">
+          <div class="fh">行程<span class="ln"></span></div>
+          <div class="field">
+            <span class="lb">路线</span>
+            <span class="vl"><span class="ph">从路线带过来（可选）</span></span><span class="go">›</span>
+          </div>
+          <div class="field">
+            <span class="lb req">装货地</span>
+            <span class="vl"><span class="pick">新晋府</span></span><span class="go">›</span>
+          </div>
+          <div class="field">
+            <span class="lb req">卸货地</span>
+            <span class="vl"><span class="pick">天麟时代</span></span><span class="go">›</span>
+          </div>
+          <div class="field">
+            <span class="lb">计划装货</span>
+            <span class="vl"><span class="pick">2026-11-27 08:00</span></span><span class="go">›</span>
+          </div>
+          <div class="field">
+            <span class="lb">计划到达</span>
+            <span class="vl"><span class="pick">2026-11-27 15:00</span></span><span class="go">›</span>
+          </div>
+          <div class="field" style="border-bottom:none">
+            <span class="lb">联系人</span>
+            <span class="vl"><span class="ph">装货 / 卸货联系人（选填）</span></span><span class="go">展开 ›</span>
+          </div>
+        </div>
+
+        <div class="fcard">
+          <div class="fh">货物<span class="ln"></span><span class="fh-r">本任务 1 项</span></div>
+          <div class="field miss">
+            <span class="mark">!</span>
+            <span class="lb req">货物名称</span>
+            <span class="vl"><span class="ph">待补充</span></span>
+          </div>
+          <div class="field">
+            <span class="lb">数量</span>
+            <span class="vl"><span class="pick">25</span><span class="unit">吨</span></span>
+          </div>
+          <div class="field">
+            <span class="lb">运费</span>
+            <span class="vl"><span class="ph">选填，之后也能在费用页登记</span></span>
+          </div>
+        </div>
+
+        <div class="fcard">
+          <div class="fh">派发<span class="ln"></span></div>
+          <div class="field miss">
+            <span class="mark">!</span>
+            <span class="lb req">车辆</span>
+            <span class="vl"><span class="ph">待补充</span></span><span class="go">›</span>
+          </div>
+          <div class="field" style="border-bottom:none">
+            <span class="lb">司机</span>
+            <span class="vl"><span class="pick">李亚楠</span><span class="unit">按车辆带出</span></span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="bar">
+        <div class="sum"><b>还差 2 项</b><br>货物 · 车辆</div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn-sec">存草稿</button>
+          <button class="btn-pri">提交前确认</button>
+        </div>
+      </div>
+    </div>
+    <div class="cap"><b>屏 2</b>　建单页：<b>草稿直达 + 缺项常驻标红</b><br>新增「客户」行；联系人默认折叠</div>
+  </div>
+
+  <!-- ==================== 屏 3 ==================== -->
+  <div>
+    <div class="phone">
+      <div class="stat"><b>9:41</b><span>●●● ⌁ ▮</span></div>
+      <div class="nav"><span class="back">‹</span>新建运单</div>
+      <div class="body" style="padding:0">
+        <div class="maskwrap">
+          <div class="ghost">
+            <div class="fcard">
+              <div class="fh">行程<span class="ln"></span></div>
+              <div class="field"><span class="lb req">装货地</span><span class="vl"><span class="pick">新晋府</span></span></div>
+              <div class="field" style="border-bottom:none"><span class="lb req">卸货地</span><span class="vl"><span class="pick">天麟时代</span></span></div>
+            </div>
+            <div class="fcard">
+              <div class="fh">货物<span class="ln"></span></div>
+              <div class="field miss"><span class="mark">!</span><span class="lb req">货物名称</span><span class="vl"><span class="ph">待补充</span></span></div>
+              <div class="field" style="border-bottom:none"><span class="lb">数量</span><span class="vl"><span class="pick">25</span><span class="unit">吨</span></span></div>
+            </div>
+            <div class="fcard">
+              <div class="fh">派发<span class="ln"></span></div>
+              <div class="field miss" style="border-bottom:none"><span class="mark">!</span><span class="lb req">车辆</span><span class="vl"><span class="ph">待补充</span></span></div>
+            </div>
+          </div>
+          <div class="dim"></div>
+          <div class="confirm">
+            <h4>提交前确认</h4>
+            <div class="sub">这一页不写库，确认后才发布</div>
+
+            <div class="kv"><span class="k">行程</span><span class="v">新晋府 → 天麟时代</span></div>
+            <div class="kv"><span class="k">货物</span><span class="v bad">未填 <em>必填</em></span></div>
+            <div class="kv"><span class="k">数量</span><span class="v">25 吨</span></div>
+            <div class="kv"><span class="k">承运</span><span class="v bad">未指派 <em>必填</em></span></div>
+            <div class="kv"><span class="k">时间</span><span class="v">11-27 08:00 装 → 15:00 到</span></div>
+            <div class="kv"><span class="k">节点</span><span class="v">极简 · 接单 → 完成</span></div>
+            <div class="kv"><span class="k">运费</span><span class="v" style="color:#94A3B8;font-weight:400">未填（选填，之后可登记）</span></div>
+
+            <div class="missline">
+              <span class="ic">!</span>
+              <span>还差 2 项：货物名称、承运车辆/司机</span>
+            </div>
+
+            <div class="cbar">
+              <button class="btn-sec">返回补充</button>
+              <button class="btn-pri" disabled>确认发布</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap"><b>屏 3</b>　提交前汇总<br>缺项直接点名，按钮置灰</div>
+  </div>
+
+  <!-- ==================== 说明 ==================== -->
+  <div class="notes">
+    <div class="note">
+      <h3><span class="n">A</span>为什么能直接复用</h3>
+      <ul>
+        <li>草稿 JSON 两端同构：<code>tasks[] / cargoList[] / assignList[] / transportMode</code>，小程序任务模型字段一一对得上（<code>pickupLocation→pickup</code>、<code>deliveryTime→planTime</code>）。</li>
+        <li>建单页已有 seed 通道：<code>adminCreateSeed</code> + <code>options.mode</code>。加一个 <code>mode=ai</code> 就能接草稿，不用另造一套。</li>
+        <li><code>ai-gateway</code> 的 <code>main(event)</code> 直接吃事件体，所以 <code>redraft / resolve</code> 用 <code>wx.cloud.callFunction</code> 传 <code>action</code> 即可，无需改后端。</li>
+        <li>小程序没有 SVG：图表卡继续用后端同源的 <code>table</code> 降级，草稿卡改成原生渲染（这才是重点）。</li>
+      </ul>
+    </div>
+
+    <div class="note">
+      <h3><span class="n">B</span>建单页要改的六处</h3>
+      <table>
+        <tr><th>现状</th><th>改法</th></tr>
+        <tr><td>必填项没标记，提交只弹一句 toast</td><td>字段加 <code>*</code>；提交时滚到第一个缺项并标红</td></tr>
+        <tr><td>切页 / 返回就丢填写</td><td>本地暂存，下次进入问「继续上次填写？」</td></tr>
+        <tr><td>没有客户字段（云函数也不写）</td><td>行程区加「客户」行，可手填；有档案就一起写 id</td></tr>
+        <tr><td>20+ 行字段一直铺开，找东西要滚很久</td><td>联系人/电话默认折叠成一行，点开才展</td></tr>
+        <tr><td>提交前后没有总览</td><td>底部改「提交前确认」半屏（屏 3）</td></tr>
+        <tr><td>缺项只在 toast 里说一句</td><td>底部常驻「还差 N 项 · 货物 · 车辆」，填完自动消失</td></tr>
+      </table>
+    </div>
+
+    <div class="note">
+      <h3><span class="n">C</span>三个需要你定的选项</h3>
+      <ul>
+        <li><b>草稿卡形态</b>：A 原生全量卡（如屏 1）／B 紧凑 6 行 + 展开／C 保持表格只加按钮。</li>
+        <li><b>客户字段</b>：A 只手填名字（轻，云函数加 2 个字段）／B 手填 + 从客户档案选（中）／C 不做。</li>
+        <li><b>计划里程</b>：A 继续留空／B 小程序也调高德算一次（+0.3 天，运单详情能显示里程）。</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -390,9 +390,39 @@ code, pre {
 .vp-dot::after{content:'';position:absolute;inset:4.5px;border-radius:50%;background:var(--c)}
 .vp-dot:hover{transform:scale(1.16)}
 
-.v-info{min-width:258px;background:linear-gradient(160deg,rgba(12,24,42,.98),rgba(6,12,22,.98));
+/* ============================================================
+   遥控高亮（小程序指定某台车 / 某组车时用）
+   ⚠️ 同样必须写在全局：AMap Marker 内容不在 Vue scoped 作用域内
+   ============================================================ */
+.vp-dot.dim{opacity:.22;filter:saturate(.45)}
+.vp-ring{width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;border:1.5px solid var(--c);position:relative;cursor:pointer;
+  box-shadow:0 0 0 5px rgba(51,214,255,.07)}
+.vp-ring::before{content:'';position:absolute;inset:-8px;border-radius:50%;
+  border:1px solid var(--c);opacity:.32}
+.vp-ring .vp-dot{width:22px;height:22px}
+
+.v-info{min-width:258px;max-width:330px;background:linear-gradient(160deg,rgba(12,24,42,.98),rgba(6,12,22,.98));
   border:1px solid rgba(84,144,214,.38);border-radius:4px;padding:12px 14px;color:#DCE9F9;
   font-family:'PingFang SC',-apple-system,sans-serif;box-shadow:0 14px 44px rgba(0,0,0,.62)}
+
+/* ============================================================
+   车辆卡定位（Vue 渲染，跟着车点走）
+   ------------------------------------------------------------
+   ⚠️ 不用 AMap InfoWindow：它的锚点是像素级计算，在大屏外层
+      transform:scale() 下会被缩放系数带偏，试过三次都对不上。
+   这里 left/top 由 JS 用 lngLatToContainer 算好，
+   transform 只用百分比做「上移自身高度 + 水平居中」，与缩放无关。
+   ============================================================ */
+.map-card{position:absolute;z-index:6;pointer-events:auto;
+  transform:translate(-50%,calc(-100% - 16px))}
+/* 车点靠近容器顶部 → 翻到下方开 */
+.map-card.below{transform:translate(-50%,16px)}
+/* 车点贴左右边缘 → 靠边站，避免半个身子出界 */
+.map-card.left{transform:translate(0,calc(-100% - 16px))}
+.map-card.left.below{transform:translate(0,16px)}
+.map-card.right{transform:translate(-100%,calc(-100% - 16px))}
+.map-card.right.below{transform:translate(-100%,16px)}
 .v-info .vi-hd{display:flex;align-items:center;gap:8px;margin-bottom:9px}
 .v-info .vi-plate{font-family:ui-monospace,monospace;font-size:15px;font-weight:700;color:#fff;letter-spacing:1px}
 .v-info .vi-st{font-size:10px;padding:1px 7px;border:1px solid currentColor;margin-left:auto;border-radius:2px}

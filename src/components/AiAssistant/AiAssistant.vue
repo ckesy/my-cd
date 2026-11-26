@@ -25,7 +25,15 @@
 
     <!-- ===== 抽屉面板 ===== -->
     <Transition name="ai-panel">
-    <aside v-if="open" ref="panelEl" class="ai-panel" role="dialog" aria-label="车队助手">
+    <aside v-if="open" ref="panelEl" class="ai-panel" :style="{ width: panelW + 'px' }" role="dialog" aria-label="车队助手">
+      <!-- 左边缘拖拽把手：只改宽度，不改布局；双击复位 -->
+      <div
+        class="rz-handle"
+        :class="{ on: resizing }"
+        title="拖动调整宽度 · 双击复位"
+        @mousedown.prevent="onResizeStart"
+        @dblclick="resetPanelW"
+      ></div>
       <header class="p-head">
         <div class="avatar">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -113,6 +121,9 @@
                 :key="i"
                 :card="c"
                 @navigate="onNavigate"
+                @redraft="onRedraft($event, m, i)"
+                @open-entity="onOpenEntity"
+                @create="onCreateDraft"
               />
             </template>
 
@@ -133,7 +144,23 @@
         </div>
         <!-- 自检行：连不上时把关键状态摆出来，排障不用翻控制台 -->
         <div v-if="!hasToken && diag" class="diag-line">{{ diag }}</div>
+        <!-- 语音提示行：Web 端暂不接识别，只用一行字把人引到「打字 / 去小程序」
+             口径来源：2026-11-27 设计稿「Web 只换图标、不接识别」。
+             ⚠️ 不用 ElMessage 弹窗：提示要贴着输入框，用户才知道下一步做什么。 -->
+        <div v-if="micHint" class="mic-hint">
+          <span class="bar"></span>{{ micHint }}
+        </div>
         <div class="inputbox">
+          <button
+            type="button"
+            class="mic"
+            :class="{ hot: !!micHint }"
+            :disabled="!hasToken"
+            aria-label="语音输入（小程序端可用）"
+            @click="onMicTap"
+          >
+            <span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+          </button>
           <textarea
             ref="inputEl"
             v-model="draft"
@@ -159,10 +186,12 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onErrorCaptured, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { AI_AGENT, AI_STORAGE, AI_SUGGESTIONS } from '@/config/aiConstants'
-import { askAi, getAiToken, setAiToken, setAiDevice, clearAiToken, resumeAiToken, ensureAiToken } from '@/utils/aiClient'
+import { askAi, redraftDraft, getAiToken, setAiToken, setAiDevice, clearAiToken, resumeAiToken, ensureAiToken } from '@/utils/aiClient'
 import { matchPage, looksLikeNav } from '@/utils/aiPageIndex'
+import { routeOfField, withFromAi } from '@/config/aiEntityRoutes'
+import { deriveMissing, normalizeMissing, emitAiDraft } from '@/utils/aiDraftMissing'
 import AiMessageCard from './AiMessageCard.vue'
 
 const emit = defineEmits(['toggle'])
@@ -234,7 +263,12 @@ function toggle(v) {
   emit('toggle', open.value)
   if (open.value) {
     loadTodo()
-    nextTick(() => inputEl.value && inputEl.value.focus())
+    /* ⭐ 打开就停在最新一条：v-if 渲染完才有 DOM，所以放 nextTick 里。
+       不这么做的话每次打开都回到最早那句，用户得自己滚到底。 */
+    nextTick(() => {
+      scrollBottom()
+      if (inputEl.value) inputEl.value.focus()
+    })
   }
 }
 
@@ -329,6 +363,36 @@ async function tryReconnect() {
     reconnecting.value = false
     refreshDiag()
   }
+}
+
+/* ============================================================
+   语音入口（Web 端：只做音波样式，不接识别）
+   ------------------------------------------------------------
+   口径来源：2026-11-27《小御语音输入设计稿》定稿 ——
+   小程序走微信同声传译（端上直连）；Web 端先不接 ASR，
+   等腾讯云「一句话识别」开通后再补，所以这里**没有**录音逻辑。
+   为什么要留按钮而不是删掉：将来接 ASR 不改版式，`.mic.rec` 状态类已备好。
+   ============================================================ */
+const MIC_HINT_TEXT = '语音输入在小程序端可用；这里直接打字更快'
+const MIC_HINT_MS = 3500
+const micHint = ref('')
+let micHintTimer = null
+
+/**
+ * 点音波按钮：出提示行 → 焦点交回输入框 → 3.5s 自动收起。
+ * ⚠️ 三件事缺一不可：只弹提示用户不知道改去哪；只跳焦点用户不知道为什么没反应。
+ */
+function onMicTap() {
+  if (!hasToken.value) return
+  micHint.value = MIC_HINT_TEXT
+  if (micHintTimer) clearTimeout(micHintTimer)
+  micHintTimer = setTimeout(() => {
+    micHint.value = ''
+    micHintTimer = null
+  }, MIC_HINT_MS)
+  nextTick(() => {
+    if (inputEl.value) inputEl.value.focus()
+  })
 }
 
 function onKeydown(e) {
@@ -516,6 +580,178 @@ function onNavigate(jump) {
   router.push({ path: jump.path, query }).catch(() => {})
 }
 
+/* ============================================================
+   面板宽度：可拖拽 + 本地记忆
+   ------------------------------------------------------------
+   ⚠️ 只存本地（ai_panel_w），不写 users 表 —— 宽度是设备偏好，
+      笔记本和外接屏本来就不一样，跟着浏览器走更合理。
+   ⚠️ 拖拽只改宽度，不动消息数组；SvgPlot 自带 ResizeObserver，
+      图卡会跟着重画，不需要额外通知。
+   ============================================================ */
+const PANEL_W_KEY = 'ai_panel_w'
+const PANEL_W_DEF = 412
+const panelW = ref(PANEL_W_DEF)
+const resizing = ref(false)
+let rzStartX = 0
+let rzStartW = PANEL_W_DEF
+
+const clampW = (w) => {
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1280
+  const max = Math.max(360, Math.min(720, vw - 80))
+  const n = Math.round(Number(w) || PANEL_W_DEF)
+  return Math.max(360, Math.min(n, max))
+}
+
+const loadPanelW = () => {
+  try {
+    const raw = localStorage.getItem(PANEL_W_KEY)
+    if (raw == null) return
+    const n = Number(raw)
+    if (Number.isFinite(n)) panelW.value = clampW(n)
+  } catch (e) { /* 忽略 */ }
+}
+loadPanelW()
+
+function onResizeStart(e) {
+  resizing.value = true
+  rzStartX = e.clientX
+  rzStartW = panelW.value
+  try { document.body.style.userSelect = 'none' } catch (err) { /* 忽略 */ }
+}
+
+function onResizeMove(e) {
+  if (!resizing.value) return
+  panelW.value = clampW(rzStartW - (e.clientX - rzStartX))
+}
+
+function onResizeEnd() {
+  if (!resizing.value) return
+  resizing.value = false
+  try {
+    document.body.style.userSelect = ''
+    localStorage.setItem(PANEL_W_KEY, String(panelW.value))
+  } catch (e) { /* 忽略 */ }
+}
+
+function resetPanelW() {
+  panelW.value = PANEL_W_DEF
+  try { localStorage.setItem(PANEL_W_KEY, String(PANEL_W_DEF)) } catch (e) { /* 忽略 */ }
+}
+
+/* ============================================================
+   草稿卡：刷新 / 去建档 / 去建单页
+   ============================================================ */
+
+/** 刷新草稿：不走模型，只把上次参数重跑一遍，原地替换这张卡 */
+async function onRedraft(payload, m, i) {
+  const card = m && Array.isArray(m.cards) ? m.cards[i] : null
+  if (!card || !card.params) return
+  const patch = (payload && payload.patch) || {}
+  const r = await redraftDraft({ draft: card.params, patch, sessionId: captureSession() })
+  if (!r.ok) {
+    ElMessage.warning(r.message || '刷新失败，稍后再试')
+    return
+  }
+  const next = (r.cards || []).find((c) => c && c.type === 'draft')
+  if (!next) return
+  const msg = messages.value.find((x) => x.id === m.id)
+  if (msg && Array.isArray(msg.cards)) {
+    msg.cards[i] = next
+    persist()
+    scrollBottom()
+  }
+}
+
+/**
+ * 去对应档案页新建。
+ * 优先开新标签（主窗口的对话和草稿卡原样保留）；被拦截时降级为同标签跳转，
+ * 草稿参数存 sessionStorage，回来还能恢复。
+ * ⚠️ 不要在 windowFeatures 里写 'noopener' —— 那样 window.open 一律返回 null，
+ *    会把"正常打开"误判成"被拦截"。拿到引用后手动置 opener 即可。
+ */
+function onOpenEntity(e) {
+  const def = routeOfField(e && e.key)
+  if (!def) return
+  const url = withFromAi(def.path)
+  let win = null
+  try { win = window.open(url, '_blank') } catch (err) { win = null }
+  if (!win) {
+    try {
+      sessionStorage.setItem('ai_pending_draft', JSON.stringify({ key: e.key, at: Date.now() }))
+    } catch (err) { /* 忽略 */ }
+    ElMessage.info('已跳到档案页，建完回来自动恢复草稿')
+    router.push(url).catch(() => {})
+    return
+  }
+  try { win.opener = null } catch (err) { /* 跨域时忽略 */ }
+  ElMessage.success(`已打开${def.label}档案，建完切回来点「刷新草稿」`)
+}
+
+/** 去建单页：草稿结构本来就是 cloneData，直接推过去预填 */
+let creating = false
+function onCreateDraft(card) {
+  /* 防连点：用户在抽屉里连点两次会连着跳两次（上一版就出现过） */
+  if (creating) return
+  const cloneData = card && card.draft
+  if (!cloneData) {
+    ElMessage.warning('草稿数据缺失，请重新说一遍')
+    return
+  }
+  creating = true
+  setTimeout(() => { creating = false }, 1200)
+  /* ⚠️ 不拦「没填完」：用户在页面上补比在抽屉里补顺手，
+     未填的区块到建单页会闪三次提示。只有草稿本身没有数据才拦。 */
+  /* 未填项：建单页据此闪三次 + 保持高亮 + 感叹号，直到填上。
+     两个来源合并，缺一不可：
+       ① 云函数 missing[]（level=block/confirm）—— 业务语义更准
+       ② deriveMissing(cloneData) —— 按草稿结构自己算，卡片从历史恢复时 ① 可能丢了
+     ⚠️ 必须塞进 cloneData（`_missing`）一起走 —— 只放 sessionStorage 的话，
+        用户中途刷新页面就丢了，高亮和感叹号全没了。
+     ⚠️ `_fromAi` 同理：fromAi 标记不能只靠 history.state 透传，
+        实测它偶尔读不到 → 建单页判定成「普通新建」，提示全不出现。 */
+  const miss = normalizeMissing([
+    ...(Array.isArray(card.missing) ? card.missing : [])
+      .filter((m) => m && (m.level === 'block' || m.level === 'confirm'))
+      .map((m) => m.field),
+    ...deriveMissing(cloneData),
+  ])
+  const payload = { ...cloneData, _missing: miss, _fromAi: true }
+
+  /* ⭐ 双通道传参：
+     ① history.state —— 首选，页面刷新即失效，不会污染下一次建单
+     ② sessionStorage —— 兜底。实测只走 state 会出现「点了按钮、建单页全空」
+     两条都写，建单页先读 state 再读这个。 */
+  try {
+    sessionStorage.setItem('ai_clone_data', JSON.stringify({ cloneData: payload, fromAi: true }))
+    if (miss.length) sessionStorage.setItem('ai_missing_fields', JSON.stringify(miss))
+    else sessionStorage.removeItem('ai_missing_fields')
+  } catch (e) { /* 隐私模式可能写不进去，不影响 state 通道 */ }
+
+  const target = '/waybill/create'
+  const cur = router.currentRoute.value
+  const onPage = !!(cur && cur.path === target)
+  closePanel()
+
+  /* ⭐ 已经在建单页：就地投递，不跳转、不重载。
+     同路径 push 会被判成重复导航（组件不重新挂载、onMounted 不跑），
+     以前用 location.assign 强刷绕过，会丢掉用户已填的内容。 */
+  if (onPage) {
+    if (emitAiDraft({ cloneData: payload, statedMiss: miss })) {
+      ElMessage.success('已把草稿填到当前页面')
+      return
+    }
+    /* 万一页面没接住（组件异常），退回强刷兜底，至少数据能填上 */
+    window.location.assign(target)
+    return
+  }
+
+  try {
+    router.push({ path: target, state: { cloneData: payload, fromAi: true } })
+  } catch (e) {
+    router.push(target).catch(() => {})
+  }
+}
+
 /** 统一收口：改状态 + 落本地 + 通知父级 */
 function closePanel() {
   open.value = false
@@ -570,6 +806,8 @@ function takeTokenFromUrl() {
 onMounted(async () => {
   window.addEventListener('keydown', onKeydown)
   document.addEventListener('mousedown', onDocDown, true)
+  window.addEventListener('mousemove', onResizeMove)
+  window.addEventListener('mouseup', onResizeEnd)
 
   /* ① 地址栏注入 → ② 设备凭证免密续签 → ③ 都没有才引导登录
      token 被清（换设备、清缓存、浏览器策略）时自动恢复，用户无感。 */
@@ -592,7 +830,10 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
   document.removeEventListener('mousedown', onDocDown, true)
+  window.removeEventListener('mousemove', onResizeMove)
+  window.removeEventListener('mouseup', onResizeEnd)
   if (timer) clearInterval(timer)
+  if (micHintTimer) { clearTimeout(micHintTimer); micHintTimer = null }
 })
 
 defineExpose({ toggle, open })
@@ -666,6 +907,35 @@ defineExpose({ toggle, open })
   flex-direction: column;
   z-index: 3001;
   box-shadow: -12px 0 32px -18px rgba(15, 23, 42, 0.22);
+}
+
+/* ===== 左边缘拖拽把手 =====
+   静默时完全透明（不打扰视觉），悬停/拖拽中才显形；
+   宽度由 :style 绑定的 panelW 控制，这里是热区。 */
+.rz-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  z-index: 4;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rz-handle::before {
+  content: "";
+  width: 3px;
+  height: 42px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background 0.14s ease, height 0.14s ease;
+}
+.rz-handle:hover::before,
+.rz-handle.on::before {
+  background: #c8102e;
+  height: 62px;
 }
 
 /* ===== 展开 / 收起动画 =====
@@ -918,10 +1188,53 @@ defineExpose({ toggle, open })
   gap: 6px;
   border: 1px solid var(--line2, #e3e8ef);
   border-radius: 10px;
-  padding: 7px 8px 7px 11px;
+  padding: 7px 8px 7px 6px;
   background: #fff;
 }
 .inputbox:focus-within { border-color: var(--brand-primary, #c8102e); }
+/* 音波图标（18×16，5 根圆角细柱）—— 替换原来的 🎤 emoji，
+   原因：emoji 会跳出细线图标色系，还随系统字体变形。 */
+.inputbox .mic {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color .15s, background .15s, border-color .15s;
+}
+.inputbox .mic:hover:not(:disabled) {
+  color: var(--brand-primary, #c8102e);
+  background: #fdf0f2;
+  border-color: #f5d4d9;
+}
+.inputbox .mic:disabled { opacity: .45; cursor: not-allowed; }
+.inputbox .mic .wave { display: flex; align-items: center; gap: 2px; height: 16px; }
+.inputbox .mic .wave i {
+  display: block; width: 2px; height: 5px;
+  border-radius: 2px; background: currentColor;
+}
+.inputbox .mic .wave i:nth-child(2) { height: 10px; }
+.inputbox .mic .wave i:nth-child(3) { height: 15px; }
+.inputbox .mic .wave i:nth-child(4) { height: 10px; }
+/* 录音态：Web 端接 ASR 后复用（现在不会触发，先留好状态类不改版式） */
+.inputbox .mic.rec { background: var(--brand-primary, #c8102e); border-color: var(--brand-primary, #c8102e); color: #fff; }
+.mic-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 2px 7px;
+  font-size: 11.5px;
+  color: #7c8797;
+  line-height: 1.5;
+}
+.mic-hint .bar { width: 2px; height: 11px; border-radius: 2px; background: #f5d4d9; flex: none; }
 .inputbox textarea {
   flex: 1; border: none; outline: none; resize: none;
   font-size: 12.5px; line-height: 1.5; color: var(--ink, #0f172a);
@@ -939,7 +1252,9 @@ defineExpose({ toggle, open })
 .tip { font-size: 10.5px; color: #cbd5e1; text-align: center; margin-top: 7px; }
 
 @media (max-width: 520px) {
-  .ai-panel { width: 100vw; }
+  /* 移动端一律铺满，内联宽度让位（!important 才能压过 :style） */
+  .ai-panel { width: 100vw !important; }
+  .rz-handle { display: none; }
   .ai-ball { right: 16px; bottom: 16px; }
 }
 </style>

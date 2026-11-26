@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 助手 · 增强三件套 · 设计稿</title>
+<style>
+:root{
+  --red:#C8102E; --red-2:#A50D25; --red-soft:#FDF0F2; --red-line:#F5D4D9;
+  --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8; --ink4:#CBD5E1;
+  --line:#EDF0F4; --line2:#E3E8EF; --bg:#F5F7FA; --card:#fff; --thead:#F7F9FC;
+  --blue:#2563EB; --green:#0E9F6E; --amber:#D97706; --teal:#0F9B8E; --coral:#FF7A59;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;
+  background:#F1F3F6;color:var(--ink);font-size:13px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 80px}
+.num{font-variant-numeric:tabular-nums}
+
+.doc-head{padding:44px 0 24px}
+.doc-head h1{font-size:23px;font-weight:600;letter-spacing:-.2px}
+.doc-head .sub{color:var(--ink3);font-size:13px;margin-top:8px;max-width:800px}
+.doc-head .meta{display:flex;gap:28px;margin-top:18px;flex-wrap:wrap}
+.doc-head .meta div{font-size:12px;color:var(--ink2)}
+.doc-head .meta b{display:block;font-size:11px;color:var(--ink3);font-weight:400;margin-bottom:2px;letter-spacing:.3px}
+
+.toc{
+  position:sticky;top:0;z-index:50;display:flex;gap:6px;flex-wrap:wrap;
+  padding:11px 0;background:rgba(241,243,246,.94);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line2);margin-bottom:30px;
+}
+.toc a{font-size:12px;color:var(--ink2);text-decoration:none;padding:5px 11px;border-radius:6px;border:1px solid transparent}
+.toc a:hover{background:#fff;border-color:var(--line2);color:var(--ink)}
+
+section{margin-bottom:54px;scroll-margin-top:64px}
+h2.sec{font-size:16.5px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:9px}
+h2.sec::before{content:"";width:3px;height:15px;border-radius:2px;background:var(--red)}
+p.sec-sub{font-size:12.5px;color:var(--ink3);margin-bottom:22px;max-width:860px}
+h3.sub{font-size:13px;font-weight:600;margin:24px 0 10px}
+
+.stage{display:flex;gap:24px;align-items:flex-start}
+.frame{
+  border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:#fff;
+  box-shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -16px rgba(15,23,42,.16);
+  width:460px;flex:none;
+}
+.f-head{height:46px;display:flex;align-items:center;gap:9px;padding:0 14px;border-bottom:1px solid var(--line)}
+.avatar{
+  width:24px;height:24px;border-radius:50%;background:var(--red-soft);border:1px solid var(--red-line);
+  display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--red);font-weight:700;
+}
+.f-head .nm{font-size:12.5px;font-weight:600}
+.f-head .st{font-size:11px;color:var(--ink3);margin-left:auto;display:flex;align-items:center;gap:5px}
+.f-head .st i{width:5px;height:5px;border-radius:50%;background:var(--green);display:block}
+.f-body{padding:14px 14px 0;background:#FCFDFE}
+
+.msg{display:flex;margin-bottom:12px}
+.msg.me{justify-content:flex-end}
+.bub{
+  max-width:330px;padding:9px 12px;border-radius:11px;font-size:12.5px;line-height:1.62;
+  background:#fff;border:1px solid var(--line);
+}
+.msg.me .bub{background:#FFF1F3;border-color:var(--red-line);border-bottom-right-radius:3px}
+.msg.ai .bub{border-bottom-left-radius:3px}
+
+/* 卡片通用 */
+.card{
+  border:1px solid var(--line2);border-radius:11px;overflow:hidden;background:#fff;
+  box-shadow:0 1px 2px rgba(15,23,42,.03);margin-bottom:12px;
+}
+.card .ch{
+  height:31px;display:flex;align-items:center;gap:7px;padding:0 11px;
+  background:var(--thead);border-bottom:1px solid var(--line);
+  font-size:11.5px;font-weight:600;color:var(--ink2);
+}
+.card .ch .tt{color:var(--ink);font-weight:600}
+.card .ch .rt{margin-left:auto;font-size:10.5px;font-weight:400;color:var(--ink3)}
+.card .note{
+  font-size:10.5px;color:var(--ink3);padding:6px 11px;border-top:1px solid #F7F9FC;
+  background:#FCFCFD;line-height:1.55;display:flex;gap:6px;align-items:center;
+}
+.card .note .dot{width:4px;height:4px;border-radius:50%;background:var(--ink4);flex:none}
+
+/* 图表 */
+.chart{padding:10px 11px 6px}
+.chart .kpi{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+.chart .kpi b{font-size:20px;font-weight:800;letter-spacing:-.4px}
+.chart .kpi span{font-size:11px;color:var(--ink3)}
+.chart .delta{font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;background:#FDF0F2;color:var(--red)}
+.chart .delta.down{background:#E8F5EF;color:var(--green)}
+.legend{display:flex;gap:12px;margin:6px 0 0;font-size:10px;color:var(--ink3)}
+.legend i{display:inline-block;width:8px;height:3px;border-radius:2px;margin-right:4px;vertical-align:2px}
+
+/* 草稿卡 */
+.d-row{
+  display:grid;grid-template-columns:62px 1fr auto;gap:8px;align-items:center;
+  padding:7px 11px;font-size:12px;border-left:2px solid transparent;
+}
+.d-row + .d-row{border-top:1px solid #F9FAFC}
+.d-row .k{color:var(--ink3);font-size:11.5px}
+.d-row .v{font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.d-row .v .muted{font-weight:400;color:var(--ink3);font-size:11px}
+.d-row .v.fix{color:var(--green)}
+.d-row.miss{background:#FFFDF7;border-left-color:var(--amber)}
+.d-row.miss .v{font-weight:400;color:var(--ink3)}
+.src{font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;white-space:nowrap}
+.src.doc{background:#EEF4FF;color:var(--blue)}
+.src.txt{background:#EEF2F7;color:var(--ink2)}
+.src.ask{background:#FEF4E6;color:var(--amber)}
+.src.new{background:#E8F5EF;color:var(--green)}
+.acts{display:flex;gap:5px}
+.mini{
+  font:inherit;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:5px;cursor:pointer;
+  border:1px solid var(--line2);background:#fff;color:var(--ink2);transition:.14s;
+}
+.mini:hover{border-color:var(--red-line);color:var(--red);background:var(--red-soft)}
+.mini.pri{border-color:var(--red-line);color:var(--red);background:var(--red-soft)}
+
+/* 内联下拉（模拟） */
+.inline-pick{
+  margin:2px 11px 8px 73px;border:1px solid var(--line2);border-radius:8px;background:#fff;
+  box-shadow:0 8px 20px -10px rgba(15,23,42,.18);overflow:hidden;
+}
+.inline-pick .ip-search{
+  display:flex;align-items:center;gap:6px;padding:6px 9px;border-bottom:1px solid var(--line);
+  font-size:11.5px;color:var(--ink3);
+}
+.inline-pick .ip-item{padding:6px 9px;font-size:11.5px;display:flex;align-items:center;gap:6px;cursor:pointer}
+.inline-pick .ip-item:hover{background:#F7F9FC}
+.inline-pick .ip-item b{font-weight:600}
+.inline-pick .ip-item .tag{font-size:9.5px;color:var(--ink3);background:#F1F4F8;padding:0 4px;border-radius:3px}
+.inline-pick .ip-foot{
+  padding:7px 9px;border-top:1px solid var(--line);font-size:11px;color:var(--red);
+  background:#FDFCFD;display:flex;align-items:center;gap:5px;font-weight:600;cursor:pointer;
+}
+
+/* 弹窗 */
+.modal-mask{
+  position:absolute;inset:0;background:rgba(15,23,42,.28);display:flex;align-items:center;justify-content:center;
+  border-radius:14px;
+}
+.modal{
+  width:392px;background:#fff;border-radius:10px;overflow:hidden;
+  box-shadow:0 20px 50px -20px rgba(15,23,42,.5);
+}
+.modal .mh{height:40px;display:flex;align-items:center;padding:0 13px;border-bottom:1px solid var(--line);font-size:12.5px;font-weight:600}
+.modal .mh .x{margin-left:auto;color:var(--ink3);cursor:pointer}
+.modal .mb{padding:12px 13px}
+.modal .fl{margin-bottom:10px}
+.modal .fl .lb{font-size:11px;color:var(--ink3);margin-bottom:4px}
+.modal .fl .inp{
+  height:30px;border:1px solid var(--line2);border-radius:6px;display:flex;align-items:center;
+  padding:0 9px;font-size:12px;
+}
+.modal .fl .inp.focus{border-color:var(--red);box-shadow:0 0 0 2px rgba(200,16,46,.08)}
+.modal .map{
+  height:96px;border-radius:6px;background:
+    repeating-linear-gradient(0deg,#EEF2F7 0 1px,transparent 1px 16px),
+    repeating-linear-gradient(90deg,#EEF2F7 0 1px,transparent 1px 16px),
+    #F7FAFC;
+  border:1px solid var(--line2);position:relative;display:flex;align-items:center;justify-content:center;
+}
+.modal .map .pin{
+  width:16px;height:16px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;
+  box-shadow:0 1px 5px rgba(37,99,235,.5);
+}
+.modal .map .hint{position:absolute;bottom:5px;left:7px;font-size:10px;color:var(--ink3)}
+.modal .mf{display:flex;justify-content:flex-end;gap:7px;padding:9px 13px;border-top:1px solid var(--line);background:#FCFDFE}
+.btn{
+  font:inherit;font-size:12px;font-weight:600;height:29px;padding:0 13px;border-radius:6px;
+  border:1px solid var(--line2);background:#fff;color:var(--ink2);cursor:pointer;
+}
+.btn.pri{background:var(--red);border-color:var(--red);color:#fff}
+
+/* 右侧说明 */
+.aside{flex:1;min-width:0}
+.aside .box{background:#fff;border:1px solid var(--line2);border-radius:11px;padding:14px 15px;margin-bottom:11px}
+.aside h4{font-size:12.5px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.aside h4 .n{width:16px;height:16px;border-radius:4px;background:var(--red-soft);color:var(--red);font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.aside ul{list-style:none;font-size:12px;color:var(--ink2)}
+.aside li{padding:3px 0 3px 13px;position:relative;line-height:1.62}
+.aside li::before{content:"";position:absolute;left:2px;top:10px;width:3px;height:3px;border-radius:50%;background:var(--ink4)}
+.aside li b{font-weight:600;color:var(--ink)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;background:#F4F6F9;padding:1px 5px;border-radius:4px}
+
+/* 拖拽演示 */
+.desk{
+  position:relative;height:420px;border:1px solid var(--line2);border-radius:12px;overflow:hidden;
+  background:#F8FAFC;
+}
+.desk .mini-side{
+  position:absolute;left:0;top:0;bottom:0;width:64px;background:#1F2937;
+  padding:14px 0;display:flex;flex-direction:column;align-items:center;gap:12px;
+}
+.desk .mini-side .dot{width:22px;height:22px;border-radius:6px;background:#374151}
+.desk .mini-side .dot.on{background:var(--red)}
+.desk .mini-main{position:absolute;left:64px;top:0;right:0;bottom:0;padding:16px 18px}
+.desk .mini-main .ph{height:30px;border-radius:7px;background:#fff;border:1px solid var(--line2);margin-bottom:10px}
+.desk .mini-main .prow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
+.desk .mini-main .pbox{height:56px;border-radius:8px;background:#fff;border:1px solid var(--line2)}
+.desk .mini-main .ptable{height:150px;border-radius:8px;background:#fff;border:1px solid var(--line2)}
+.desk .panel{
+  position:absolute;top:0;right:0;bottom:0;width:412px;background:#fff;
+  border-left:1px solid var(--line2);display:flex;flex-direction:column;
+  box-shadow:-12px 0 32px -18px rgba(15,23,42,.22);
+}
+.desk .panel .ph2{height:44px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 13px;font-size:12px;font-weight:600}
+.desk .panel .pb2{flex:1;padding:13px;background:#FCFDFE;font-size:11.5px;color:var(--ink3);line-height:1.7}
+.desk .panel .pb2 .bb{background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;color:var(--ink2);font-size:11.5px;margin-bottom:8px}
+.desk .handle{
+  position:absolute;top:0;bottom:0;left:0;width:9px;cursor:col-resize;z-index:5;
+  display:flex;align-items:center;justify-content:center;
+}
+.desk .handle::before{
+  content:"";width:4px;height:44px;border-radius:3px;background:#C7D0DC;transition:.14s;
+}
+.desk .handle:hover::before,.desk .handle.dragging::before{background:var(--red);height:64px;width:5px}
+.desk .wbadge{
+  position:absolute;top:11px;right:12px;background:#EEF2F7;color:var(--ink2);
+  font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:5px;transition:.16s;
+  font-variant-numeric:tabular-nums;border:1px solid var(--line2);
+}
+.desk .panel.dragging .wbadge{background:var(--red);border-color:var(--red);color:#fff}
+.desk .pb2 .bb{background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;
+  color:var(--ink2);font-size:11.5px;margin-bottom:8px;max-width:86%}
+.desk .pb2 .bb.me{background:#FFF1F3;border-color:var(--red-line);margin-left:auto;max-width:80%}
+.tips{font-size:11.5px;color:var(--ink3);margin-top:9px;display:flex;gap:14px;flex-wrap:wrap}
+.tips span{display:flex;align-items:center;gap:5px}
+
+/* 表格 */
+table.spec{width:100%;border-collapse:collapse;font-size:12px;background:#fff;border:1px solid var(--line2);border-radius:10px;overflow:hidden}
+table.spec th{text-align:left;padding:9px 12px;background:var(--thead);font-size:11px;color:var(--ink3);font-weight:600;border-bottom:1px solid var(--line2)}
+table.spec td{padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:top}
+table.spec tr:last-child td{border-bottom:0}
+table.spec td b{color:var(--ink);font-weight:600}
+
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--line2);font-size:11.5px;color:var(--ink3);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+/* ---------- 补档：刷新条 / 行内操作 / 窗口示意 ---------- */
+.refresh-bar{
+  display:flex;align-items:center;gap:7px;padding:7px 11px;border-bottom:1px solid var(--line);
+  background:#FFFDF7;font-size:10.5px;color:#8A6D3B;line-height:1.4;
+}
+.refresh-bar .pick{width:5px;height:5px;border-radius:50%;background:var(--amber);flex:none}
+.refresh-bar .rb-btn{
+  margin-left:auto;font:inherit;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:5px;
+  border:1px solid #F0DDBB;background:#fff;color:#9A6B14;cursor:pointer;display:flex;align-items:center;gap:4px;
+  white-space:nowrap;
+}
+.refresh-bar .rb-btn:hover{background:#FEF4E6;border-color:#E9CE9E}
+.row-ops{display:flex;gap:4px}
+.mini.link{border-color:transparent;background:transparent;color:var(--ink3);text-decoration:underline;text-underline-offset:2px}
+.mini.link:hover{color:var(--red);background:transparent;border-color:transparent}
+
+.win-row{display:flex;gap:12px;align-items:flex-start}
+.win{
+  border:1px solid var(--line2);border-radius:10px;overflow:hidden;background:#fff;
+  box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 20px -14px rgba(15,23,42,.2);
+}
+.win .wbar{
+  height:26px;display:flex;align-items:center;gap:5px;padding:0 9px;background:#EEF2F7;
+  font-size:9.5px;color:#7C8AA0;border-bottom:1px solid var(--line2);
+}
+.win .wbar .dots{display:flex;gap:3px;margin-right:4px}
+.win .wbar .dots i{width:5px;height:5px;border-radius:50%;background:#C9D3E0;display:block}
+.win .wbar .url{
+  flex:1;background:#fff;border:1px solid var(--line2);border-radius:4px;height:15px;
+  display:flex;align-items:center;padding:0 6px;font-size:9px;color:#94A3B8;overflow:hidden;
+  white-space:nowrap;text-overflow:ellipsis;
+}
+.win .wbody{padding:0}
+.win.dim{opacity:.62;filter:saturate(.7)}
+.win.main{width:272px}
+.win.new{width:300px}
+
+.mini-page{padding:11px 12px;font-size:10.5px;color:var(--ink2)}
+.mini-page .tp{
+  display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;background:#F6F8FB;
+  font-size:10px;color:var(--ink2);margin-bottom:9px;
+}
+.mini-page .tp .back{margin-left:auto;font-size:9.5px;color:var(--red);font-weight:700}
+.mini-page .fldline{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.mini-page .fldline .lb{width:44px;color:var(--ink3);font-size:9.5px;flex:none}
+.mini-page .fldline .ip{
+  flex:1;height:20px;border:1px solid var(--line2);border-radius:4px;display:flex;align-items:center;
+  padding:0 6px;font-size:10px;background:#fff;
+}
+.mini-page .fldline .ip.f{border-color:#CFE8DB;background:#FBFEFC}
+.mini-page .mbtn{
+  display:inline-flex;align-items:center;justify-content:center;height:22px;padding:0 9px;border-radius:5px;
+  background:var(--red);color:#fff;font-size:9.5px;font-weight:700;margin-top:3px;
+}
+
+.ba{display:flex;gap:10px;align-items:stretch}
+.ba .arrow{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  font-size:10px;color:var(--ink3);padding:0 2px;flex:none;
+}
+.ba .arrow .a{font-size:15px;color:var(--red);line-height:1}
+.d-row.tight{padding:6px 11px}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="doc-head">
+    <h1>AI 助手 · 增强三件套</h1>
+    <div class="sub">
+      ① 会画图（环比 / 对比 / 构成，模型只选图型不碰数字）·
+      ② 缺档能就地补（选已有 / 新建，补完自动重算草稿）·
+      ③ 面板宽度可拖拽并记住。
+      三项都落在现有抽屉里，不新增页面。
+    </div>
+    <div class="meta">
+      <div><b>版本</b>v1.0 · 2026-11-26</div>
+      <div><b>图表底座</b>svgCharts.js（禁 echarts）</div>
+      <div><b>补档方式</b>跳转新建 + 手动刷新</div>
+      <div><b>记忆键</b>ai_panel_w</div>
+    </div>
+  </div>
+
+  <nav class="toc">
+    <a href="#chart">01 会画图</a>
+    <a href="#fix">02 补档与刷新</a>
+    <a href="#resize">03 拖拽宽度</a>
+    <a href="#contract">04 接口与改动</a>
+  </nav>
+
+  <!-- ================= 01 图表 ================= -->
+  <section id="chart">
+    <h2 class="sec">会画图 · 模型选图型，程序给数据</h2>
+    <p class="sec-sub">
+      用户说「看下这个月能耗环比」「哪几台车最费电」「费用都花在哪了」，助手回一张图卡。
+      <b>图里的每个数字都来自工具返回值</b>——模型只决定「画哪种图、用哪份结果」，不参与任何计算，也不会自己编一组数。
+    </p>
+
+    <div class="stage">
+      <div class="frame">
+        <div class="f-head"><div class="avatar">御</div><div class="nm">小御</div><div class="st"><i></i>在线</div></div>
+        <div class="f-body">
+
+          <div class="msg me"><div class="bub">看下这个月能耗，跟上周比怎么样</div></div>
+          <div class="msg ai"><div class="bub">这个月百公里 58.4 度，比上周降了 4.2%。周三那台车拉高了平均。</div></div>
+
+          <!-- 图卡 1：折线 -->
+          <div class="card">
+            <div class="ch">
+              <span class="tt">百公里电耗 · 近 7 天</span>
+              <span class="rt">11-20 ~ 11-26</span>
+            </div>
+            <div class="chart">
+              <div class="kpi">
+                <b class="num">58.4</b><span>度 / 百公里</span>
+                <span class="delta down">↓ 4.2%</span>
+              </div>
+              <svg viewBox="0 0 400 150" style="width:100%;height:auto;display:block">
+                <!-- 网格 -->
+                <g stroke="#EDF1F5" stroke-width="1">
+                  <line x1="38" y1="20" x2="392" y2="20"/>
+                  <line x1="38" y1="52" x2="392" y2="52"/>
+                  <line x1="38" y1="84" x2="392" y2="84"/>
+                  <line x1="38" y1="116" x2="392" y2="116"/>
+                </g>
+                <!-- ±2 带宽 -->
+                <path d="M38 60 L96 55 L154 62 L212 50 L270 57 L328 46 L386 49"
+                      fill="none" stroke="#0F9B8E" stroke-opacity=".12" stroke-width="14" stroke-linecap="round"/>
+                <!-- 折线 -->
+                <path d="M38 60 L96 55 L154 62 L212 50 L270 57 L328 46 L386 49"
+                      fill="none" stroke="#0F9B8E" stroke-width="2" stroke-linejoin="round"/>
+                <!-- 数据点 -->
+                <g fill="#fff" stroke="#0F9B8E" stroke-width="2">
+                  <circle cx="38" cy="60" r="3"/><circle cx="96" cy="55" r="3"/>
+                  <circle cx="154" cy="62" r="3"/><circle cx="212" cy="50" r="3"/>
+                  <circle cx="270" cy="57" r="3"/><circle cx="328" cy="46" r="3"/>
+                  <circle cx="386" cy="49" r="3.6"/>
+                </g>
+                <!-- 轴标 -->
+                <g font-size="9" fill="#94A3B8">
+                  <text x="34" y="23" text-anchor="end">64</text>
+                  <text x="34" y="55" text-anchor="end">60</text>
+                  <text x="34" y="87" text-anchor="end">56</text>
+                  <text x="34" y="119" text-anchor="end">52</text>
+                  <text x="38" y="136" text-anchor="middle">11-20</text>
+                  <text x="154" y="136" text-anchor="middle">11-22</text>
+                  <text x="270" y="136" text-anchor="middle">11-24</text>
+                  <text x="386" y="136" text-anchor="middle">11-26</text>
+                </g>
+                <!-- 标注 -->
+                <text x="330" y="38" font-size="9.5" fill="#0F9B8E" font-weight="700" text-anchor="middle">今天 58.4</text>
+              </svg>
+              <div class="legend">
+                <span><i style="background:#0F9B8E"></i>百公里电耗</span>
+                <span><i style="background:#0F9B8E;opacity:.16;height:7px"></i>±2 常规波动带</span>
+              </div>
+            </div>
+            <div class="note"><span class="dot"></span>数据来自每日凌晨同步，最新至 11-26；口径 = 耗电量 ÷ 里程 × 100</div>
+          </div>
+
+          <!-- 图卡 2：横条 -->
+          <div class="card">
+            <div class="ch"><span class="tt">最费电的 5 台车 · 本月</span><span class="rt">共 38 台有数据</span></div>
+            <div class="chart">
+              <svg viewBox="0 0 400 132" style="width:100%;height:auto;display:block">
+                <g font-size="10">
+                  <!-- row 1 -->
+                  <text x="72" y="14" text-anchor="end" fill="#475569">川A89802</text>
+                  <rect x="80" y="4" width="270" height="13" rx="3" fill="#F2F8F6"/>
+                  <rect x="80" y="4" width="248" height="13" rx="3" fill="#C8102E"/>
+                  <text x="396" y="14" text-anchor="end" fill="#475569">72.6</text>
+                  <!-- row 2 -->
+                  <text x="72" y="39" text-anchor="end" fill="#475569">苏A89803</text>
+                  <rect x="80" y="29" width="270" height="13" rx="3" fill="#F2F8F6"/>
+                  <rect x="80" y="29" width="205" height="13" rx="3" fill="#FF7A59"/>
+                  <text x="396" y="39" text-anchor="end" fill="#475569">65.1</text>
+                  <!-- row 3 -->
+                  <text x="72" y="64" text-anchor="end" fill="#475569">川A12345</text>
+                  <rect x="80" y="54" width="270" height="13" rx="3" fill="#F2F8F6"/>
+                  <rect x="80" y="54" width="176" height="13" rx="3" fill="#F5B544"/>
+                  <text x="396" y="64" text-anchor="end" fill="#475569">61.8</text>
+                  <!-- row 4 -->
+                  <text x="72" y="89" text-anchor="end" fill="#475569">苏A77771</text>
+                  <rect x="80" y="79" width="270" height="13" rx="3" fill="#F2F8F6"/>
+                  <rect x="80" y="79" width="140" height="13" rx="3" fill="#39BDA9"/>
+                  <text x="396" y="89" text-anchor="end" fill="#475569">58.2</text>
+                  <!-- row 5 -->
+                  <text x="72" y="114" text-anchor="end" fill="#475569">川A55502</text>
+                  <rect x="80" y="104" width="270" height="13" rx="3" fill="#F2F8F6"/>
+                  <rect x="80" y="104" width="118" height="13" rx="3" fill="#9FDED4"/>
+                  <text x="396" y="114" text-anchor="end" fill="#475569">55.9</text>
+                </g>
+              </svg>
+              <div class="legend"><span>数值为百公里电耗（度），车队均值 54.1</span></div>
+            </div>
+            <div class="note"><span class="dot"></span>按百公里电耗降序，只列前 5 台</div>
+          </div>
+
+          <!-- 图卡 3：环图 -->
+          <div class="card">
+            <div class="ch"><span class="tt">本月费用构成</span><span class="rt">合计 ¥486,200</span></div>
+            <div class="chart" style="display:flex;align-items:center;gap:12px">
+              <svg viewBox="0 0 110 110" style="width:104px;height:104px;flex:none">
+                <circle cx="55" cy="55" r="40" fill="none" stroke="#EEF2F7" stroke-width="15"/>
+                <!-- 支出 62% -->
+                <circle cx="55" cy="55" r="40" fill="none" stroke="#C8102E" stroke-width="15"
+                        stroke-dasharray="155.8 251.3" stroke-dashoffset="0"
+                        transform="rotate(-90 55 55)" stroke-linecap="butt"/>
+                <!-- 补贴 18% -->
+                <circle cx="55" cy="55" r="40" fill="none" stroke="#3EA8D6" stroke-width="15"
+                        stroke-dasharray="45.2 251.3" stroke-dashoffset="-155.8"
+                        transform="rotate(-90 55 55)"/>
+                <!-- 借款 12% -->
+                <circle cx="55" cy="55" r="40" fill="none" stroke="#F5B544" stroke-width="15"
+                        stroke-dasharray="30.2 251.3" stroke-dashoffset="-201"
+                        transform="rotate(-90 55 55)"/>
+                <!-- 违章 8% -->
+                <circle cx="55" cy="55" r="40" fill="none" stroke="#8B7CC8" stroke-width="15"
+                        stroke-dasharray="20.1 251.3" stroke-dashoffset="-231.2"
+                        transform="rotate(-90 55 55)"/>
+                <text x="55" y="53" text-anchor="middle" font-size="14" font-weight="800" fill="#0F172A">48.6</text>
+                <text x="55" y="66" text-anchor="middle" font-size="9" fill="#94A3B8">万元</text>
+              </svg>
+              <div style="flex:1;font-size:11.5px;line-height:1.9">
+                <div><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#C8102E;margin-right:6px"></span>支出 <b class="num">¥301,400</b> <span style="color:#94A3B8">62%</span></div>
+                <div><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#3EA8D6;margin-right:6px"></span>补贴 <b class="num">¥87,500</b> <span style="color:#94A3B8">18%</span></div>
+                <div><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#F5B544;margin-right:6px"></span>借款 <b class="num">¥58,300</b> <span style="color:#94A3B8">12%</span></div>
+                <div><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#8B7CC8;margin-right:6px"></span>违章 <b class="num">¥39,000</b> <span style="color:#94A3B8">8%</span></div>
+              </div>
+            </div>
+            <div class="note"><span class="dot"></span>费用只有四类，没有过路费 / 加油费这类细分科目</div>
+          </div>
+
+        </div>
+        <div class="f-head" style="border-top:1px solid var(--line);border-bottom:0;height:44px">
+          <span style="font-size:11.5px;color:var(--ink3)">再问：「周三哪台车拉高的」</span>
+        </div>
+      </div>
+
+      <div class="aside">
+        <div class="box">
+          <h4><span class="n">1</span>模型只做两件事</h4>
+          <ul>
+            <li>选<b>图型</b>：折线（趋势）/ 横条（排名）/ 环图（构成）/ 柱线组合（双指标）。</li>
+            <li>指定<b>用哪份结果</b>：<code>{ source: 'q_energy', ... }</code>。</li>
+            <li>它<b>不传任何数值</b>—— schema 里就没有 data 字段，想编也编不进去。</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="n">2</span>为什么不用 echarts</h4>
+          <ul>
+            <li>项目既有铁律：图表统一用 <code>svgCharts.js</code> 手写 SVG，与报表页同一套视觉。</li>
+            <li>零依赖、能跟着面板宽度用 <code>ResizeObserver</code> 重绘（拖宽时自动适配）。</li>
+            <li>小程序端没有 DOM，降级成「表格 + 一句话结论」，不硬画。</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="n">3</span>图卡必须带的三样</h4>
+          <ul>
+            <li><b>时间范围</b>：右上角，避免"这是哪天的数据"。</li>
+            <li><b>口径/来源</b>：底部一行小字，如「耗电量 ÷ 里程 × 100」。</li>
+            <li><b>异常标注</b>：峰值点打标签，不用让人自己找。</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="n">4</span>什么时候不画图</h4>
+          <ul>
+            <li>只有 1~2 个数（「昨天花了多少」）→ 直接文字，画图反而累。</li>
+            <li>类别超过 12 个 → 只画 Top 10 + 「其余」。 </li>
+            <li>时间跨度不足 3 个点 → 退回表格。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 02 补档 ================= -->
+  <section id="fix">
+    <h2 class="sec">补档 · 跳过去建，回来点刷新</h2>
+    <p class="sec-sub">
+      草稿里每一个实体字段都能补：<b>能从已有里选就选，「新建」一律跳到对应页面</b>。
+      围栏要地图选点、货物要设计价规则、车辆要填证件 —— 这些塞进 412px 的抽屉里只会更难用。
+      建完切回来点一下「刷新草稿」，助手把这些名字重新对一遍，能匹配上的自动变绿。
+    </p>
+
+    <div class="stage">
+      <div class="frame">
+        <div class="f-head"><div class="avatar">御</div><div class="nm">小御</div><div class="st"><i></i>在线</div></div>
+        <div class="f-body">
+
+          <div class="msg me"><div class="bub">明天派苏A89802 从青白江仓库到青羊工业园，25 吨螺纹钢，客户是蜀通物流</div></div>
+          <div class="msg ai"><div class="bub">三样对不上：卸货围栏、货物、客户。可以选已有的，没有就去建，建完回来说一声。</div></div>
+
+          <div class="card">
+            <div class="ch">
+              <span class="tt">派单草稿 · 1 个任务</span>
+              <span class="rt" style="color:#D97706;font-weight:600">待补 3 项</span>
+            </div>
+
+            <div class="refresh-bar">
+              <span class="pick"></span>
+              <span>刚去新建了档案？建完点这里重新对齐</span>
+              <button class="rb-btn">↻ 刷新草稿</button>
+            </div>
+
+            <div class="d-row tight">
+              <div class="k">装货地</div><div class="v">青白江仓库</div>
+              <div class="row-ops"><button class="mini link">改</button></div>
+            </div>
+            <div class="d-row tight miss">
+              <div class="k">卸货地</div><div class="v">青羊工业园 <span class="muted">无此围栏</span></div>
+              <div class="row-ops"><button class="mini">选已有</button><button class="mini pri">新建</button></div>
+            </div>
+            <div class="d-row tight miss">
+              <div class="k">货物</div><div class="v">螺纹钢 <span class="muted">档案里没有</span></div>
+              <div class="row-ops"><button class="mini">选已有</button><button class="mini pri">新建</button></div>
+            </div>
+            <div class="d-row tight miss">
+              <div class="k">客户</div><div class="v">蜀通物流 <span class="muted">档案里没有</span></div>
+              <div class="row-ops"><button class="mini">选已有</button><button class="mini pri">新建</button></div>
+            </div>
+            <div class="d-row tight">
+              <div class="k">车辆</div><div class="v">苏A89802 <span class="muted">6 轴</span></div>
+              <div class="row-ops"><button class="mini link">改</button></div>
+            </div>
+            <div class="d-row tight">
+              <div class="k">司机</div><div class="v">康其中 <span class="muted">随车</span></div>
+              <div class="row-ops"><button class="mini link">改</button></div>
+            </div>
+            <div class="d-row tight">
+              <div class="k">路线</div><div class="v" style="color:#94A3B8;font-weight:400">未指定 <span class="muted">可选</span></div>
+              <div class="row-ops"><button class="mini">新建</button></div>
+            </div>
+            <div class="d-row tight">
+              <div class="k">计划发车</div><div class="v num">11-27 08:00</div>
+              <div class="row-ops"><button class="mini link">改</button></div>
+            </div>
+
+            <div class="note"><span class="dot"></span>卸货地、货物、客户是必填（或影响归档），补齐后按钮才可用</div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="aside">
+        <div class="box">
+          <h4><span class="n">A</span>两类字段，两种补法</h4>
+          <ul>
+            <li><b>主数据</b>（围栏 / 路线 / 车辆 / 司机 / 客户 / 货物）：先给候选下拉，没有就跳转新建。</li>
+            <li><b>普通字段</b>（数量 / 计划时间 / 运费）：就地改，输入框在行内展开。</li>
+            <li>已填的字段也留「改」，允许换车换围栏，不只是补空。</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="n">B</span>为什么跳转而不弹窗</h4>
+          <ul>
+            <li>围栏要在地图上拖半径、货物要配计价规则、车辆要录证件 —— 抽屉宽度装不下。</li>
+            <li>跳过去用的是<b>完整页面和原有校验</b>，不会出现「助手建的数据和档案页建的不一样」。</li>
+            <li>代价是多一步回来点刷新，换来的是数据规范一致。</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="n">C</span>新建的东西落到哪张表</h4>
+          <ul>
+            <li>围栏 → <code>ele_fences</code>　路线 → <code>routes</code></li>
+            <li>车辆 → <code>vehicles</code>　司机 → <code>drivers</code></li>
+            <li>客户 → <code>customer_archives</code>（不是 <code>customers</code>）</li>
+            <li>货物 → <code>cargo_archives</code> + <code>cargo_rules</code>（计价）</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="sub">点「新建」：开新标签，助手原样留着；建完切回来点刷新</h3>
+    <div class="stage">
+      <div class="win-row" style="flex:none">
+        <div class="win main dim">
+          <div class="wbar"><span class="dots"><i></i><i></i><i></i></span><span class="url">车队管理系统 / 运单</span></div>
+          <div class="wbody" style="padding:10px 11px">
+            <div style="font-size:10px;color:#94A3B8;margin-bottom:7px">助手抽屉（原样保留，不打断）</div>
+            <div style="background:#FFF1F3;border:1px solid #F5D4D9;border-radius:7px;padding:6px 8px;font-size:10px;color:#475569;margin-left:26px">派苏A89802 到青羊工业园，25 吨螺纹钢</div>
+            <div style="background:#fff;border:1px solid #EDF0F4;border-radius:7px;padding:6px 8px;font-size:10px;color:#475569;margin-top:6px;max-width:88%">三样对不上：卸货围栏、货物、客户</div>
+            <div style="border:1px solid #E3E8EF;border-radius:7px;margin-top:7px;overflow:hidden">
+              <div style="height:20px;background:#F7F9FC;border-bottom:1px solid #EDF0F4;display:flex;align-items:center;padding:0 7px;font-size:9px;color:#94A3B8">派单草稿</div>
+              <div style="padding:5px 7px;font-size:9px;color:#94A3B8">卸货地 <span style="color:#D97706">待补</span></div>
+              <div style="padding:5px 7px;font-size:9px;color:#94A3B8;border-top:1px solid #F7F9FC">货物 <span style="color:#D97706">待补</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="win new">
+          <div class="wbar"><span class="dots"><i></i><i></i><i></i></span><span class="url">…/archive/cargo</span></div>
+          <div class="wbody">
+            <div class="mini-page">
+              <div class="tp">← 返回助手继续 · 建完记得刷新 <span class="back">刷新</span></div>
+              <div class="fldline"><span class="lb">名称</span><span class="ip f">螺纹钢</span></div>
+              <div class="fldline"><span class="lb">单位</span><span class="ip f">吨</span></div>
+              <div class="fldline"><span class="lb">计价</span><span class="ip">按吨 · 含税 3200</span></div>
+              <div class="fldline"><span class="lb">备注</span><span class="ip" style="color:#94A3B8">选填</span></div>
+              <div class="mbtn">保存</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="aside">
+        <div class="box">
+          <h4><span class="n">D</span>为什么开新标签而不是跳走</h4>
+          <ul>
+            <li>跳走会销毁对话和草稿卡，回来得重说一遍 —— 那才是真割裂。</li>
+            <li>新标签里建完，切回来助手<b>一个字都没变</b>，只是数据旧了，点刷新即可。</li>
+            <li>被弹窗拦截时降级为同标签跳转，草稿暂存 <code>sessionStorage</code>，返回后自动恢复。</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="n">E</span>路由对照</h4>
+          <ul>
+            <li>围栏 <code>/ele-fence/setting</code>　路线 <code>/route/manage</code></li>
+            <li>车辆 <code>/archive/vehicle</code>　司机 <code>/archive/driver</code></li>
+            <li>客户 <code>/archive/customer</code>　货物 <code>/archive/cargo</code></li>
+            <li>页面顶部给一条「返回助手 · 建完记得刷新」轻提示（<code>?from=ai</code> 触发）。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="sub">回来点「刷新草稿」：三个字段一次对齐</h3>
+    <div class="stage">
+      <div class="ba">
+        <div class="card" style="width:214px;margin:0">
+          <div class="ch" style="height:26px;font-size:10.5px"><span class="tt">刷新前</span><span class="rt">待补 3</span></div>
+          <div class="d-row tight" style="font-size:10.5px"><div class="k" style="width:40px">卸货地</div><div class="v" style="font-weight:400;color:#94A3B8">未匹配</div></div>
+          <div class="d-row tight" style="font-size:10.5px"><div class="k" style="width:40px">货物</div><div class="v" style="font-weight:400;color:#94A3B8">未建档</div></div>
+          <div class="d-row tight" style="font-size:10.5px"><div class="k" style="width:40px">客户</div><div class="v" style="font-weight:400;color:#94A3B8">未建档</div></div>
+        </div>
+        <div class="arrow"><span class="a">→</span><span>↻ 刷新</span></div>
+        <div class="card" style="width:244px;margin:0">
+          <div class="ch" style="height:26px;font-size:10.5px"><span class="tt">刷新后</span><span class="rt" style="color:#0E9F6E;font-weight:600">可发布</span></div>
+          <div class="d-row tight" style="font-size:10.5px">
+            <div class="k" style="width:40px">卸货地</div>
+            <div class="v" style="font-weight:600;color:#0E9F6E;font-size:10.5px">青羊工业园 <span class="src new">刚创建</span></div>
+          </div>
+          <div class="d-row tight" style="font-size:10.5px">
+            <div class="k" style="width:40px">货物</div>
+            <div class="v" style="font-weight:600;color:#0E9F6E;font-size:10.5px">螺纹钢 <span class="src new">已建档</span></div>
+          </div>
+          <div class="d-row tight" style="font-size:10.5px">
+            <div class="k" style="width:40px">客户</div>
+            <div class="v" style="font-weight:600;color:#0E9F6E;font-size:10.5px">蜀通物流 <span class="src new">已建档</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="aside">
+        <div class="box">
+          <h4><span class="n">F</span>刷新到底做了什么</h4>
+          <ul>
+            <li>拿着草稿里的<b>原始文字</b>（青羊工业园 / 螺纹钢 / 蜀通物流）重新跑一遍实体对齐。</li>
+            <li>匹配上就换成档案值并标「刚创建」；仍没有就保持待补，不会假装成功。</li>
+            <li>走 <code>action:'redraft'</code>，<b>不进模型</b>，约 200ms，不扣配额。</li>
+            <li>已完成的手工修改（比如数量改成 30 吨）全部保留。</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="n">G</span>客户 / 货物必须落档案</h4>
+          <ul>
+            <li>运单只存 <code>customer_archive_id + name</code>、货物存 <code>cargo_name</code> + 计价规则，所以档案必须先存在。</li>
+            <li>这就是「新建后要同步到客户档案 / 货物档案」的落点 —— 不在运单里临时存个字符串了事。</li>
+            <li>只填名字没建档 → 草稿标待补，不放行。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 03 拖拽 ================= -->
+  <section id="resize">
+    <h2 class="sec">面板宽度可拖拽并记住</h2>
+    <p class="sec-sub">
+      现在是固定 412px。改成拖左边缘调宽（360 ~ 720），松手即存，重开浏览器 / 下次登录自动恢复。
+      图卡会跟着宽度自动重绘（<code>ResizeObserver</code> 已在 <code>SvgPlot</code> 里）。
+      <b>下面这个是真的能拖的</b>，试试左边缘。
+    </p>
+
+    <div class="desk" id="desk">
+      <div class="mini-side">
+        <div class="dot on"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+      <div class="mini-main">
+        <div class="ph"></div>
+        <div class="prow"><div class="pbox"></div><div class="pbox"></div><div class="pbox"></div><div class="pbox"></div></div>
+        <div class="ptable"></div>
+      </div>
+      <div class="panel" id="panel">
+        <div class="handle" id="handle" title="拖动调整宽度 · 双击复位"></div>
+        <div class="wbadge" id="wbadge">412px</div>
+        <div class="ph2"><span class="avatar" style="width:20px;height:20px;font-size:10px">御</span>小御</div>
+        <div class="pb2">
+          <div class="bb me">看下这个月能耗，跟上周比怎么样</div>
+          <div class="bb">这个月百公里 58.4 度，比上周降了 4.2%。</div>
+          <div style="font-size:10.5px;color:#94A3B8;margin-top:10px">
+            拖宽到 600 以上时，表格列不用横向滚动、图卡也能显示完整图例。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tips">
+      <span>↔ 左侧 9px 热区，鼠标变 <code>col-resize</code></span>
+      <span>📏 范围 360 ~ 720px</span>
+      <span>💾 <code>localStorage.ai_panel_w</code></span>
+      <span>👆 双击把手复位 412</span>
+    </div>
+
+    <div class="rules3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px">
+      <div class="card" style="margin:0">
+        <div class="ch"><span class="tt">边界怎么定</span></div>
+        <div style="padding:10px 12px;font-size:11.5px;color:var(--ink2);line-height:1.7">
+          下限 360：再窄表格就压扁了。<br>
+          上限 720：超过这个宽度正文行长过长，反而难读。<br>
+          窗口本身小于 760 时，上限自动降到 <code>100vw - 80px</code>。
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="ch"><span class="tt">拖拽时的性能</span></div>
+        <div style="padding:10px 12px;font-size:11.5px;color:var(--ink2);line-height:1.7">
+          拖拽只改 CSS 变量，不触发 Vue 重渲染；<br>
+          松手后才 <code>localStorage.setItem</code>；<br>
+          图卡用 <code>requestAnimationFrame</code> 节流重绘。
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="ch"><span class="tt">记忆在哪</span></div>
+        <div style="padding:10px 12px;font-size:11.5px;color:var(--ink2);line-height:1.7">
+          只存本地，不写 <code>users</code> 表 —— 宽度是设备偏好（笔记本和外接屏本来就不一样），跟着浏览器走更合理。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 04 接口与改动 ================= -->
+  <section id="contract">
+    <h2 class="sec">接口与改动面</h2>
+    <p class="sec-sub">三项都只动 AI 模块，不碰业务页面（除档案页加一个 query 触发）。</p>
+
+    <table class="spec">
+      <thead>
+        <tr><th style="width:130px">项</th><th style="width:200px">接口 / 文件</th><th>改动</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>图表</b></td>
+          <td><code>render_chart</code>（新工具）<br><code>AiMessageCard.vue</code></td>
+          <td>
+            工具入参只有 <code>chartType</code> + <code>source</code>（用哪份工具结果）+ <code>title</code>，<b>没有数值字段</b>；
+            服务端从本轮 <code>toolResults</code> 取数据组装 <code>chart</code> 卡；前端用 <code>SvgPlot</code> + <code>svgCharts</code> 画。
+          </td>
+        </tr>
+        <tr>
+          <td><b>补档</b></td>
+          <td><code>AiMessageCard.vue</code><br><code>aiClient.js</code>（redraft）<br>6 个档案页（仅加返回提示）</td>
+          <td>
+            实体字段行加「选已有 / 新建」；新建一律 <code>window.open</code> 打开对应页面（带 <code>?from=ai</code>）；
+            回来后点「↻ 刷新草稿」，走 <code>action:'redraft'</code> 重新对齐并重算，<b>全程不进模型</b>。
+          </td>
+        </tr>
+        <tr>
+          <td><b>拖拽</b></td>
+          <td><code>AiAssistant.vue</code></td>
+          <td>
+            <code>.ai-panel</code> 宽度改 <code>var(--ai-panel-w)</code>；加 9px 左把手 + <code>mousedown/mousemove</code>；
+            <code>localStorage.ai_panel_w</code> 读写；双击复位。
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="foot">
+    <span>AI 助手增强三件套 v1.0 · 2026-11-26 · 供评审</span>
+    <span>配套：AI助手增强_图表_补档_拖拽_实施清单_2026-11-26.md</span>
+  </div>
+</div>
+
+<script>
+/* ---- 拖拽演示：真的能拖 ---- */
+(function () {
+  const desk = document.getElementById('desk')
+  const panel = document.getElementById('panel')
+  const handle = document.getElementById('handle')
+  const badge = document.getElementById('wbadge')
+  const MIN = 360, MAX = 720, DEF = 412
+
+  const deskW = () => desk.getBoundingClientRect().width
+  const clamp = (w) => Math.max(MIN, Math.min(MAX, w, deskW() - 80))
+  const apply = (w) => {
+    panel.style.width = w + 'px'
+    badge.textContent = Math.round(w) + 'px'
+  }
+  apply(DEF)
+
+  let dragging = false, startX = 0, startW = DEF
+
+  handle.addEventListener('mousedown', (e) => {
+    dragging = true
+    startX = e.clientX
+    startW = panel.getBoundingClientRect().width
+    handle.classList.add('dragging')
+    panel.classList.add('dragging')
+    e.preventDefault()
+  })
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return
+    apply(clamp(startW - (e.clientX - startX)))
+  })
+
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return
+    dragging = false
+    handle.classList.remove('dragging')
+    panel.classList.remove('dragging')
+  })
+
+  handle.addEventListener('dblclick', () => apply(DEF))
+})()
+</script>
+</body>
+</html>

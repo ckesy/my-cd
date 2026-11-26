@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AI 助手里「派单草稿」卡片 · 三版重设计（Web）</title>
+<style>
+  :root{
+    --red:#C8102E; --red-dark:#A50D25; --red-soft:#FDF0F2; --red-line:#F5D4D9;
+    --blue:#2563EB; --blue-2:#1D4ED8; --blue-soft:#EFF4FF; --blue-line:#D8E3FB;
+    --green:#0E9F6E; --green-2:#0B7F58; --green-soft:#EDF9F4; --green-line:#CDEBDD;
+    --amber:#D97706; --amber-soft:#FFF8ED; --amber-line:#F5E0BE;
+    --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8; --ink4:#C3CCD9;
+    --line:#E6EBF2; --line2:#F1F5F9; --bg:#F4F6FA; --card:#fff;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{
+    margin:0;padding:24px 24px 40px;background:#E9ECF2;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;
+    font-variant-numeric:tabular-nums;
+  }
+  .doc{max-width:1380px;margin:0 auto 20px}
+  .doc h1{font-size:18px;margin:0 0 8px}
+  .doc p{margin:0;font-size:12.5px;line-height:1.8;color:#5B6879}
+  .doc b{color:var(--ink)}
+  .doc .sw{display:inline-flex;align-items:center;gap:5px;margin-left:4px}
+  .doc .sw i{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+  .row{display:flex;gap:20px;max-width:1380px;margin:0 auto;align-items:flex-start;flex-wrap:wrap}
+
+  /* ---------- 抽屉面板模拟 ---------- */
+  .panel{
+    width:412px;flex:none;height:640px;background:#fff;border-radius:12px;overflow:hidden;
+    display:flex;flex-direction:column;
+    box-shadow:0 18px 42px -26px rgba(15,23,42,.55),0 0 0 1px #DDE3EC;
+  }
+  .p-top{
+    height:44px;flex:none;display:flex;align-items:center;gap:8px;padding:0 13px;
+    border-bottom:1px solid var(--line);background:#fff;
+  }
+  .p-top .av{width:24px;height:24px;border-radius:50%;background:var(--red);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+  .p-top .nm{font-size:12.5px;font-weight:700}
+  .p-top .st{font-size:10px;color:var(--green);display:flex;align-items:center;gap:3px}
+  .p-top .st i{width:4px;height:4px;border-radius:50%;background:var(--green);display:block}
+  .p-top .x{margin-left:auto;color:#B9C4D2;font-size:13px}
+  .p-body{flex:1;min-height:0;background:#FCFDFE;padding:11px 12px;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+
+  .bub{max-width:84%;font-size:11.5px;line-height:1.65;padding:7px 10px;border-radius:9px}
+  .bub.me{align-self:flex-end;background:var(--red-soft);border:1px solid var(--red-line);color:#475569}
+  .bub.ai{align-self:flex-start;background:#fff;border:1px solid #EDF0F4;color:#475569}
+
+  .dcard{border:1px solid #E7ECF3;border-radius:11px;background:#fff;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+  .dc-h{display:flex;align-items:center;gap:7px;padding:8px 11px;border-bottom:1px solid var(--line);background:#FBFCFE}
+  .dc-h .t{font-size:11.5px;font-weight:700}
+  .dc-h .m{font-size:10px;color:var(--ink3)}
+  .dc-h .r{margin-left:auto;display:flex;align-items:center;gap:7px}
+  .dc-h .sync{font-size:10px;font-weight:600;color:#8A6D3B;background:#FFFDF7;border:1px solid #F0DDBB;border-radius:5px;padding:2px 6px;white-space:nowrap}
+  .pill{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap}
+  .pill.warn{background:#FEF1E6;color:#B45309}
+  .pill.bad{background:var(--red-soft);color:var(--red)}
+  .pill.ok{background:var(--green-soft);color:var(--green-2)}
+
+  /* ============ 版 A：双列网格 ============ */
+  .route{border-bottom:1px solid var(--line)}
+  .rp{display:flex;align-items:center;gap:7px;padding:7px 11px 7px 0;position:relative}
+  .rp + .rp{border-top:1px dashed #EEF2F7}
+  .rp .bar{width:3px;height:20px;border-radius:0 2px 2px 0;flex:none}
+  .rp .bar.b{background:var(--blue)} .rp .bar.g{background:var(--green)}
+  .rp .tag{width:14px;font-size:9.5px;font-weight:800;flex:none}
+  .rp .tag.b{color:var(--blue)} .rp .tag.g{color:var(--green)}
+  .rp .nm{font-size:12.5px;font-weight:700;letter-spacing:.2px}
+  .rp .tm{margin-left:auto;font-size:10.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .rp .mid{position:absolute;left:16px;bottom:-1px;width:1px;height:100%;background:transparent}
+
+  .cells{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .cell{padding:7px 11px;border-bottom:1px solid #F4F7FB;position:relative;min-height:44px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+  .cell:nth-child(odd){border-right:1px solid #F4F7FB}
+  .cell .k{font-size:9.5px;color:var(--ink3);letter-spacing:.3px}
+  .cell .v{font-size:11.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cell .v.ph{color:var(--ink4);font-weight:500}
+  .cell.bad{background:#FFF7F7}
+  .cell.bad .k{color:#C2606B}
+  .cell.bad .v{color:var(--red)}
+  .cell .act{
+    position:absolute;right:8px;top:50%;transform:translateY(-50%);
+    font-size:9.5px;font-weight:700;color:var(--red);background:#fff;border:1px solid var(--red-line);
+    border-radius:4px;padding:1px 5px;
+  }
+  .cell .segsm{display:flex;margin-top:1px}
+  .cell .segsm span{font-size:9px;font-weight:700;padding:2px 6px;border:1px solid var(--line);color:var(--ink3);background:#fff}
+  .cell .segsm span:first-child{border-radius:4px 0 0 4px}
+  .cell .segsm span:last-child{border-radius:0 4px 4px 0;border-left:0}
+  .cell .segsm span.on{background:var(--red);border-color:var(--red);color:#fff}
+
+  /* ============ 版 B：缺项优先 ============ */
+  .alert2{display:flex;align-items:center;gap:8px;padding:9px 11px;background:linear-gradient(180deg,#FFF6F6,#FFF9F9);border-bottom:1px solid #F7DCDC}
+  .alert2 .ic{width:16px;height:16px;border-radius:50%;background:var(--red);color:#fff;font-size:10px;font-weight:800;line-height:16px;text-align:center;flex:none}
+  .alert2 .tx{font-size:11px;color:#A50D25;font-weight:700}
+  .alert2 .tx em{font-style:normal;font-weight:400;color:#B4545F;margin-left:4px}
+  .alert2 .go{margin-left:auto;font-size:10px;font-weight:700;color:#fff;background:var(--red);border-radius:5px;padding:3px 8px;white-space:nowrap}
+
+  .line1{display:flex;align-items:center;gap:6px;padding:9px 11px;border-bottom:1px solid var(--line);font-size:11.5px}
+  .line1 .dot{width:7px;height:7px;border-radius:50%;flex:none}
+  .line1 .dot.b{background:var(--blue)} .line1 .dot.g{background:var(--green)}
+  .line1 .nm{font-weight:700;font-size:12px}
+  .line1 .ar{color:#C3CCD9;font-size:10px;margin:0 1px}
+  .line1 .tm{margin-left:auto;font-size:10px;color:var(--ink3);white-space:nowrap}
+
+  .grp{border-bottom:1px solid var(--line)}
+  .grp-h{display:flex;align-items:center;gap:6px;padding:7px 11px;font-size:10px;font-weight:700;color:#64748B;background:#FBFCFE;cursor:default}
+  .grp-h .ln{flex:1;height:1px;background:var(--line2)}
+  .grp-h .n{color:var(--ink3);font-weight:600}
+  .grp-h .chev{color:var(--ink4);font-size:9px}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;padding:2px 11px 10px}
+  .chipx{font-size:10px;color:#475569;background:#F7F9FC;border:1px solid var(--line);border-radius:5px;padding:2px 6px;white-space:nowrap}
+  .chipx b{font-weight:700;color:var(--ink)}
+  .chipx.bad{background:#FFF6F6;border-color:#F7DCDC;color:var(--red)}
+  .chipx.bad b{color:var(--red)}
+  .chipx.act{background:#fff;border-style:dashed;color:var(--red);border-color:#F0C6CD;font-weight:700}
+
+  /* ============ 版 C：紧凑列表 ============ */
+  .lrow{display:flex;align-items:center;gap:8px;padding:0 11px;height:33px;border-bottom:1px solid #F4F7FB;position:relative;font-size:11.5px}
+  .lrow:last-child{border-bottom:none}
+  .lrow .k{width:58px;flex:none;color:var(--ink3);font-size:10.5px}
+  .lrow .v{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lrow .v.ph{color:var(--ink4);font-weight:500}
+  .lrow .v em{font-style:normal;font-weight:400;color:var(--ink3);font-size:10px;margin-left:5px}
+  .lrow.bad{background:#FFF7F7}
+  .lrow.bad::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:2px;background:var(--red);border-radius:0 2px 2px 0}
+  .lrow.bad .k{color:#C2606B}
+  .lrow.bad .v{color:var(--red)}
+  .lrow .ops{display:flex;gap:4px;flex:none;opacity:0;transition:.14s}
+  .lrow:hover .ops{opacity:1}
+  .lrow .ops.always{opacity:1}
+  .mini{font-size:9.5px;font-weight:600;color:#64748B;background:#fff;border:1px solid var(--line);border-radius:4px;padding:2px 6px;white-space:nowrap}
+  .mini.pri{color:var(--red);border-color:var(--red-line);background:#FFF8F9;font-weight:700}
+  .lrow .segsm{display:flex;flex:none}
+  .lrow .segsm span{font-size:9px;font-weight:700;padding:2px 6px;border:1px solid var(--line);color:var(--ink3);background:#fff}
+  .lrow .segsm span:first-child{border-radius:4px 0 0 4px}
+  .lrow .segsm span:last-child{border-radius:0 4px 4px 0;border-left:0}
+  .lrow .segsm span.on{background:var(--red);border-color:var(--red);color:#fff}
+  .ghr{display:flex;align-items:center;gap:6px;padding:6px 11px;font-size:9.5px;font-weight:700;color:#94A3B8;background:#FBFCFE;border-bottom:1px solid var(--line)}
+  .ghr .ln{flex:1;height:1px;background:var(--line2)}
+
+  /* 底部 */
+  .dc-foot{display:flex;align-items:center;gap:8px;padding:9px 11px;background:#FCFDFE;border-top:1px solid var(--line)}
+  .btn{font-size:11.5px;font-weight:700;border-radius:6px;padding:6px 12px;border:1px solid var(--line);background:#fff;color:var(--ink2);cursor:default;white-space:nowrap}
+  .btn.pri{background:var(--red);border-color:var(--red);color:#fff}
+  .dc-foot .sp{margin-left:auto;font-size:10px;color:var(--red);font-weight:700;text-align:right;line-height:1.4}
+  .dc-foot .sp.ok{color:var(--green-2)}
+
+  /* 说明 */
+  .vtag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;color:#fff;background:var(--ink);border-radius:5px;padding:3px 8px}
+  .vtag.rec{background:var(--red)}
+  .vhead{display:flex;align-items:baseline;gap:9px;margin-bottom:8px;flex-wrap:wrap}
+  .vhead h2{font-size:14px;margin:0}
+  .vhead .s{font-size:11px;color:#7C8AA0}
+  .vnote{width:412px;flex:none;background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-top:10px}
+  .vnote h3{font-size:11px;margin:0 0 5px;color:var(--green-2)}
+  .vnote h3.bad{color:#B45309}
+  .vnote p{margin:0 0 8px;font-size:11.5px;line-height:1.75;color:#475569}
+  .vnote p:last-child{margin-bottom:0}
+  .vnote b{color:var(--ink)}
+  .col{display:flex;flex-direction:column;gap:0}
+</style>
+</head>
+<body>
+
+<div class="doc">
+  <h1>「派单草稿」卡片 · Web 三版重设计</h1>
+  <p>
+    现状问题：12 行等高纵向排列 → 卡片占满整屏、每行都有「改 / 新建」按钮 → 按钮比信息多、看不出哪里真的缺。
+    新方案统一三条原则：<b>装/卸货地做成行程色块</b><span class="sw"><i style="background:#2563EB"></i>装货</span><span class="sw"><i style="background:#0E9F6E"></i>卸货</span>、
+    <b>缺项独立成条并在原位标红</b>、<b>次要操作只在需要时出现</b>（悬停或仅缺项行常驻）。
+    抽屉宽度仍按 412px 设计。
+  </p>
+</div>
+
+<div class="row">
+
+  <!-- ==================== 版 A ==================== -->
+  <div class="col">
+    <div class="vhead">
+      <span class="vtag rec">版 A</span>
+      <h2>行程块 + 双列网格</h2>
+      <span class="s">推荐 · 信息全且一屏放得下</span>
+    </div>
+
+    <div class="panel">
+      <div class="p-top">
+        <span class="av">御</span><span class="nm">小御</span>
+        <span class="st"><i></i>在线</span>
+        <span class="x">✕</span>
+      </div>
+      <div class="p-body">
+        <div class="bub me">明天八点从新晋府装货，晚上七点到天麟时代，派李亚楠的车</div>
+        <div class="bub ai">草稿好了。货物还没定，李亚楠名下有两台车，你选一台。</div>
+
+        <div class="dcard">
+          <div class="dc-h">
+            <span class="t">派单草稿</span><span class="m">1 个任务</span>
+            <span class="r">
+              <span class="sync">↻ 重新对齐</span>
+              <span class="pill bad">缺 1 项</span>
+            </span>
+          </div>
+
+          <!-- 行程 -->
+          <div class="route">
+            <div class="rp">
+              <span class="bar b"></span><span class="tag b">装</span>
+              <span class="nm">新晋府</span>
+              <span class="tm">11-27 08:00</span>
+            </div>
+            <div class="rp">
+              <span class="bar g"></span><span class="tag g">卸</span>
+              <span class="nm">天麟时代</span>
+              <span class="tm">11-27 19:00</span>
+            </div>
+          </div>
+
+          <!-- 双列 -->
+          <div class="cells">
+            <div class="cell bad">
+              <span class="k">货物</span><span class="v">待补充</span>
+              <span class="act">补 ›</span>
+            </div>
+            <div class="cell"><span class="k">数量</span><span class="v ph">未填</span></div>
+
+            <div class="cell"><span class="k">车辆</span><span class="v">2 台可选</span><span class="act">选 ›</span></div>
+            <div class="cell"><span class="k">司机</span><span class="v">李亚楠</span></div>
+
+            <div class="cell"><span class="k">客户</span><span class="v ph">可后补</span></div>
+            <div class="cell"><span class="k">路线</span><span class="v ph">可后补</span></div>
+
+            <div class="cell"><span class="k">运费</span><span class="v ph">选填</span></div>
+            <div class="cell">
+              <span class="k">运输模式</span>
+              <span class="v" style="margin-bottom:1px">详细</span>
+              <span class="segsm"><span>极简</span><span class="on">详细</span></span>
+            </div>
+          </div>
+
+          <div class="dc-foot">
+            <button class="btn pri">去建单页确认 →</button>
+            <span class="sp">还差 货物<br><span style="font-weight:600;color:#B4545F">去建单页补</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="vnote">
+      <h3>好在哪</h3>
+      <p>12 行压成 <b>2 行行程 + 4 行网格</b>，高度从约 640px 降到 330px，一屏能同时看到草稿和输入框。装卸货用蓝/绿色条区分，扫一眼就知道哪头是哪头。</p>
+      <p><b>缺项处理</b>：货物那格整格淡红 + 右上角「补 ›」，其余格不加噪。</p>
+      <p><b>操作收敛</b>：只有真正要动手的格子才常驻按钮（货物「补」、车辆「选」），其余字段想改点格子本身即可。</p>
+    </div>
+  </div>
+
+  <!-- ==================== 版 B ==================== -->
+  <div class="col">
+    <div class="vhead">
+      <span class="vtag">版 B</span>
+      <h2>缺项优先 · 已填折叠</h2>
+      <span class="s">行动导向</span>
+    </div>
+
+    <div class="panel">
+      <div class="p-top">
+        <span class="av">御</span><span class="nm">小御</span>
+        <span class="st"><i></i>在线</span>
+        <span class="x">✕</span>
+      </div>
+      <div class="p-body">
+        <div class="bub me">明天八点从新晋府装货，晚上七点到天麟时代，派李亚楠的车</div>
+        <div class="bub ai">草稿好了。货物还没定，李亚楠名下有两台车，你选一台。</div>
+
+        <div class="dcard">
+          <div class="dc-h">
+            <span class="t">派单草稿</span><span class="m">1 个任务</span>
+            <span class="r"><span class="sync">↻ 重新对齐</span></span>
+          </div>
+
+          <div class="alert2">
+            <span class="ic">!</span>
+            <span class="tx">还差 1 项才能建单<em>货物</em></span>
+            <span class="go">现在补</span>
+          </div>
+
+          <div class="line1">
+            <span class="dot b"></span><span class="nm">新晋府</span>
+            <span class="ar">→</span>
+            <span class="dot g"></span><span class="nm">天麟时代</span>
+            <span class="tm">11-27 08:00 → 19:00</span>
+          </div>
+
+          <div class="grp">
+            <div class="grp-h">要补<span class="ln"></span><span class="n">1 项</span></div>
+            <div class="chips">
+              <span class="chipx bad"><b>货物</b> 未定</span>
+              <span class="chipx act">选已有</span>
+              <span class="chipx act">新建货物</span>
+            </div>
+          </div>
+
+          <div class="grp">
+            <div class="grp-h">要选<span class="ln"></span><span class="n">李亚楠名下 2 台</span></div>
+            <div class="chips">
+              <span class="chipx">晋K03115D <b>6 轴</b></span>
+              <span class="chipx">晋K05851D <b>4 轴</b></span>
+              <span class="chipx act">去车库选</span>
+            </div>
+          </div>
+
+          <div class="grp">
+            <div class="grp-h">可后补<span class="ln"></span><span class="n">2 项</span></div>
+            <div class="chips">
+              <span class="chipx">客户</span><span class="chipx">路线</span>
+            </div>
+          </div>
+
+          <div class="grp" style="border-bottom:none">
+            <div class="grp-h">已填<span class="ln"></span><span class="n">6 项</span><span class="chev">▸</span></div>
+            <div class="chips">
+              <span class="chipx">司机 <b>李亚楠</b></span>
+              <span class="chipx">数量 <b>25 吨</b></span>
+              <span class="chipx">模式 <b>详细</b></span>
+            </div>
+          </div>
+
+          <div class="dc-foot">
+            <button class="btn pri">去建单页确认 →</button>
+            <span class="sp">还差 货物</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="vnote">
+      <h3>好在哪</h3>
+      <p>把「要你决定的事」顶到最上面：红条 → <b>要补 / 要选 / 可后补</b> 三组 chips → 已填折叠。适合用户只关心「还差什么、下一步点哪」的场景，卡片高度可压到 300px。</p>
+      <h3 class="bad" style="margin-top:10px">代价</h3>
+      <p>已填内容被折叠，核对时要点开；chips 形态不适合放长值（如「车 晋K03115D、晋K05851D」）。<b>适合确认型场景，不适合逐项核对。</b></p>
+    </div>
+  </div>
+
+  <!-- ==================== 版 C ==================== -->
+  <div class="col">
+    <div class="vhead">
+      <span class="vtag">版 C</span>
+      <h2>紧凑列表 · 悬停出操作</h2>
+      <span class="s">改动最小、最稳</span>
+    </div>
+
+    <div class="panel">
+      <div class="p-top">
+        <span class="av">御</span><span class="nm">小御</span>
+        <span class="st"><i></i>在线</span>
+        <span class="x">✕</span>
+      </div>
+      <div class="p-body">
+        <div class="bub me">明天八点从新晋府装货，晚上七点到天麟时代，派李亚楠的车</div>
+        <div class="bub ai">草稿好了。货物还没定，李亚楠名下有两台车，你选一台。</div>
+
+        <div class="dcard">
+          <div class="dc-h">
+            <span class="t">派单草稿</span><span class="m">1 个任务</span>
+            <span class="r">
+              <span class="sync">↻ 重新对齐</span>
+              <span class="pill bad">缺 1 项</span>
+            </span>
+          </div>
+
+          <div class="ghr">行程<span class="ln"></span></div>
+          <div class="lrow">
+            <span class="k">装货地</span>
+            <span class="v">新晋府<em>11-27 08:00</em></span>
+            <span class="ops"><span class="mini">改</span></span>
+          </div>
+          <div class="lrow">
+            <span class="k">卸货地</span>
+            <span class="v">天麟时代<em>11-27 19:00</em></span>
+            <span class="ops"><span class="mini">改</span></span>
+          </div>
+
+          <div class="ghr">货物与承运<span class="ln"></span></div>
+          <div class="lrow bad">
+            <span class="k">货物</span>
+            <span class="v">待补充</span>
+            <span class="ops always"><span class="mini">选已有</span><span class="mini pri">新建</span></span>
+          </div>
+          <div class="lrow">
+            <span class="k">数量</span><span class="v ph">未填</span>
+            <span class="ops"><span class="mini">改</span></span>
+          </div>
+          <div class="lrow">
+            <span class="k">车辆</span><span class="v">2 台可选</span>
+            <span class="ops always"><span class="mini pri">选车</span></span>
+          </div>
+          <div class="lrow"><span class="k">司机</span><span class="v">李亚楠</span>
+            <span class="ops"><span class="mini">改</span></span>
+          </div>
+
+          <div class="ghr">其余<span class="ln"></span></div>
+          <div class="lrow"><span class="k">客户</span><span class="v ph">可后补</span><span class="ops"><span class="mini">填</span></span></div>
+          <div class="lrow"><span class="k">运费</span><span class="v ph">选填</span><span class="ops"><span class="mini">填</span></span></div>
+          <div class="lrow">
+            <span class="k">运输模式</span><span class="v">详细</span>
+            <span class="segsm"><span>极简</span><span class="on">详细</span></span>
+          </div>
+
+          <div class="dc-foot">
+            <button class="btn pri">去建单页确认 →</button>
+            <span class="sp">还差 货物</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="vnote">
+      <h3>好在哪</h3>
+      <p>保留原来的字段顺序和阅读习惯，但行高压到 <b>33px</b>、去掉重复的「新建」按钮（悬停才出现），缺失行只有一条红色竖线 + 红字，克制。</p>
+      <p>分组标题（行程 / 货物与承运 / 其余）让 12 行有了结构，视觉上不再是“一长条”。</p>
+      <h3 class="bad" style="margin-top:10px">代价</h3>
+      <p>悬停才出按钮，触屏 / 触控板用户不容易发现；且没有行程色块，「装卸货」的对比感最弱。</p>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

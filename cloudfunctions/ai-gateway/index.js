@@ -16,11 +16,13 @@
  * 环境变量：DEEPSEEK_API_KEY / DEEPSEEK_BASE_URL / AI_MODEL
  */
 
-const { CODE, TABLE, TOOLS, LIMITS } = require('./constants')
+const { CODE, TABLE, TOOLS, LIMITS, permHit } = require('./constants')
 const { dbSelect, dbInsert, dbPatch, enc, isMissingTable } = require('./db')
 const { BizError, validateArgs, sanitize, checkQuota } = require('./guard')
 const { runTool } = require('./tools')
 const { chat, parseArgs, trimMessages } = require('./llm')
+const { pickPatch } = require('./match')
+const { handleScreen } = require('./screen')
 
 /* ============================================================
    System prompt（⚠️ 上线后冻结：任何字符改动都会让 prompt 缓存失效）
@@ -54,7 +56,28 @@ const SYSTEM_PROMPT = `你是东风车队管理系统的助手，名字叫小御
 - 费用只有「支出 / 补贴 / 借款 / 违章」四类，没有过路费、加油费这类细分科目；用户问细分科目时，说明只能按四类统计。
 - 问「每个月 / 逐月 / 按月 / 各月」的费用时，调用 q_fee 并传 groupBy="month"，**一次查完**；不要按月拆成多次调用。
 - 常驻任务：一个组号为一单，后续趟次由司机端接单产生。
-- 待审批判定以系统待办接口为准，不得自行推断。`
+- 待审批判定以系统待办接口为准，不得自行推断。
+- 「待办」有三类，别混：
+  ① 「要审批的 / 待我审核 / 费用待审」→ q_todo(kind='fee_approval')
+  ② 「哪些单还没派车 / 待派单 / 司机拒单要重派」→ q_todo(kind='waybill_assign')
+  ③ 「哪些在等司机接单 / 常驻接一趟」→ q_todo(kind='recurring_accept')
+  问「我有什么待办」时三类都要查一遍再汇总，不要只查费用。
+  这三类**不要**用 q_waybill 代替 —— q_waybill 是查具体运单，不是"我的待办"。
+- 用户说「画图 / 画个图 / 趋势 / 对比 / 排行 / 占比 / 分布 / 哪几台最…」时：先查数据，**再调 render_chart 出图**；已经有结果就直接画，不要重复查询。
+- 派单时间要拆成两个参数：pickupTime = 计划装货（司机到场装货）、deliveryTime = 计划到达（承诺送达）。
+  「明天八点装货，下午三点到」→ pickupTime 当天 08:00、deliveryTime 当天 15:00。
+  用户只给了一个时间就只填那一个，另一个**留空**（建单页可补），绝不自己编一个。
+- 运输模式默认「极简」；用户明确说「要装车/发车/到达这些节点」「要拍照打卡」才用「详细」。
+- 运费**不是必填**：用户没提就不要追问、不要编，也不要因此判定草稿不能建单。
+- 说「档案里没有某某」之前先看工具的返回：
+  只有 missing 的 sub/note 是「档案里没有」或「没匹配到」时才建议建档；
+  如果返回里带「查询失败 / 可重试」或 warnings，那是查询出错，请让用户点「重新对齐」重试，
+  **不要**让用户去新建档案 —— 档案往往本来就有，误导用户建重复档比查不到更糟。
+- 只有用户明确说「投到大屏 / 在大屏上看 / 切到大屏」时才调 screen_dispatch；
+  单纯问车在哪、跑得怎么样，用 q_vehicle，不要投屏。
+- 投屏的车牌必须已经对齐：先用 q_vehicle 确认，**绝不**把用户原话当车牌直接传。
+- screen_dispatch 返回 ok:false（如大屏离线、没有费用大屏权限）时，如实说明原因，
+  绝不改口说「已投屏」—— 用户会走到会议室发现屏幕没动。`
 
 /* ============================================================
    上下文构建
@@ -164,13 +187,32 @@ async function buildContext(account) {
   /* 能耗表没有 owner_account，用 energyScope（customer_id / 机构名）收口 */
   const energyScope = await resolveEnergyScope(u, kind, tenant)
 
+  /* ⭐ 子账号的机构：org_id 有值才查（主账号为空 = 看全部）。
+     ⚠️ drivers 表的 org_id 大量为 NULL（历史数据只写了 org 名），
+        只按 org_id 隔离会把整张司机表滤成 0 行 —— 用户会看到「档案里没有这个司机」。
+        所以这里把机构名和层级也带上，隔离条件用「org_id 或 org 名」二者命中。 */
+  const orgId = u.org_id !== null && u.org_id !== undefined && u.org_id !== '' ? String(u.org_id) : ''
+  let orgName = ''
+  let orgLevel = 0
+  if (orgId) {
+    try {
+      const orgs = await dbSelect('organizations', `select=name,level&id=eq.${enc(orgId)}&limit=1`)
+      orgName = String((orgs[0] && orgs[0].name) || '').trim()
+      orgLevel = Number((orgs[0] && orgs[0].level) || 0)
+    } catch (e) {
+      console.warn('[ai-gateway] 读取机构信息失败，按无机构收口:', e && e.message)
+    }
+  }
+
   return {
     account: String(u.account),
     userId: u.id,
     name: u.name || '',
     phone: u.phone || '',
-    /* ⭐ 子账号的机构 id：车辆/司机档案按 org_id 收口时要用（主账号为空=看全部） */
-    orgId: u.org_id !== null && u.org_id !== undefined && u.org_id !== '' ? String(u.org_id) : '',
+    /* ⭐ 子账号的机构 id：车辆/司机档案隔离用（主账号为空=看全部） */
+    orgId,
+    orgName,
+    orgLevel,
     kind,
     tenant,
     perms,
@@ -236,7 +278,9 @@ async function resolveEnergyScope(u, kind, tenant) {
 
 /** 按「权限 + 数据范围」算可用工具：不满足的工具**根本不进 tools 数组** */
 function availableTools(ctx) {
-  const has = (key) => ctx.perms.includes('*') || ctx.perms.includes(key)
+  /* ⚠️ 不能按字面比对：老角色的 client 里只有 operation / fee_stats 这类老 key，
+     字面比较会让「明明有权限」的账号拿不到工具（2026-11-26 能耗查不了的起因）。 */
+  const has = (key) => permHit(ctx.perms, key)
   return Object.entries(TOOLS)
     .filter(([, def]) => {
       if (def.perm && !has(def.perm)) return false
@@ -303,7 +347,7 @@ const TOOL_SCHEMAS = {
     type: 'function',
     function: {
       name: 'q_todo',
-      description: '查询当前账号待处理的审批与待办，返回可跳转的入口。审批动作必须在页面完成。',
+      description: '查询当前账号的待办。kind: fee_approval=待我审批的费用；waybill_assign=需要派车/重新指派的运单；recurring_accept=等司机接单的常驻趟次。审批动作必须在页面完成。',
       parameters: {
         type: 'object',
         properties: {
@@ -375,6 +419,142 @@ const TOOL_SCHEMAS = {
       },
     },
   },
+  /* ⭐ 2026-11-26 派单：实体对齐。模型不知道库里有哪些车牌/围栏名，
+     不先查就让它"填"必然瞎编，所以这一步必须由工具完成。 */
+  resolve_entity: {
+    type: 'function',
+    function: {
+      name: 'resolve_entity',
+      description:
+        '把用户口语化的名称对齐到系统实体，返回候选（最多 5 个）。'
+        + '派单前遇到「张师傅」「苏A1234」「青白江仓库」「蜀通物流」这类称呼时先调用它。'
+        + '命中 1 个可继续；0 个或多于 1 个必须向用户确认，不得自行选择。',
+      parameters: {
+        type: 'object',
+        properties: {
+          kind: {
+            type: 'string',
+            enum: ['vehicle', 'driver', 'fence', 'customer', 'cargo', 'route'],
+            description: 'vehicle=车辆 driver=司机 fence=围栏 customer=客户档案 cargo=货物档案 route=路线',
+          },
+          text: { type: 'string', description: '用户原话里的名称，如「康其中」「苏A898」' },
+        },
+        required: ['kind', 'text'],
+      },
+    },
+  },
+  /* 派单草稿：只生成不写库。 */
+  draft_waybill: {
+    type: 'function',
+    function: {
+      name: 'draft_waybill',
+      description:
+        '根据用户已说明的信息生成运单草稿（**只生成草稿，绝不写库**）。'
+        + '会返回缺什么、有没有冲突、是否疑似重复。'
+        + '客户与货物必须是档案里已存在的；对不上时会提示先去建档。'
+        + '用户说「派一趟 / 建个单 / 安排车」时用它。',
+      parameters: {
+        type: 'object',
+        properties: {
+          pickup: { type: 'string', description: '装货地，围栏名或地址原文' },
+          delivery: { type: 'string', description: '卸货地' },
+          customerName: { type: 'string', description: '客户名称原文（可选）' },
+          vehiclePlate: { type: 'string', description: '车牌原文' },
+          driverName: { type: 'string', description: '司机姓名原文' },
+          routeName: { type: 'string', description: '路线名（可选）' },
+          cargoName: { type: 'string', description: '货物名原文' },
+          quantity: { type: 'number', minimum: 0, description: '数量，可不填' },
+          unit: { type: 'string', description: '吨 / 方 / 件，不填取货物档案的单位' },
+          /* 两个时间分开：装货时间 ≠ 到达时间，合成一个会丢信息 */
+          pickupTime: {
+            type: 'string',
+            description: '计划装货时间（司机到场装货），ISO8601，如 2026-11-27T08:00:00+08:00；'
+              + '用户只说「明天装货」就把日期+时间都算出来，只说日期则取当天 08:00',
+          },
+          deliveryTime: {
+            type: 'string',
+            description: '计划到达时间（承诺送达），ISO8601；'
+              + '用户说「明天八点装、下午三点到」时分别填两个参数，不要合并',
+          },
+          transportMode: { type: 'string', enum: ['极简', '详细'] },
+        },
+        required: [],
+      },
+    },
+  },
+  /* 图表：参数里**没有数值字段**，想编也编不进去 */
+  render_chart: {
+    type: 'function',
+    function: {
+      name: 'render_chart',
+      description:
+        '把本次对话里**已经查到的数据**画成图。只能引用本轮执行过的工具结果，不能自带数字。'
+        + '用户说「画个图 / 环比 / 对比 / 趋势 / 排行 / 占比」且已查过对应数据时使用。'
+        + '数据点少于 3 个时不要画，直接说结论。',
+      parameters: {
+        type: 'object',
+        properties: {
+          chartType: {
+            type: 'string',
+            enum: ['trend', 'rank', 'share', 'compare'],
+            description: 'trend=趋势 rank=排行 share=构成 compare=环比',
+          },
+          source: {
+            type: 'string',
+            enum: ['q_energy', 'q_fee', 'q_waybill', 'q_vehicle'],
+            description: '用哪份已查到的结果来画',
+          },
+          metric: { type: 'string', enum: ['km', 'energy', 'rate', 'amount', 'count'] },
+          title: { type: 'string', description: '可选，不传由程序生成' },
+          limit: { type: 'integer', minimum: 3, maximum: 12 },
+        },
+        required: ['chartType', 'source'],
+      },
+    },
+  },
+  /* 大屏遥控：参数是白名单枚举，**不携带任何自由文本指令**，杜绝「传一段话去执行」 */
+  screen_dispatch: {
+    type: 'function',
+    function: {
+      name: 'screen_dispatch',
+      description:
+        '把「看某台车 / 某组车 / 某个片区 / 切到某个大屏页」投到数据大屏上。'
+        + '只在用户明确要求「投到大屏 / 在大屏上看 / 切到大屏」时使用；'
+        + '单纯问车辆信息用 q_vehicle，不要投屏。',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: {
+            type: 'string',
+            enum: ['focus_vehicle', 'highlight_vehicles', 'filter_vehicle', 'switch_tab', 'focus_area', 'open_kpi', 'reset'],
+            description: 'focus_vehicle=定位单台 highlight_vehicles=高亮一组 filter_vehicle=按条件筛 switch_tab=切大屏页 focus_area=看片区 open_kpi=打开明细 reset=复位',
+          },
+          plate: { type: 'string', description: 'focus_vehicle 必填，必须是 q_vehicle 已对齐的车牌，不要自己猜' },
+          plates: {
+            type: 'array',
+            items: { type: 'string' },
+            maxItems: 20,
+            description: 'highlight_vehicles / filter_vehicle 用，最多 20 个',
+          },
+          org: { type: 'string', description: 'filter_vehicle：机构名' },
+          status: { type: 'string', enum: ['行驶', '静止', '离线'] },
+          tab: { type: 'string', enum: ['fleet', 'fee'], description: 'switch_tab：fleet=车辆运行 fee=运单费用' },
+          area: { type: 'string', description: 'focus_area：省市 / 片区 / 机构名' },
+          key: { type: 'string', enum: ['mileage', 'running', 'speed', 'alerts', 'flow', 'route'] },
+          screenId: { type: 'string', description: '可选；不传就用最近活跃的那块屏' },
+        },
+        required: ['action'],
+      },
+    },
+  },
+  q_screen: {
+    type: 'function',
+    function: {
+      name: 'q_screen',
+      description: '查询当前账号能投屏的数据大屏：在线状态、停在哪一页、正在被谁接管。用户问「大屏开着吗 / 有哪些屏」时使用。',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
 }
 
 /* ============================================================
@@ -384,11 +564,12 @@ function toCards(results) {
   const cards = []
   for (const r of results) {
     if (!r.ok) continue
-    const { name, data } = r
+    const { name, data, args } = r
 
     if (name === 'q_energy' && data.rows.length) {
       cards.push({
         type: 'table',
+        source: name,
         title: `${data.summary.vehicles} 台车 · 百公里能耗`,
         cols: [
           { key: 'key', label: data.rows[0].key.length === 10 ? '日期' : '车牌', align: 'left' },
@@ -405,6 +586,7 @@ function toCards(results) {
     if (name === 'q_fee' && data.groupBy === 'month' && data.rows.length) {
       cards.push({
         type: 'table',
+        source: name,
         title: `${data.rows.length} 个月的费用`,
         stat: { label: '合计', value: data.summary.amount, unit: '元' },
         cols: [
@@ -420,6 +602,7 @@ function toCards(results) {
     if (name === 'q_fee' && !data.groupBy && data.rows.length) {
       cards.push({
         type: 'table',
+        source: name,
         title: `费用 ${data.summary.count} 笔`,
         stat: { label: '合计', value: data.summary.amount, unit: '元' },
         cols: [
@@ -434,10 +617,23 @@ function toCards(results) {
     }
 
     if (name === 'q_todo') {
+      /* 三类待办标题各说各的：费用「笔」、待派单「单」、待接单「趟」，
+         混用「笔」会让人以为又是费用 */
+      const k = data.kind || 'fee_approval'
+      const n = data.summary ? data.summary.count : 0
+      const title = k === 'waybill_assign'
+        ? (n ? `待派单 ${n} 单` : '暂无待派单')
+        : k === 'recurring_accept'
+          ? (n ? `待接单 ${(data.summary && data.summary.trips) || n} 趟` : '暂无待接单')
+          : (n ? `待我处理 ${n} 笔` : '暂无待办')
       cards.push({
         type: 'todo',
-        title: data.summary.count ? `待我处理 ${data.summary.count} 笔` : '暂无待办',
-        stat: { label: '合计', value: data.summary.amount, unit: '元' },
+        title,
+        /* 运单类没有金额，不挂 stat（否则卡片头上会出现「合计 ¥0.00」） */
+        stat: k === 'fee_approval' || k === 'payout'
+          ? { label: '合计', value: data.summary.amount, unit: '元' }
+          : null,
+        kind: k,
         rows: data.rows,
         jump: data.jump,
         note: data.note,
@@ -447,6 +643,7 @@ function toCards(results) {
     if (name === 'q_waybill' && data.rows.length) {
       cards.push({
         type: 'table',
+        source: name,
         title: `运单 ${data.summary.count} 条`,
         cols: [
           { key: 'waybillNo', label: '单号', align: 'left' },
@@ -464,6 +661,7 @@ function toCards(results) {
       const orgs = [...new Set(data.rows.map((r) => r.org).filter(Boolean))]
       cards.push({
         type: 'table',
+        source: name,
         title: data.mine ? `我名下 ${data.summary.count} 台车` : `车辆 ${data.summary.count} 台`,
         cols: [
           { key: 'plate', label: '车牌', align: 'left' },
@@ -479,6 +677,7 @@ function toCards(results) {
     if (name === 'q_driver' && data.rows.length) {
       cards.push({
         type: 'table',
+        source: name,
         title: `司机 ${data.summary.count} 名`,
         cols: [
           { key: 'name', label: '姓名', align: 'left' },
@@ -489,8 +688,74 @@ function toCards(results) {
         note: data.note,
       })
     }
+    /* ⭐ 派单草稿卡：字段顺序与来源标记全部由程序决定，模型只负责把话听懂。
+       ⚠️ params 一并下发 —— 前端「刷新草稿」时要拿它原样回传（redraft）。 */
+    if (name === 'draft_waybill' && data.fields) {
+      cards.push({
+        type: 'draft',
+        title: '派单草稿 · 1 个任务',
+        status: data.status,
+        fields: data.fields,
+        missing: data.missing,
+        conflicts: data.conflicts,
+        duplicates: data.duplicates,
+        /* draft 直接就是 WaybillCreate.applyCloneData 认的结构，
+           前端「去建单页」把它塞进 history.state 即可预填 */
+        draft: data.draft,
+        params: data.params,
+        jump: data.jump,
+        note: data.note,
+      })
+    }
+
+    /* ⭐ 图表卡：数值来自工具结果，模型只选了「画哪种图、用哪份数据」 */
+    if (name === 'render_chart' && data.ok && data.chart) {
+      cards.push({
+        type: 'chart',
+        source: (args && args.source) || name,
+        title: data.title,
+        range: data.range,
+        chartType: data.chartType,
+        chart: data.chart,
+        kpi: data.kpi,
+        table: data.table,
+        note: data.note,
+      })
+    }
   }
-  return cards
+  return mergeChartFold(cards)
+}
+
+/**
+ * 图表卡与明细表卡合并成一张（2026-11-27）
+ * ------------------------------------------------------------
+ * 起因：问「这个月能耗怎么样」会同时出「明细表」和「图」两张卡，手机上要滑两屏。
+ * 口径：**同源的 table 卡折进 chart 卡的 fold**，不再单独下发。
+ * ⚠️ 用 table 卡的数据而不是 chart.table —— rank 图的 chart.table 只截了 top N，
+ *    直接用它当明细会丢行。
+ * ⚠️ 不能原地 splice 遍历：先标记消费，再重建数组。
+ */
+function mergeChartFold(cards) {
+  const consumed = new Set()
+  const out = []
+  for (let i = 0; i < cards.length; i++) {
+    const c = cards[i]
+    if (c.type === 'chart') {
+      const j = cards.findIndex((t, k) =>
+        k !== i && !consumed.has(k) && t.type === 'table' && t.source && t.source === c.source)
+      if (j > -1) {
+        consumed.add(j)
+        const t = cards[j]
+        c.fold = { title: t.title, cols: t.cols, rows: t.rows, stat: t.stat || null, note: t.note || '' }
+      } else if (c.table && c.table.rows && c.table.rows.length) {
+        // 没有对应表卡（例如只画了图）：用图自带的小表兜底
+        c.fold = { title: '明细', cols: c.table.cols, rows: c.table.rows, stat: null, note: '' }
+      }
+      delete c.table
+    }
+    if (!consumed.has(i)) out.push(c)
+  }
+  return out
 }
 
 /* ============================================================
@@ -503,6 +768,222 @@ async function writeLog(rec) {
     // 日志失败绝不影响主流程
     console.warn('[ai-gateway] 审计写入失败:', e && e.message)
   }
+}
+
+/* ============================================================
+   语音用量打点（action: 'voice_log'）
+   ------------------------------------------------------------
+   口径来源：2026-11-27 语音设计稿验收清单 —— 只记指标，绝不记识别原文。
+   一次录音只上报一次（结束/取消/失败时汇总），避免录一句话打四五个请求。
+   放在配额校验之前：打点不是提问，不该被配额拦掉，也不扣 LLM 额度。
+   ============================================================ */
+const VOICE_OUTCOME_STATUS = {
+  sent: 'ok',
+  cancelled: 'cancel',
+  empty: 'empty',
+  error: 'error',
+}
+
+async function handleVoiceLog(payload, ctx, traceId) {
+  const m = (payload && payload.metrics) || {}
+  const durationSec = Math.max(0, Math.min(600, Number(m.durationSec) || 0))
+  const chars = Math.max(0, Math.min(2000, Number(m.chars) || 0))
+  const outcome = VOICE_OUTCOME_STATUS[m.outcome] ? String(m.outcome) : 'unknown'
+  const errorKind = m.errorKind ? String(m.errorKind).slice(0, 32) : null
+
+  await writeLog({
+    trace_id: traceId,
+    session_id: null,
+    account_id: ctx.account,
+    owner_account: ctx.tenant,
+    client: 'miniprogram',
+    question: null,
+    intent: 'voice',
+    /* jsonb：时长 / 字数 / 结果 / 错误分类，够算使用率与失败率，不含任何文本 */
+    tool_calls: { voice: { durationSec, chars, outcome } },
+    rows_returned: 0,
+    prompt_tokens: 0,
+    completion_tokens: 0,
+    cached_tokens: 0,
+    latency_ms: Math.round(durationSec * 1000),
+    status: VOICE_OUTCOME_STATUS[outcome] || 'unknown',
+    error_code: errorKind,
+  })
+  return { ok: true, action: 'voice_log' }
+}
+
+/* ============================================================
+   重算草稿（action: 'redraft'）
+   ------------------------------------------------------------
+   用户在档案页补完围栏 / 客户 / 货物，回到助手点「刷新草稿」时进来。
+   **不进模型**：把上一次的原始参数 + 用户改过的字段重跑一次 draft_waybill，
+   约 200ms，且只改被补的那一项，已确认的字段一个不动。
+   ⚠️ patch 走白名单（match.pickPatch）：传 owner_account / tenant / id 一律丢弃。
+   ============================================================ */
+async function handleRedraft(payload, ctx, traceId, t0) {
+  const rawDraft = payload.draft && typeof payload.draft === 'object' ? payload.draft : {}
+  const merged = { ...rawDraft, ...pickPatch(payload.patch) }
+
+  let args
+  try {
+    args = validateArgs('draft_waybill', merged)
+  } catch (e) {
+    throw new BizError(e.code || CODE.ERR_PARAM, e.message || '参数不合法')
+  }
+
+  const names = availableTools(ctx)
+  if (!names.includes('draft_waybill')) {
+    throw new BizError(CODE.ERR_NO_TOOL, '当前账号不能派单，请让调度操作')
+  }
+
+  const data = await runTool('draft_waybill', args, ctx)
+  const latency = Date.now() - t0
+
+  await writeLog({
+    trace_id: traceId,
+    session_id: String(payload.sessionId || '').slice(0, 60),
+    account_id: ctx.account,
+    owner_account: ctx.tenant,
+    client: String(payload.client || 'web').slice(0, 20),
+    question: '（刷新草稿）',
+    intent: 'redraft',
+    tool_calls: [{ name: 'draft_waybill', ok: true, code: 0, ms: latency }],
+    rows_returned: 0,
+    prompt_tokens: 0,
+    completion_tokens: 0,
+    cached_tokens: 0,
+    latency_ms: latency,
+    status: 'ok',
+    error_code: '',
+  })
+
+  return {
+    code: CODE.OK,
+    answer: '',
+    cards: toCards([{ name: 'draft_waybill', data, ok: true }]),
+    usage: { prompt: 0, completion: 0, cached: 0, total: 0 },
+    traceId,
+    latencyMs: latency,
+  }
+}
+
+/* ============================================================
+   只查实体候选（action: 'resolve'）
+   ------------------------------------------------------------
+   草稿卡上点「选已有」时用：只要候选列表，不要模型、不要卡片。
+   同样不扣 LLM 配额。
+   ============================================================ */
+async function handleResolve(payload, ctx, traceId, t0) {
+  const args = validateArgs('resolve_entity', { kind: payload.kind, text: payload.text })
+  const names = availableTools(ctx)
+  if (!names.includes('resolve_entity')) {
+    throw new BizError(CODE.ERR_NO_TOOL, '当前账号不能派单，请让调度操作')
+  }
+  const data = await runTool('resolve_entity', args, ctx)
+  return {
+    code: CODE.OK,
+    answer: '',
+    exact: data.exact,
+    candidates: data.candidates,
+    suggestions: data.suggestions,
+    note: data.note,
+    traceId,
+    latencyMs: Date.now() - t0,
+  }
+}
+
+/* ============================================================
+   工具结果缓存（实例级 · 跨请求）
+   ------------------------------------------------------------
+   为什么不是「请求内」就完了：用户连着问「这个月能耗」「那上个月呢」
+   「哪几台最费电」，每次都把 366 天的日统计重新拉一遍。
+   请求内 toolCache 管不到下一次请求。
+
+   ⚠️ 云函数多实例、**没有共享内存**：这里只能做「同一实例内跨请求」复用，
+      命中率取决于并发，不保证命中。真要全共享得落表（ai_cache）+ DDL，
+      收益 < 运维成本，先不上。
+   KEY 带 tenant + account：不同租户/账号的数据绝不能串。
+   草稿类（draft_waybill）与 render_chart 不缓存：前者含时间/冲突实时判断，
+   后者从本轮 toolResults 取数，缓存只会拿到上一轮的数据。
+   resolve_entity TTL 缩到 60s：用户很可能刚建完档就回来刷新。
+   ============================================================ */
+const TOOL_CACHE = new Map()
+const TOOL_INFLIGHT = new Map()
+const TOOL_CACHE_MAX = 200
+const TOOL_CACHE_TTL = 300 * 1000
+const TOOL_CACHE_TTL_OF = { resolve_entity: 60 * 1000 }
+const TOOL_CACHE_SKIP = new Set(['draft_waybill', 'render_chart'])
+
+/** 参数稳定序列化（对象 key 顺序不同不该算两个 key） */
+const stableArgs = (args) => {
+  if (!args || typeof args !== 'object') return ''
+  return Object.keys(args).sort().map((k) => `${k}=${JSON.stringify(args[k])}`).join('&')
+}
+
+async function runToolCached(name, args, ctx) {
+  if (TOOL_CACHE_SKIP.has(name)) return runTool(name, args, ctx)
+  const key = `${ctx.tenant}|${ctx.account}|${name}|${stableArgs(args)}`
+  const hit = TOOL_CACHE.get(key)
+  if (hit && hit.exp > Date.now()) return hit.value
+  /* 单飞：同一 key 并发只跑一次，其余等同一个 Promise */
+  if (TOOL_INFLIGHT.has(key)) return TOOL_INFLIGHT.get(key)
+
+  const ttl = TOOL_CACHE_TTL_OF[name] || TOOL_CACHE_TTL
+  const p = runTool(name, args, ctx)
+    .then((v) => {
+      /* 淘汰：Map 保持插入顺序，满了就丢掉最早的 1/4 */
+      if (TOOL_CACHE.size >= TOOL_CACHE_MAX) {
+        const drop = Math.ceil(TOOL_CACHE_MAX / 4)
+        let i = 0
+        for (const k of TOOL_CACHE.keys()) {
+          TOOL_CACHE.delete(k)
+          if (++i >= drop) break
+        }
+      }
+      TOOL_CACHE.set(key, { value: v, exp: Date.now() + ttl })
+      return v
+    })
+    .finally(() => { TOOL_INFLIGHT.delete(key) })
+  TOOL_INFLIGHT.set(key, p)
+  return p
+}
+
+/* ============================================================
+   图表意图兜底
+   ------------------------------------------------------------
+   实测：用户说「画个图」「哪几台车最费电」时，模型只回一张表格，
+   不肯多调一次工具（和当初 q_fee 按月汇总同一类问题：prompt 劝不动）。
+   所以在返回前补一道：用户明确要图 + 本轮已有可画数据 + 模型没画 → 程序直接画。
+   ⚠️ 数据仍然来自工具结果，数值不过模型。
+   ============================================================ */
+const CHART_INTENT = /画.{0,3}图|图表|趋势|折线|柱状|条形|饼图|环形|占比|分布|环比|对比图|排行|排名|最费电|最耗电|最省|最费|哪几台|前几名/
+/**
+ * 聚合类提问（能耗 / 费用）**不用用户说「画图」也给图**（2026-11-26 用户要求）。
+ * 判断依赖两层：① 问句里有指标词；② 数据源必须是聚合结果（q_energy / q_fee）。
+ * 「查一下苏A1234 的运单」这类明细查询只靠 CHART_INTENT，不会被硬塞图表。
+ * 数据点 <3 时 render_chart 自己会拒（tooFewPoints），不会出现一个点也画图。
+ */
+const AGG_INTENT = /能耗|电耗|油耗|百公里|里程|跑了多少|费用|花费|支出|开销|花销/
+const AGG_SOURCES = new Set(['q_energy', 'q_fee'])
+const CHART_SKIP = new Set(['render_chart', 'resolve_entity', 'draft_waybill'])
+
+/** 从最近一次可画的结果里推断「用哪份数据、画哪种图」 */
+function pickChartSource(rows) {
+  for (let i = rows.length - 1; i >= 0; i -= 1) {
+    const r = rows[i]
+    if (!r || !r.ok || CHART_SKIP.has(r.name) || !r.data) continue
+    const list = Array.isArray(r.data.rows) ? r.data.rows : []
+    if (list.length < 3) continue
+    if (r.name === 'q_energy') {
+      return { source: 'q_energy', chartType: r.data.groupBy === 'day' ? 'trend' : 'rank' }
+    }
+    if (r.name === 'q_fee') {
+      return { source: 'q_fee', chartType: r.data.groupBy === 'month' ? 'trend' : 'share' }
+    }
+    if (r.name === 'q_waybill') return { source: 'q_waybill', chartType: 'share' }
+    if (r.name === 'q_vehicle') return { source: 'q_vehicle', chartType: 'share' }
+  }
+  return null
 }
 
 /* ============================================================
@@ -521,18 +1002,42 @@ exports.main = async (event) => {
   const sessionToken = String(payload.sessionToken || payload.token || '').trim()
   const text = String(payload.text || '').trim()
   const history = Array.isArray(payload.history) ? payload.history : []
+  /* ask（默认）| redraft | resolve —— 后两个不带 text，所以下面的必填校验要放行 */
+  const action = String(payload.action || 'ask')
 
   let ctx = null
   let toolResults = []
   let usageTotal = { prompt: 0, completion: 0, cached: 0, total: 0 }
 
   try {
-    if (!text) throw new BizError(CODE.ERR_PARAM, '请说点什么')
-    if (text.length > 500) throw new BizError(CODE.ERR_PARAM, '问题太长，请精简到 500 字以内')
+    if (action === 'ask') {
+      if (!text) throw new BizError(CODE.ERR_PARAM, '请说点什么')
+      if (text.length > 500) throw new BizError(CODE.ERR_PARAM, '问题太长，请精简到 500 字以内')
+    }
 
     /* ① 身份 */
     const account = await resolveSession(sessionToken)
     ctx = await buildContext(account)
+
+    /* ⭐ 刷新草稿 / 查实体候选：都不进模型、不扣 LLM 配额（只跑一次工具） */
+    if (action === 'redraft') {
+      return await handleRedraft(payload, ctx, traceId, t0)
+    }
+    if (action === 'resolve') {
+      return await handleResolve(payload, ctx, traceId, t0)
+    }
+
+    /* ⭐ 数据大屏遥控：与 redraft / resolve 同级 —— 不进模型、不扣 LLM 配额。
+       长轮询（op='pull'）也走这里，所以云函数超时必须 ≥ 20s。 */
+    if (action === 'screen') {
+      const r = await handleScreen(String(payload.op || ''), payload, ctx)
+      return Object.assign(r, { traceId, latencyMs: Date.now() - t0 })
+    }
+
+    /* ⭐ 语音用量打点：必须在配额之前（打点不算提问，也不扣额度） */
+    if (action === 'voice_log') {
+      return await handleVoiceLog(payload, ctx, traceId)
+    }
 
     /* ② 配额 */
     await checkQuota(ctx)
@@ -553,6 +1058,21 @@ exports.main = async (event) => {
     const wd = ['日', '一', '二', '三', '四', '五', '六'][bj.getUTCDay()]
     const hm = bj.toISOString().slice(11, 16)
 
+    /* ⭐ 大屏遥控模式：只作为提示词上下文，不参与鉴权。
+       没有 screen_dispatch 工具（无权限）时这句自动失效，模型也调不到。
+       放在日期之后，保持第一条 system 字节不变（prompt 缓存）。 */
+    const screenPage = payload.screen && payload.screen.page === 'fee' ? 'fee' : 'fleet'
+    const screenHint = payload.screen && payload.screen.active
+      ? {
+        role: 'system',
+        content:
+          `用户已从小程序接管大屏「${String(payload.screen.name || '数据大屏').slice(0, 40)}」，` +
+          `大屏当前停在「${screenPage === 'fee' ? '运单费用' : '车辆运行'}」页。` +
+          '本轮用户说要看某台车 / 某几台车 / 某个片区 / 切大屏页时，调用 screen_dispatch 投屏，不要只回文字；' +
+          '纯数据统计类问题仍按普通问答回答，不要投屏。',
+      }
+      : null
+
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
       {
@@ -562,6 +1082,7 @@ exports.main = async (event) => {
           '用户说「今天/昨天/前天/本周/上周/这个月/上个月」时，按此换算成 YYYY-MM-DD 再调用工具；' +
           '不要再反问年份。能耗数据最新到 T-1，需要时把结束日期截到前一天。',
       },
+      ...(screenHint ? [screenHint] : []),
       ...history.slice(-6).map((m) => ({
         role: m.role === 'user' ? 'user' : 'assistant',
         content: String(m.content || '').slice(0, 500),
@@ -821,7 +1342,10 @@ exports.main = async (event) => {
           }
 
           try {
-            const data = await runTool(tc.name, args, ctx)
+            /* render_chart 就是从这堆结果里取数 —— 每次调用前刷新一次，
+               保证它只能看到「本轮已经查到的」，拿不到任何外部数据。 */
+            ctx.chartSources = toolResults
+            const data = await runToolCached(tc.name, args, ctx)
             toolResults.push({ name: tc.name, args, data, ok: true })
             toolMsg = JSON.stringify({ ok: true, data: sanitize(data) })   // 回填前先脱敏
             toolCache.set(ck, toolMsg)
@@ -851,6 +1375,22 @@ exports.main = async (event) => {
       answer = rounds >= LIMITS.MAX_TOOL_ROUNDS
         ? '这次查得有点绕，换个问法试试？'
         : '抱歉，我没能理解。可以问得具体一点，比如「上个月电耗最差的三个车」。'
+    }
+
+    /* ⭐ 图表兜底：用户要图（或问的是能耗/费用这类聚合指标）、模型只给了表 → 程序补一张 */
+    const alreadyCharted = toolResults.some((r) => r.name === 'render_chart' && r.ok)
+    if (!alreadyCharted) {
+      const pick = pickChartSource(toolResults)
+      const wantChart = CHART_INTENT.test(text)
+        || (!!pick && AGG_SOURCES.has(pick.source) && AGG_INTENT.test(text))
+      if (pick && wantChart) {
+        try {
+          const cd = await runTool('render_chart', { ...pick, limit: 8 }, { ...ctx, chartSources: toolResults })
+          if (cd && cd.ok) toolResults.push({ name: 'render_chart', args: pick, data: cd, ok: true })
+        } catch (e) {
+          console.warn('[ai-gateway] 图表兜底失败:', e && e.message)
+        }
+      }
     }
 
     /* 清洗模型偶发泄漏的内部标记（DSML / tool_call 片段），避免把乱码甩给用户。
@@ -962,3 +1502,6 @@ exports.main = async (event) => {
     }
   }
 }
+
+/* 仅测试用：把无法从 HTTP 入口覆盖的纯函数暴露出来（不参与线上调用） */
+exports._internals = { mergeChartFold }

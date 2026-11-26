@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>小御 · 语音输入完整设计稿（Web 音波样式 / 小程序同声传译）</title>
+<style>
+  :root{
+    --red:#C8102E; --red-soft:#FDF0F2; --red-line:#F5D4D9;
+    --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8; --ink4:#C3CCD9;
+    --line:#E3E8EF; --line-soft:#EDF0F4; --bg:#F1F3F6;
+    --blue:#2563EB; --green:#0E9F6E; --amber:#D97706;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0 0 60px; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;
+    font-size:13px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:26px 24px 0}
+  b{font-weight:800}
+
+  .hd{display:flex; align-items:flex-end; gap:16px; padding-bottom:14px; border-bottom:1px solid var(--line)}
+  .hd h1{margin:0; font-size:20px; font-weight:800; letter-spacing:-.2px}
+  .hd .sub{color:var(--ink3); font-size:12px; padding-bottom:2px}
+  .hd .toc{margin-left:auto; display:flex; gap:6px; flex-wrap:wrap}
+  .hd .toc a{
+    font-size:11.5px; color:var(--ink2); text-decoration:none; background:#fff;
+    border:1px solid var(--line); border-radius:6px; padding:3px 9px;
+  }
+  .hd .toc a:hover{border-color:var(--red-line); color:var(--red)}
+
+  /* 结论条 */
+  .verdict{display:flex; gap:10px; margin-top:16px}
+  .vcard{
+    flex:1; background:#fff; border:1px solid var(--line); border-radius:9px;
+    padding:11px 13px; position:relative; overflow:hidden;
+  }
+  .vcard::before{content:""; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--line)}
+  .vcard.now::before{background:var(--red)}
+  .vcard.later::before{background:var(--amber)}
+  .vcard.off::before{background:var(--ink4)}
+  .vcard .vk{font-size:10px; font-weight:800; letter-spacing:.4px; color:var(--ink3)}
+  .vcard .vt{font-size:12.5px; font-weight:800; margin:2px 0 3px}
+  .vcard .vd{font-size:11.5px; color:var(--ink2); line-height:1.55}
+
+  .sec{margin-top:32px}
+  .sec-h{display:flex; align-items:center; gap:9px; margin-bottom:5px}
+  .sec-h .n{
+    width:21px; height:21px; border-radius:6px; background:var(--red); color:#fff;
+    font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;
+    flex:none;
+  }
+  .sec-h h2{margin:0; font-size:16px; font-weight:800}
+  .sec-h .tag{
+    font-size:10.5px; font-weight:700; color:var(--amber); background:#FFF8ED;
+    border:1px solid #F5E0BE; border-radius:4px; padding:1px 7px;
+  }
+  .sec-h .tag.blue{color:#1D4ED8; background:#EFF4FF; border-color:#CFDDFA}
+  .sec-sub{color:var(--ink2); font-size:12.5px; margin:0 0 15px; max-width:900px}
+  .sec-sub code{font-size:11.5px}
+
+  .stage{display:flex; gap:20px; align-items:flex-start}
+  .demo{flex:none}
+  .aside{flex:1; min-width:0; display:flex; flex-direction:column; gap:9px}
+  .box{background:#fff; border:1px solid var(--line); border-radius:9px; padding:11px 13px}
+  .box h4{margin:0 0 6px; font-size:11.5px; font-weight:800; display:flex; align-items:center; gap:6px}
+  .box h4 .k{
+    width:15px; height:15px; border-radius:4px; background:#EEF2F7; color:var(--ink2);
+    font-size:9px; display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .box ul{margin:0; padding-left:14px}
+  .box li{margin:2.5px 0; color:var(--ink2); font-size:11.5px}
+  .box li b{color:var(--ink)}
+  .box p{margin:0; color:var(--ink2); font-size:11.5px}
+  code{
+    font-family:"SF Mono",Menlo,Consolas,monospace; font-size:10.5px;
+    background:#F6F8FB; border:1px solid var(--line-soft); border-radius:3px; padding:0 4px;
+  }
+  .note-min{font-size:10px; color:var(--ink3); margin-top:6px; text-align:center}
+  .cap{font-size:10px; color:var(--ink3); padding:6px 12px 8px; background:#fff; border-top:1px dashed var(--line-soft)}
+  .cap b{color:var(--ink2)}
+
+  /* ============ Web 412 面板 ============ */
+  .p412{
+    width:412px; background:#FCFDFE; border:1px solid var(--line); border-radius:12px;
+    overflow:hidden; box-shadow:0 14px 40px -30px rgba(15,23,42,.6);
+  }
+  .p412 .head{
+    display:flex; align-items:center; gap:7px; padding:9px 12px;
+    border-bottom:1px solid var(--line-soft); background:#fff;
+  }
+  .p412 .head .av{
+    width:25px; height:25px; border-radius:50%; background:var(--red); color:#fff;
+    font-size:10.5px; font-weight:700; display:flex; align-items:center; justify-content:center;
+  }
+  .p412 .head .nm{font-size:11.5px; font-weight:800}
+  .p412 .head .st{font-size:9.5px; color:var(--green); display:flex; align-items:center; gap:4px}
+  .p412 .head .st i{width:5px; height:5px; border-radius:50%; background:var(--green); display:block}
+  .p412 .head .x{margin-left:auto; color:var(--ink4); font-size:13px}
+  .p412 .body{padding:11px; display:flex; flex-direction:column; gap:9px; background:#FCFDFE}
+
+  .bub{border-radius:9px; padding:7px 10px; font-size:11.5px; line-height:1.6; max-width:88%}
+  .bub.ai{background:#fff; border:1px solid var(--line-soft); color:var(--ink2)}
+  .bub.me{background:var(--red-soft); border:1px solid var(--red-line); margin-left:auto}
+
+  /* Web 输入区 */
+  .pfoot{padding:9px 11px 7px; border-top:1px solid var(--line-soft); background:#fff}
+  .ghostline{
+    display:flex; align-items:center; gap:6px; margin-bottom:7px;
+    font-size:10.5px; color:#7C8797;
+  }
+  .ghostline .bar{width:2px; height:11px; border-radius:2px; background:var(--red-line); flex:none}
+  .inputbox{display:flex; align-items:flex-end; gap:7px}
+  .inputbox .field{
+    flex:1; min-width:0; border:1px solid var(--line); border-radius:9px; background:#FCFDFE;
+    padding:7px 10px; font-size:11.5px; color:var(--ink4); min-height:32px;
+    display:flex; align-items:center;
+  }
+  .inputbox .field.on{border-color:#C9D6E8; background:#fff; color:var(--ink); box-shadow:0 0 0 3px rgba(37,99,235,.06)}
+  .sbtn{
+    height:32px; padding:0 13px; border-radius:9px; background:var(--red); color:#fff;
+    border:0; font-size:11.5px; font-weight:700; flex:none;
+  }
+  /* 音波按钮 */
+  .mic{
+    width:32px; height:32px; border-radius:9px; border:1px solid var(--line); background:#fff;
+    display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .mic.hot{border-color:var(--red-line); background:var(--red-soft); color:var(--red)}
+  .mic.dim{opacity:.55; cursor:not-allowed}
+  .wave{display:flex; align-items:center; gap:2px; height:16px}
+  .wave i{display:block; width:2px; border-radius:2px; background:currentColor; flex:none}
+  .wave i:nth-child(1){height:5px} .wave i:nth-child(2){height:10px}
+  .wave i:nth-child(3){height:15px} .wave i:nth-child(4){height:10px}
+  .wave i:nth-child(5){height:5px}
+  .pfoot .tiprow{text-align:center; font-size:9.5px; color:var(--ink4); margin-top:7px}
+
+  /* ============ 小程序 375 ============ */
+  .mp{
+    width:375px; background:#FCFDFE; border:1px solid var(--line); border-radius:18px;
+    overflow:hidden; box-shadow:0 14px 40px -30px rgba(15,23,42,.6);
+  }
+  .mp .hd2{
+    display:flex; align-items:center; gap:8px; padding:10px 12px;
+    background:#fff; border-bottom:1px solid var(--line-soft);
+  }
+  .mp .hd2 .av{
+    width:28px; height:28px; border-radius:50%; background:var(--red); color:#fff;
+    font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;
+  }
+  .mp .hd2 .who .n{font-size:12px; font-weight:800; line-height:1.3}
+  .mp .hd2 .who .s{font-size:9px; color:var(--green); display:flex; align-items:center; gap:4px}
+  .mp .hd2 .who .s i{width:4px; height:4px; border-radius:50%; background:var(--green)}
+  .mp .hd2 .x{margin-left:auto; color:var(--ink3); font-size:14px}
+  .mp .bd{padding:11px 12px; display:flex; flex-direction:column; gap:9px; min-height:104px}
+
+  /* 小程序输入栏 */
+  .mpft{
+    display:flex; align-items:center; gap:8px; padding:9px 11px 6px;
+    background:#fff; border-top:1px solid var(--line-soft);
+  }
+  .mpft .mic{
+    width:30px; height:30px; border-radius:50%; border:1px solid var(--line);
+    background:#fff; display:flex; align-items:center; justify-content:center; flex:none;
+    color:var(--ink3);
+  }
+  .mpft .mic.rec{background:var(--red); border-color:var(--red); color:#fff}
+  .mpft .inp{
+    flex:1; height:30px; border:1px solid var(--line); border-radius:15px; background:#F7F9FC;
+    display:flex; align-items:center; padding:0 11px; font-size:11px; color:var(--ink4);
+  }
+  .mpft .sd{
+    height:30px; padding:0 12px; border-radius:15px; background:var(--red); color:#fff;
+    font-size:11.5px; font-weight:700; display:flex; align-items:center; flex:none;
+  }
+  .mpft .sd.off{background:#E6EBF2; color:#A9B4C2}
+  .mp .tip{text-align:center; font-size:9px; color:var(--ink4); padding:4px 0 9px; background:#fff}
+
+  /* 按住说话浮层（小程序态 2）：深色胶囊，从输入栏向上展开 */
+  .hold{
+    position:absolute; left:0; right:0; bottom:100%; z-index:7;
+    margin:0 6px 4px; padding:9px 12px 8px; border-radius:11px;
+    background:var(--red); box-shadow:0 6px 16px -10px rgba(15,23,42,.5);
+  }
+  .hold.cancel{background:#1F2430}
+  .hold .live{
+    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden;
+    margin-bottom:5px; font-size:13px; line-height:1.45; color:rgba(255,255,255,.94);
+    text-align:center;
+  }
+  .hold .wave{
+    height:58px; padding:0 2px; display:flex; align-items:center; justify-content:center;
+    gap:6px; color:#fff;
+  }
+  .hold .wave i{display:block; width:4px; flex:none; border-radius:2px; background:currentColor;
+    animation:breathe 1.9s ease-in-out infinite}
+  .hold .wave i:nth-child(1){height:10px}
+  .hold .wave i:nth-child(2){height:22px; animation-delay:.12s}
+  .hold .wave i:nth-child(3){height:38px; animation-delay:.24s}
+  .hold .wave i:nth-child(4){height:26px; animation-delay:.36s}
+  .hold .wave i:nth-child(5){height:48px; animation-delay:.06s}
+  .hold .wave i:nth-child(6){height:32px; animation-delay:.3s}
+  .hold .wave i:nth-child(7){height:56px; animation-delay:.18s}
+  .hold .wave i:nth-child(8){height:39px; animation-delay:.42s}
+  .hold .wave i:nth-child(9){height:50px; animation-delay:.09s}
+  .hold .wave i:nth-child(10){height:28px; animation-delay:.27s}
+  .hold .wave i:nth-child(11){height:44px; animation-delay:.39s}
+  .hold .wave i:nth-child(12){height:20px; animation-delay:.15s}
+  .hold .wave i:nth-child(13){height:30px; animation-delay:.33s}
+  .hold .wave i:nth-child(14){height:13px; animation-delay:.21s}
+  @keyframes breathe{0%,100%{transform:scaleY(.72)}50%{transform:scaleY(1)}}
+  .hold .foot{display:flex; align-items:center; margin-top:5px}
+  .hold .foot .tm{font-size:10.5px; font-weight:800; color:#fff; font-variant-numeric:tabular-nums}
+  .hold .foot .hint{margin-left:auto; font-size:9.5px; color:rgba(255,255,255,.82)}
+  /* 录音中：麦克风实心红、输入框压暗 */
+  .mpft.recing .sd{opacity:.35}
+  /* 语音模式：长条顶替输入框（微信同款） */
+  .mpft .holdbtn{
+    flex:1; min-width:0; height:38px; line-height:38px; text-align:center;
+    border:1px solid var(--line); border-radius:10px; background:#fff;
+    font-size:13px; font-weight:600; color:var(--ink);
+  }
+  .mpft .holdbtn.down{background:#FDF0F2; border-color:var(--red-line); color:var(--red)}
+  .mpft .holdbtn.cancel{background:#1F2430; border-color:#1F2430; color:#fff}
+  /* 键盘图标（切回打字） */
+  .mpft .kb{
+    width:18px; height:14px; box-sizing:border-box; padding:0 2.5px;
+    border:1.5px solid currentColor; border-radius:3.5px;
+    display:flex; flex-direction:column; justify-content:center; gap:2.5px;
+  }
+  .mpft .kb-row{display:flex; justify-content:center; gap:2.5px}
+  .mpft .kb-dot{display:block; width:3px; height:2px; border-radius:.5px; background:currentColor}
+
+  /* 转写确认卡（小程序态 3） */
+  .tcard{
+    margin:0 9px 8px; background:#fff; border:1px solid var(--line); border-radius:11px;
+    box-shadow:0 -6px 20px -14px rgba(15,23,42,.5); overflow:hidden;
+  }
+  .tcard .th{
+    display:flex; align-items:center; gap:6px; padding:7px 10px; border-bottom:1px solid var(--line-soft);
+    font-size:10px; color:var(--ink3);
+  }
+  .tcard .th .t{font-size:11px; font-weight:800; color:var(--ink)}
+  .tcard .th .x{margin-left:auto; color:var(--ink4); font-size:12px}
+  .tcard .tx{
+    padding:8px 10px; font-size:11.5px; line-height:1.75; color:var(--ink);
+    min-height:56px; background:#FCFDFE; border-bottom:1px solid var(--line-soft);
+  }
+  .tcard .tx .cursor{display:inline-block; width:1px; height:12px; background:var(--red); vertical-align:-1px; margin-left:1px}
+  .chips{display:flex; gap:5px; padding:7px 10px; overflow:hidden}
+  .chips .c{
+    font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:20px; flex:none;
+    background:#EFF4FF; color:#1D4ED8; border:1px solid #CFDDFA;
+  }
+  .chips .c.low{background:#FFF8ED; color:#9A6B14; border-color:#F5E0BE}
+  .chips .lb{font-size:9px; color:var(--ink4); align-self:center; flex:none; margin-right:1px}
+  .tcard .ops{display:flex; align-items:center; gap:7px; padding:7px 10px 9px}
+  .tcard .ops .gh{
+    height:26px; padding:0 11px; border-radius:7px; border:1px solid var(--line);
+    background:#fff; font-size:10.5px; color:var(--ink2); display:flex; align-items:center;
+  }
+  .tcard .ops .pr{
+    height:26px; padding:0 13px; border-radius:7px; background:var(--red); color:#fff;
+    font-size:10.5px; font-weight:700; display:flex; align-items:center; margin-left:auto;
+  }
+  .tcard .ops .cnt{font-size:9px; color:var(--ink4); font-variant-numeric:tabular-nums}
+
+  /* 错误条 */
+  .errbar{
+    display:flex; align-items:flex-start; gap:7px; margin:0 9px 8px;
+    background:#FFF8ED; border:1px solid #F5E0BE; border-radius:9px; padding:8px 10px;
+    font-size:10.5px; color:#8A5A12; line-height:1.55;
+  }
+  .errbar .b{width:2px; align-self:stretch; border-radius:2px; background:var(--amber); flex:none}
+  .errbar b{font-weight:800}
+  .errbar .go{margin-left:auto; font-weight:800; color:#8A5A12; text-decoration:underline; flex:none}
+
+  /* 图标规范大图 */
+  .spec{
+    background:#fff; border:1px solid var(--line); border-radius:12px; padding:20px 22px 16px;
+  }
+  .spec-row{display:flex; gap:34px; align-items:flex-end}
+  .spec-cell{text-align:center}
+  .spec-cell .glass{
+    width:120px; height:120px; border-radius:12px; border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; background:#FCFDFE; margin-bottom:7px;
+  }
+  .spec-cell .glass.soft{background:#F7F9FC}
+  .spec-cell .lb2{font-size:10.5px; font-weight:800; color:var(--ink2)}
+  .spec-cell .lb3{font-size:9.5px; color:var(--ink3)}
+  /* 放大的音波：柱宽 14 / 间距 14 / 高 28-84 */
+  .bigwave{display:flex; align-items:center; gap:12px}
+  .bigwave i{display:block; width:12px; border-radius:10px; background:#475569; flex:none}
+  .bigwave i:nth-child(1){height:28px} .bigwave i:nth-child(2){height:56px}
+  .bigwave i:nth-child(3){height:84px} .bigwave i:nth-child(4){height:56px}
+  .bigwave i:nth-child(5){height:28px}
+  .bigwave.red i{background:var(--red)}
+  .bigwave.grey i{background:#C3CCD9}
+  .bigwave.white i{background:#fff}
+  .measure{
+    display:flex; align-items:center; gap:6px; margin-top:12px; padding-top:10px;
+    border-top:1px solid var(--line-soft); font-size:10.5px; color:var(--ink3); flex-wrap:wrap;
+  }
+  .measure span em{font-style:normal; color:var(--ink); font-weight:800; font-variant-numeric:tabular-nums}
+
+  /* 表格 */
+  .tb{width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line);
+      border-radius:10px; overflow:hidden}
+  .tb th,.tb td{padding:7px 10px; text-align:left; font-size:11.5px; border-bottom:1px solid var(--line-soft); vertical-align:top}
+  .tb th{background:#F7F9FC; font-size:11px; color:var(--ink2); font-weight:700}
+  .tb tr:last-child td{border-bottom:0}
+  .tb td.mono{font-family:"SF Mono",Menlo,monospace; font-size:10.5px; color:var(--ink2)}
+  .tb td b{font-weight:800}
+  .tb .red{color:var(--red); font-weight:800}
+  .tb .ok{color:var(--green); font-weight:800}
+  .tb .amb{color:#9A6B14; font-weight:800}
+
+  /* 状态机 */
+  .fsm{background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 18px}
+  .fsm-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .node{
+    border:1px solid var(--line); border-radius:8px; padding:6px 11px; background:#FCFDFE;
+    font-size:11px; font-weight:800; color:var(--ink2); line-height:1.3;
+  }
+  .node small{display:block; font-size:9px; font-weight:600; color:var(--ink3)}
+  .node.a{border-color:var(--red-line); background:var(--red-soft); color:var(--red)}
+  .node.b{border-color:#CFDDFA; background:#EFF4FF; color:#1D4ED8}
+  .arrow{color:var(--ink4); font-size:12px; flex:none}
+  .arrow span{display:block; font-size:9px; color:var(--ink3); text-align:center; line-height:1}
+  .fsm-note{font-size:10.5px; color:var(--ink3); margin-top:11px; padding-top:9px; border-top:1px solid var(--line-soft)}
+
+  pre{
+    margin:0; background:#0F172A; color:#DCE3EE; border-radius:9px; padding:12px 14px;
+    font-family:"SF Mono",Menlo,Consolas,monospace; font-size:10.5px; line-height:1.75;
+    overflow-x:auto;
+  }
+  pre .c{color:#7C8CA5}
+  pre .k{color:#F0A3B0}
+  pre .s{color:#9DD6A8}
+
+  .two{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .three{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px}
+
+  .chk{background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 14px}
+  .chk h4{margin:0 0 7px; font-size:11.5px; font-weight:800; display:flex; align-items:center; gap:6px}
+  .chk h4 .dot{width:6px; height:6px; border-radius:50%; background:var(--red); flex:none}
+  .chk ul{margin:0; padding:0; list-style:none}
+  .chk li{position:relative; padding-left:19px; font-size:11px; color:var(--ink2); margin:3.5px 0; line-height:1.55}
+  .chk li::before{
+    content:""; position:absolute; left:0; top:3px; width:11px; height:11px;
+    border:1px solid var(--ink4); border-radius:3px;
+  }
+  .chk li b{color:var(--ink)}
+
+  .foot{margin-top:34px; padding-top:13px; border-top:1px solid var(--line); color:var(--ink3); font-size:11.5px}
+  .foot b{color:var(--ink2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hd">
+    <div>
+      <h1>小御 · 语音输入设计稿</h1>
+      <div class="sub">Web 只做音波样式 / 小程序接微信同声传译　·　2026-11-27　·　面板覆盖式布局不变</div>
+    </div>
+    <div class="toc">
+      <a href="#icon">01 音波图标</a>
+      <a href="#web">02 Web 端</a>
+      <a href="#mp">03 小程序端</a>
+      <a href="#fsm">04 状态机</a>
+      <a href="#tech">05 技术实现</a>
+      <a href="#qa">06 验收</a>
+    </div>
+  </div>
+
+  <!-- 结论 -->
+  <div class="verdict">
+    <div class="vcard now">
+      <div class="vk">本次做</div>
+      <div class="vt">小程序 · 微信同声传译</div>
+      <div class="vd">端上插件直连，<b>不走云函数、不配密钥</b>；三态：空闲 → 录音 → 转写确认。</div>
+    </div>
+    <div class="vcard now">
+      <div class="vk">本次做</div>
+      <div class="vt">Web · 只换图标</div>
+      <div class="vd">麦克风 emoji 改成<b>音波细柱</b>，点击给「请在小程序用」的一行提示，<b>不接识别</b>。</div>
+    </div>
+    <div class="vcard off">
+      <div class="vk">本次不做</div>
+      <div class="vt">ai-asr 云函数</div>
+      <div class="vd">Web 不做识别就没有中转需求，<b>省掉 SecretKey 托管</b>这一整块风险。</div>
+    </div>
+    <div class="vcard later">
+      <div class="vk">后续</div>
+      <div class="vt">Web 端接 ASR</div>
+      <div class="vd">等腾讯云一句话识别开通后再补，接口位在 <code>voice.js</code> 里预留。</div>
+    </div>
+  </div>
+
+  <!-- ================= 01 音波图标 ================= -->
+  <section class="sec" id="icon">
+    <div class="sec-h"><span class="n">01</span><h2>音波图标规范</h2><span class="tag blue">两端共用一套</span></div>
+    <p class="sec-sub">
+      现在输入栏用的是 🎤 emoji —— 系统里其它图标全是细线 SVG，emoji 一放进去就跳出色系、还随系统字体变形。
+      改成<b>五根圆角细柱</b>组成的音波：静止时是「声音」的静态形状，录音时柱高跟着音量走。
+      同一个图形，Web 只做静态，小程序做动态。
+    </p>
+
+    <div class="spec">
+      <div class="spec-row">
+        <div class="spec-cell">
+          <div class="glass"><div class="bigwave"><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="lb2">空闲 · 静止</div>
+          <div class="lb3">#475569 / 柱高 5·10·15·10·5</div>
+        </div>
+        <div class="spec-cell">
+          <div class="glass" style="background:#C8102E; border-color:#C8102E"><div class="bigwave white"><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="lb2">按住 · 实心红</div>
+          <div class="lb3">#C8102E 底 + 白柱</div>
+        </div>
+        <div class="spec-cell">
+          <div class="glass soft"><div class="bigwave grey"><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="lb2">不可用 / 占位</div>
+          <div class="lb3">#C3CCD9 / 整体 0.55 透明</div>
+        </div>
+        <div class="spec-cell" style="text-align:left; padding-left:10px; max-width:340px">
+          <div style="font-size:11px; font-weight:800; color:var(--ink2); margin-bottom:5px">为什么要改成音波</div>
+          <div style="font-size:11px; color:var(--ink2); line-height:1.65">
+            ① 和系统里 24×24 细线图标同一套语言，不再有 emoji 色差；<br>
+            ② <b>同一个图形能表达两种状态</b>：静止=可说话，跳动=正在听，不用换成两个图标；<br>
+            ③ 柱高天然是「音量」的隐喻，用户一眼知道「它在听我」；<br>
+            ④ 尺寸极小（18×16），放在 30px 按钮里仍清晰。
+          </div>
+        </div>
+      </div>
+
+      <div class="measure">
+        <span>柱数 <em>5</em></span>
+        <span>柱宽 <em>2px</em></span>
+        <span>间距 <em>2px</em></span>
+        <span>圆角 <em>2px</em>（全圆头）</span>
+        <span>整体 <em>18×16px</em></span>
+        <span>颜色 <em>currentColor</em>（继承按钮，暗色主题自动跟随）</span>
+      </div>
+    </div>
+
+    <div class="three" style="margin-top:14px">
+      <div class="box">
+        <h4><span class="k">A</span>动效只有两处</h4>
+        <ul>
+          <li><b>录音态</b>：柱高按实时音量变化，<b>节流 60ms</b>、线性插值 120ms —— 不做 60fps 全速刷新，避免「抖」</li>
+          <li><b>入场一次</b>：面板打开后 2 秒内，五根柱依次抬升一次（0→1→0，各错开 60ms），之后<b>永久静止</b></li>
+        </ul>
+      </div>
+      <div class="box">
+        <h4><span class="k">B</span>明确不做</h4>
+        <ul>
+          <li>不做无限循环的「呼吸」动画 —— 面板常驻，一直动会分心</li>
+          <li>不做扫描光条、扩散波纹、来回扫的渐变</li>
+          <li>不做快闪（&lt;0.5s 一轮）—— 用户明确反感</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h4><span class="k">C</span>可复制的样式</h4>
+        <p style="margin-bottom:6px">柱高用 <code>:nth-child</code> 定死，录音时改 <code>--v</code>：</p>
+        <pre style="font-size:9.5px; padding:8px 10px"><span class="c">/* 18×16 音波 */</span>
+.wave{display:flex;align-items:center;
+  gap:2px;height:16px;color:currentColor}
+.wave i{width:2px;border-radius:2px;
+  background:currentColor;
+  height:calc(var(--b) * var(--v,1))}
+<span class="c">/* --b 基准高 5/10/15/10/5
+   --v 音量 0~1，录音时由 JS 逐根写 */</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 02 Web 端 ================= -->
+  <section class="sec" id="web">
+    <div class="sec-h"><span class="n">02</span><h2>Web 端：只换样式，不接识别</h2><span class="tag blue">0.1 d</span></div>
+    <p class="sec-sub">
+      Web 端先不上语音识别。麦克风位保留（后面接 ASR 时不用改版式），但图标换成音波，
+      点下去<b>不弹窗、不报错</b>，只在输入框上方出一行灰字把人引到能用的路径上：打字，或者去小程序。
+    </p>
+
+    <div class="stage">
+      <div class="demo">
+        <!-- 态 1 空闲 -->
+        <div class="p412">
+          <div class="head"><span class="av">御</span><span class="nm">小御</span><span class="st"><i></i>在线</span><span class="x">✕</span></div>
+          <div class="body">
+            <div class="bub ai">晚上好。今天有 3 条待审批、2 单车没指派，先看哪个？</div>
+          </div>
+          <div class="pfoot">
+            <div class="inputbox">
+              <div class="mic"><div class="wave"><i></i><i></i><i></i><i></i><i></i></div></div>
+              <div class="field">问小御点什么…</div>
+              <button class="sbtn">发送</button>
+            </div>
+            <div class="tiprow">小御陪伴您每一天</div>
+          </div>
+          <div class="cap">态 1 · 空闲：音波在输入框左侧，<b>32×32 圆角 9</b>，与发送键同高</div>
+        </div>
+
+        <div style="height:16px"></div>
+
+        <!-- 态 2 点击后 -->
+        <div class="p412">
+          <div class="head"><span class="av">御</span><span class="nm">小御</span><span class="st"><i></i>在线</span><span class="x">✕</span></div>
+          <div class="body">
+            <div class="bub ai">晚上好。今天有 3 条待审批、2 单车没指派，先看哪个？</div>
+          </div>
+          <div class="pfoot">
+            <div class="ghostline"><span class="bar"></span>语音输入在小程序端可用；这里直接打字更快</div>
+            <div class="inputbox">
+              <div class="mic dim"><div class="wave"><i></i><i></i><i></i><i></i><i></i></div></div>
+              <div class="field on">|　问小御点什么…</div>
+              <button class="sbtn">发送</button>
+            </div>
+            <div class="tiprow">小御陪伴您每一天</div>
+          </div>
+          <div class="cap">态 2 · 点击后：提示行浮出（3.5s 自动收起）+ <b>焦点自动跳到输入框</b> + 按钮压到 0.55 透明</div>
+        </div>
+
+        <div style="height:16px"></div>
+
+        <!-- 态 3 hover -->
+        <div class="p412">
+          <div class="head"><span class="av">御</span><span class="nm">小御</span><span class="st"><i></i>在线</span><span class="x">✕</span></div>
+          <div class="body">
+            <div class="bub me">这个月晋K03313D 能耗多少</div>
+          </div>
+          <div class="pfoot">
+            <div class="inputbox">
+              <div class="mic hot"><div class="wave"><i></i><i></i><i></i><i></i><i></i></div></div>
+              <div class="field">问小御点什么…</div>
+              <button class="sbtn">发送</button>
+            </div>
+            <div class="tiprow">小御陪伴您每一天</div>
+          </div>
+          <div class="cap">态 3 · hover / focus：边框与图标转品牌红，底色 <b>#FDF0F2</b>，中间三根柱抬 2px</div>
+        </div>
+      </div>
+
+      <div class="aside">
+        <div class="box">
+          <h4><span class="k">A</span>为什么不做成「点了没反应」</h4>
+          <p>点了没反应 = 坏了。所以给三件事：<b>一行说明（告诉你为什么）</b> + <b>焦点跳转（给你出口）</b> + <b>按钮按下去变灰（告诉你它现在不可用）</b>，3.5 秒后自己收起，不打扰。</p>
+        </div>
+        <div class="box">
+          <h4><span class="k">B</span>提示文案备选</h4>
+          <ul>
+            <li><b>推荐</b>：语音输入在小程序端可用；这里直接打字更快</li>
+            <li>短版：语音请在小程序里说，Web 端先打字</li>
+            <li>语气太硬不用：「Web 端暂不支持语音」——像错误提示</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="k">C</span>别动的地方</h4>
+          <ul>
+            <li><b>不改</b> textarea 的自增高逻辑（<code>autoGrow</code>）与 Enter 发送</li>
+            <li>按钮放在 textarea <b>左侧</b>，与 01 稿一致；右侧留给发送键</li>
+            <li>未连接（<code>!hasToken</code>）时按钮一并置灰，不给「去小程序」的误导</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="k">D</span>预留 Web 接 ASR 的位置</h4>
+          <p>点击处理统一走 <code>onMicTap()</code>，里面现在只做提示；将来接腾讯云时，把这一处换成开始录音即可，版式与状态类（<code>.mic.rec</code>）已备好。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 03 小程序端 ================= -->
+  <section class="sec" id="mp">
+    <div class="sec-h"><span class="n">03</span><h2>小程序端：微信同声传译，五种状态</h2><span class="tag">0.9 d</span></div>
+    <p class="sec-sub">
+      司机在车上、调度手上拿着单子，打字是最慢的一环。用<b>微信同声传译插件</b>在端上直接识别，不经过我们的服务器。
+      关键约束：<b>识别结果必须落在可编辑的框里</b>，不能识别完直接发 —— 地名和数字错一次，后面全错。
+    </p>
+
+    <div class="stage">
+      <div class="demo">
+        <!-- 态 1 空闲 -->
+        <div class="mp">
+          <div class="hd2">
+            <span class="av">御</span>
+            <span class="who"><span class="n">小御 · AI 智能助理</span><span class="s"><i></i>在线</span></span>
+            <span class="x">✕</span>
+          </div>
+          <div class="bd">
+            <div class="bub ai">你好，我是小御。车队里的事可以直接问我。</div>
+          </div>
+          <div class="mpft">
+            <div class="mic"><div class="wave"><i></i><i></i><i></i><i></i><i></i></div></div>
+            <div class="inp">问小御点什么…</div>
+            <div class="sd off">发送</div>
+          </div>
+          <div class="tip">小御陪伴您每一天</div>
+          <div class="cap">态 1 · 键盘模式（默认）：<b>30×30 圆形</b>，音波灰 <b>#94A3B8</b>，中间是输入框</div>
+        </div>
+
+        <div style="height:16px"></div>
+
+        <!-- 态 1b 切到语音模式（未按住） -->
+        <div class="mp">
+          <div class="hd2">
+            <span class="av">御</span>
+            <span class="who"><span class="n">小御 · AI 智能助理</span><span class="s"><i></i>在线</span></span>
+            <span class="x">✕</span>
+          </div>
+          <div class="bd">
+            <div class="bub ai">你好，我是小御。车队里的事可以直接问我。</div>
+          </div>
+          <div class="mpft">
+            <div class="mic"><div class="kb"><div class="kb-row"><span class="kb-dot"></span><span class="kb-dot"></span><span class="kb-dot"></span></div><div class="kb-row"><span class="kb-dot"></span><span class="kb-dot"></span><span class="kb-dot"></span></div></div></div>
+            <div class="holdbtn">按住 说话</div>
+            <div class="sd off">发送</div>
+          </div>
+          <div class="tip">小御陪伴您每一天</div>
+          <div class="cap">态 1b · 点音波切到语音：<b>输入框变「按住 说话」长条</b>，左侧图标换键盘；再点键盘切回打字</div>
+        </div>
+
+        <div style="height:16px"></div>
+
+        <!-- 态 2 录音中 -->
+        <div class="mp">
+          <div class="hd2">
+            <span class="av">御</span>
+            <span class="who"><span class="n">小御 · AI 智能助理</span><span class="s"><i></i>在线</span></span>
+            <span class="x">✕</span>
+          </div>
+          <div class="bd" style="min-height:300px">
+            <div class="bub ai">你好，我是小御。车队里的事可以直接问我。</div>
+            <div class="bub me">明天八点从新晋府装货，晚上七点到天麟时代</div>
+          </div>
+          <!-- 录音中：浮层从输入栏**向上**展开，输入栏本身保留（手指还按在上面） -->
+          <div class="mpft recing" style="position:relative">
+            <div class="hold">
+              <span class="live">明天八点从新晋府装货，晚上七点到天麟…</span>
+              <div class="wave">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <div class="foot"><span class="tm">00:07</span><span class="hint">松手结束，上滑取消</span></div>
+            </div>
+            <div class="mic"><div class="kb"><div class="kb-row"><span class="kb-dot"></span><span class="kb-dot"></span><span class="kb-dot"></span></div><div class="kb-row"><span class="kb-dot"></span><span class="kb-dot"></span><span class="kb-dot"></span></div></div></div>
+            <div class="holdbtn down">松手结束</div>
+            <div class="sd off">发送</div>
+          </div>
+          <div class="tip">小御陪伴您每一天</div>
+          <div class="cap">态 2 · 按住说话：<b>浮层红底白波形</b>，长条压下变浅红；上滑取消时两者一起转黑</div>
+        </div>
+
+        <div style="height:16px"></div>
+
+        <!-- 态 3 转写确认 -->
+        <div class="mp">
+          <div class="hd2">
+            <span class="av">御</span>
+            <span class="who"><span class="n">小御 · AI 智能助理</span><span class="s"><i></i>在线</span></span>
+            <span class="x">✕</span>
+          </div>
+          <div class="bd">
+            <div class="bub ai">听完了，确认一下再发我。</div>
+          </div>
+          <div class="tcard">
+            <div class="th">
+              <span class="t">语音转文字</span>
+              <span>· 可以改</span>
+              <span class="x">✕</span>
+            </div>
+            <div class="tx">明天八点从新晋府装货，晚上七点到天麟时代，25 吨螺纹钢<span class="cursor"></span></div>
+            <div class="chips">
+              <span class="lb">识别到</span>
+              <span class="c">新晋府</span>
+              <span class="c low">? 天麟时代</span>
+              <span class="c">25 吨</span>
+            </div>
+            <div class="ops">
+              <div class="gh">↺ 重录</div>
+              <span class="cnt">52 字 · 7s</span>
+              <div class="pr">发送</div>
+            </div>
+          </div>
+          <div class="tip">小御陪伴您每一天</div>
+          <div class="cap">态 3 · 转写确认（<b>可选</b>）：默认松手直发不出现此卡，开关 <code>VOICE_AUTO_SEND=false</code> 才走这里</div>
+        </div>
+
+        <div style="height:16px"></div>
+
+        <!-- 态 4 异常 -->
+        <div class="mp">
+          <div class="hd2">
+            <span class="av">御</span>
+            <span class="who"><span class="n">小御 · AI 智能助理</span><span class="s"><i></i>在线</span></span>
+            <span class="x">✕</span>
+          </div>
+          <div class="bd">
+            <div class="bub ai">你好，我是小御。车队里的事可以直接问我。</div>
+          </div>
+          <div class="errbar">
+            <span class="b"></span>
+            <span>没有麦克风权限，说不了话。<b>开启后就能用语音</b>，也可以继续打字。</span>
+            <span class="go">去开启</span>
+          </div>
+          <div class="mpft">
+            <div class="mic dim"><div class="wave"><i></i><i></i><i></i><i></i><i></i></div></div>
+            <div class="inp">问小御点什么…</div>
+            <div class="sd off">发送</div>
+          </div>
+          <div class="tip">小御陪伴您每一天</div>
+          <div class="cap">态 4 · 权限被拒：一条条内提示 + 去开启，<b>不弹系统弹窗二次骚扰</b>，输入框照常能用</div>
+        </div>
+      </div>
+
+      <div class="aside">
+        <div class="box">
+          <h4><span class="k">A</span>五个决定（2026-11-27 改为微信手势）</h4>
+          <ul>
+            <li><b>语音 / 键盘一键切换</b>：左侧图标，键盘模式显示音波、语音模式显示键盘；切到语音自动收键盘，切回键盘时若还停在确认态先把文本回填</li>
+            <li><b>按住说话 / 松手结束</b>：与微信一致，司机和调度不用学第二套操作。最早那版是「点一下开始」，实际用下来大家习惯按住 —— 已改</li>
+            <li><b>上滑越过 56px 松手取消</b>：浮层整体转黑、长条也转黑底白字，文案变「松开取消」</li>
+            <li><b>浮层向上展开，不替换输入栏</b>：按住的节点一旦被销毁，<code>touchend</code> 就收不到、录音停不下来（实现时踩实了）</li>
+            <li><b>第一次要授权</b>：未授权时按下先弹授权，回来后请再按一次 —— 比「按住没反应」可解释</li>
+            <li><b>实时字幕用打字机追赶</b>：插件回调是整句来的（实测 1~2s 一次），一次性替换会「蹦一大段」；改成每 70ms 补 1~3 字，且<b>只显示最新 40 字</b>（否则画面永远停在句首像卡死）</li>
+            <li><b>松手直接发送</b>（用户 2026-11-27 定）：与微信一致，不再停确认卡；想回到「先确认再发」把 <code>VOICE_AUTO_SEND</code> 置 false，确认卡分支保留</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="k">B</span>为什么用 chips 而不是框内高亮</h4>
+          <p>小程序 <code>textarea</code> 里<b>做不到内联高亮</b>（没有 contenteditable）。所以改成：文本可自由编辑，下方用 chips 列出「我识别到的实体」，低置信度打 <b>?</b> 并用琥珀色 —— 用户扫一眼就知道该核对哪几处，比染色更实用。</p>
+        </div>
+        <div class="box">
+          <h4><span class="k">C</span>三种出口，别让人卡住</h4>
+          <ul>
+            <li><b>确认态接管输入区</b>：原输入栏暂时隐藏 —— 两个输入框同时在场，用户不知道该改哪个</li>
+            <li><b>上滑取消</b>：越过 56px 浮层转黑、提示变「松开取消」，松手即丢弃，不留草稿</li>
+            <li><b>重录</b>：确认态一点回到录音，<b>已识别文本保留</b>（重录失败不至于全丢）</li>
+            <li><b>✕ / 继续打字</b>：确认态关掉，文本<b>回填到输入框</b>而不是丢掉</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4><span class="k">D</span>时长与打断</h4>
+          <ul>
+            <li>单次上限 <b>60s</b>（插件限制）；到 <b>60s 自动停止并转写</b>，不丢已识别内容</li>
+            <li>切后台 / 来电 → 立即停止并保留文本，回到前台进确认态</li>
+            <li>面板被关掉 → 停止录音，不保留（避免后台偷偷占用麦克风）</li>
+            <li><b>手指滑出按钮不会中断</b>：事件跟着按下时的节点走，只要不松手就继续录</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 04 状态机 ================= -->
+  <section class="sec" id="fsm">
+    <div class="sec-h"><span class="n">04</span><h2>状态机与事件</h2><span class="tag blue">五个状态，无隐式跳转</span></div>
+
+    <div class="fsm">
+      <div class="fsm-row">
+        <div class="node">idle<small>空闲 · 音波静止</small></div>
+        <span class="arrow">→<span>按住麦克风</span></span>
+        <div class="node a">recording<small>录音 · 浮层展开</small></div>
+        <span class="arrow">→<span>松手 / 60s</span></span>
+        <div class="node b">transcribing<small>识别中 · 800ms 内</small></div>
+        <span class="arrow">→<span>插件回调</span></span>
+        <div class="node b">confirm<small>确认 · 可编辑</small></div>
+        <span class="arrow">→<span>点发送</span></span>
+        <div class="node">idle<small>回到消息流</small></div>
+      </div>
+      <div class="fsm-row" style="margin-top:12px">
+        <div class="node a">recording</div>
+        <span class="arrow">→<span>点取消 / 面板关闭</span></span>
+        <div class="node">idle<small>丢草稿</small></div>
+        <span class="arrow" style="margin-left:14px">　</span>
+        <div class="node b">confirm</div>
+        <span class="arrow">→<span>点重录</span></span>
+        <div class="node a">recording<small>保留上次文本</small></div>
+        <span class="arrow" style="margin-left:14px">　</span>
+        <div class="node" style="border-color:#F5E0BE;background:#FFF8ED;color:#8A5A12">error<small>提示 + 回 idle</small></div>
+      </div>
+      <div class="fsm-note">
+        <b>没有 loading 转圈</b>：识别中最多 800ms，直接在确认卡里显示「一个字一个字往上长」的骨架，不用 spinner。
+        <b>错误永远回 idle</b>，不留在录音态 —— 卡在录音态是最难受的失败。
+      </div>
+    </div>
+
+    <div style="margin-top:14px">
+      <table class="tb">
+        <thead>
+          <tr><th style="width:132px">事件</th><th style="width:88px">从</th><th style="width:88px">到</th><th>界面反馈</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><b>按住麦克风</b>（已授权）</td><td>idle</td><td>recording</td><td>立刻开录，浮层从输入栏向上展开；输入框压暗、麦克风实心红</td></tr>
+          <tr><td>按住麦克风（未授权）</td><td>idle</td><td>idle</td><td>先弹一次系统授权；回来后提示「麦克风开好了，按住再说一次」</td></tr>
+          <tr><td><b>上滑越过 56px</b></td><td>recording</td><td>recording</td><td>浮层与长条一起转黑，文案变「松开取消」；回滑到阈值内可恢复</td></tr>
+          <tr><td>插件 <code>onStart</code></td><td>recording</td><td>recording</td><td>计时从 <code>00:00</code> 起走，波形动起来</td></tr>
+          <tr><td>插件 <code>onRecognize</code></td><td>recording</td><td>recording</td><td>浮层顶部实时字幕更新（单行截断，不换行跳动）</td></tr>
+          <tr><td><b>松手（未上滑）</b></td><td>recording</td><td>transcribing</td><td>波形停住，长条变「识别中…」，浮层留在原位</td></tr>
+          <tr><td><b>松手（已上滑）</b></td><td>recording</td><td>idle</td><td>丢弃，不留草稿、不提示</td></tr>
+          <tr><td>插件 <code>onStop</code></td><td>transcribing</td><td>idle</td><td>有字 → <b>直接发送</b>（松手即发，不再二次确认）；无字 → 提示重说</td></tr>
+          <tr><td>识别为空</td><td>transcribing</td><td>error</td><td>提示「没听清，再说一遍？」；重录场景保留上次文本</td></tr>
+          <tr><td>面板关闭 / 切后台</td><td>recording</td><td>idle</td><td>立即 <code>stop()</code>，文本丢弃（切后台则保留进确认态）</td></tr>
+          <tr><td>点「发送」</td><td>confirm</td><td>idle</td><td>文本进消息流，走原有 <code>askAi</code>，清空确认卡</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 05 技术实现 ================= -->
+  <section class="sec" id="tech">
+    <div class="sec-h"><span class="n">05</span><h2>技术实现</h2><span class="tag">端上直连，无云函数</span></div>
+    <p class="sec-sub">
+      微信同声传译是<b>小程序插件</b>，识别在端上 + 微信侧完成，我们的服务器不参与，也不需要任何密钥。
+      所以这次<b>不新增云函数</b>，改动只在小程序工程内（不影响已部署的 <code>ai-gateway</code>）。
+    </p>
+
+    <div class="two">
+      <div>
+        <div class="box" style="padding:0; overflow:hidden">
+          <div style="padding:10px 13px; border-bottom:1px solid var(--line-soft); font-size:11.5px; font-weight:800">
+            ① 声明插件 · <code>src/manifest.json</code>
+          </div>
+          <pre style="border-radius:0"><span class="c">// mp-weixin 节点下追加（uni-app 会写进 app.json）</span>
+<span class="s">"mp-weixin"</span>: {
+  <span class="s">"plugins"</span>: {
+    <span class="s">"WechatSI"</span>: {
+      <span class="s">"version"</span>: <span class="s">"0.3.6"</span>,   <span class="c">// 以插件市场当前版本为准</span>
+      <span class="s">"provider"</span>: <span class="s">"wx069ba97219f66d99"</span>
+    }
+  }
+}</pre>
+        </div>
+
+        <div class="box" style="padding:0; overflow:hidden; margin-top:12px">
+          <div style="padding:10px 13px; border-bottom:1px solid var(--line-soft); font-size:11.5px; font-weight:800">
+            ② 封装 · <code>src/utils/voice.js</code>
+          </div>
+          <pre style="border-radius:0"><span class="c">// 只在微信端引入，其它端整文件 return no-op</span>
+<span class="k">let</span> mgr = <span class="k">null</span>
+<span class="k">function</span> ensure() {
+  <span class="c">// #ifdef MP-WEIXIN</span>
+  <span class="k">if</span> (!mgr) {
+    <span class="k">const</span> si = requirePlugin(<span class="s">'WechatSI'</span>)
+    mgr = si.getRecordRecognitionManager()
+  }
+  <span class="c">// #endif</span>
+  <span class="k">return</span> mgr
+}
+
+<span class="k">export function</span> startVoice({ onLive, onDone, onFail }) {
+  <span class="k">const</span> m = ensure()
+  <span class="k">if</span> (!m) <span class="k">return</span> onFail({ kind: <span class="s">'unsupported'</span> })
+  m.onRecognize = r =&gt; onLive(r.result || <span class="s">''</span>)
+  m.onStop      = r =&gt; onDone(r.result || <span class="s">''</span>)
+  m.onError     = e =&gt; onFail({ kind: mapErr(e), raw: e })
+  m.start({ duration: <span class="s">60000</span>, lang: <span class="s">'zh_CN'</span> })
+}
+
+<span class="k">export function</span> stopVoice() { ensure()?.stop() }</pre>
+        </div>
+      </div>
+
+      <div>
+        <div class="box" style="padding:0; overflow:hidden">
+          <div style="padding:10px 13px; border-bottom:1px solid var(--line-soft); font-size:11.5px; font-weight:800">
+            ③ 权限预检（不要一上来就 <code>start</code>）
+          </div>
+          <pre style="border-radius:0"><span class="k">async function</span> ensurePerm() {
+  <span class="k">const</span> s = <span class="k">await</span> wx.getSetting()
+  <span class="k">if</span> (s.authSetting[<span class="s">'scope.record'</span>] === <span class="k">false</span>) {
+    <span class="c">// 已明确拒绝过 → 只能引导去设置页</span>
+    <span class="k">return</span> { ok: <span class="k">false</span>, denied: <span class="k">true</span> }
+  }
+  <span class="k">try</span> { <span class="k">await</span> wx.authorize({ scope: <span class="s">'scope.record'</span> })
+    <span class="k">return</span> { ok: <span class="k">true</span> } }
+  <span class="k">catch</span> { <span class="k">return</span> { ok: <span class="k">false</span>, denied: <span class="k">true</span> } }
+}</pre>
+          <div style="padding:8px 13px 10px; font-size:10px; color:var(--ink3); border-top:1px solid var(--line-soft)">
+            授权成功直接进入录音，<b>不要</b>「已授权，请再点一次」。
+          </div>
+        </div>
+
+        <div class="box" style="padding:0; overflow:hidden; margin-top:12px">
+          <div style="padding:10px 13px; border-bottom:1px solid var(--line-soft); font-size:11.5px; font-weight:800">
+            ④ 音波驱动（音量 → 柱高）
+          </div>
+          <pre style="border-radius:0"><span class="c">// 60ms 节流，120ms 线性插值；不要逐帧 setData</span>
+<span class="k">let</span> last = 0
+m.onFrameRecorded = <span class="k">function</span> (res) {
+  <span class="k">const</span> now = Date.now()
+  <span class="k">if</span> (now - last &lt; <span class="s">60</span>) <span class="k">return</span>
+  last = now
+  <span class="k">const</span> v = rms(res.frameBuffer)   <span class="c">// 0~1</span>
+  setBars(v)
+}
+<span class="c">// setBars 只改 12 根柱的 style.height</span>
+<span class="c">// 静音时收到基线，不再抖动</span></pre>
+          <div style="padding:8px 13px 10px; font-size:10px; color:var(--ink3); border-top:1px solid var(--line-soft)">
+            ⚠️ 插件本身不给音量，需要另一路 <code>RecorderManager</code> 才能拿 <code>onFrameRecorded</code>；
+            <b>若要省事，可退化为固定节奏的柔和波动</b>（1.8s 一轮、幅度 30%），观感差别不大。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="box" style="padding:0; overflow:hidden; margin-top:14px">
+      <div style="padding:10px 13px; border-bottom:1px solid var(--line-soft); font-size:11.5px; font-weight:800">
+        ⑤ 手势（按住 / 上滑取消）
+      </div>
+      <pre style="border-radius:0"><span class="c">// touchstart 立即开录（权限已就绪时），move 判阈值，touchend 收口</span>
+<span class="k">function</span> onMicTouchStart(e) {
+  holding = <span class="k">true</span>
+  touchStartY = e.touches[<span class="s">0</span>].clientY
+  <span class="k">if</span> (!permReady.value) { <span class="c">/* 先授权，回来提示「再按一次」 */</span> }
+  <span class="k">else</span> beginRecording()
+}
+
+<span class="k">function</span> onMicTouchMove(e) {
+  <span class="c">// 上滑超过 56px → 取消态；回滑自动恢复</span>
+  willCancel.value = touchStartY - e.touches[<span class="s">0</span>].clientY &gt; <span class="s">56</span>
+}
+
+<span class="k">function</span> onMicTouchEnd() {
+  holding = <span class="k">false</span>
+  <span class="k">if</span> (willCancel.value) { cancelVoice(); resetVoice() }  <span class="c">// 丢弃</span>
+  <span class="k">else</span> stopVoice()                                     <span class="c">// 进确认态</span>
+}</pre>
+      <div style="padding:8px 13px 10px; font-size:10px; color:var(--ink3); line-height:1.7; border-top:1px solid var(--line-soft)">
+        ⚠️ <b>承载 touch 的节点在录音期间不能被 <code>v-if</code> 掉</b> —— 一旦输入栏被替换，按住的节点销毁，<code>touchend</code> 收不到，录音永远停不下来。所以浮层用 <code>absolute</code> 向上展开，输入栏保留（只压暗）。<br>
+        ⚠️ 必须 <code>catchtouchmove</code>（<code>.stop.prevent</code>），否则手指上滑会带着消息列表一起滚。<br>
+        ⚠️ 插件 <code>stop()</code> 后可能补一个迟到的 <code>onError</code>，失败处理里先判状态是否还是 <code>recording</code>，否则取消后弹莫名报错。
+      </div>
+    </div>
+
+    <div style="margin-top:14px">
+      <table class="tb">
+        <thead>
+          <tr><th style="width:150px">异常现象</th><th style="width:158px">判定</th><th>界面处理</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>用户拒绝过授权</td><td><code>authSetting.record === false</code></td><td>条内提示 + 「去开启」→ <code>wx.openSetting</code>；<b>不再弹系统框</b></td></tr>
+          <tr><td>录音初始化失败 / 被占用</td><td><code>onError</code> retcode 非 0</td><td>提示「麦克风被占用，稍后再试」+ 重录；不进入确认态</td></tr>
+          <tr><td>无网络</td><td>设备离线 / 识别超时</td><td>提示「没网，先打字或稍后重试」；<b>已识别的半句保留到输入框</b></td></tr>
+          <tr><td>一句都没识别到</td><td><code>result</code> 为空串</td><td>提示「没听清，再说一遍？」+ 大号重录按钮</td></tr>
+          <tr><td>环境太吵 / 说了方言</td><td>result 长度 &lt; 4 字</td><td>同上，但文案改为「周围太吵？靠近点说」</td></tr>
+          <tr><td>插件未安装（旧版本包）</td><td><code>requirePlugin</code> 抛错</td><td><code>try/catch</code> 兜住，麦克风按钮<b>直接不渲染</b>，输入框照常</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 06 验收 ================= -->
+  <section class="sec" id="qa">
+    <div class="sec-h"><span class="n">06</span><h2>验收清单与工时</h2><span class="tag blue">1.2 d</span></div>
+
+    <div class="three">
+      <div class="chk">
+        <h4><span class="dot"></span>Web（0.1 d）</h4>
+        <ul>
+          <li>音波图标 18×16，与发送键垂直居中对齐</li>
+          <li>hover 变红、点击置灰 + 提示行 <b>3.5s</b> 自动收起</li>
+          <li>点击后焦点落在 textarea</li>
+          <li>未连接时按钮一并置灰</li>
+          <li>六套主题下颜色跟随（用 <code>currentColor</code>）</li>
+          <li>不出现任何 console 报错</li>
+        </ul>
+      </div>
+      <div class="chk">
+        <h4><span class="dot"></span>小程序（0.9 d）</h4>
+        <ul>
+          <li>插件声明生效，真机能调起麦克风</li>
+          <li>首次授权后<b>直接开始录音</b>，不用点两次</li>
+          <li>录音中实时字幕滚动，不撑高面板</li>
+          <li>60s 自动停止；55s 有提示</li>
+          <li>确认态文本可改，改完发送的是改后内容</li>
+          <li>取消 / 重录 / 关闭 三条出口都通</li>
+          <li>拒绝授权后输入框仍可用</li>
+          <li>切后台立即停止，不后台录音</li>
+        </ul>
+      </div>
+      <div class="chk">
+        <h4><span class="dot"></span>埋点与合规</h4>
+        <ul>
+          <li>只记 <code>voice_start / voice_stop / voice_send / voice_cancel / voice_error</code> 与耗时、字数</li>
+          <li><b>不记识别原文</b>、不记手机号、不落录音文件</li>
+          <li>录音文件用后即删（插件默认不落盘）</li>
+          <li>日志带 <code>traceId</code>，异常统一 <code>BizError</code></li>
+          <li>面板关闭时确保 <code>stop()</code> 被调用</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="margin-top:14px">
+      <table class="tb">
+        <thead><tr><th style="width:150px">改动文件</th><th>内容</th><th style="width:70px">端</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">src/components/AiAssistant/AiAssistant.vue</td><td>输入栏加音波按钮 + <code>onMicTap()</code> + 提示行；预留 <code>.mic.rec</code> 状态类</td><td>Web</td></tr>
+          <tr><td class="mono">my-cd-miniprogram/src/manifest.json</td><td><code>mp-weixin.plugins</code> 声明 WechatSI</td><td>小程序</td></tr>
+          <tr><td class="mono">…/src/utils/voice.js <b>（新）</b></td><td>插件封装：<code>ensurePerm / startVoice / stopVoice / cancelVoice</code>、错误映射</td><td>小程序</td></tr>
+          <tr><td class="mono">…/src/components/ai-assistant.vue</td><td>输入栏音波按钮、录音条、转写确认卡、错误条；<code>onUnmounted</code> 里 <code>stopVoice()</code></td><td>小程序</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="foot">
+      <b>落地顺序</b>：① Web 音波（10 分钟，先让两端视觉统一）→ ② 小程序 manifest + voice.js 跑通「能录能出字」→ ③ 三态 UI → ④ 异常与出口 → ⑤ 真机 5 个用例（安静车内 / 嘈杂街道 / 拒绝授权 / 无网 / 60s 到点）。<br>
+      <b>风险</b>：插件版本号与错误码需以实际返回为准，实现时先把 <code>onError</code> 的原始 <code>retcode</code> 打日志（不含文本），跑一轮再收敛文案。
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

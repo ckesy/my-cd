@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AI 草稿卡 · 四版重设计（可视化优先）</title>
+<style>
+  :root{
+    --red:#C8102E; --red-dark:#A50D25; --red-soft:#FDF0F2; --red-line:#F5D4D9;
+    --blue:#2563EB; --blue-2:#1D4ED8; --blue-lt:#60A5FA; --blue-soft:#EFF4FF;
+    --green:#0E9F6E; --green-2:#0B7F58; --green-lt:#34D399; --green-soft:#EDF9F4;
+    --amber:#D97706; --amber-soft:#FFF8ED;
+    --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8; --ink4:#C3CCD9;
+    --line:#E6EBF2; --line2:#F1F5F9; --bg:#F4F6FA;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{
+    margin:0;padding:26px 24px 44px;background:#E9ECF2;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;
+    font-variant-numeric:tabular-nums;
+  }
+  .doc{max-width:900px;margin:0 auto 22px}
+  .doc h1{font-size:18px;margin:0 0 8px}
+  .doc p{margin:0;font-size:12.5px;line-height:1.85;color:#5B6879}
+  .doc b{color:var(--ink)}
+  .doc .sw{display:inline-flex;align-items:center;gap:4px;margin:0 3px}
+  .doc .sw i{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+  .grid{display:grid;grid-template-columns:repeat(2,412px);gap:34px 34px;justify-content:center}
+  .cellh{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .vtag{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.3px;color:#fff;background:var(--ink);border-radius:5px;padding:3px 8px}
+  .vtag.rec{background:var(--red)}
+  .cellh h2{font-size:13.5px;margin:0}
+  .cellh .s{font-size:11px;color:#7C8AA0}
+
+  /* ---------- 面板 ---------- */
+  .panel{
+    width:412px;height:592px;background:#fff;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;
+    box-shadow:0 16px 38px -26px rgba(15,23,42,.55),0 0 0 1px #DDE3EC;
+  }
+  .p-top{height:42px;flex:none;display:flex;align-items:center;gap:7px;padding:0 12px;border-bottom:1px solid var(--line)}
+  .p-top .av{width:23px;height:23px;border-radius:50%;background:var(--red);color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+  .p-top .nm{font-size:12px;font-weight:700}
+  .p-top .st{font-size:9.5px;color:var(--green);display:flex;align-items:center;gap:3px}
+  .p-top .st i{width:4px;height:4px;border-radius:50%;background:var(--green);display:block}
+  .p-top .x{margin-left:auto;color:#B9C4D2;font-size:12px}
+  .p-body{flex:1;min-height:0;background:#FCFDFE;padding:10px 11px;display:flex;flex-direction:column;gap:7px;overflow:hidden}
+
+  .bub{max-width:86%;font-size:11px;line-height:1.6;padding:6px 9px;border-radius:9px}
+  .bub.me{align-self:flex-end;background:var(--red-soft);border:1px solid var(--red-line);color:#475569}
+  .bub.ai{align-self:flex-start;background:#fff;border:1px solid #EDF0F4;color:#475569}
+
+  .dcard{border:1px solid #E7ECF3;border-radius:12px;background:#fff;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+  .dc-h{display:flex;align-items:center;gap:7px;padding:8px 11px;border-bottom:1px solid var(--line)}
+  .dc-h .t{font-size:11.5px;font-weight:700}
+  .dc-h .m{font-size:10px;color:var(--ink3)}
+  .dc-h .r{margin-left:auto;display:flex;align-items:center;gap:6px}
+  .sync{font-size:10px;color:#8A6D3B;background:#FFFDF7;border:1px solid #F0DDBB;border-radius:5px;padding:2px 6px}
+  .prog{display:flex;align-items:center;gap:5px;font-size:9.5px;font-weight:700;color:#64748B}
+  .prog .pbar{width:40px;height:4px;border-radius:2px;background:#EAEFF6;overflow:hidden;display:block}
+  .prog .pbar i{display:block;height:100%;border-radius:2px;background:var(--red)}
+  .dc-foot{display:flex;align-items:center;gap:8px;padding:9px 11px;border-top:1px solid var(--line);background:#FCFDFE}
+  .btn{font-size:11.5px;font-weight:700;border-radius:6px;padding:6px 12px;border:1px solid var(--line);background:#fff;color:var(--ink2);white-space:nowrap}
+  .btn.pri{background:var(--red);border-color:var(--red);color:#fff}
+  .dc-foot .sp{margin-left:auto;font-size:10px;color:var(--red);font-weight:700;text-align:right;line-height:1.4}
+  .segsm{display:flex;flex:none}
+  .segsm span{font-size:9px;font-weight:700;padding:2px 6px;border:1px solid var(--line);color:var(--ink3);background:#fff}
+  .segsm span:first-child{border-radius:4px 0 0 4px}
+  .segsm span:last-child{border-radius:0 4px 4px 0;border-left:0}
+  .segsm span.on{background:var(--red);border-color:var(--red);color:#fff}
+
+  /* ================= V1 双色块 ================= */
+  .stops{padding:10px 11px 8px;background:linear-gradient(180deg,#FBFCFE,#F7F9FC)}
+  .stop{border-radius:10px;padding:9px 11px;color:#fff;position:relative;overflow:hidden}
+  .stop.b{background:linear-gradient(135deg,#2563EB 0%,#3B82F6 100%);box-shadow:0 6px 14px -8px rgba(37,99,235,.85)}
+  .stop.g{background:linear-gradient(135deg,#0E9F6E 0%,#10B981 100%);box-shadow:0 6px 14px -8px rgba(14,159,110,.85)}
+  .stop::after{content:"";position:absolute;right:-24px;top:-24px;width:78px;height:78px;border-radius:50%;background:rgba(255,255,255,.12)}
+  .s-top{display:flex;align-items:center;gap:6px;position:relative;z-index:1}
+  .s-ic{width:17px;height:17px;border-radius:5px;background:rgba(255,255,255,.24);font-size:9.5px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+  .s-when{font-size:10px;font-weight:700;opacity:.95}
+  .s-src{margin-left:auto;font-size:9px;font-weight:700;background:rgba(255,255,255,.2);border-radius:4px;padding:1px 5px}
+  .s-nm{font-size:16px;font-weight:800;letter-spacing:.4px;margin-top:3px;position:relative;z-index:1}
+  .s-sub{font-size:9.5px;opacity:.82;margin-top:1px;position:relative;z-index:1}
+  .link{height:24px;display:flex;align-items:center;justify-content:center;position:relative}
+  .link::before{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:1.5px dashed #C6D3E4}
+  .link span{position:relative;background:#fff;border:1px solid var(--line);border-radius:999px;font-size:9px;font-weight:700;color:#64748B;padding:1px 7px}
+
+  .tiles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;padding:9px 11px 4px}
+  .tile{border:1px solid var(--line);border-radius:9px;padding:9px 8px 7px;position:relative;background:#FBFCFE;min-height:50px;display:flex;flex-direction:column;gap:1px}
+  .tile .tl{font-size:9px;color:var(--ink3);letter-spacing:.3px}
+  .tile .tv{font-size:12px;font-weight:800;line-height:1.25}
+  .tile .tv.ph{color:var(--ink4);font-weight:600}
+  .tile .ta{position:absolute;right:7px;top:6px;font-size:8.5px;font-weight:800;color:var(--red);background:none;border:0;padding:0}
+  .tile.bad{background:#FFF6F6;border-color:#F3C9D0;border-style:dashed}
+  .tile.bad .tv{color:var(--red)}
+  .tile.blue{background:var(--blue-soft);border-color:#D8E3FB}
+  .tile.blue .tv{color:var(--blue-2)}
+  .tile.grey .tv{color:var(--ink4)}
+
+  .metarow{display:flex;align-items:center;gap:12px;padding:7px 11px 9px;font-size:10px;color:var(--ink3)}
+  .metarow b{font-size:11.5px;color:var(--ink);margin-left:4px}
+  .metarow b.ph{color:var(--ink4);font-weight:600}
+  .metarow .sp{margin-left:auto;display:flex;align-items:center;gap:5px}
+
+  /* ================= V2 迷你地图 ================= */
+  .mapwrap{position:relative;height:150px;background:
+      repeating-linear-gradient(0deg,#F2F6FB 0 1px,transparent 1px 26px),
+      repeating-linear-gradient(90deg,#F2F6FB 0 1px,transparent 1px 26px),
+      linear-gradient(180deg,#FAFCFE,#F2F7FB);
+    border-bottom:1px solid var(--line)}
+  .mapwrap svg{position:absolute;inset:0;width:100%;height:100%}
+  .pin2{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:2px}
+  .pin2 .c{font-size:8.5px;font-weight:800;color:#fff;border-radius:4px;padding:1px 5px;white-space:nowrap}
+  .pin2 .d{width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(15,23,42,.3)}
+  .pin2.b{left:20%;top:38%} .pin2.b .c{background:var(--blue)} .pin2.b .d{background:var(--blue)}
+  .pin2.g{left:72%;top:76%} .pin2.g .c{background:var(--green)} .pin2.g .d{background:var(--green)}
+  .km{position:absolute;left:44%;top:39%;transform:translate(-50%,-50%);background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:999px;font-size:9px;font-weight:800;color:#475569;padding:2px 8px;box-shadow:0 2px 6px rgba(15,23,42,.08)}
+  .mapinfo{display:flex;gap:0;border-bottom:1px solid var(--line)}
+  .mi{flex:1;padding:8px 11px;display:flex;flex-direction:column;gap:1px}
+  .mi + .mi{border-left:1px solid var(--line2)}
+  .mi .k{font-size:8.5px;font-weight:800;letter-spacing:.4px}
+  .mi.b .k{color:var(--blue)} .mi.g .k{color:var(--green)}
+  .mi .n{font-size:12.5px;font-weight:800}
+  .mi .t{font-size:9.5px;color:var(--ink3)}
+
+  /* ================= V3 时间轴 ================= */
+  .rail{padding:10px 11px 6px}
+  .rrow{display:flex;gap:9px}
+  .rrail{width:16px;flex:none;display:flex;flex-direction:column;align-items:center}
+  .rnode{width:11px;height:11px;border-radius:50%;border:2.5px solid #fff;flex:none}
+  .rnode.b{background:var(--blue);box-shadow:0 0 0 2px #BFD3FA}
+  .rnode.g{background:var(--green);box-shadow:0 0 0 2px #BBE8D6}
+  .rline{flex:1;width:0;border-left:1.5px dashed #D3DDEA;margin:3px 0}
+  .rmain{flex:1;min-width:0;padding-bottom:12px}
+  .rtime{font-size:11px;font-weight:800;color:var(--ink);margin-bottom:4px;letter-spacing:.2px}
+  .rtime em{font-style:normal;font-weight:500;color:var(--ink3);font-size:9.5px;margin-left:4px}
+  .rcard{border-radius:9px;padding:8px 10px;border:1px solid #D8E3FB;background:linear-gradient(135deg,#F5F9FF,#EAF1FF)}
+  .rcard.g{border-color:#CDEBDD;background:linear-gradient(135deg,#F4FCF8,#E6F7EF)}
+  .rcard .h{display:flex;align-items:center;gap:6px}
+  .rcard .rl{font-size:8.5px;font-weight:800;letter-spacing:.4px;color:var(--blue-2)}
+  .rcard.g .rl{color:var(--green-2)}
+  .rcard .nm{font-size:13.5px;font-weight:800}
+  .rcard .mt{font-size:9.5px;color:#5B6879;margin-top:1px}
+
+  /* ================= V4 仪表 ================= */
+  .dash{padding:10px 11px 4px}
+  .ringrow{display:flex;align-items:center;gap:10px}
+  .ringbig{width:56px;height:56px;flex:none;position:relative}
+  .ringbig b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:1px;font-size:11px;font-weight:800;letter-spacing:-.2px}
+  .ringbig b i{font-style:normal;font-size:8.5px;color:var(--ink3);font-weight:600}
+  .bards{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+  .bd{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--ink3)}
+  .bd .n{width:24px;flex:none;font-weight:700;color:#64748B}
+  .bd .track{flex:1;height:5px;border-radius:3px;background:#EEF2F7;overflow:hidden}
+  .bd .fill{display:block;height:100%;border-radius:3px}
+  .bd .fill.b{background:var(--blue)} .bd .fill.g{background:var(--green)} .bd .fill.r{background:#E7A9B3}
+  .bd .p{width:26px;text-align:right;font-weight:700;color:#64748B;flex:none}
+
+  .tiles2{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:9px 11px 0}
+  .tile2{border-radius:9px;padding:8px 9px;display:flex;align-items:center;gap:8px;border:1px solid transparent}
+  .tile2 .ic2{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex:none}
+  .tile2 .tx2{min-width:0}
+  .tile2 .k2{font-size:8.5px;color:var(--ink3)}
+  .tile2 .v2{font-size:11.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tile2.blue{background:var(--blue-soft);border-color:#DCE7FB}
+  .tile2.blue .ic2{background:var(--blue)} .tile2.blue .v2{color:var(--blue-2)}
+  .tile2.green{background:var(--green-soft);border-color:#D3EEE2}
+  .tile2.green .ic2{background:var(--green)} .tile2.green .v2{color:var(--green-2)}
+  .tile2.bad{background:#FFF6F6;border-color:#F3C9D0;border-style:dashed}
+  .tile2.bad .ic2{background:var(--red)} .tile2.bad .v2{color:var(--red)}
+  .tile2.grey{background:#F7F9FC;border-color:#E9EEF5}
+  .tile2.grey .ic2{background:#C7D2E0} .tile2.grey .v2{color:var(--ink4);font-weight:700}
+
+  /* 说明 */
+  .vnote{width:412px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:9px}
+  .vnote p{margin:0 0 6px;font-size:11.5px;line-height:1.75;color:#475569}
+  .vnote p:last-child{margin:0}
+  .vnote b{color:var(--ink)}
+  .vnote .h{font-size:10px;font-weight:800;color:var(--green-2);margin-bottom:3px}
+  .vnote .h.bad{color:#B45309}
+</style>
+</head>
+<body>
+
+<div class="doc">
+  <h1>「派单草稿」卡片 · 四版重设计（可视化优先）</h1>
+  <p>
+    这一次把「表格式逐行」换成<b>图形块</b>：起点终点用<span class="sw"><i style="background:#2563EB"></i>蓝色块</span>和<span class="sw"><i style="background:#0E9F6E"></i>绿色块</span>承载，
+    待办用彩色 tile 承载，文字只保留必须读的那几个字。四版都是在 412px 抽屉内的真实尺寸。
+  </p>
+</div>
+
+<div class="grid">
+
+  <!-- ==================== V1 ==================== -->
+  <div>
+    <div class="cellh"><span class="vtag rec">V1</span><h2>双色块 + 待办瓷砖</h2><span class="s">推荐 · 最直观</span></div>
+
+    <div class="panel">
+      <div class="p-top"><span class="av">御</span><span class="nm">小御</span><span class="st"><i></i>在线</span><span class="x">✕</span></div>
+      <div class="p-body">
+        <div class="bub me">明天八点从新晋府装货，晚上七点到天麟时代，派李亚楠的车</div>
+        <div class="bub ai">草稿好了。货物还没定，李亚楠名下有两台车。</div>
+
+        <div class="dcard">
+          <div class="dc-h">
+            <span class="t">派单草稿</span><span class="m">1 个任务</span>
+            <span class="r">
+              <span class="prog">
+                <span class="pbar"><i style="width:67%"></i></span>已填 8/12
+              </span>
+              <span class="sync">↻</span>
+            </span>
+          </div>
+
+          <div class="stops">
+            <div class="stop b">
+              <div class="s-top"><span class="s-ic">装</span><span class="s-when">11-27 08:00</span><span class="s-src">围栏</span></div>
+              <div class="s-nm">新晋府</div>
+              <div class="s-sub">成都市青白江区</div>
+            </div>
+            <div class="link"><span>同日达 · 11 小时</span></div>
+            <div class="stop g">
+              <div class="s-top"><span class="s-ic">卸</span><span class="s-when">11-27 19:00</span><span class="s-src">围栏</span></div>
+              <div class="s-nm">天麟时代</div>
+              <div class="s-sub">成都市新都区</div>
+            </div>
+          </div>
+
+          <div class="tiles">
+            <div class="tile bad"><span class="tl">货物</span><span class="tv">待补</span><span class="ta">补 ›</span></div>
+            <div class="tile blue"><span class="tl">车辆</span><span class="tv">2 选 1</span><span class="ta">选 ›</span></div>
+            <div class="tile grey"><span class="tl">客户</span><span class="tv ph">可后补</span></div>
+          </div>
+
+          <div class="metarow">
+            <span>数量<b>25 吨</b></span>
+            <span>运费<b class="ph">未填</b></span>
+            <span class="sp">模式<span class="segsm"><span>极简</span><span class="on">详细</span></span></span>
+          </div>
+
+          <div class="dc-foot">
+            <button class="btn pri">去建单页确认 →</button>
+            <span class="sp">还差 货物</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="vnote">
+      <p><span class="h">好在哪</span>装卸货是两个实心色块，字是白的 —— 不用读标签就知道哪头是装、哪头是卸。中间那条「同日达 · 11 小时」把两站连起来，像一张票。</p>
+      <p><span class="h">待办</span>货物（红虚线）、车辆（蓝）、客户（灰）三种颜色直接区分「必须补 / 要我选 / 可后补」，不用再写状态文字。</p>
+    </div>
+  </div>
+
+  <!-- ==================== V2 ==================== -->
+  <div>
+    <div class="cellh"><span class="vtag">V2</span><h2>迷你地图 + 浮条</h2><span class="s">最有「行程感」</span></div>
+
+    <div class="panel">
+      <div class="p-top"><span class="av">御</span><span class="nm">小御</span><span class="st"><i></i>在线</span><span class="x">✕</span></div>
+      <div class="p-body">
+        <div class="bub me">明天八点从新晋府装货，晚上七点到天麟时代，派李亚楠的车</div>
+        <div class="bub ai">草稿好了。货物还没定，李亚楠名下有两台车。</div>
+
+        <div class="dcard">
+          <div class="dc-h">
+            <span class="t">派单草稿</span><span class="m">1 个任务</span>
+            <span class="r"><span class="sync">↻ 重新对齐</span></span>
+          </div>
+
+          <div class="mapwrap">
+            <svg viewBox="0 0 412 150" preserveAspectRatio="none">
+              <path d="M82 52 C 150 52, 150 106, 214 108 S 270 114, 296 114"
+                    fill="none" stroke="#2563EB" stroke-width="2" stroke-dasharray="6 4" stroke-linecap="round" opacity=".8"/>
+            </svg>
+            <div class="pin2 b"><span class="c">装 · 新晋府</span><span class="d"></span></div>
+            <div class="pin2 g"><span class="c">卸 · 天麟时代</span><span class="d"></span></div>
+            <div class="km">约 128 km</div>
+          </div>
+
+          <div class="mapinfo">
+            <div class="mi b"><span class="k">装 货</span><span class="n">新晋府</span><span class="t">11-27 08:00</span></div>
+            <div class="mi g"><span class="k">卸 货</span><span class="n">天麟时代</span><span class="t">11-27 19:00</span></div>
+          </div>
+
+          <div class="tiles">
+            <div class="tile bad"><span class="tl">货物</span><span class="tv">待补</span><span class="ta">补 ›</span></div>
+            <div class="tile blue"><span class="tl">车辆</span><span class="tv">2 选 1</span><span class="ta">选 ›</span></div>
+            <div class="tile"><span class="tl">司机</span><span class="tv">李亚楠</span></div>
+          </div>
+
+          <div class="metarow">
+            <span>数量<b>25 吨</b></span>
+            <span>客户<b class="ph">可后补</b></span>
+            <span class="sp">模式<span class="segsm"><span>极简</span><span class="on">详细</span></span></span>
+          </div>
+
+          <div class="dc-foot">
+            <button class="btn pri">去建单页确认 →</button>
+            <span class="sp">还差 货物</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="vnote">
+      <p><span class="h">好在哪</span>地图是「这次到底跑多远」最省脑的解释，比一行「128 km」有力得多。色块退回成小色签，整体更轻。</p>
+      <p><span class="h bad">注意</span>没有路线 / 没坐标时会空 —— 必须降级（退化成 V1 的双色块），否则一半单子打开是白框。</p>
+    </div>
+  </div>
+
+  <!-- ==================== V3 ==================== -->
+  <div>
+    <div class="cellh"><span class="vtag">V3</span><h2>时间轴轨道</h2><span class="s">时间优先</span></div>
+
+    <div class="panel">
+      <div class="p-top"><span class="av">御</span><span class="nm">小御</span><span class="st"><i></i>在线</span><span class="x">✕</span></div>
+      <div class="p-body">
+        <div class="bub me">明天八点从新晋府装货，晚上七点到天麟时代，派李亚楠的车</div>
+        <div class="bub ai">草稿好了。货物还没定，李亚楠名下有两台车。</div>
+
+        <div class="dcard">
+          <div class="dc-h">
+            <span class="t">派单草稿</span><span class="m">1 个任务</span>
+            <span class="r"><span class="sync">↻</span><span class="t" style="font-size:10px;color:var(--red);font-weight:700">差 1 项</span></span>
+          </div>
+
+          <div class="rail">
+            <div class="rrow">
+              <div class="rrail"><span class="rnode b"></span><span class="rline"></span></div>
+              <div class="rmain">
+                <div class="rtime">08:00<em>11-27 周五</em></div>
+                <div class="rcard">
+                  <div class="h"><span class="rl">装 货</span><span class="nm">新晋府</span></div>
+                  <div class="mt">成都市青白江区 · 围栏已匹配</div>
+                </div>
+              </div>
+            </div>
+            <div class="rrow">
+              <div class="rrail"><span class="rnode g"></span></div>
+              <div class="rmain">
+                <div class="rtime">19:00<em>11-27 周五</em></div>
+                <div class="rcard g">
+                  <div class="h"><span class="rl">卸 货</span><span class="nm">天麟时代</span></div>
+                  <div class="mt">成都市新都区 · 围栏已匹配</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tiles">
+            <div class="tile bad"><span class="tl">货物</span><span class="tv">待补</span><span class="ta">补 ›</span></div>
+            <div class="tile blue"><span class="tl">车辆</span><span class="tv">2 选 1</span><span class="ta">选 ›</span></div>
+            <div class="tile grey"><span class="tl">客户</span><span class="tv ph">可后补</span></div>
+          </div>
+
+          <div class="metarow">
+            <span>数量<b>25 吨</b></span>
+            <span>运费<b class="ph">未填</b></span>
+            <span class="sp">模式<span class="segsm"><span>极简</span><span class="on">详细</span></span></span>
+          </div>
+
+          <div class="dc-foot">
+            <button class="btn pri">去建单页确认 →</button>
+            <span class="sp">还差 货物</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="vnote">
+      <p><span class="h">好在哪</span>「几点装、几点到」成了主轴，蓝绿两色只做节点。适合以时间为主的派单，也最像司机看到的行程单。</p>
+      <p><span class="h bad">注意</span>没有色块底，视觉重量比 V1 轻一档；装卸货的对比靠圆点颜色，弱一些。</p>
+    </div>
+  </div>
+
+  <!-- ==================== V4 ==================== -->
+  <div>
+    <div class="cellh"><span class="vtag">V4</span><h2>完成度仪表 + 彩色块</h2><span class="s">进度感最强</span></div>
+
+    <div class="panel">
+      <div class="p-top"><span class="av">御</span><span class="nm">小御</span><span class="st"><i></i>在线</span><span class="x">✕</span></div>
+      <div class="p-body">
+        <div class="bub me">明天八点从新晋府装货，晚上七点到天麟时代，派李亚楠的车</div>
+        <div class="bub ai">草稿好了。货物还没定，李亚楠名下有两台车。</div>
+
+        <div class="dcard">
+          <div class="dc-h">
+            <span class="t">派单草稿</span><span class="m">1 个任务</span>
+            <span class="r"><span class="sync">↻ 重新对齐</span></span>
+          </div>
+
+          <div class="dash">
+            <div class="ringrow">
+              <div class="ringbig">
+                <svg width="56" height="56" viewBox="0 0 56 56">
+                  <circle cx="28" cy="28" r="22" fill="none" stroke="#EDF1F7" stroke-width="5"/>
+                  <circle cx="28" cy="28" r="22" fill="none" stroke="#C8102E" stroke-width="5"
+                          stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="46"
+                          transform="rotate(-90 28 28)"/>
+                </svg>
+                <b>8<i>/12</i></b>
+              </div>
+              <div class="bards">
+                <div class="bd"><span class="n">行程</span><span class="track"><i class="fill b" style="width:100%"></i></span><span class="p">2/2</span></div>
+                <div class="bd"><span class="n">货物</span><span class="track"><i class="fill r" style="width:35%"></i></span><span class="p">1/3</span></div>
+                <div class="bd"><span class="n">承运</span><span class="track"><i class="fill g" style="width:66%"></i></span><span class="p">2/3</span></div>
+              </div>
+            </div>
+
+            <div class="tiles2">
+              <div class="tile2 blue">
+                <span class="ic2">装</span>
+                <div class="tx2"><div class="k2">11-27 08:00</div><div class="v2">新晋府</div></div>
+              </div>
+              <div class="tile2 green">
+                <span class="ic2">卸</span>
+                <div class="tx2"><div class="k2">11-27 19:00</div><div class="v2">天麟时代</div></div>
+              </div>
+              <div class="tile2 bad">
+                <span class="ic2">货</span>
+                <div class="tx2"><div class="k2">必填</div><div class="v2">待补 · 去选</div></div>
+              </div>
+              <div class="tile2 grey">
+                <span class="ic2">车</span>
+                <div class="tx2"><div class="k2">李亚楠名下</div><div class="v2">2 台可选</div></div>
+              </div>
+            </div>
+
+            <div class="metarow" style="padding:8px 0 4px">
+              <span>数量<b>25 吨</b></span>
+              <span>客户<b class="ph">可后补</b></span>
+              <span class="sp">模式<span class="segsm"><span>极简</span><span class="on">详细</span></span></span>
+            </div>
+          </div>
+
+          <div class="dc-foot">
+            <button class="btn pri">去建单页确认 →</button>
+            <span class="sp">还差 货物</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="vnote">
+      <p><span class="h">好在哪</span>一眼知道「填到哪了」：环 8/12，三条进度分行程/货物/承运。适合调度连着建好几单、需要快速判断状态的场景。</p>
+      <p><span class="h bad">注意</span>信息密度最高，小屏幕上三条进度条会挤；且「8/12」这种分数对临时用户意义不大。</p>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

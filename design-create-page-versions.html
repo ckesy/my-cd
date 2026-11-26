@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AI 建单页 · 视觉方案（Web 3 版 + 小程序 2 版）</title>
+<style>
+  :root{
+    /* 品牌 */
+    --red:#C8102E; --red-dark:#A50D25; --red-soft:#FDF0F2; --red-line:#F5D4D9;
+    /* 电子围栏语义色（装货蓝 / 卸货绿 / 提醒琥珀，避开品牌红） */
+    --blue:#2563EB; --blue-2:#1D4ED8; --blue-soft:#EFF4FF; --blue-line:#D8E3FB;
+    --green:#0E9F6E; --green-2:#0B7F58; --green-soft:#EDF9F4; --green-line:#CDEBDD;
+    --amber:#D97706; --amber-soft:#FFF8ED; --amber-line:#F5E0BE;
+    /* 中性 */
+    --ink:#0F172A; --ink2:#475569; --ink3:#94A3B8; --ink4:#C3CCD9;
+    --line:#E6EBF2; --line2:#F1F5F9; --bg:#F4F6FA; --card:#FFFFFF;
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{
+    margin:0;padding:26px 26px 46px;background:#E9ECF2;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* ---------- 文档头 ---------- */
+  .doc-head{max-width:1180px;margin:0 auto 22px}
+  .doc-head h1{font-size:19px;margin:0 0 8px;letter-spacing:.2px}
+  .doc-head p{margin:0;font-size:12.5px;line-height:1.8;color:#5B6879}
+  .doc-head .k{color:var(--ink);font-weight:600}
+
+  /* ---------- 版本块 ---------- */
+  .spec{max-width:1180px;margin:0 auto 30px}
+  .spec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+  .tag{
+    flex:none;font-size:11px;font-weight:800;letter-spacing:.4px;color:#fff;background:var(--ink);
+    padding:3px 8px;border-radius:5px;
+  }
+  .tag.rec{background:var(--red)}
+  .spec-head h2{font-size:14.5px;margin:0;letter-spacing:.2px}
+  .spec-head .sub{font-size:11.5px;color:#7C8AA0}
+  .spec-note{
+    font-size:11.5px;line-height:1.8;color:#5B6879;background:#fff;border:1px solid var(--line);
+    border-radius:9px;padding:10px 13px;margin-top:10px;display:flex;gap:22px;flex-wrap:wrap;
+  }
+  .spec-note div{flex:1 1 300px;min-width:0}
+  .spec-note b{display:block;font-size:11px;color:var(--ink);margin-bottom:3px}
+  .spec-note .good b{color:var(--green-2)}
+  .spec-note .bad b{color:#B45309}
+
+  /* ---------- Web 画布 ---------- */
+  .web{
+    background:var(--card);border-radius:12px;overflow:hidden;
+    box-shadow:0 14px 34px -26px rgba(15,23,42,.5),0 0 0 1px #DDE3EC;
+  }
+  .web-top{display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid var(--line);background:#FBFCFE}
+  .web-top .dots{display:flex;gap:4px}
+  .web-top .dots i{width:6px;height:6px;border-radius:50%;background:#D5DCE6;display:block}
+  .web-top .ttl{font-size:12px;font-weight:700}
+  .web-top .crumb{font-size:11px;color:var(--ink3)}
+  .web-top .right{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .btn{font-size:12px;font-weight:600;border-radius:6px;padding:6px 12px;border:1px solid var(--line);background:#fff;color:var(--ink2);cursor:default;white-space:nowrap}
+  .btn.pri{background:var(--red);border-color:var(--red);color:#fff;font-weight:700}
+  .btn.pri[disabled]{background:#EAD2D6;border-color:#EAD2D6;color:#fff}
+  .btn.ghost{border-color:transparent;color:var(--ink3)}
+  .web-body{padding:14px;background:var(--bg)}
+
+  /* AI 来源条 */
+  .ai-tip{
+    display:flex;align-items:center;gap:8px;background:#EEF4FF;border:1px solid #D9E5FC;
+    border-radius:8px;padding:7px 11px;font-size:11.5px;color:#1E4FBF;margin-bottom:12px;
+  }
+  .ai-tip .ic{width:16px;height:16px;border-radius:5px;background:#2563EB;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;flex:none}
+  .ai-tip .x{margin-left:auto;font-size:11px;color:#6B8CD6;font-weight:600}
+  .ai-tip .prog{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:#3B62B8;font-weight:600}
+  .ai-tip .prog .bar{width:88px;height:4px;border-radius:2px;background:#DCE7FB;overflow:hidden}
+  .ai-tip .prog .bar i{display:block;height:100%;width:73%;background:#2563EB;border-radius:2px}
+
+  /* ---------- 版 A：行程带 ---------- */
+  .band{
+    display:flex;align-items:stretch;gap:0;border-radius:12px;overflow:hidden;
+    box-shadow:0 1px 2px rgba(15,23,42,.04);margin-bottom:12px;
+  }
+  .stop{flex:1 1 0;min-width:0;padding:13px 15px 12px;position:relative;display:flex;flex-direction:column;gap:7px}
+  .stop.pickup{background:linear-gradient(135deg,#F2F6FF 0%,#E7EFFF 100%);border-left:4px solid var(--blue)}
+  .stop.delivery{background:linear-gradient(135deg,#F0FBF7 0%,#E4F7EF 100%);border-left:4px solid var(--green)}
+  .st-top{display:flex;align-items:center;gap:7px}
+  .chip{
+    width:20px;height:20px;border-radius:6px;color:#fff;font-size:11px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;flex:none;
+  }
+  .chip.b{background:var(--blue)} .chip.g{background:var(--green)}
+  .st-role{font-size:10.5px;font-weight:700;letter-spacing:.5px}
+  .st-role.b{color:var(--blue-2)} .st-role.g{color:var(--green-2)}
+  .st-src{margin-left:auto;font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:4px;background:#fff;border:1px solid var(--blue-line);color:var(--blue-2)}
+  .stop.delivery .st-src{border-color:var(--green-line);color:var(--green-2)}
+  .st-name{font-size:16px;font-weight:800;letter-spacing:.2px;line-height:1.25}
+  .st-meta{display:flex;align-items:center;gap:9px;font-size:11px;color:#5B6879}
+  .st-meta b{font-size:12.5px;color:var(--ink);font-weight:700}
+  .st-meta .dotsep{width:2px;height:2px;border-radius:50%;background:#BFC9D6}
+
+  .hop{
+    flex:0 0 176px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+    background:#fff;padding:10px 6px;
+  }
+  .hop-line{display:flex;align-items:center;width:100%;padding:0 6px}
+  .hop-line .n{width:7px;height:7px;border-radius:50%;flex:none}
+  .hop-line .n.b{background:var(--blue)} .hop-line .n.g{background:var(--green)}
+  .hop-line .dash{flex:1;height:0;border-top:2px dashed #CBD6E5;margin:0 5px}
+  .hop-line .car{font-size:11px;color:#8494A8;flex:none;transform:translateY(-1px)}
+  .hop-pill{
+    font-size:10.5px;font-weight:700;color:#5B6879;background:#F4F7FB;border:1px solid var(--line);
+    border-radius:999px;padding:2px 9px;white-space:nowrap;
+  }
+  .hop-pill.amber{background:var(--amber-soft);border-color:var(--amber-line);color:#A2610B}
+
+  /* 表单栅格 */
+  .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .box{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px 6px}
+  .box-h{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+  .box-h .t{font-size:11.5px;font-weight:700;color:#334155}
+  .box-h .ln{flex:1;height:1px;background:var(--line2)}
+  .box-h .r{font-size:10.5px;color:var(--ink3)}
+  .box-h .r.warn{color:var(--red);font-weight:700}
+
+  .f{display:flex;align-items:center;gap:8px;min-height:30px;border-bottom:1px solid #F4F7FB;font-size:12px;padding:2px 0}
+  .f:last-child{border-bottom:none}
+  .f .k{width:62px;flex:none;color:var(--ink3);font-size:11.5px}
+  .f .k.req::after{content:"*";color:var(--red);margin-left:1px}
+  .f .v{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .f .v.ph{color:var(--ink4);font-weight:400}
+  .f .v.bad{color:var(--red)}
+  .f .u{font-size:11px;color:var(--ink3);font-weight:400}
+  .f .op{font-size:11px;color:#B9C4D2;flex:none}
+  .f.miss{background:#FFF6F6;border-radius:6px;padding-left:7px;position:relative;margin:1px 0}
+  .f.miss::before{content:"!";position:absolute;left:-5px;top:50%;margin-top:-7px;width:14px;height:14px;border-radius:50%;background:var(--red);color:#fff;font-size:9px;font-weight:800;line-height:14px;text-align:center;box-shadow:0 0 0 2px #fff}
+  .f.miss .k{color:var(--red)}
+  .f.miss .v{color:var(--red)}
+
+  .segsm{display:flex;flex:none}
+  .segsm span{font-size:10.5px;font-weight:600;padding:3px 8px;border:1px solid var(--line);color:var(--ink3);background:#fff}
+  .segsm span:first-child{border-radius:5px 0 0 5px}
+  .segsm span:last-child{border-radius:0 5px 5px 0;border-left:0}
+  .segsm span.on{background:var(--red);border-color:var(--red);color:#fff}
+
+  .web-foot{
+    display:flex;align-items:center;gap:10px;margin-top:12px;padding:9px 12px;
+    background:#fff;border:1px solid var(--line);border-radius:9px;
+  }
+  .web-foot .miss-txt{font-size:11.5px;color:var(--red);font-weight:700}
+  .web-foot .miss-sub{font-size:10.5px;color:#B4545F}
+  .web-foot .sp{margin-left:auto;display:flex;gap:8px}
+
+  /* ---------- 版 B：左图右单 ---------- */
+  .split{display:grid;grid-template-columns:436px minmax(0,1fr);gap:12px}
+  .mapbox{
+    background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;
+  }
+  .map-canvas{
+    position:relative;flex:1;min-height:210px;
+    background:
+      repeating-linear-gradient(0deg,#EEF3F9 0 1px,transparent 1px 26px),
+      repeating-linear-gradient(90deg,#EEF3F9 0 1px,transparent 1px 26px),
+      linear-gradient(180deg,#FAFCFE,#F3F7FB);
+  }
+  .map-canvas svg{position:absolute;inset:0;width:100%;height:100%}
+  .pin{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:3px}
+  .pin .cap{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;color:#fff}
+  .pin .pt{width:12px;height:12px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 5px rgba(15,23,42,.28)}
+  .pin.b{left:22%;top:34%} .pin.b .cap{background:var(--blue)} .pin.b .pt{background:var(--blue)}
+  .pin.g{left:76%;top:70%} .pin.g .cap{background:var(--green)} .pin.g .pt{background:var(--green)}
+  .map-tag{
+    position:absolute;left:34%;top:64%;transform:translate(-50%,-50%);
+    background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:999px;
+    font-size:10.5px;font-weight:700;color:#5B6879;padding:3px 10px;white-space:nowrap;
+  }
+  .map-side{padding:10px 12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+  .leg{display:flex;align-items:center;gap:7px;font-size:11.5px}
+  .leg i{width:8px;height:8px;border-radius:2px;flex:none}
+  .leg i.b{background:var(--blue)} .leg i.g{background:var(--green)}
+  .leg .nm{font-weight:700}
+  .leg .mt{margin-left:auto;font-size:10.5px;color:var(--ink3)}
+  .driver{margin-top:6px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:9px;background:#FBFCFE}
+  .driver .av{width:24px;height:24px;border-radius:50%;background:#EEF2F7;display:flex;align-items:center;justify-content:center;font-size:11px;color:#64748B}
+  .driver .nm{font-size:11.5px;font-weight:700}
+  .driver .sub{font-size:10.5px;color:var(--ink3)}
+  .driver .plate{margin-left:auto;font-size:11.5px;font-weight:800;letter-spacing:.6px;color:#1E293B;background:#F1F5F9;border:1px solid var(--line);border-radius:5px;padding:2px 7px}
+  .right-col{display:flex;flex-direction:column;gap:12px;min-width:0}
+
+  /* ---------- 版 C：时间轴 ---------- */
+  .tlwrap{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  .tl{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 14px 6px}
+  .tl-row{display:flex;gap:12px}
+  .tl-rail{width:14px;flex:none;display:flex;flex-direction:column;align-items:center}
+  .tl-node{width:12px;height:12px;border-radius:50%;flex:none;border:3px solid #fff;box-shadow:0 0 0 2px currentColor}
+  .tl-node.b{background:var(--blue);color:var(--blue)}
+  .tl-node.g{background:var(--green);color:var(--green)}
+  .tl-line{flex:1;width:0;border-left:2px dashed #D3DDEA;margin:4px 0}
+  .tl-main{flex:1;min-width:0;padding-bottom:14px}
+  .tl-time{font-size:11px;color:var(--ink3);margin-bottom:3px}
+  .tl-card{border-radius:9px;padding:9px 11px;border:1px solid var(--blue-line);background:linear-gradient(135deg,#F5F8FF,#EDF3FF)}
+  .tl-card.g{border-color:var(--green-line);background:linear-gradient(135deg,#F4FCF8,#E9F8F1)}
+  .tl-card .h{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+  .tl-card .role{font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--blue-2)}
+  .tl-card.g .role{color:var(--green-2)}
+  .tl-card .nm{font-size:14px;font-weight:800}
+  .tl-card .mt{font-size:11px;color:#5B6879;margin-top:2px}
+  .tl-gap{display:flex;align-items:center;gap:7px;font-size:10.5px;color:#7C8AA0;padding:0 0 14px 26px}
+  .tl-foot{
+    display:flex;align-items:center;gap:6px;font-size:10.5px;color:#5B6879;
+    background:#F7FAFD;border-top:1px solid var(--line2);margin:0 -14px -6px;padding:8px 14px;
+    border-radius:0 0 10px 10px;
+  }
+  .tl-foot .ok{color:var(--green);font-weight:800}
+  .tl-gap .dash{flex:1;height:0;border-top:1px dashed #D3DDEA;max-width:40px}
+
+  /* ---------- 小程序 ---------- */
+  .phones{display:flex;gap:22px;flex-wrap:wrap}
+  .phone{
+    width:375px;flex:none;background:#fff;border-radius:26px;overflow:hidden;height:748px;
+    box-shadow:0 18px 40px -22px rgba(15,23,42,.45),0 0 0 1px #DDE3EC;display:flex;flex-direction:column;
+  }
+  .stat{height:23px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:10.5px;color:#334155;flex:none}
+  .nav{height:38px;flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;border-bottom:1px solid var(--line);position:relative}
+  .nav .back{position:absolute;left:14px;color:#64748B;font-size:15px}
+  .pbody{flex:1;min-height:0;background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
+  .pbar{flex:none;background:#fff;border-top:1px solid var(--line);padding:8px 12px;display:flex;align-items:center;gap:8px}
+  .pbar .txt{font-size:10px;color:var(--ink3);line-height:1.5}
+  .pbar .txt b{color:var(--ink);font-size:11px}
+  .pcard{background:#fff;border-radius:11px;padding:10px 12px;box-shadow:0 2px 8px rgba(15,23,42,.04)}
+  .pcap{font-size:10.5px;color:#7C8AA0;text-align:center;margin-top:9px;line-height:1.6}
+
+  /* 小程序行程色块（版 D） */
+  .band-sm{border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.06)}
+  .stop-sm{padding:11px 13px;position:relative;display:flex;flex-direction:column;gap:5px}
+  .stop-sm.pickup{background:linear-gradient(135deg,#F1F6FF,#E6EEFF);border-left:4px solid var(--blue)}
+  .stop-sm.delivery{background:linear-gradient(135deg,#F0FBF6,#E3F6EE);border-left:4px solid var(--green)}
+  .stop-sm .row1{display:flex;align-items:center;gap:6px}
+  .stop-sm .chip{width:17px;height:17px;border-radius:5px;font-size:9.5px}
+  .stop-sm .role{font-size:10px;font-weight:800;letter-spacing:.4px}
+  .stop-sm .role.b{color:var(--blue-2)} .stop-sm .role.g{color:var(--green-2)}
+  .stop-sm .nm{font-size:15px;font-weight:800;letter-spacing:.2px}
+  .stop-sm .mt{font-size:10.5px;color:#5B6879;display:flex;align-items:center;gap:7px}
+  .stop-sm .mt b{color:var(--ink);font-size:11.5px}
+  .hop-sm{
+    background:#fff;padding:6px 13px;display:flex;align-items:center;gap:8px;
+    border-top:1px dashed #DCE4EF;border-bottom:1px dashed #DCE4EF;
+  }
+  .hop-sm .dash{flex:1;height:0;border-top:2px dashed #CBD6E5}
+  .hop-sm .pill{font-size:9.5px;font-weight:700;color:#5B6879;background:#F4F7FB;border:1px solid var(--line);border-radius:999px;padding:1px 7px;white-space:nowrap}
+  .hop-sm .car{font-size:10px;color:#8494A8}
+
+  /* 小程序大色块（版 E） */
+  .hero{
+    position:relative;padding:16px 16px 44px;color:#fff;
+    background:linear-gradient(135deg,#2563EB 0%,#3B82F6 42%,#10B981 100%);
+  }
+  .hero .ht{font-size:10.5px;opacity:.86;letter-spacing:.6px;font-weight:700}
+  .hero .h-names{display:flex;align-items:center;gap:9px;margin:7px 0 9px}
+  .hero .h-names .n{font-size:17px;font-weight:800;letter-spacing:.2px}
+  .hero .h-names .ar{opacity:.85;font-size:13px}
+  .hero .h-meta{display:flex;gap:14px;font-size:10.5px;opacity:.92}
+  .hero .h-meta b{font-weight:800}
+  .hero .badge-ai{
+    position:absolute;right:14px;top:14px;font-size:9.5px;font-weight:700;background:rgba(255,255,255,.2);
+    border:1px solid rgba(255,255,255,.42);border-radius:999px;padding:2px 8px;
+  }
+  .sheet-up{margin-top:-30px;background:#fff;border-radius:16px 16px 0 0;flex:1;min-height:0;padding:12px 14px 0;overflow:hidden}
+
+  /* 通用字段行（小程序） */
+  .pf{display:flex;align-items:center;gap:8px;min-height:32px;border-bottom:1px solid #F2F6FA;position:relative;font-size:11.5px;padding-left:8px}
+  .pf:last-child{border-bottom:none}
+  .pf::before{content:"";position:absolute;left:0;top:50%;margin-top:-2px;width:4px;height:4px;border-radius:50%;background:#F3B6C2}
+  .pf .k{width:66px;flex:none;color:#64748B;font-weight:600}
+  .pf .k.req::after{content:"*";color:var(--red);margin-left:1px}
+  .pf .v{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pf .v.ph{color:var(--ink4);font-weight:400}
+  .pf .v.bad{color:var(--red)}
+  .pf .op{color:#C3CCD9;font-size:12px}
+  .pf.miss{background:#FFF6F6;border-radius:7px}
+  .pf.miss .k{color:var(--red)}
+  .pf.miss .v{color:var(--red)}
+  .pf .mark{position:absolute;left:-6px;top:8px;width:14px;height:14px;border-radius:50%;background:var(--red);color:#fff;font-size:9px;font-weight:800;line-height:14px;text-align:center;box-shadow:0 0 0 2px #fff}
+  .pfh{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:800;color:#64748B;letter-spacing:.4px;margin:8px 0 2px}
+  .pfh .ln{flex:1;height:1px;background:var(--line2)}
+  .pfh .r{font-weight:600;color:var(--ink3)}
+  .pfh .r.warn{color:var(--red)}
+  .psegsm{display:flex;flex:none}
+  .psegsm span{font-size:9px;font-weight:700;padding:2px 6px;border:1px solid var(--line);color:var(--ink3);background:#fff}
+  .psegsm span:first-child{border-radius:4px 0 0 4px}
+  .psegsm span:last-child{border-radius:0 4px 4px 0;border-left:0}
+  .psegsm span.on{background:var(--red);border-color:var(--red);color:#fff}
+</style>
+</head>
+<body>
+
+<div class="doc-head">
+  <h1>AI 建单页 · 五版视觉方案</h1>
+  <p>
+    同一份 AI 草稿（<span class="k">新晋府 → 天麟时代，25 吨螺纹钢，晋K03313D，11-27 08:00 装 / 15:00 到</span>）在五种版式下的呈现。
+    装货统一用 <span class="k">蓝块（#2563EB）</span>、卸货用 <span class="k">绿块（#0E9F6E）</span> —— 沿用电子围栏的语义色，避开品牌红，红只留给「缺项 / 主按钮」。
+    Web 三版是同一页面的三种信息结构，小程序两版是两种首屏策略。
+  </p>
+</div>
+
+<!-- ============================================================ 版 A ============================================================ -->
+<section class="spec">
+  <div class="spec-head">
+    <span class="tag rec">版 A</span>
+    <h2>行程带主导 · 一屏先看清「从哪到哪」</h2>
+    <span class="sub">推荐 / Web</span>
+  </div>
+
+  <div class="web">
+    <div class="web-top">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span class="ttl">新建运单</span>
+      <span class="crumb">/ 运单管理 / 新建</span>
+      <span class="right">
+        <button class="btn ghost">关闭</button>
+        <button class="btn">存草稿</button>
+        <button class="btn pri">发布</button>
+      </span>
+    </div>
+
+    <div class="web-body">
+      <div class="ai-tip">
+        <span class="ic">✦</span>
+        <span>已按 AI 助手草稿填好，缺 2 项已标红 —— 核对后点「发布」即可</span>
+        <span class="prog">
+          <span class="bar"><i></i></span>8 / 11 已填
+        </span>
+        <span class="x">知道了</span>
+      </div>
+
+      <!-- 行程带 -->
+      <div class="band">
+        <div class="stop pickup">
+          <div class="st-top">
+            <span class="chip b">装</span>
+            <span class="st-role b">装 货 地</span>
+            <span class="st-src">围栏</span>
+          </div>
+          <div class="st-name">新晋府</div>
+          <div class="st-meta">
+            <b>11-27 08:00</b>
+            <span class="dotsep"></span>
+            <span>成都市青白江区</span>
+          </div>
+        </div>
+
+        <div class="hop">
+          <div class="hop-line">
+            <span class="n b"></span>
+            <span class="dash"></span>
+            <span class="car">🚚</span>
+            <span class="dash"></span>
+            <span class="n g"></span>
+          </div>
+          <div class="hop-pill">128 km · 约 2h10m</div>
+        </div>
+
+        <div class="stop delivery">
+          <div class="st-top">
+            <span class="chip g">卸</span>
+            <span class="st-role g">卸 货 地</span>
+            <span class="st-src">围栏</span>
+          </div>
+          <div class="st-name">天麟时代</div>
+          <div class="st-meta">
+            <b>11-27 15:00</b>
+            <span class="dotsep"></span>
+            <span>成都市新都区</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 三列 -->
+      <div class="grid3">
+        <div class="box">
+          <div class="box-h"><span class="t">货物</span><span class="ln"></span><span class="r warn">缺 1 项</span></div>
+          <div class="f miss"><span class="k req">货物名称</span><span class="v bad">待补充</span><span class="op">选已有 ›</span></div>
+          <div class="f"><span class="k">数量</span><span class="v">25</span><span class="u">吨</span></div>
+          <div class="f"><span class="k">运费</span><span class="v ph">选填，之后可登记</span></div>
+        </div>
+
+        <div class="box">
+          <div class="box-h"><span class="t">承运</span><span class="ln"></span><span class="r warn">缺 1 项</span></div>
+          <div class="f"><span class="k">客户</span><span class="v ph">可直接填写</span><span class="op">档案 ›</span></div>
+          <div class="f miss"><span class="k req">车辆</span><span class="v bad">待补充</span><span class="op">选车 ›</span></div>
+          <div class="f"><span class="k">司机</span><span class="v">李亚楠</span><span class="u">随车</span></div>
+        </div>
+
+        <div class="box">
+          <div class="box-h"><span class="t">节点与时间</span><span class="ln"></span></div>
+          <div class="f"><span class="k">运输模式</span><span class="v">极简</span>
+            <span class="segsm"><span class="on">极简</span><span>详细</span></span>
+          </div>
+          <div class="f"><span class="k">计划装货</span><span class="v">11-27 08:00</span></div>
+          <div class="f"><span class="k">计划到达</span><span class="v">11-27 15:00</span></div>
+        </div>
+      </div>
+
+      <div class="web-foot">
+        <div>
+          <div class="miss-txt">还差 2 项才能发布</div>
+          <div class="miss-sub">货物名称、承运车辆 —— 补齐后按钮自动可用</div>
+        </div>
+        <div class="sp">
+          <button class="btn">重置</button>
+          <button class="btn pri" disabled>发布运单</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-note">
+    <div class="good"><b>为什么推荐</b>装/卸货在同一水平线上并列，中间给里程与时长 —— 判断「这趟合不合理」只需要看最上面这一条，不用往下滚。</div>
+    <div><b>代价</b>下方三列在 1280px 以下会挤，需要降到两列（货物+承运 / 节点单独一行）。</div>
+  </div>
+</section>
+
+<!-- ============================================================ 版 B ============================================================ -->
+<section class="spec">
+  <div class="spec-head">
+    <span class="tag">版 B</span>
+    <h2>左图右单 · 路线画出来，表单在右边滚</h2>
+    <span class="sub">Web / 适合已有路线规划</span>
+  </div>
+
+  <div class="web">
+    <div class="web-top">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span class="ttl">新建运单</span>
+      <span class="crumb">/ 运单管理 / 新建</span>
+      <span class="right">
+        <button class="btn ghost">关闭</button>
+        <button class="btn">存草稿</button>
+        <button class="btn pri">发布</button>
+      </span>
+    </div>
+
+    <div class="web-body">
+      <div class="ai-tip">
+        <span class="ic">✦</span>
+        <span>已按 AI 助手草稿填好，缺 2 项已标红</span>
+        <span class="prog"><span class="bar"><i></i></span>8 / 11 已填</span>
+        <span class="x">知道了</span>
+      </div>
+
+      <div class="split">
+        <!-- 左：地图 -->
+        <div class="mapbox">
+          <div class="map-canvas">
+            <svg viewBox="0 0 436 238" preserveAspectRatio="none">
+              <path d="M96 78 C 160 78, 170 150, 232 156 S 300 168, 332 168"
+                    fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"
+                    stroke-dasharray="7 5" opacity=".85"/>
+            </svg>
+            <div class="pin b"><span class="cap">装 · 新晋府</span><span class="pt"></span></div>
+            <div class="pin g"><span class="cap">卸 · 天麟时代</span><span class="pt"></span></div>
+            <div class="map-tag">128 km · 约 2h10m</div>
+          </div>
+
+          <div class="map-side">
+            <div class="leg"><i class="b"></i><span class="nm">新晋府</span><span class="mt">11-27 08:00 装</span></div>
+            <div class="leg"><i class="g"></i><span class="nm">天麟时代</span><span class="mt">11-27 15:00 到</span></div>
+            <div class="driver">
+              <span class="av">李</span>
+              <div>
+                <div class="nm">李亚楠</div>
+                <div class="sub">6 轴 · 纯电 · 常年跑青白江线</div>
+              </div>
+              <span class="plate">晋K03313D</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右：表单 -->
+        <div class="right-col">
+          <div class="box">
+            <div class="box-h"><span class="t">行程</span><span class="ln"></span></div>
+            <div class="f"><span class="k">任务名称</span><span class="v">任务1</span></div>
+            <div class="f"><span class="k">路线</span><span class="v">青白江 → 新都（已带出里程）</span></div>
+            <div class="f"><span class="k">客户</span><span class="v ph">可直接填写，不必选档案</span><span class="op">›</span></div>
+          </div>
+
+          <div class="box">
+            <div class="box-h"><span class="t">货物</span><span class="ln"></span><span class="r warn">缺 1 项</span></div>
+            <div class="f miss"><span class="k req">货物名称</span><span class="v bad">待补充</span><span class="op">选已有 ›</span></div>
+            <div class="f"><span class="k">数量</span><span class="v">25</span><span class="u">吨</span></div>
+            <div class="f"><span class="k">运费</span><span class="v ph">选填</span></div>
+          </div>
+
+          <div class="box">
+            <div class="box-h"><span class="t">派发</span><span class="ln"></span><span class="r warn">缺 1 项</span></div>
+            <div class="f miss"><span class="k req">车辆</span><span class="v bad">待补充</span><span class="op">选车 ›</span></div>
+            <div class="f"><span class="k">运输模式</span><span class="v">极简</span>
+              <span class="segsm"><span class="on">极简</span><span>详细</span></span>
+            </div>
+          </div>
+
+          <div class="web-foot" style="margin-top:0">
+            <div>
+              <div class="miss-txt">还差 2 项</div>
+              <div class="miss-sub">货物名称、承运车辆</div>
+            </div>
+            <div class="sp"><button class="btn pri" disabled>发布运单</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-note">
+    <div class="good"><b>好在哪</b>有路线时有真实形状，一眼看出「这趟是不是绕了」；司机与车牌做成实体卡，比一行文字更容易核对。</div>
+    <div class="bad"><b>注意</b>没有路线 / 没有坐标时地图会空 —— 必须有降级态（退化成版 A 的行程带），否则就是个灰框。</div>
+  </div>
+</section>
+
+<!-- ============================================================ 版 C ============================================================ -->
+<section class="spec">
+  <div class="spec-head">
+    <span class="tag">版 C</span>
+    <h2>竖向时间轴 · 强调「几点装、几点到」</h2>
+    <span class="sub">Web / 适合多任务、常驻</span>
+  </div>
+
+  <div class="web">
+    <div class="web-top">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span class="ttl">新建运单</span>
+      <span class="crumb">/ 运单管理 / 新建</span>
+      <span class="right">
+        <button class="btn ghost">关闭</button>
+        <button class="btn">存草稿</button>
+        <button class="btn pri">发布</button>
+      </span>
+    </div>
+
+    <div class="web-body">
+      <div class="ai-tip">
+        <span class="ic">✦</span>
+        <span>已按 AI 助手草稿填好，缺 2 项已标红</span>
+        <span class="x">知道了</span>
+      </div>
+
+      <div class="tlwrap">
+        <!-- 左：时间轴 -->
+        <div class="tl">
+          <div class="tl-row">
+            <div class="tl-rail">
+              <span class="tl-node b"></span>
+              <span class="tl-line"></span>
+            </div>
+            <div class="tl-main">
+              <div class="tl-time">11-27 周五 · 08:00</div>
+              <div class="tl-card">
+                <div class="h"><span class="role">装 货</span><span class="nm">新晋府</span></div>
+                <div class="mt">成都市青白江区 · 围栏已匹配</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tl-gap"><span class="dash"></span><span>在途 128 km · 约 2h10m</span><span class="dash"></span></div>
+
+          <div class="tl-row">
+            <div class="tl-rail">
+              <span class="tl-node g"></span>
+            </div>
+            <div class="tl-main">
+              <div class="tl-time">11-27 周五 · 15:00</div>
+              <div class="tl-card g">
+                <div class="h"><span class="role">卸 货</span><span class="nm">天麟时代</span></div>
+                <div class="mt">成都市新都区 · 围栏已匹配</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tl-foot">
+            <span class="ok">✓</span> 两站都匹配到围栏，坐标与里程已带出；司机端「导航」可直接用
+          </div>
+        </div>
+
+        <!-- 右：字段 -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="box">
+            <div class="box-h"><span class="t">货物与客户</span><span class="ln"></span><span class="r warn">缺 1 项</span></div>
+            <div class="f"><span class="k">客户</span><span class="v ph">可直接填写</span><span class="op">›</span></div>
+            <div class="f miss"><span class="k req">货物名称</span><span class="v bad">待补充</span><span class="op">选已有 ›</span></div>
+            <div class="f"><span class="k">数量</span><span class="v">25</span><span class="u">吨</span></div>
+            <div class="f"><span class="k">运费</span><span class="v ph">选填</span></div>
+          </div>
+
+          <div class="box">
+            <div class="box-h"><span class="t">承运</span><span class="ln"></span><span class="r warn">缺 1 项</span></div>
+            <div class="f miss"><span class="k req">车辆</span><span class="v bad">待补充</span><span class="op">选车 ›</span></div>
+            <div class="f"><span class="k">司机</span><span class="v">李亚楠</span><span class="u">随车</span></div>
+            <div class="f"><span class="k">运输模式</span><span class="v">极简</span>
+              <span class="segsm"><span class="on">极简</span><span>详细</span></span>
+            </div>
+          </div>
+
+          <div class="web-foot" style="margin-top:0">
+            <div>
+              <div class="miss-txt">还差 2 项</div>
+              <div class="miss-sub">货物名称、承运车辆</div>
+            </div>
+            <div class="sp"><button class="btn pri" disabled>发布运单</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-note">
+    <div class="good"><b>好在哪</b>时间是这条线上最强的信息，适合「明天几点装、几点到」这类以时间为主的派单；多任务时纵向排开很像行程单。</div>
+    <div class="bad"><b>注意</b>装/卸不在同一水平线，对比「距离感」弱；没有路线时不显示里程会显得空。</div>
+  </div>
+</section>
+
+<!-- ============================================================ 版 D ============================================================ -->
+<section class="spec">
+  <div class="spec-head">
+    <span class="tag">版 D</span>
+    <h2>小程序 · 上下两块色卡 + 卡片流</h2>
+    <span class="sub">与 Web 版 A 同构，学习成本最低</span>
+  </div>
+
+  <div class="phones">
+    <div>
+      <div class="phone">
+        <div class="stat"><b>9:41</b><span>●●● ⌁ ▮</span></div>
+        <div class="nav"><span class="back">‹</span>新建运单</div>
+
+        <div class="pbody" style="padding:10px 12px;gap:9px;overflow:hidden">
+          <!-- 行程色卡 -->
+          <div class="band-sm">
+            <div class="stop-sm pickup">
+              <div class="row1">
+                <span class="chip b">装</span>
+                <span class="role b">装 货 地</span>
+                <span style="margin-left:auto;font-size:9px;font-weight:700;color:#2563EB;background:#fff;border:1px solid #D8E3FB;border-radius:4px;padding:1px 5px">围栏</span>
+              </div>
+              <div class="nm">新晋府</div>
+              <div class="mt"><b>11-27 08:00</b><span style="width:2px;height:2px;border-radius:50%;background:#C0CBD9"></span><span>青白江区</span></div>
+            </div>
+
+            <div class="hop-sm">
+              <span class="dash"></span>
+              <span class="car">🚚</span>
+              <span class="pill">128 km · 2h10m</span>
+              <span class="dash"></span>
+            </div>
+
+            <div class="stop-sm delivery">
+              <div class="row1">
+                <span class="chip g">卸</span>
+                <span class="role g">卸 货 地</span>
+                <span style="margin-left:auto;font-size:9px;font-weight:700;color:#0E9F6E;background:#fff;border:1px solid #CDEBDD;border-radius:4px;padding:1px 5px">围栏</span>
+              </div>
+              <div class="nm">天麟时代</div>
+              <div class="mt"><b>11-27 15:00</b><span style="width:2px;height:2px;border-radius:50%;background:#C0CBD9"></span><span>新都区</span></div>
+            </div>
+          </div>
+
+          <!-- 货物 -->
+          <div class="pcard">
+            <div class="pfh">货物<span class="ln"></span><span class="r warn">缺 1 项</span></div>
+            <div class="pf miss"><span class="mark">!</span><span class="k req">货物名称</span><span class="v bad">待补充</span><span class="op">›</span></div>
+            <div class="pf"><span class="k">数量</span><span class="v">25 吨</span></div>
+            <div class="pf"><span class="k">运费</span><span class="v ph">选填</span></div>
+          </div>
+
+          <!-- 派发 -->
+          <div class="pcard">
+            <div class="pfh">派发<span class="ln"></span><span class="r warn">缺 1 项</span></div>
+            <div class="pf"><span class="k">客户</span><span class="v ph">可直接填写</span><span class="op">›</span></div>
+            <div class="pf miss"><span class="mark">!</span><span class="k req">车辆</span><span class="v bad">待补充</span><span class="op">›</span></div>
+            <div class="pf" style="border-bottom:none"><span class="k">司机</span><span class="v">李亚楠</span></div>
+          </div>
+
+          <div class="pcard">
+            <div class="pfh">时间与节点<span class="ln"></span></div>
+            <div class="pf"><span class="k">计划装货</span><span class="v">11-27 08:00</span></div>
+            <div class="pf"><span class="k">计划到达</span><span class="v">11-27 15:00</span></div>
+            <div class="pf" style="border-bottom:none"><span class="k">运输模式</span><span class="v">极简</span>
+              <span class="psegsm"><span class="on">极简</span><span>详细</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pbar">
+          <div class="txt"><b>还差 2 项</b><br>货物 · 车辆</div>
+          <div style="margin-left:auto;display:flex;gap:7px">
+            <button class="btn" style="font-size:11.5px;padding:7px 11px">存草稿</button>
+            <button class="btn pri" style="font-size:11.5px;padding:7px 13px" disabled>发布</button>
+          </div>
+        </div>
+      </div>
+      <div class="pcap"><b>版 D</b>　上下两块色卡<br>与 Web 版 A 同构，滚一次看全</div>
+    </div>
+
+    <!-- 版 E -->
+    <div>
+      <div class="phone">
+        <div class="stat"><b>9:41</b><span>●●● ⌁ ▮</span></div>
+        <div class="nav" style="border-bottom:none"><span class="back">‹</span>新建运单</div>
+
+        <div class="pbody">
+          <!-- 大色块 -->
+          <div class="hero">
+            <span class="badge-ai">✦ AI 已填 8/11</span>
+            <div class="ht">青白江 → 新都</div>
+            <div class="h-names">
+              <span class="n">新晋府</span>
+              <span class="ar">→</span>
+              <span class="n">天麟时代</span>
+            </div>
+            <div class="h-meta">
+              <span>装 <b>08:00</b></span>
+              <span>到 <b>15:00</b></span>
+              <span><b>128</b> km</span>
+            </div>
+          </div>
+
+          <div class="sheet-up">
+            <div class="pfh" style="margin-top:2px">今日任务 · 1<span class="ln"></span><span class="r warn">缺 2 项</span></div>
+
+            <div class="pf"><span class="k">客户</span><span class="v ph">可直接填写</span><span class="op">›</span></div>
+            <div class="pf miss"><span class="mark">!</span><span class="k req">货物名称</span><span class="v bad">待补充</span><span class="op">›</span></div>
+            <div class="pf"><span class="k">数量</span><span class="v">25 吨</span></div>
+            <div class="pf miss"><span class="mark">!</span><span class="k req">车辆</span><span class="v bad">待补充</span><span class="op">›</span></div>
+            <div class="pf"><span class="k">司机</span><span class="v">李亚楠</span></div>
+            <div class="pf"><span class="k">运输模式</span><span class="v">极简</span>
+              <span class="psegsm"><span class="on">极简</span><span>详细</span></span>
+            </div>
+            <div class="pf"><span class="k">运费</span><span class="v ph">选填</span></div>
+            <div class="pf"><span class="k">装货联系人</span><span class="v ph">选填</span><span class="op">›</span></div>
+            <div class="pf"><span class="k">卸货联系人</span><span class="v ph">选填</span><span class="op">›</span></div>
+            <div class="pf"><span class="k">备注</span><span class="v ph">选填，司机可见</span><span class="op">›</span></div>
+
+            <div class="pf"><span class="k">派发方式</span><span class="v">车辆</span>
+              <span class="psegsm"><span>司机</span><span class="on">车辆</span><span>车队</span></span>
+            </div>
+            <div class="pf" style="border-bottom:none"><span class="k">承运量</span><span class="v">25 吨</span><span class="op">自动平分</span></div>
+
+            <div style="margin:10px -2px 0;border:1px dashed #E3E8EF;border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:8px">
+              <span style="width:16px;height:16px;border-radius:5px;background:#F1F5F9;color:#64748B;font-size:10px;display:flex;align-items:center;justify-content:center">⚙</span>
+              <span style="font-size:11px;font-weight:700;color:#475569">更多设置</span>
+              <span style="font-size:10px;color:#94A3B8">常驻任务 · 装卸货打卡 · 装卸时间</span>
+              <span style="margin-left:auto;font-size:11px;color:#C3CCD9">›</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pbar">
+          <div class="txt"><b>还差 2 项</b><br>货物 · 车辆</div>
+          <div style="margin-left:auto;display:flex;gap:7px">
+            <button class="btn" style="font-size:11.5px;padding:7px 11px">存草稿</button>
+            <button class="btn pri" style="font-size:11.5px;padding:7px 13px" disabled>发布</button>
+          </div>
+        </div>
+      </div>
+      <div class="pcap"><b>版 E</b>　大色块 + 上滑表单<br>首屏冲击强，色块随城市变化</div>
+    </div>
+
+    <div style="flex:1 1 260px;min-width:260px;display:flex;flex-direction:column;gap:12px">
+      <div class="spec-note" style="margin-top:0">
+        <div class="good"><b>版 D 好在哪</b>色块上下排列，手机上比左右并排更抗窄屏；信息密度低，司机/调度单手操作友好。</div>
+        <div><b>版 D 代价</b>首屏看不到「还差什么」，得靠底部那条提示补。</div>
+      </div>
+      <div class="spec-note" style="margin-top:0">
+        <div class="good"><b>版 E 好在哪</b>最像「行程单」：一眼看到起点终点和两个时间，缺项在下面集中标红，底部按钮状态明确。</div>
+        <div class="bad"><b>版 E 代价</b>大色块占了 30% 高度，字段多时要滚；颜色是渐变，和系统其它页面的克制风格不完全一致。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
